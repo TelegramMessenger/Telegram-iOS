@@ -448,7 +448,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private enum ListEntry: Comparable, Identifiable {
-            case invite(PresentationTheme, PresentationStrings, String)
+            case invite(PresentationTheme, PresentationStrings, String, Bool)
             case peer(PeerEntry)
             
             var stableId: EntryId {
@@ -462,8 +462,8 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: ListEntry, rhs: ListEntry) -> Bool {
                 switch lhs {
-                    case let .invite(lhsTheme, lhsStrings, lhsText):
-                        if case let .invite(rhsTheme, rhsStrings, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText {
+                    case let .invite(lhsTheme, lhsStrings, lhsText, lhsIsLink):
+                        if case let .invite(rhsTheme, rhsStrings, rhsText, rhsIsLink) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText, lhsIsLink == rhsIsLink {
                             return true
                         } else {
                             return false
@@ -494,8 +494,8 @@ public final class VoiceChatController: ViewController {
             
             func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListViewItem {
                 switch self {
-                    case let .invite(_, _, text):
-                        return VoiceChatActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .generic(UIImage(bundleImageName: "Chat/Context Menu/AddUser")!), action: {
+                    case let .invite(_, _, text, isLink):
+                        return VoiceChatActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .generic(UIImage(bundleImageName: isLink ? "Chat/Context Menu/Link" : "Chat/Context Menu/AddUser")!), action: {
                             interaction.openInvite()
                         })
                     case let .peer(peerEntry):
@@ -1186,22 +1186,33 @@ public final class VoiceChatController: ViewController {
                 let itemsForEntry: (PeerEntry, GroupCallParticipantsContext.Participant.MuteState?) -> [ContextMenuItem] = { entry, muteState in
                     var items: [ContextMenuItem] = []
                     
+                    var hasVolumeSlider = false
                     let peer = entry.peer
                     if let muteState = muteState, !muteState.canUnmute || muteState.mutedByYou {
                     } else {
-                        let minValue: CGFloat
-                        if let callState = strongSelf.callState, callState.canManageCall && callState.adminIds.contains(peer.id) && muteState != nil {
-                            minValue = 0.01
-                        } else {
-                            minValue = 0.0
-                        }
-                        items.append(.custom(VoiceChatVolumeContextItem(minValue: minValue, value: entry.volume.flatMap { CGFloat($0) / 10000.0 } ?? 1.0, valueChanged: { newValue, finished in
-                            if finished && newValue.isZero {
-                                let updatedMuteState = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
-                                muteStatePromise.set(.single(updatedMuteState))
+                        if entry.canManageCall || !entry.isMyPeer {
+                            hasVolumeSlider = true
+                            
+                            let minValue: CGFloat
+                            if let callState = strongSelf.callState, callState.canManageCall && callState.adminIds.contains(peer.id) && muteState != nil {
+                                minValue = 0.01
                             } else {
-                                strongSelf.call.setVolume(peerId: peer.id, volume: Int32(newValue * 10000), sync: finished)
+                                minValue = 0.0
                             }
+                            items.append(.custom(VoiceChatVolumeContextItem(minValue: minValue, value: entry.volume.flatMap { CGFloat($0) / 10000.0 } ?? 1.0, valueChanged: { newValue, finished in
+                                if finished && newValue.isZero {
+                                    let updatedMuteState = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                    muteStatePromise.set(.single(updatedMuteState))
+                                } else {
+                                    strongSelf.call.setVolume(peerId: peer.id, volume: Int32(newValue * 10000), sync: finished)
+                                }
+                            }), true))
+                        }
+                    }
+                    
+                    if entry.isMyPeer && !hasVolumeSlider && ((entry.about?.isEmpty ?? true) || entry.peer.smallProfileImage == nil) {
+                        items.append(.custom(VoiceChatInfoContextItem(text: strongSelf.presentationData.strings.VoiceChat_ImproveYourProfileText, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tip"), color: theme.actionSheet.primaryTextColor)
                         }), true))
                     }
 
@@ -1268,7 +1279,7 @@ public final class VoiceChatController: ViewController {
                                                 return .complete()
                                             }).start()
                                         } else {
-                                            let _ = (updatePeerTitle(account: strongSelf.context.account, peerId: peer.id, title: bio)
+                                            let _ = (updatePeerDescription(account: strongSelf.context.account, peerId: peer.id, description: bio)
                                             |> `catch` { _ -> Signal<Void, NoError> in
                                                 return .complete()
                                             }).start()
@@ -2019,7 +2030,8 @@ public final class VoiceChatController: ViewController {
                 })))*/
 
                 if let callState = strongSelf.callState, callState.canManageCall {
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
+                    let isScheduled = strongSelf.callState?.scheduleTimestamp != nil
+                    items.append(.action(ContextMenuActionItem(text: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelVoiceChat : strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { _, f in
                         f(.dismissWithoutContent)
@@ -2041,7 +2053,7 @@ public final class VoiceChatController: ViewController {
                             })
                         }
 
-                        let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                        let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationTitle : strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationText : strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationEnd : strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
                             action()
                         })])
                         strongSelf.controller?.present(alertController, in: .window(.root))
@@ -2223,7 +2235,7 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func updateMinimumDate() {
+        private func updateSchedulePickerDates() {
             let timeZone = TimeZone(secondsFromGMT: 0)!
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = timeZone
@@ -2234,9 +2246,10 @@ public final class VoiceChatController: ViewController {
             let roundedDate = calendar.date(from: components)!
             let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: roundedDate)
             
+            let minute = components.minute ?? 0
             components.minute = 0
             let roundedToHourDate = calendar.date(from: components)!
-            let nextTwoHourDate = calendar.date(byAdding: .hour, value: 2, to: roundedToHourDate)
+            let nextTwoHourDate = calendar.date(byAdding: .hour, value: minute > 30 ? 4 : 3, to: roundedToHourDate)
             let maxDate = calendar.date(byAdding: .day, value: 7, to: currentDate)
             
             if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
@@ -2275,7 +2288,7 @@ public final class VoiceChatController: ViewController {
             pickerView.setValue(textColor, forKey: "textColor")
             self.pickerView = pickerView
             
-            self.updateMinimumDate()
+            self.updateSchedulePickerDates()
             if let currentDate = currentDate {
                 pickerView.date = currentDate
             }
@@ -2400,6 +2413,12 @@ public final class VoiceChatController: ViewController {
                 self?.timerNode.isHidden = true
             })
             
+            if self.audioButton.isHidden {
+                self.audioButton.isHidden = false
+                self.audioButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.audioButton.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
+            }
+            
             self.updateTitle(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
@@ -2419,6 +2438,7 @@ public final class VoiceChatController: ViewController {
             self.controller?.dismissAllTooltips()
             
             if let callState = self.callState, callState.canManageCall {
+                let isScheduled = callState.scheduleTimestamp != nil
                 let action: () -> Void = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -2434,12 +2454,12 @@ public final class VoiceChatController: ViewController {
                 var items: [ActionSheetItem] = []
                 
                 items.append(ActionSheetTextItem(title: self.presentationData.strings.VoiceChat_LeaveConfirmation))
-                items.append(ActionSheetButtonItem(title: self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak self, weak actionSheet] in
+                items.append(ActionSheetButtonItem(title: isScheduled ? self.presentationData.strings.VoiceChat_LeaveAndCancelVoiceChat : self.presentationData.strings.VoiceChat_LeaveAndEndVoiceChat, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     if let strongSelf = self {
                         if let (members, _) = strongSelf.currentCallMembers, members.count >= 10 || true {
-                            let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                            let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationTitle : strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationText :  strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelConfirmationEnd :  strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
                                 action()
                             })])
                             strongSelf.controller?.present(alertController, in: .window(.root))
@@ -2716,11 +2736,31 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    if let inviteLinks = inviteLinks {
-                        strongSelf.presentShare(inviteLinks)
-                    } else if let addressName = strongSelf.peer?.addressName, !addressName.isEmpty {
-                        strongSelf.presentShare(GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil))
+                    
+                    let callPeerId = strongSelf.call.peerId
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> GroupCallInviteLinks? in
+                        if let inviteLinks = inviteLinks {
+                            return inviteLinks
+                        } else if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
+                            return GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil)
+                        } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
+                            if let cachedData = cachedData as? CachedChannelData, let link = cachedData.exportedInvitation?.link {
+                                return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
+                            } else if let cachedData = cachedData as? CachedGroupData, let link = cachedData.exportedInvitation?.link {
+                                return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
+                            }
+                        }
+                        return nil
                     }
+                    |> deliverOnMainQueue).start(next: { links in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let links = links {
+                            strongSelf.presentShare(links)
+                        }
+                    })
                 })
                 return
             }
@@ -2987,11 +3027,7 @@ public final class VoiceChatController: ViewController {
                 if let navigationController = self.controller?.navigationController as? NavigationController {
                     for controller in navigationController.viewControllers.reversed() {
                         if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation, peerId == self.call.peerId {
-                            if self.callState?.scheduleTimestamp != nil {
-                                title = self.presentationData.strings.VoiceChat_ScheduledTitle
-                            } else {
-                                title = self.presentationData.strings.VoiceChat_Title
-                            }
+                            title = self.presentationData.strings.VoiceChat_Title
                         }
                     }
                 }
@@ -3004,7 +3040,7 @@ public final class VoiceChatController: ViewController {
                 if self.callState?.canManageCall ?? false {
                     subtitle = self.presentationData.strings.VoiceChat_TapToEditTitle
                 } else {
-                    subtitle = ""
+                    subtitle = self.presentationData.strings.VoiceChat_Scheduled
                 }
             }
             
@@ -3429,14 +3465,19 @@ public final class VoiceChatController: ViewController {
             }
             self.enqueuedTransitions.remove(at: 0)
             
-            if self.callState?.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
-                self.timerNode.isHidden = false
-                self.listNode.alpha = 0.0
-                self.listNode.isUserInteractionEnabled = false
-                self.backgroundNode.backgroundColor = panelBackgroundColor
-                self.updateIsFullscreen(false)
-            } else if self.callState?.scheduleTimestamp == nil && !self.isScheduling && self.listNode.alpha == 0.0 {
-                self.transitionToCall()
+            if let callState = self.callState {
+                if callState.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
+                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
+                        self.audioButton.isHidden = true
+                    }
+                    self.timerNode.isHidden = false
+                    self.listNode.alpha = 0.0
+                    self.listNode.isUserInteractionEnabled = false
+                    self.backgroundNode.backgroundColor = panelBackgroundColor
+                    self.updateIsFullscreen(false)
+                } else if callState.scheduleTimestamp == nil && !self.isScheduling && self.listNode.alpha == 0.0 {
+                    self.transitionToCall()
+                }
             }
             
             var options = ListViewDeleteAndInsertOptions()
@@ -3525,6 +3566,7 @@ public final class VoiceChatController: ViewController {
             var processedPeerIds = Set<PeerId>()
             
             var canInvite = true
+            var inviteIsLink = false
             if let peer = self.peer as? TelegramChannel {
                 if peer.flags.contains(.isGigagroup) || (peer.addressName?.isEmpty ?? true) {
                     if peer.flags.contains(.isCreator) || peer.adminRights != nil {
@@ -3532,9 +3574,12 @@ public final class VoiceChatController: ViewController {
                         canInvite = false
                     }
                 }
+                if case .broadcast = peer.info, !(peer.addressName?.isEmpty ?? true) {
+                    inviteIsLink = true
+                }
             }
             if canInvite {
-                entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember))
+                entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
             }
             
             for member in callMembers.0 {
@@ -4251,7 +4296,7 @@ public final class VoiceChatController: ViewController {
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                  
         self.statusBar.statusBarStyle = .Ignore
         

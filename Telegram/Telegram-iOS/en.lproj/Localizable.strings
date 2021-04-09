@@ -6295,6 +6295,7 @@ Sorry for the inconvenience.";
 "VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
 "VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
 "VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+"VoiceChat.LeaveAndCancelVoiceChat" = "Cancel Voice Chat";
 
 "VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
 "VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
@@ -6341,7 +6342,7 @@ Sorry for the inconvenience.";
 "VoiceChat.UnpinVideo" = "Unpin Video";
 
 "Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
-"Notification.VoiceChatScheduled" = "%1$@ Voice chat scheduled for %2$@";
+"Notification.VoiceChatScheduled" = "%1$@ scheduled a voice chat for %2$@";
 
 "VoiceChat.StartsIn" = "Starts in";
 "VoiceChat.LateBy" = "Late by";
@@ -6349,12 +6350,13 @@ Sorry for the inconvenience.";
 "VoiceChat.StatusStartsIn" = "starts in %@";
 "VoiceChat.StatusLateBy" = "late by %@";
 
+"VoiceChat.Scheduled" = "Scheduled";
+
 "VoiceChat.StartNow" = "Start Now";
 "VoiceChat.SetReminder" = "Set Reminder";
 "VoiceChat.CancelReminder" = "Cancel Reminder";
 
 "VoiceChat.ShareShort" = "share";
-
 "VoiceChat.TapToEditTitle" = "Tap to edit title";
 
 "ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
@@ -6367,8 +6369,11 @@ Sorry for the inconvenience.";
 "ScheduleVoiceChat.ScheduleTomorrow" = "Start tomorrow at %@";
 "ScheduleVoiceChat.ScheduleOn" = "Start on %@ at %@";
 
-"VoiceChat.ScheduledTitle" = "Scheduled Voice Chat";
-
 "Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
 "Conversation.ScheduledVoiceChatStartsOn" = "Voice chat starts %@";
 "Conversation.ScheduledVoiceChatStartsOnShort" = "Starts %@";
+
+"VoiceChat.CancelVoiceChat" = "Cancel Voice Chat";
+"VoiceChat.CancelConfirmationTitle" = "Cancel Voice Chat";
+"VoiceChat.CancelConfirmationText" = "Are you sure you want to cancel this voice chat?";
+"VoiceChat.CancelConfirmationEnd" = "Cancel";
