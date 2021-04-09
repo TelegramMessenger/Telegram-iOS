@@ -50,7 +50,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
@@ -143,6 +143,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if let activatePinchPreview = activatePinchPreview {
             self.pinchContainerNode.activate = { sourceNode in
                 activatePinchPreview(sourceNode)
+            }
+            self.pinchContainerNode.animatedOut = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                pinchPreviewFinished?(strongSelf)
             }
         }
     }
