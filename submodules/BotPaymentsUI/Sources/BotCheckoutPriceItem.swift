@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
+import ShimmerEffect
 
 class BotCheckoutPriceItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
@@ -13,16 +14,18 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
     let label: String
     let isFinal: Bool
     let hasSeparator: Bool
+    let shimmeringIndex: Int?
     let sectionId: ItemListSectionId
     
     let requestsNoInset: Bool = true
     
-    init(theme: PresentationTheme, title: String, label: String, isFinal: Bool, hasSeparator: Bool, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, title: String, label: String, isFinal: Bool, hasSeparator: Bool, shimmeringIndex: Int?, sectionId: ItemListSectionId) {
         self.theme = theme
         self.title = title
         self.label = label
         self.isFinal = isFinal
         self.hasSeparator = hasSeparator
+        self.shimmeringIndex = shimmeringIndex
         self.sectionId = sectionId
     }
     
@@ -89,6 +92,9 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
     let backgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
     let bottomSeparatorNode: ASDisplayNode
+
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     private var item: BotCheckoutPriceItem?
     
@@ -111,6 +117,15 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.bottomSeparatorNode)
     }
+
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
+    }
     
     func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ previousItem: ListViewItem?, _ nextItem: ListViewItem?) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -124,7 +139,12 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
             if item.isFinal {
                 naturalContentHeight = 44.0
             } else {
-                naturalContentHeight = 34.0
+                switch neighbors.bottom {
+                case .otherSection, .none:
+                    naturalContentHeight = 44.0
+                default:
+                    naturalContentHeight = 34.0
+                }
             }
             if let _ = previousItem as? BotCheckoutHeaderItem {
                 verticalOffset += 8.0
@@ -164,7 +184,13 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     strongSelf.separatorNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
 
-                    strongSelf.bottomSeparatorNode.isHidden = !item.isFinal
+                    switch neighbors.bottom {
+                    case .otherSection, .none:
+                        strongSelf.bottomSeparatorNode.isHidden = false
+                    default:
+                        strongSelf.bottomSeparatorNode.isHidden = !item.isFinal
+                    }
+
                     strongSelf.bottomSeparatorNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: CGSize(width: params.width, height: UIScreenPixel))
 
@@ -173,6 +199,38 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset + floor((naturalContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: verticalOffset + floor((naturalContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+
+                    if let shimmeringIndex = item.shimmeringIndex {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.placeholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.placeholderNode = shimmerNode
+                            if strongSelf.separatorNode.supernode != nil {
+                                strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.separatorNode)
+                            } else {
+                                strongSelf.addSubnode(shimmerNode)
+                            }
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+
+                        var shapes: [ShimmerEffectNode.Shape] = []
+
+                        let titleLineWidth: CGFloat = (shimmeringIndex % 2 == 0) ? 120.0 : 80.0
+                        let lineDiameter: CGFloat = 8.0
+
+                        let titleFrame = strongSelf.titleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+
+                        shimmerNode.update(backgroundColor: item.theme.list.itemBlocksBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor, shimmeringColor: item.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: contentSize)
+                    } else if let shimmerNode = strongSelf.placeholderNode {
+                        strongSelf.placeholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
         }
