@@ -9,6 +9,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import Stripe
 import CountrySelectionUI
+import PresentationDataUtils
+import AccountContext
 
 private final class BotCheckoutNativeCardEntryScrollerNodeView: UIScrollView {
     var ignoreUpdateBounds = false
@@ -42,6 +44,7 @@ private final class BotCheckoutNativeCardEntryScrollerNode: ASDisplayNode {
 }
 
 final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private let context: AccountContext
     private let provider: BotCheckoutNativeCardEntryController.Provider
     
     private let present: (ViewController, Any?) -> Void
@@ -73,7 +76,8 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
 
     private var dataTask: URLSessionDataTask?
     
-    init(provider: BotCheckoutNativeCardEntryController.Provider, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+    init(context: AccountContext, provider: BotCheckoutNativeCardEntryController.Provider, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+        self.context = context
         self.provider = provider
         
         self.present = present
@@ -302,8 +306,8 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             let jsonPayload: [String: Any] = [
                 "card": [
                     "number": cardData.number,
-                    "expiration_month": "\(cardData.month)",
-                    "expiration_year": "\(cardData.year)",
+                    "expiration_month": String(format: "%02d", cardData.month),
+                    "expiration_year": String(format: "%02d", cardData.year),
                     "security_code": "\(cardData.code)"
                 ] as [String: Any]
             ]
@@ -384,6 +388,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
                     } catch {
                         strongSelf.isVerifying = false
                         strongSelf.updateDone()
+
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {
+                        })]), nil)
                     }
                 }
             })
