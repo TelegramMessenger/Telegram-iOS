@@ -15,6 +15,7 @@ public struct GroupCallInfo: Equatable {
     public var subscribedToScheduled: Bool
     public var recordingStartTimestamp: Int32?
     public var sortAscending: Bool
+    public var defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?
     
     public init(
         id: Int64,
@@ -26,7 +27,8 @@ public struct GroupCallInfo: Equatable {
         scheduleTimestamp: Int32?,
         subscribedToScheduled: Bool,
         recordingStartTimestamp: Int32?,
-        sortAscending: Bool
+        sortAscending: Bool,
+        defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -38,6 +40,7 @@ public struct GroupCallInfo: Equatable {
         self.subscribedToScheduled = subscribedToScheduled
         self.recordingStartTimestamp = recordingStartTimestamp
         self.sortAscending = sortAscending
+        self.defaultParticipantsAreMuted = defaultParticipantsAreMuted
     }
 }
 
@@ -67,7 +70,8 @@ extension GroupCallInfo {
                 scheduleTimestamp: scheduleDate,
                 subscribedToScheduled: (flags & (1 << 8)) != 0,
                 recordingStartTimestamp: recordStartDate,
-                sortAscending: (flags & (1 << 6)) != 0
+                sortAscending: (flags & (1 << 6)) != 0,
+                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: (flags & (1 << 1)) != 0, canChange: (flags & (1 << 2)) != 0)
             )
         case .groupCallDiscarded:
             return nil
@@ -91,7 +95,6 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 guard let info = GroupCallInfo(call) else {
                     return nil
                 }
-                
                 
                 var peers: [Peer] = []
                 var peerPresences: [PeerId: PeerPresence] = [:]
@@ -380,19 +383,19 @@ public enum GetGroupCallParticipantsError {
 }
 
 public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    let sortAscendingValue: Signal<(Bool, Int32?, Bool), GetGroupCallParticipantsError>
+    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?), GetGroupCallParticipantsError>
     if let sortAscending = sortAscending {
-        sortAscendingValue = .single((sortAscending, nil, false))
+        sortAscendingValue = .single((sortAscending, nil, false, nil))
     } else {
         sortAscendingValue = getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
         |> mapError { _ -> GetGroupCallParticipantsError in
             return .generic
         }
-        |> mapToSignal { result -> Signal<(Bool, Int32?, Bool), GetGroupCallParticipantsError> in
+        |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?), GetGroupCallParticipantsError> in
             guard let result = result else {
                 return .fail(.generic)
             }
-            return .single((result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled))
+            return .single((result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted))
         }
     }
 
@@ -410,7 +413,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
             let version: Int32
             let nextParticipantsFetchOffset: String?
             
-            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled) = sortAscendingAndScheduleTimestamp
+            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted) = sortAscendingAndScheduleTimestamp
             
             switch result {
             case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
@@ -494,7 +497,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 nextParticipantsFetchOffset: nextParticipantsFetchOffset,
                 adminIds: Set(),
                 isCreator: false,
-                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false),
+                defaultParticipantsAreMuted: defaultParticipantsAreMuted ?? GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false),
                 sortAscending: sortAscendingValue,
                 recordingStartTimestamp: nil,
                 title: nil,
