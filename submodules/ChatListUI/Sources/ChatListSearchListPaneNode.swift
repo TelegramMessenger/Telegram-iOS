@@ -841,9 +841,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
-
             let foundLocalPeers: Signal<(peers: [RenderedPeer], unread: [PeerId: (Int32, Bool)]), NoError>
-
             if let query = query {
                 foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
                 |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
@@ -1279,7 +1277,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }, openUrl: { url in
                 interaction.openUrl(url)
             }, openPeer: { peer, navigation in
-//                interaction.openPeer(peer.id, navigation)
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .custom(messages: foundMessages, at: message.id, loadMore: {
