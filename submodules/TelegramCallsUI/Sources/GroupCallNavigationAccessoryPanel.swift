@@ -525,7 +525,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             if elapsedTime >= 86400 {
                 joinText = timeIntervalString(strings: strings, value: elapsedTime)
             } else if elapsedTime < 0 {
-                joinText = "+\(textForTimeout(value: abs(elapsedTime)))"
+                joinText = "-\(textForTimeout(value: abs(elapsedTime)))"
             } else {
                 joinText = textForTimeout(value: elapsedTime)
             }

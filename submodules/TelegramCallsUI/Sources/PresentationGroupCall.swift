@@ -557,6 +557,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var peerUpdatesSubscription: Disposable?
     
     public private(set) var schedulePending = false
+    private var isScheduled = false
+    private var isScheduledStarted = false
     
     init(
         accountContext: AccountContext,
@@ -581,6 +583,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.invite = invite
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         self.schedulePending = initialCall == nil
+        self.isScheduled = initialCall == nil || initialCall?.scheduleTimestamp != nil
         
         self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title, scheduleTimestamp: initialCall?.scheduleTimestamp, subscribedToScheduled: initialCall?.subscribedToScheduled ?? false)
         self.statePromise = ValuePromise(self.stateValue)
@@ -1058,6 +1061,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             case let .active(previousCallInfo):
                 if case let .active(callInfo) = internalState {
                     shouldJoin = previousCallInfo.scheduleTimestamp != nil && callInfo.scheduleTimestamp == nil
+                    self.participantsContext = nil
                     activeCallInfo = callInfo
                 } else {
                     activeCallInfo = nil
@@ -1082,6 +1086,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     outgoingAudioBitrateKbit = value
                 }
 
+                let enableNoiseSuppression = accountContext.sharedContext.immediateExperimentalUISettings.enableNoiseSuppression
+
                 callContext = OngoingGroupCallContext(video: self.videoCapturer, participantDescriptionsRequired: { [weak self] ssrcs in
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
@@ -1098,7 +1104,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo)
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo, enableNoiseSuppression: enableNoiseSuppression)
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in
@@ -1284,9 +1290,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if !strongSelf.didConnectOnce {
                         strongSelf.didConnectOnce = true
                         
-                        let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
-                        strongSelf.toneRenderer = toneRenderer
-                        toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        if !strongSelf.isScheduled {
+                            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
+                            strongSelf.toneRenderer = toneRenderer
+                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        }
                     }
 
                     if let peer = strongSelf.reconnectingAsPeer {
@@ -1711,6 +1719,180 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {
                     self.startCheckingCallIfNeeded()
                 }
+            } else if case let .active(callInfo) = internalState, callInfo.scheduleTimestamp != nil {
+                let accountContext = self.accountContext
+                let peerId = self.peerId
+                let rawAdminIds: Signal<Set<PeerId>, NoError>
+                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    rawAdminIds = Signal { subscriber in
+                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                            var peerIds = Set<PeerId>()
+                            for item in list.list {
+                                if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
+                                    peerIds.insert(item.peer.id)
+                                }
+                            }
+                            subscriber.putNext(peerIds)
+                        })
+                        return disposable
+                    }
+                    |> distinctUntilChanged
+                    |> runOn(.mainQueue())
+                } else {
+                    rawAdminIds = accountContext.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
+                    |> map { views -> Set<PeerId> in
+                        guard let view = views.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView else {
+                            return Set()
+                        }
+                        guard let cachedData = view.cachedPeerData as? CachedGroupData, let participants = cachedData.participants else {
+                            return Set()
+                        }
+                        return Set(participants.participants.compactMap { item -> PeerId? in
+                            switch item {
+                            case .creator, .admin:
+                                return item.peerId
+                            default:
+                                return nil
+                            }
+                        })
+                    }
+                    |> distinctUntilChanged
+                }
+                
+                let adminIds = combineLatest(queue: .mainQueue(),
+                    rawAdminIds,
+                    accountContext.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+                )
+                |> map { rawAdminIds, view -> Set<PeerId> in
+                    var rawAdminIds = rawAdminIds
+                    if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer as? TelegramChannel {
+                        if peer.hasPermission(.manageCalls) {
+                            rawAdminIds.insert(accountContext.account.peerId)
+                        } else {
+                            rawAdminIds.remove(accountContext.account.peerId)
+                        }
+                    }
+                    return rawAdminIds
+                }
+                |> distinctUntilChanged
+
+                let participantsContext = GroupCallParticipantsContext(
+                    account: self.accountContext.account,
+                    peerId: self.peerId,
+                    myPeerId: self.joinAsPeerId,
+                    id: callInfo.id,
+                    accessHash: callInfo.accessHash,
+                    state: GroupCallParticipantsContext.State(
+                        participants: [],
+                        nextParticipantsFetchOffset: nil,
+                        adminIds: Set(),
+                        isCreator: false,
+                        defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: self.stateValue.defaultParticipantMuteState == .muted, canChange: false),
+                        sortAscending: true,
+                        recordingStartTimestamp: nil,
+                        title: self.stateValue.title,
+                        scheduleTimestamp: self.stateValue.scheduleTimestamp,
+                        subscribedToScheduled: self.stateValue.subscribedToScheduled,
+                        totalCount: 0,
+                        version: 0
+                    ),
+                    previousServiceState: nil
+                )
+                self.temporaryParticipantsContext = nil
+                self.participantsContext = participantsContext
+                
+                let myPeerId = self.joinAsPeerId
+                let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
+                    if let peer = transaction.getPeer(myPeerId) {
+                        return (peer, transaction.getPeerCachedData(peerId: myPeerId))
+                    } else {
+                        return nil
+                    }
+                }
+                self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
+                    participantsContext.state,
+                    adminIds,
+                    myPeer,
+                    accountContext.account.postbox.peerView(id: peerId)
+                ).start(next: { [weak self] state, adminIds, myPeerAndCachedData, view in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    var members = PresentationGroupCallMembers(
+                        participants: [],
+                        speakingParticipants: Set(),
+                        totalCount: state.totalCount,
+                        loadMoreToken: state.nextParticipantsFetchOffset
+                    )
+                    
+                    var participants: [GroupCallParticipantsContext.Participant] = []
+                    var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                    if let (myPeer, cachedData) = myPeerAndCachedData {
+                        let about: String?
+                        if let cachedData = cachedData as? CachedUserData {
+                            about = cachedData.about
+                        } else if let cachedData = cachedData as? CachedUserData {
+                            about = cachedData.about
+                        } else {
+                            about = nil
+                        }
+                        participants.append(GroupCallParticipantsContext.Participant(
+                            peer: myPeer,
+                            ssrc: nil,
+                            jsonParams: nil,
+                            joinTimestamp: strongSelf.temporaryJoinTimestamp,
+                            raiseHandRating: strongSelf.temporaryRaiseHandRating,
+                            hasRaiseHand: strongSelf.temporaryHasRaiseHand,
+                            activityTimestamp: strongSelf.temporaryActivityTimestamp,
+                            activityRank: strongSelf.temporaryActivityRank,
+                            muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                            volume: nil,
+                            about: about
+                        ))
+                    }
+
+                    for participant in participants {
+                        members.participants.append(participant)
+
+                        if topParticipants.count < 3 {
+                            topParticipants.append(participant)
+                        }
+                    }
+                    
+                    strongSelf.membersValue = members
+                    strongSelf.stateValue.adminIds = adminIds
+                    strongSelf.stateValue.canManageCall = state.isCreator || adminIds.contains(strongSelf.accountContext.account.peerId)
+                    if (state.isCreator || strongSelf.stateValue.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
+                        strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+                    }
+                    strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
+                    strongSelf.stateValue.title = state.title
+                    
+                    strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
+                    if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
+                        strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, clientParams: callInfo.clientParams, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true)), audioSessionControl: strongSelf.audioSessionControl)
+                    } else {
+                        strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
+                            id: callInfo.id,
+                            accessHash: callInfo.accessHash,
+                            participantCount: state.totalCount,
+                            clientParams: nil,
+                            streamDcId: nil,
+                            title: state.title,
+                            scheduleTimestamp: state.scheduleTimestamp,
+                            subscribedToScheduled: false,
+                            recordingStartTimestamp: state.recordingStartTimestamp,
+                            sortAscending: state.sortAscending
+                        ))))
+                        
+                        strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
+                            participantCount: state.totalCount,
+                            topParticipants: topParticipants,
+                            activeSpeakers: Set()
+                        )))
+                    }
+                }))
             }
         }
     }
@@ -1886,11 +2068,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { [weak self] myPeer in
-            guard let strongSelf = self, let _ = myPeer else {
+            guard let strongSelf = self, let myPeer = myPeer else {
                 return
             }
-
-            strongSelf.reconnectingAsPeer = myPeer
             
             let previousPeerId = strongSelf.joinAsPeerId
             if let localSsrc = strongSelf.currentLocalSsrc {
@@ -1898,23 +2078,30 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             strongSelf.joinAsPeerId = peerId
             
-            if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
-                for participant in immediateState.participants {
-                    if participant.peer.id == previousPeerId {
-                        strongSelf.temporaryJoinTimestamp = participant.joinTimestamp
-                        strongSelf.temporaryActivityTimestamp = participant.activityTimestamp
-                        strongSelf.temporaryActivityRank = participant.activityRank
-                        strongSelf.temporaryRaiseHandRating = participant.raiseHandRating
-                        strongSelf.temporaryHasRaiseHand = participant.hasRaiseHand
-                        strongSelf.temporaryMuteState = participant.muteState
-                    }
-                }
-                strongSelf.switchToTemporaryParticipantsContext(sourceContext: participantsContext, oldMyPeerId: previousPeerId)
-            } else {
+            if strongSelf.stateValue.scheduleTimestamp != nil {
                 strongSelf.stateValue.myPeerId = peerId
+                strongSelf.reconnectedAsEventsPipe.putNext(myPeer)
+            } else {
+                strongSelf.reconnectingAsPeer = myPeer
+                
+                if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
+                    for participant in immediateState.participants {
+                        if participant.peer.id == previousPeerId {
+                            strongSelf.temporaryJoinTimestamp = participant.joinTimestamp
+                            strongSelf.temporaryActivityTimestamp = participant.activityTimestamp
+                            strongSelf.temporaryActivityRank = participant.activityRank
+                            strongSelf.temporaryRaiseHandRating = participant.raiseHandRating
+                            strongSelf.temporaryHasRaiseHand = participant.hasRaiseHand
+                            strongSelf.temporaryMuteState = participant.muteState
+                        }
+                    }
+                    strongSelf.switchToTemporaryParticipantsContext(sourceContext: participantsContext, oldMyPeerId: previousPeerId)
+                } else {
+                    strongSelf.stateValue.myPeerId = peerId
+                }
+                
+                strongSelf.requestCall(movingFromBroadcastToRtc: false)
             }
-            
-            strongSelf.requestCall(movingFromBroadcastToRtc: false)
         })
     }
     
@@ -2011,20 +2198,32 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.schedulePending = false
         self.stateValue.scheduleTimestamp = timestamp
         
+        self.summaryParticipantsState.set(.single(SummaryParticipantsState(
+            participantCount: 1,
+            topParticipants: [],
+            activeSpeakers: Set()
+        )))
+        
         self.startDisposable.set((createGroupCall(account: self.account, peerId: self.peerId, title: nil, scheduleDate: timestamp)
         |> deliverOnMainQueue).start(next: { [weak self] callInfo in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.updateSessionState(internalState: .active(callInfo), audioSessionControl: strongSelf.audioSessionControl)
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                strongSelf.markAsCanBeRemoved()
+            }
         }))
     }
+    
     
     public func startScheduled() {
         guard case let .active(callInfo) = self.internalState else {
             return
         }
         
+        self.isScheduledStarted = true
         self.stateValue.scheduleTimestamp = nil
         
         self.startDisposable.set((startScheduledGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
@@ -2033,6 +2232,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return
             }
             strongSelf.updateSessionState(internalState: .active(callInfo), audioSessionControl: strongSelf.audioSessionControl)
+            
+            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
+            strongSelf.toneRenderer = toneRenderer
+            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
         }))
     }
     
@@ -2244,10 +2447,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         let account = self.account
-        
         let currentCall: Signal<GroupCallInfo?, CallError>
         if let initialCall = self.initialCall {
             currentCall = getCurrentGroupCall(account: account, callId: initialCall.id, accessHash: initialCall.accessHash)
+            |> mapError { _ -> CallError in
+                return .generic
+            }
+            |> map { summary -> GroupCallInfo? in
+                return summary?.info
+            }
+        } else if case let .active(callInfo) = self.internalState {
+            currentCall = getCurrentGroupCall(account: account, callId: callInfo.id, accessHash: callInfo.accessHash)
             |> mapError { _ -> CallError in
                 return .generic
             }
@@ -2319,7 +2529,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         guard let callInfo = self.internalState.callInfo else {
             return
         }
-        self.stateValue.title = title
+        self.stateValue.title = title.isEmpty ? nil : title
         let _ = editGroupCallTitle(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, title: title).start()
     }
     

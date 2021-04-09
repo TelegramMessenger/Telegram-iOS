@@ -55,7 +55,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
     var section: ItemListSectionId {
         switch self {
             case .header:
-                return BotCheckoutSection.header.rawValue
+                return BotCheckoutSection.prices.rawValue
             case .price, .tip:
                 return BotCheckoutSection.prices.rawValue
             default:
@@ -286,7 +286,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
         
         var index = 0
         for price in paymentForm.invoice.prices {
-            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, false))
+            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, index == 0))
             totalPrice += price.amount
             index += 1
         }
@@ -447,7 +447,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var currentPaymentMethod: BotCheckoutPaymentMethod?
     private var currentTipAmount: Int64?
     private var formRequestDisposable: Disposable?
-    
+
+    private let actionButtonPanelNode: ASDisplayNode
+    private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     private let inProgressDimNode: ASDisplayNode
     
@@ -481,13 +483,20 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
         |> map { presentationData, state, paymentFormAndInfo, botPeer -> (ItemListPresentationData, (ItemListNodeState, Any)) in
-            let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botCheckoutControllerEntries(presentationData: presentationData, state: state, invoice: invoice, paymentForm: paymentFormAndInfo?.0, formInfo: paymentFormAndInfo?.1, validatedFormInfo: paymentFormAndInfo?.2, currentShippingOptionId: paymentFormAndInfo?.3, currentPaymentMethod: paymentFormAndInfo?.4, currentTip: paymentFormAndInfo?.5, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
+            let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botCheckoutControllerEntries(presentationData: presentationData, state: state, invoice: invoice, paymentForm: paymentFormAndInfo?.0, formInfo: paymentFormAndInfo?.1, validatedFormInfo: paymentFormAndInfo?.2, currentShippingOptionId: paymentFormAndInfo?.3, currentPaymentMethod: paymentFormAndInfo?.4, currentTip: paymentFormAndInfo?.5, botPeer: botPeer), style: .blocks, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
 
             return (ItemListPresentationData(presentationData), (nodeState, arguments))
         }
+
+        self.actionButtonPanelNode = ASDisplayNode()
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+
+        self.actionButtonPanelSeparator = ASDisplayNode()
+        self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
-        self.actionButton.setState(.loading)
+        self.actionButton.setState(.active(""))
+        self.actionButtonPanelNode.isHidden = true
         
         self.inProgressDimNode = ASDisplayNode()
         self.inProgressDimNode.alpha = 0.0
@@ -522,6 +531,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                 strongSelf.currentPaymentMethod = method
                 strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
+                strongSelf.updateActionButton()
             }
         }
         
@@ -551,7 +561,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     
                     var dismissImpl: (() -> Void)?
                     let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
-                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, additionalFields: additionalFields, publishableKey: publishableKey, completion: { method in
+                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .stripe(additionalFields: additionalFields, publishableKey: publishableKey), completion: { method in
                         guard let strongSelf = self else {
                             return
                         }
@@ -574,6 +584,74 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                             updatedToken.saveOnServer = false
                                             applyPaymentMethod(.webToken(updatedToken))
                                             
+                                            let controller = SetupTwoStepVerificationController(context: strongSelf.context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
+                                                if shouldDismiss {
+                                                    controller.dismiss()
+                                                }
+                                                switch update {
+                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                        break
+                                                    case .passwordSet:
+                                                        var updatedToken = webToken
+                                                        updatedToken.saveOnServer = true
+                                                        applyPaymentMethod(.webToken(updatedToken))
+                                                }
+                                            })
+                                            strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        } else {
+                                            var updatedToken = webToken
+                                            updatedToken.saveOnServer = true
+                                            applyPaymentMethod(.webToken(updatedToken))
+                                        }
+                                    })]), nil)
+                                default:
+                                    applyPaymentMethod(method)
+                            }
+                        } else {
+                            applyPaymentMethod(method)
+                        }
+                        dismissImpl?()
+                    })
+                    dismissImpl = { [weak controller] in
+                        controller?.dismiss()
+                    }
+                    strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                } else if let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "smartglocal" {
+                    guard let paramsData = nativeProvider.params.data(using: .utf8) else {
+                        return
+                    }
+                    guard let nativeParams = (try? JSONSerialization.jsonObject(with: paramsData)) as? [String: Any] else {
+                        return
+                    }
+                    guard let publicToken = nativeParams["public_token"] as? String else {
+                        return
+                    }
+
+                    var dismissImpl: (() -> Void)?
+                    let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
+                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .smartglobal(isTesting: paymentForm.invoice.isTest, publicToken: publicToken), completion: { method in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if canSave && paymentForm.passwordMissing {
+                            switch method {
+                                case let .webToken(webToken) where webToken.saveOnServer:
+                                    var text = strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp
+                                    text = text.replacingOccurrences(of: "[", with: "")
+                                    text = text.replacingOccurrences(of: "]", with: "")
+                                    present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
+                                        var updatedToken = webToken
+                                        updatedToken.saveOnServer = false
+                                        applyPaymentMethod(.webToken(updatedToken))
+                                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        if paymentForm.passwordMissing {
+                                            var updatedToken = webToken
+                                            updatedToken.saveOnServer = false
+                                            applyPaymentMethod(.webToken(updatedToken))
+
                                             let controller = SetupTwoStepVerificationController(context: strongSelf.context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
                                                 if shouldDismiss {
                                                     controller.dismiss()
@@ -753,10 +831,13 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }, error: { _ in
             
         })
+
+        self.addSubnode(self.actionButtonPanelNode)
+        self.actionButtonPanelNode.addSubnode(self.actionButtonPanelSeparator)
+        self.actionButtonPanelNode.addSubnode(self.actionButton)
         
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
         self.actionButton.isEnabled = false
-        self.addSubnode(self.actionButton)
         
         self.listNode.supernode?.insertSubnode(self.inProgressDimNode, aboveSubnode: self.listNode)
     }
@@ -775,21 +856,36 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         } else {
             payString = self.presentationData.strings.CheckoutInfo_Pay
         }
-        if self.actionButton.isEnabled {
-            self.actionButton.setState(.active(payString))
+        if let currentPaymentMethod = self.currentPaymentMethod {
+            switch currentPaymentMethod {
+            case .applePay:
+                self.actionButton.setState(.applePay)
+            default:
+                self.actionButton.setState(.active(payString))
+            }
         } else {
-            self.actionButton.setState(.loading)
+            self.actionButton.setState(.active(payString))
         }
+        self.actionButtonPanelNode.isHidden = false
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var updatedInsets = layout.intrinsicInsets
-        updatedInsets.bottom += BotCheckoutActionButton.diameter + 20.0
-        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
-        
-        let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
+
+        let bottomPanelHorizontalInset: CGFloat = 16.0
+        let bottomPanelVerticalInset: CGFloat = 16.0
+        let bottomPanelHeight = updatedInsets.bottom + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
+
+        transition.updateFrame(node: self.actionButtonPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight)))
+        transition.updateFrame(node: self.actionButtonPanelSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+
+        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
+
+        updatedInsets.bottom = bottomPanelHeight
+
+        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
         
         transition.updateFrame(node: self.inProgressDimNode, frame: self.listNode.frame)
     }

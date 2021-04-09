@@ -43,7 +43,7 @@ enum BotCheckoutActionButtonState: Equatable {
 private let titleFont = Font.semibold(17.0)
 
 final class BotCheckoutActionButton: HighlightableButtonNode {
-    static var diameter: CGFloat = 48.0
+    static var height: CGFloat = 52.0
     
     private var inactiveFillColor: UIColor
     private var activeFillColor: UIColor
@@ -62,12 +62,14 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
         self.inactiveFillColor = inactiveFillColor
         self.activeFillColor = activeFillColor
         self.foregroundColor = foregroundColor
+
+        let diameter: CGFloat = 20.0
         
         self.progressBackgroundNode = ASImageNode()
         self.progressBackgroundNode.displaysAsynchronously = false
         self.progressBackgroundNode.displayWithoutProcessing = true
         self.progressBackgroundNode.isLayerBacked = true
-        self.progressBackgroundNode.image = generateImage(CGSize(width: BotCheckoutActionButton.diameter, height: BotCheckoutActionButton.diameter), rotatedContext: { size, context in
+        self.progressBackgroundNode.image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             let strokeWidth: CGFloat = 2.0
             context.setFillColor(activeFillColor.cgColor)
@@ -75,7 +77,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
             
             context.setFillColor(inactiveFillColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(x: strokeWidth, y: strokeWidth), size: CGSize(width: size.width - strokeWidth * 2.0, height: size.height - strokeWidth * 2.0)))
-            let cutout: CGFloat = 10.0
+            let cutout: CGFloat = diameter
             context.fill(CGRect(origin: CGPoint(x: floor((size.width - cutout) / 2.0), y: 0.0), size: CGSize(width: cutout, height: cutout)))
         })
         
@@ -83,14 +85,14 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
         self.inactiveBackgroundNode.displaysAsynchronously = false
         self.inactiveBackgroundNode.displayWithoutProcessing = true
         self.inactiveBackgroundNode.isLayerBacked = true
-        self.inactiveBackgroundNode.image = generateStretchableFilledCircleImage(diameter: BotCheckoutActionButton.diameter, color: self.foregroundColor, strokeColor: activeFillColor, strokeWidth: 2.0)
+        self.inactiveBackgroundNode.image = generateStretchableFilledCircleImage(diameter: diameter, color: self.foregroundColor, strokeColor: activeFillColor, strokeWidth: 2.0)
         self.inactiveBackgroundNode.alpha = 0.0
         
         self.activeBackgroundNode = ASImageNode()
         self.activeBackgroundNode.displaysAsynchronously = false
         self.activeBackgroundNode.displayWithoutProcessing = true
         self.activeBackgroundNode.isLayerBacked = true
-        self.activeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: BotCheckoutActionButton.diameter, color: activeFillColor)
+        self.activeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: diameter, color: activeFillColor)
         
         self.labelNode = TextNode()
         self.labelNode.displaysAsynchronously = false
@@ -178,10 +180,21 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                             self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                         }
                     case .applePay:
-                        if case .applePay = previousState {
-                            
-                        } else {
-                            
+                        if self.applePayButton == nil {
+                            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                                let applePayButton: PKPaymentButton
+                                if #available(iOS 14.0, *) {
+                                    applePayButton = PKPaymentButton(paymentButtonType: .buy, paymentButtonStyle: .black)
+                                } else {
+                                    applePayButton = PKPaymentButton(paymentButtonType: .buy, paymentButtonStyle: .black)
+                                }
+                                applePayButton.addTarget(self, action: #selector(self.applePayButtonPressed), for: .touchUpInside)
+                                self.view.addSubview(applePayButton)
+                                self.applePayButton = applePayButton
+                            }
+                        }
+                        if let applePayButton = self.applePayButton {
+                            applePayButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: validLayout.width, height: BotCheckoutActionButton.height))
                         }
                 }
             } else {
@@ -226,15 +239,19 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
             }
         }
     }
+
+    @objc private func applePayButtonPressed() {
+        self.sendActions(forControlEvents: .touchUpInside, with: nil)
+    }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
-        transition.updateFrame(node: self.progressBackgroundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - BotCheckoutActionButton.diameter) / 2.0), y: 0.0), size: CGSize(width: BotCheckoutActionButton.diameter, height: BotCheckoutActionButton.diameter)))
-        transition.updateFrame(node: self.inactiveBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.diameter)))
-        transition.updateFrame(node: self.activeBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.diameter)))
+        transition.updateFrame(node: self.progressBackgroundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - BotCheckoutActionButton.height) / 2.0), y: 0.0), size: CGSize(width: BotCheckoutActionButton.height, height: BotCheckoutActionButton.height)))
+        transition.updateFrame(node: self.inactiveBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.height)))
+        transition.updateFrame(node: self.activeBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.height)))
         if let applePayButton = self.applePayButton {
-            applePayButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.diameter))
+            applePayButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: BotCheckoutActionButton.height))
         }
         
         var labelSize = self.labelNode.bounds.size

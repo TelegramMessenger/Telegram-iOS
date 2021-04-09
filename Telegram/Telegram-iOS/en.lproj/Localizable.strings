@@ -6340,10 +6340,14 @@ Sorry for the inconvenience.";
 "VoiceChat.PinVideo" = "Pin Video";
 "VoiceChat.UnpinVideo" = "Unpin Video";
 
-"Notification.VoiceChatScheduled" = "Voice chat scheduled for %@";
+"Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
+"Notification.VoiceChatScheduled" = "%1$@ Voice chat scheduled for %2$@";
 
 "VoiceChat.StartsIn" = "Starts in";
 "VoiceChat.LateBy" = "Late by";
+
+"VoiceChat.StatusStartsIn" = "starts in %@";
+"VoiceChat.StatusLateBy" = "late by %@";
 
 "VoiceChat.StartNow" = "Start Now";
 "VoiceChat.SetReminder" = "Set Reminder";

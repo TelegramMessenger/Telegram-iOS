@@ -122,7 +122,7 @@ private final class TipValueNode: ASDisplayNode {
 
     func update(theme: PresentationTheme, text: String, isHighlighted: Bool, height: CGFloat) -> (CGFloat, (CGFloat) -> Void) {
         var updateBackground = false
-        let backgroundColor = isHighlighted ? UIColor(rgb: 0x00A650) : UIColor(rgb: 0xE5F6ED)
+        let backgroundColor = isHighlighted ? theme.list.paymentOption.activeFillColor : theme.list.paymentOption.inactiveFillColor
         if let currentBackgroundColor = self.currentBackgroundColor {
             if !currentBackgroundColor.isEqual(backgroundColor) {
                 updateBackground = true
@@ -135,7 +135,7 @@ private final class TipValueNode: ASDisplayNode {
             self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: backgroundColor)
         }
 
-        self.titleNode.attributedText = NSAttributedString(string: text, font: Font.semibold(15.0), textColor: isHighlighted ? UIColor(rgb: 0xffffff) : UIColor(rgb: 0x00A650))
+        self.titleNode.attributedText = NSAttributedString(string: text, font: Font.semibold(15.0), textColor: isHighlighted ? theme.list.paymentOption.activeForegroundColor : theme.list.paymentOption.inactiveForegroundColor)
         let titleSize = self.titleNode.updateLayout(CGSize(width: 200.0, height: height))
 
         let minWidth: CGFloat = 80.0
@@ -154,20 +154,23 @@ private final class TipValueNode: ASDisplayNode {
 }
 
 class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
+    private let backgroundNode: ASDisplayNode
     let titleNode: TextNode
     let labelNode: TextNode
     let tipMeasurementNode: ImmediateTextNode
     let tipCurrencyNode: ImmediateTextNode
     private let textNode: TextFieldNode
 
-    private var formatterDelegate: CurrencyUITextFieldDelegate?
-
     private let scrollNode: ASScrollNode
     private var valueNodes: [TipValueNode] = []
     
     private var item: BotCheckoutTipItem?
+
+    private var formatterDelegate: CurrencyUITextFieldDelegate?
     
     init() {
+        self.backgroundNode = ASDisplayNode()
+
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
 
@@ -191,6 +194,8 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
         }
         
         super.init(layerBacked: false, dynamicBounce: false)
+
+        self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
@@ -272,7 +277,11 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
                     var textInputFrame = CGRect(origin: CGPoint(x: params.width - leftInset - 150.0, y: -2.0), size: CGSize(width: 150.0, height: labelsContentHeight))
 
-                    var currencyText: (String, String) = formatCurrencyAmountCustom(item.numericValue, currency: item.currency)
+                    let currencyText: (String, String, Bool) = formatCurrencyAmountCustom(item.numericValue, currency: item.currency)
+
+                    let currencySymbolOnTheLeft = currencyText.2
+                    //let currencySymbolOnTheLeft = true
+
                     if strongSelf.textNode.textField.text ?? "" != currencyText.0 {
                         strongSelf.textNode.textField.text = currencyText.0
                         strongSelf.labelNode.isHidden = !currencyText.0.isEmpty
@@ -281,10 +290,16 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     strongSelf.tipMeasurementNode.attributedText = NSAttributedString(string: currencyText.0, font: titleFont, textColor: textColor)
                     let inputTextSize = strongSelf.tipMeasurementNode.updateLayout(textInputFrame.size)
 
-                    strongSelf.tipCurrencyNode.attributedText = NSAttributedString(string: " \(currencyText.1)", font: titleFont, textColor: textColor)
+                    let spaceRect = NSAttributedString(string: " ", font: titleFont, textColor: textColor).boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+
+                    strongSelf.tipCurrencyNode.attributedText = NSAttributedString(string: "\(currencyText.1)", font: titleFont, textColor: textColor)
                     let currencySize = strongSelf.tipCurrencyNode.updateLayout(CGSize(width: 100.0, height: .greatestFiniteMagnitude))
-                    strongSelf.tipCurrencyNode.frame = CGRect(origin: CGPoint(x: textInputFrame.maxX - currencySize.width, y: floor((labelsContentHeight - currencySize.height) / 2.0) - 1.0), size: currencySize)
-                    textInputFrame.origin.x -= currencySize.width
+                    if currencySymbolOnTheLeft {
+                        strongSelf.tipCurrencyNode.frame = CGRect(origin: CGPoint(x: textInputFrame.maxX - currencySize.width - inputTextSize.width - spaceRect.width, y: floor((labelsContentHeight - currencySize.height) / 2.0) - 1.0), size: currencySize)
+                    } else {
+                        strongSelf.tipCurrencyNode.frame = CGRect(origin: CGPoint(x: textInputFrame.maxX - currencySize.width, y: floor((labelsContentHeight - currencySize.height) / 2.0) - 1.0), size: currencySize)
+                        textInputFrame.origin.x -= currencySize.width + spaceRect.width
+                    }
 
                     strongSelf.textNode.frame = textInputFrame
 
@@ -347,6 +362,9 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: valueY), size: CGSize(width: params.width, height: max(0.0, contentSize.height - valueY)))
                     strongSelf.scrollNode.view.contentSize = CGSize(width: variantsOffset, height: strongSelf.scrollNode.frame.height)
+
+                    strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
                 }
             })
         }
@@ -382,7 +400,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
             if value > item.maxValue {
                 value = item.maxValue
 
-                let currencyText: (String, String) = formatCurrencyAmountCustom(value, currency: item.currency)
+                let currencyText = formatCurrencyAmountCustom(value, currency: item.currency)
                 if self.textNode.textField.text ?? "" != currencyText.0 {
                     self.textNode.textField.text = currencyText.0
                 }
@@ -400,6 +418,11 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     }
 
     @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
+        textField.selectedTextRange = textField.textRange(from: textField.endOfDocument, to: textField.endOfDocument)
+    }
+
+    @objc public func textFieldDidChangeSelection(_ textField: UITextField) {
+        textField.selectedTextRange = textField.textRange(from: textField.endOfDocument, to: textField.endOfDocument)
     }
 
     @objc public func textFieldDidEndEditing(_ textField: UITextField) {

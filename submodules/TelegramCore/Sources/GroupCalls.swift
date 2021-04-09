@@ -184,6 +184,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
 public enum CreateGroupCallError {
     case generic
     case anonymousNotAllowed
+    case scheduledTooLate
 }
 
 public func createGroupCall(account: Account, peerId: PeerId, title: String?, scheduleDate: Int32?) -> Signal<GroupCallInfo, CreateGroupCallError> {
@@ -208,6 +209,8 @@ public func createGroupCall(account: Account, peerId: PeerId, title: String?, sc
         |> mapError { error -> CreateGroupCallError in
             if error.errorDescription == "ANONYMOUS_CALLS_DISABLED" {
                 return .anonymousNotAllowed
+            } else if error.errorDescription == "SCHEDULE_DATE_TOO_LATE" {
+                return .scheduledTooLate
             }
             return .generic
         }
@@ -1005,6 +1008,11 @@ public final class GroupCallParticipantsContext {
         public struct DefaultParticipantsAreMuted: Equatable {
             public var isMuted: Bool
             public var canChange: Bool
+            
+            public init(isMuted: Bool, canChange: Bool) {
+                self.isMuted = isMuted
+                self.canChange = canChange
+            }
         }
         
         public var participants: [Participant]
@@ -1036,6 +1044,34 @@ public final class GroupCallParticipantsContext {
             }
             
             self.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: self.sortAscending) })
+        }
+        
+        public init(
+            participants: [Participant],
+            nextParticipantsFetchOffset: String?,
+            adminIds: Set<PeerId>,
+            isCreator: Bool,
+            defaultParticipantsAreMuted: DefaultParticipantsAreMuted,
+            sortAscending: Bool,
+            recordingStartTimestamp: Int32?,
+            title: String?,
+            scheduleTimestamp: Int32?,
+            subscribedToScheduled: Bool,
+            totalCount: Int,
+            version: Int32
+        ) {
+            self.participants = participants
+            self.nextParticipantsFetchOffset = nextParticipantsFetchOffset
+            self.adminIds = adminIds
+            self.isCreator = isCreator
+            self.defaultParticipantsAreMuted = defaultParticipantsAreMuted
+            self.sortAscending = sortAscending
+            self.recordingStartTimestamp = recordingStartTimestamp
+            self.title = title
+            self.scheduleTimestamp = scheduleTimestamp
+            self.subscribedToScheduled = subscribedToScheduled
+            self.totalCount = totalCount
+            self.version = version
         }
     }
     

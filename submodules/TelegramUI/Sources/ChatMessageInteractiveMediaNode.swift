@@ -926,7 +926,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                                 
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
-                                videoNode.frame = imageFrame
+                                videoNode.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
                                 
                                 if strongSelf.visibility {
                                     if !videoNode.canAttachContent {

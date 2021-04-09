@@ -815,14 +815,14 @@ final class SharedApplicationContext {
                 }
             })
 
-            self.mainWindow.debugAction = {
+            /*self.mainWindow.debugAction = {
                 self.mainWindow.debugAction = nil
                 
                 let presentationData = sharedContext.currentPresentationData.with { $0 }
                 let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
                 navigationController.viewControllers = [debugController(sharedContext: sharedContext, context: nil)]
                 self.mainWindow.present(navigationController, on: .root)
-            }
+            }*/
             
             presentationDataPromise.set(sharedContext.presentationData)
             
