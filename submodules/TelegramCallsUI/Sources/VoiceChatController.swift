@@ -2895,7 +2895,7 @@ public final class VoiceChatController: ViewController {
             self.floatingHeaderOffset = offset
              
             if bottomEdge.isZero {
-                bottomEdge = self.listNode.frame.minY + 46.0 + 56.0
+                bottomEdge = self.listNode.frame.minY + 46.0 + 56.0 + 46
             }
             
             let rawPanelOffset = offset + listTopInset - topPanelHeight
@@ -3497,9 +3497,9 @@ public final class VoiceChatController: ViewController {
             
             if let callState = self.callState {
                 if callState.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
-                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
-                        self.audioButton.isHidden = true
-                    }
+//                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
+//                        self.audioButton.isHidden = true
+//                    }
                     self.timerNode.isHidden = false
                     self.listNode.alpha = 0.0
                     self.listNode.isUserInteractionEnabled = false
@@ -3609,7 +3609,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             if canInvite && self.peer != nil {
-                entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
+                entries.append(.invite(self.presentationData.theme, self.presentationData.strings, inviteIsLink ? self.presentationData.strings.VoiceChat_Share : self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
             }
             
             for member in callMembers.0 {

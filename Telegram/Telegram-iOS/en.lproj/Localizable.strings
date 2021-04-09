@@ -6321,6 +6321,13 @@ Sorry for the inconvenience.";
 "VoiceChat.EditBioSave" = "Save";
 "VoiceChat.EditBioSuccess" = "Your bio is changed.";
 
+"VoiceChat.EditDescription" = "Edit Description";
+"VoiceChat.EditDescriptionTitle" = "Description";
+"VoiceChat.EditDescriptionText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditDescriptionPlaceholder" = "Description";
+"VoiceChat.EditDescriptionSave" = "Save";
+"VoiceChat.EditDescriptionSuccess" = "Description is changed.";
+
 "VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
 "VoiceChat.SendPublicLinkSend" = "Send";
 

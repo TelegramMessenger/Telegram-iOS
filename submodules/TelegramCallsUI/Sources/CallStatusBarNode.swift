@@ -17,11 +17,14 @@ private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x3252ef)
 private let pink = UIColor(rgb: 0xef436c)
+private let latePurple = UIColor(rgb: 0xaa56a6)
+private let latePink = UIColor(rgb: 0xef476f)
 
 private class CallStatusBarBackgroundNode: ASDisplayNode {
     enum State {
         case connecting
         case cantSpeak
+        case late
         case active
         case speaking
     }
@@ -64,6 +67,8 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
                 targetColors = [green.cgColor, activeBlue.cgColor]
             case .cantSpeak:
                 targetColors = [purple.cgColor, pink.cgColor]
+            case .late:
+                targetColors = [latePurple.cgColor, latePink.cgColor]
         }
 
         if CACurrentMediaTime() - self.initialTimestamp > 0.1 {
@@ -200,6 +205,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
     private var currentCantSpeak = false
+    private var currentScheduleTimestamp: Int32?
     private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
     
@@ -314,6 +320,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             }
                             strongSelf.currentIsMuted = isMuted
                             strongSelf.currentCantSpeak = cantSpeak
+                            strongSelf.currentScheduleTimestamp = state?.callState.scheduleTimestamp
                             
                             let currentIsConnected: Bool
                             if let state = state, case .connected = state.callState.networkState {
@@ -351,6 +358,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
         var displaySpeakerSubtitle = false
+        var isLate = false
         
         if let presentationData = self.presentationData {
             if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
@@ -389,8 +397,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 let elapsedTime = scheduleTime - currentTime
                 let timerText: String
                 if elapsedTime >= 86400 {
-                    timerText = scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).0
                 } else if elapsedTime < 0 {
+                    isLate = true
                     timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
                 } else {
                     timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).0
@@ -501,7 +510,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let state: CallStatusBarBackgroundNode.State
         if self.currentIsConnected {
             if self.currentCantSpeak {
-                state = .cantSpeak
+                state = isLate ? .late : .cantSpeak
             } else if self.currentIsMuted {
                 state = .active
             } else {

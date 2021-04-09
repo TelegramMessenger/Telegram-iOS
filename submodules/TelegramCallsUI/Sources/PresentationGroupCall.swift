@@ -1105,7 +1105,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 nextParticipantsFetchOffset: nil,
                 adminIds: Set(),
                 isCreator: false,
-                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: self.stateValue.defaultParticipantMuteState == .muted, canChange: false),
+                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: self.stateValue.defaultParticipantMuteState == .muted, canChange: true),
                 sortAscending: true,
                 recordingStartTimestamp: nil,
                 title: self.stateValue.title,

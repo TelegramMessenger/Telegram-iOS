@@ -281,13 +281,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
-        
-        self.theme = presentationData.theme
-        
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
-                
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isScheduled ? .white : presentationData.theme.chat.inputPanel.actionControlForegroundColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
@@ -305,23 +301,21 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             let pink = UIColor(rgb: 0xea436f)
             let latePurple = UIColor(rgb: 0xaa56a6)
             let latePink = UIColor(rgb: 0xef476f)
-            
             let colors: [UIColor]
             if self.isLate {
                 colors = [latePurple, latePink]
             } else {
                 colors = [purple, pink]
             }
-            
             if self.joinButtonBackgroundNode.image != nil, let snapshotView = self.joinButtonBackgroundNode.view.snapshotContentTree() {
                 self.joinButtonBackgroundNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.joinButtonBackgroundNode.view)
                 
-                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 1.0, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                     snapshotView?.removeFromSuperview()
                 })
             }
             
-            self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: [purple, pink], locations: [0.0, 1.0], direction: .horizontal)
+            self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: colors, locations: [0.0, 1.0], direction: .horizontal)
             self.joinButtonBackgroundNode.backgroundColor = nil
         } else {
             self.joinButtonBackgroundNode.image = nil
@@ -533,10 +527,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             isScheduled = true
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
             } else {
                 title = self.strings.Conversation_ScheduledVoiceChat
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
             }
             
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -575,7 +569,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.updateJoinButton()
         }
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText.uppercased(), font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.chat.inputPanel.actionControlForegroundColor)
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText.uppercased(), font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: isScheduled ? .white : self.theme.chat.inputPanel.actionControlForegroundColor)
         
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
         let joinButtonSize = CGSize(width: joinButtonTitleSize.width + 20.0, height: 28.0)
