@@ -1050,6 +1050,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             
                             strongSelf.updateStatus(animated: synchronousLoads)
+
+                            strongSelf.pinchContainerNode.isPinchGestureEnabled = !isSecretMedia
                         }
                     })
                 })

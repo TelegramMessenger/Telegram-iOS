@@ -195,6 +195,7 @@ final class InstantPageContentNode : ASDisplayNode {
                             self?.longPressMedia(media)
                         },
                         activatePinchPreview: nil,
+                        pinchPreviewFinished: nil,
                         openPeer: { [weak self] peerId in
                             self?.openPeer(peerId)
                         }, openUrl: { [weak self] url in

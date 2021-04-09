@@ -564,13 +564,26 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             return
                         }
                         let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-                            guard let strongSelf = self, let controller = strongSelf.controller else {
+                            guard let strongSelf = self else {
                                 return CGRect()
                             }
 
-                            return controller.view.convert(controller.view.bounds, to: nil)
+                            let localRect = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.navigationBar.frame.maxY), size: CGSize(width: strongSelf.bounds.width, height: strongSelf.bounds.height - strongSelf.navigationBar.frame.maxY))
+                            return strongSelf.view.convert(localRect, to: nil)
                         })
                         controller.window?.presentInGlobalOverlay(pinchController)
+                    }, pinchPreviewFinished: { [weak self] itemNode in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        for (_, listItemNode) in strongSelf.visibleItemsWithNodes {
+                            if let listItemNode = listItemNode as? InstantPagePeerReferenceNode {
+                                if listItemNode.frame.intersects(itemNode.frame) && listItemNode.frame.maxY <= itemNode.frame.maxY + 2.0 {
+                                    listItemNode.layer.animateAlpha(from: 0.0, to: listItemNode.alpha, duration: 0.25)
+                                    break
+                                }
+                            }
+                        }
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
