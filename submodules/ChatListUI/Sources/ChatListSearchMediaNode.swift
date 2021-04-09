@@ -320,21 +320,6 @@ private final class VisualMediaItemNode: ASDisplayNode {
     
     func updateIsVisible(_ isVisible: Bool) {
         self.hasVisibility = isVisible
-//        if let _ = self.videoLayerFrameManager {
-//            let displayLink: ConstantDisplayLinkAnimator
-//            if let current = self.displayLink {
-//                displayLink = current
-//            } else {
-//                displayLink = ConstantDisplayLinkAnimator { [weak self] in
-//                    guard let strongSelf = self else {
-//                        return
-//                    }
-//                    strongSelf.displayLinkTimestamp += 1.0 / 30.0
-//                }
-//                displayLink.frameInterval = 2
-//                self.displayLink = displayLink
-//            }
-//        }
         self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
     
@@ -422,8 +407,8 @@ private final class VisualMediaItem {
     let dimensions: CGSize
     let aspectRatio: CGFloat
     
-    init(message: Message) {
-        self.index = nil
+    init(message: Message, index: UInt32?) {
+        self.index = index
         self.message = message
         
         var aspectRatio: CGFloat = 1.0
@@ -441,10 +426,10 @@ private final class VisualMediaItem {
     }
     
     var stableId: UInt32 {
-        if let message = self.message {
-            return message.stableId
-        } else if let index = self.index {
+        if let index = self.index {
             return index
+        } else if let message = self.message {
+            return message.stableId
         } else {
             return 0
         }
@@ -708,7 +693,6 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.animationTimer?.invalidate()
     }
     
-    
     func updateHistory(entries: [ChatListSearchEntry]?, totalCount: Int32, updateType: ViewUpdateType) {
         switch updateType {
         case .FillHole:
@@ -716,11 +700,13 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         default:
             self.mediaItems.removeAll()
             
+            var index: UInt32 = 0
             if let entries = entries {   
                 for entry in entries {
                     if case let .message(message, _, _, _, _, _, _) = entry {
-                        self.mediaItems.append(VisualMediaItem(message: message))
+                        self.mediaItems.append(VisualMediaItem(message: message, index: nil))
                     }
+                    index += 1
                 }
             }
             self.itemsLayout = nil
