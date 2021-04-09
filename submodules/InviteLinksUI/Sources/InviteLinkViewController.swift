@@ -839,7 +839,7 @@ public final class InviteLinkViewController: ViewController {
                 } else {
                     let elapsedTime = expireDate - currentTime
                     if elapsedTime >= 86400 {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(timeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
                     } else {
                         subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
                         if self.countdownTimer == nil {

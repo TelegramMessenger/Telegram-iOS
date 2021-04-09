@@ -450,7 +450,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if let scheduleDate = scheduleDate {
                     let timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate)
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
-                        let titleString = strings.Notification_VoiceChatScheduledChannel(timeString).0
+                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0).0 }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0).0 }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0).0 }, yesterdayFormatString: { $0 }))
                         attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]

@@ -9,6 +9,9 @@ import TelegramStringFormatting
 private let purple = UIColor(rgb: 0x3252ef)
 private let pink = UIColor(rgb: 0xef436c)
 
+private let latePurple = UIColor(rgb: 0x974aa9)
+private let latePink = UIColor(rgb: 0xf0436c)
+
 final class VoiceChatTimerNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let dateTimeFormat: PresentationDateTimeFormat
@@ -28,6 +31,8 @@ final class VoiceChatTimerNode: ASDisplayNode {
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = false
+    
+    private var isLate = false
     
     init(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
         self.strings = strings
@@ -132,9 +137,13 @@ final class VoiceChatTimerNode: ASDisplayNode {
         let elapsedTime = scheduleTime - currentTime
         let timerText: String
         if elapsedTime >= 86400 {
-            timerText = timeIntervalString(strings: self.strings, value: elapsedTime).uppercased()
+            timerText = scheduledTimeIntervalString(strings: self.strings, value: elapsedTime).uppercased()
         } else {
             timerText = textForTimeout(value: abs(elapsedTime))
+            if elapsedTime < 0 && !self.isLate {
+                self.isLate = true
+                self.foregroundGradientLayer.colors = [latePink.cgColor, latePurple.cgColor, latePurple.cgColor]
+            }
         }
         
         if self.updateTimer == nil {

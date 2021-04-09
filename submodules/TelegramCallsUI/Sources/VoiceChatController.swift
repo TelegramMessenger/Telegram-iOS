@@ -721,6 +721,9 @@ public final class VoiceChatController: ViewController {
         private let updateAvatarPromise = Promise<(TelegramMediaImageRepresentation, Float)?>(nil)
         private var currentUpdatingAvatar: TelegramMediaImageRepresentation?
         
+        private var ignoreConnecting = false
+        private var ignoreConnectingTimer: SwiftSignalKit.Timer?
+        
         private enum DisplayMode {
             case `default`
             case fullscreen(controlsHidden: Bool)
@@ -1875,6 +1878,7 @@ public final class VoiceChatController: ViewController {
             self.reconnectedAsEventsDisposable.dispose()
             self.voiceSourcesDisposable.dispose()
             self.updateAvatarDisposable.dispose()
+            self.ignoreConnectingTimer?.invalidate()
         }
 
         private func openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -2320,7 +2324,7 @@ public final class VoiceChatController: ViewController {
             if let peer = self.peer as? TelegramChannel, case .broadcast = peer.info {
                 isGroup = false
             }
-            let intervalString = timeIntervalString(strings: self.presentationData.strings, value: max(60, delta))
+            let intervalString = scheduledTimeIntervalString(strings: self.presentationData.strings, value: max(60, delta))
             self.scheduleTextNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.ScheduleVoiceChat_GroupText(intervalString).0 : self.presentationData.strings.ScheduleVoiceChat_ChannelText(intervalString).0, font: Font.regular(14.0), textColor: UIColor(rgb: 0x8e8e93))
             
             if let (layout, navigationHeight) = self.validLayout {
@@ -2781,7 +2785,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             } else {
-                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                let actionSheet = ActionSheetController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme))
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
                     if hasMute, case .builtin = output {
@@ -3147,7 +3151,6 @@ public final class VoiceChatController: ViewController {
             transition.updateAlpha(node: self.leaveButton.textNode, alpha: buttonsTitleAlpha)
         }
         
-        private var ignoreNextConnecting = false
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstTime = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
@@ -3281,7 +3284,7 @@ public final class VoiceChatController: ViewController {
             var actionButtonEnabled = true
             if let callState = self.callState, !self.isScheduling {
                 if callState.scheduleTimestamp != nil {
-                    self.ignoreNextConnecting = true
+                    self.ignoreConnecting = true
                     if callState.canManageCall {
                         actionButtonState = .scheduled(state: .start)
                         actionButtonTitle = self.presentationData.strings.VoiceChat_StartNow
@@ -3297,9 +3300,27 @@ public final class VoiceChatController: ViewController {
                         actionButtonSubtitle = ""
                     }
                 } else {
-                    let connected = self.ignoreNextConnecting || callState.networkState == .connected
+                    let connected = self.ignoreConnecting || callState.networkState == .connected
                     if case .connected = callState.networkState {
-                        self.ignoreNextConnecting = false
+                        self.ignoreConnecting = false
+                        self.ignoreConnectingTimer?.invalidate()
+                        self.ignoreConnectingTimer = nil
+                    } else if self.ignoreConnecting {
+                        if self.ignoreConnectingTimer == nil {
+                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.ignoreConnecting = false
+                                    strongSelf.ignoreConnectingTimer?.invalidate()
+                                    strongSelf.ignoreConnectingTimer = nil
+                                    
+                                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                                    }
+                                }
+                            }, queue: Queue.mainQueue())
+                            self.ignoreConnectingTimer = timer
+                            timer.start()
+                        }
                     }
 
                     if connected {
@@ -3419,7 +3440,7 @@ public final class VoiceChatController: ViewController {
                     //self.bottomPanelNode.addSubnode(self.cameraButtonNode)
                     self.bottomPanelNode.addSubnode(self.leaveButton)
                     self.bottomPanelNode.addSubnode(self.actionButton)
-                    self.containerLayoutUpdated(layout, navigationHeight :navigationHeight, transition: .immediate)
+                    self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                     self.actionButton.ignoreHierarchyChanges = false
                 }
                 
@@ -3587,7 +3608,7 @@ public final class VoiceChatController: ViewController {
                     inviteIsLink = true
                 }
             }
-            if canInvite {
+            if canInvite && self.peer != nil {
                 entries.append(.invite(self.presentationData.theme, self.presentationData.strings, self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
             }
             
@@ -4064,20 +4085,10 @@ public final class VoiceChatController: ViewController {
                         strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                         })
-                        |> deliverOnMainQueue).start(next: { result in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            switch result {
-                            case .complete:
-                                break
-                            case .progress:
-                                break
-                            }
-                        }))
+                        |> deliverOnMainQueue).start())
                     }
                     
-                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    let actionSheet = ActionSheetController(presentationData: presentationData.withUpdated(theme: strongSelf.darkTheme))
                     let items: [ActionSheetItem] = [
                         ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()

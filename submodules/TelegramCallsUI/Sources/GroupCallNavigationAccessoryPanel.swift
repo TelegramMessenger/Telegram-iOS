@@ -121,6 +121,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let muteIconNode: ASImageNode
     
     private var isScheduled = false
+    private var isLate = false
     private var currentText: String = ""
     private var updateTimer: SwiftSignalKit.Timer?
     
@@ -302,6 +303,24 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         if self.isScheduled {
             let purple = UIColor(rgb: 0x5d4ed1)
             let pink = UIColor(rgb: 0xea436f)
+            let latePurple = UIColor(rgb: 0xaa56a6)
+            let latePink = UIColor(rgb: 0xef476f)
+            
+            let colors: [UIColor]
+            if self.isLate {
+                colors = [latePurple, latePink]
+            } else {
+                colors = [purple, pink]
+            }
+            
+            if self.joinButtonBackgroundNode.image != nil, let snapshotView = self.joinButtonBackgroundNode.view.snapshotContentTree() {
+                self.joinButtonBackgroundNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.joinButtonBackgroundNode.view)
+                
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+            
             self.joinButtonBackgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 1.0), colors: [purple, pink], locations: [0.0, 1.0], direction: .horizontal)
             self.joinButtonBackgroundNode.backgroundColor = nil
         } else {
@@ -509,23 +528,24 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         var title = self.strings.VoiceChat_Title
         var text = self.currentText
         var isScheduled = false
+        var isLate = false
         if let scheduleTime = self.currentData?.info.scheduleTimestamp {
             isScheduled = true
-            let timeString = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime)
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
-                text = self.strings.Conversation_ScheduledVoiceChatStartsOn(timeString).0
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
             } else {
                 title = self.strings.Conversation_ScheduledVoiceChat
-                text = self.strings.Conversation_ScheduledVoiceChatStartsOnShort(timeString).0
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
             }
             
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             let elapsedTime = scheduleTime - currentTime
             if elapsedTime >= 86400 {
-                joinText = timeIntervalString(strings: strings, value: elapsedTime)
+                joinText = scheduledTimeIntervalString(strings: strings, value: elapsedTime)
             } else if elapsedTime < 0 {
                 joinText = "-\(textForTimeout(value: abs(elapsedTime)))"
+                isLate = true
             } else {
                 joinText = textForTimeout(value: elapsedTime)
             }
@@ -549,8 +569,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
         }
         
-        if self.isScheduled != isScheduled {
+        if self.isScheduled != isScheduled || self.isLate != isLate {
             self.isScheduled = isScheduled
+            self.isLate = isLate
             self.updateJoinButton()
         }
         

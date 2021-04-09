@@ -862,11 +862,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
         let myPeerId = self.joinAsPeerId
+        let accountContext = self.accountContext
         let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
             if let peer = transaction.getPeer(myPeerId) {
                 return (peer, transaction.getPeerCachedData(peerId: myPeerId))
             } else {
                 return nil
+            }
+        }
+        |> beforeNext { view in
+            if let view = view, view.1 == nil {
+                let _ = fetchAndUpdateCachedPeerData(accountPeerId: accountContext.account.peerId, peerId: myPeerId, network: accountContext.account.network, postbox: accountContext.account.postbox).start()
             }
         }
         if let sourceContext = sourceContext, let initialState = sourceContext.immediateState {
@@ -913,7 +919,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         } else if let cachedData = cachedData as? CachedUserData {
                             about = cachedData.about
                         } else {
-                            about = nil
+                            about = " "
                         }
                         participants.append(GroupCallParticipantsContext.Participant(
                             peer: myPeer,
@@ -993,7 +999,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     } else if let cachedData = cachedData as? CachedUserData {
                         about = cachedData.about
                     } else {
-                        about = nil
+                        about = " "
                     }
                     participants.append(GroupCallParticipantsContext.Participant(
                         peer: myPeer,
@@ -1121,6 +1127,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return nil
             }
         }
+        |> beforeNext { view in
+            if let view = view, view.1 == nil {
+                let _ = fetchAndUpdateCachedPeerData(accountPeerId: accountContext.account.peerId, peerId: myPeerId, network: accountContext.account.network, postbox: accountContext.account.postbox).start()
+            }
+        }
         self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
             participantsContext.state,
             adminIds,
@@ -1147,7 +1158,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else if let cachedData = cachedData as? CachedUserData {
                     about = cachedData.about
                 } else {
-                    about = nil
+                    about = " "
                 }
                 participants.append(GroupCallParticipantsContext.Participant(
                     peer: myPeer,
@@ -1646,6 +1657,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         return nil
                     }
                 }
+                |> beforeNext { view in
+                    if let view = view, view.1 == nil {
+                        let _ = fetchAndUpdateCachedPeerData(accountPeerId: accountContext.account.peerId, peerId: myPeerId, network: accountContext.account.network, postbox: accountContext.account.postbox).start()
+                    }
+                }
                 
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
@@ -1714,7 +1730,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             } else if let cachedData = cachedData as? CachedChannelData {
                                 about = cachedData.about
                             } else {
-                                about = nil
+                                about = " "
                             }
 
                             participants.append(GroupCallParticipantsContext.Participant(
@@ -1753,7 +1769,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 } else if let cachedData = cachedData as? CachedChannelData {
                                     about = cachedData.about
                                 } else {
-                                    about = nil
+                                    about = " "
                                 }
                                 participant.peer = myPeer
                                 participant.about = about

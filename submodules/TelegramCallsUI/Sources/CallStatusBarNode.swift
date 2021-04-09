@@ -389,7 +389,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 let elapsedTime = scheduleTime - currentTime
                 let timerText: String
                 if elapsedTime >= 86400 {
-                    timerText = timeIntervalString(strings: presentationData.strings, value: elapsedTime)
+                    timerText = scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)
                 } else if elapsedTime < 0 {
                     timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
                 } else {
