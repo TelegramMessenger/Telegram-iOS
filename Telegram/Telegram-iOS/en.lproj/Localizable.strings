@@ -2552,7 +2552,6 @@ Unused sets are archived when you add more.";
 "Message.ForwardedMessageShort" = "Forwarded From\n%@";
 
 "Checkout.LiabilityAlertTitle" = "Warning";
-"Checkout.LiabilityAlert" = "Neither Telegram, nor %1$@ will have access to your credit card information. Credit card details will be handled only by the payment system, %2$@.\n\nPayments will go directly to the developer of %1$@. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of %1$@ or your bank.";
 
 "Settings.AppLanguage" = "Language";
 "Settings.AppLanguage.Unofficial" = "UNOFFICIAL";
@@ -6377,3 +6376,5 @@ Sorry for the inconvenience.";
 "VoiceChat.CancelConfirmationTitle" = "Cancel Voice Chat";
 "VoiceChat.CancelConfirmationText" = "Are you sure you want to cancel this voice chat?";
 "VoiceChat.CancelConfirmationEnd" = "Cancel";
+
+"Checkout.PaymentLiabilityAlert" = "Neither Telegram, nor {target} will have access to your credit card information. Credit card details will be handled only by the payment system, {payment_system}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";

@@ -826,8 +826,15 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }
+        let themeParams: [String: Any] = [
+            "bg_color": Int32(bitPattern: self.presentationData.theme.list.plainBackgroundColor.argb),
+            "text_color": Int32(bitPattern: self.presentationData.theme.list.itemPrimaryTextColor.argb),
+            "link_color": Int32(bitPattern: self.presentationData.theme.list.itemAccentColor.argb),
+            "button_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.fillColor.argb),
+            "button_text_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.foregroundColor.argb)
+        ]
         
-        let formAndMaybeValidatedInfo = fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
+        let formAndMaybeValidatedInfo = fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId, themeParams: themeParams)
             |> mapToSignal { paymentForm -> Signal<(BotPaymentForm, BotPaymentValidatedFormInfo?), BotPaymentFormRequestError> in
                 if let current = paymentForm.savedInfo {
                     return validateBotPaymentForm(account: context.account, saveInfo: true, messageId: messageId, formInfo: current)
@@ -1126,7 +1133,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        let paymentText = strongSelf.presentationData.strings.Checkout_PaymentLiabilityAlert
+                            .replacingOccurrences(of: "{target}", with: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            .replacingOccurrences(of: "{payment_system}", with: providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: paymentText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
