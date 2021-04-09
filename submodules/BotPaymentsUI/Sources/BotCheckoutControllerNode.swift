@@ -18,6 +18,7 @@ import TelegramStringFormatting
 import PasswordSetupUI
 import Stripe
 import LocalAuth
+import OverlayStatusController
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account
@@ -25,13 +26,15 @@ final class BotCheckoutControllerArguments {
     fileprivate let openPaymentMethod: () -> Void
     fileprivate let openShippingMethod: () -> Void
     fileprivate let updateTip: (Int64) -> Void
+    fileprivate let ensureTipInputVisible: () -> Void
     
-    fileprivate init(account: Account, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, updateTip: @escaping (Int64) -> Void) {
+    fileprivate init(account: Account, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, updateTip: @escaping (Int64) -> Void, ensureTipInputVisible: @escaping () -> Void) {
         self.account = account
         self.openInfo = openInfo
         self.openPaymentMethod = openPaymentMethod
         self.openShippingMethod = openShippingMethod
         self.updateTip = updateTip
+        self.ensureTipInputVisible = ensureTipInputVisible
     }
 }
 
@@ -197,6 +200,10 @@ enum BotCheckoutEntry: ItemListNodeEntry {
             case let .tip(_, _, text, currency, value, numericValue, maxValue, variants):
                 return BotCheckoutTipItem(theme: presentationData.theme, strings: presentationData.strings, title: text, currency: currency, value: value, numericValue: numericValue, maxValue: maxValue, availableVariants: variants, sectionId: self.section, updateValue: { value in
                     arguments.updateTip(value)
+                }, updatedFocus: { isFocused in
+                    if isFocused {
+                        arguments.ensureTipInputVisible()
+                    }
                 })
             case let .paymentMethod(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -428,6 +435,7 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
 }
 
 final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
+    private weak var controller: BotCheckoutController?
     private let context: AccountContext
     private let messageId: MessageId
     private let present: (ViewController, Any?) -> Void
@@ -452,13 +460,15 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     private let inProgressDimNode: ASDisplayNode
+    private var statusController: ViewController?
     
     private let payDisposable = MetaDisposable()
     private let paymentAuthDisposable = MetaDisposable()
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
     
-    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+        self.controller = controller
         self.context = context
         self.messageId = messageId
         self.present = present
@@ -470,6 +480,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         var updateTipImpl: ((Int64) -> Void)?
         var openPaymentMethodImpl: (() -> Void)?
         var openShippingMethodImpl: (() -> Void)?
+        var ensureTipInputVisibleImpl: (() -> Void)?
         
         let arguments = BotCheckoutControllerArguments(account: context.account, openInfo: { item in
             openInfoImpl?(item)
@@ -479,6 +490,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             openShippingMethodImpl?()
         }, updateTip: { value in
             updateTipImpl?(value)
+        }, ensureTipInputVisible: {
+            ensureTipInputVisibleImpl?()
         })
         
         let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
@@ -503,7 +516,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         
-        super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: nil, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
         self.arguments = arguments
         
@@ -519,8 +532,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                 updatedCurrentShippingOptionId = currentShippingOptionId
                             }
                         }
+
                         strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, formInfo, validatedInfo, updatedCurrentShippingOptionId, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
-                        
+
                         strongSelf.updateActionButton()
                     }
                 }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -762,6 +776,23 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
 
             strongSelf.updateActionButton()
         }
+
+        ensureTipInputVisibleImpl = { [weak self] in
+            self?.afterLayout({
+                guard let strongSelf = self else {
+                    return
+                }
+                var selectedItemNode: ListViewItemNode?
+                strongSelf.listNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? BotCheckoutTipItemNode {
+                        selectedItemNode = itemNode
+                    }
+                }
+                if let selectedItemNode = selectedItemNode {
+                    strongSelf.listNode.ensureItemNodeVisible(selectedItemNode, atTop: true)
+                }
+            })
+        }
         
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
@@ -811,6 +842,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         self.formRequestDisposable = (formAndMaybeValidatedInfo |> deliverOnMainQueue).start(next: { [weak self] form, validatedInfo in
             if let strongSelf = self {
+                UIView.transition(with: strongSelf.view, duration: 0.25, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
+                }, completion: nil)
+
                 let savedInfo: BotPaymentRequestedInfo
                 if let current = form.savedInfo {
                     savedInfo = current
@@ -868,13 +902,26 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
         self.actionButtonPanelNode.isHidden = false
     }
+
+    private func updateIsInProgress(_ value: Bool) {
+        if value {
+            if self.statusController == nil {
+                let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                self.statusController = statusController
+                self.controller?.present(statusController, in: .window(.root))
+            }
+        } else if let statusController = self.statusController {
+            self.statusController = nil
+            statusController.dismiss()
+        }
+    }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var updatedInsets = layout.intrinsicInsets
 
         let bottomPanelHorizontalInset: CGFloat = 16.0
         let bottomPanelVerticalInset: CGFloat = 16.0
-        let bottomPanelHeight = updatedInsets.bottom + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
+        let bottomPanelHeight = max(updatedInsets.bottom, layout.inputHeight ?? 0.0) + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
 
         transition.updateFrame(node: self.actionButtonPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight)))
         transition.updateFrame(node: self.actionButtonPanelSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -1088,11 +1135,19 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             self.inProgressDimNode.alpha = 1.0
             self.actionButton.isEnabled = false
             self.updateActionButton()
-            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: self.currentTipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.updateIsInProgress(true)
+
+            var tipAmount = self.currentTipAmount
+            if tipAmount == nil, let _ = paymentForm.invoice.tip {
+                tipAmount = 0
+            }
+
+            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0
                     strongSelf.actionButton.isEnabled = true
+                    strongSelf.updateIsInProgress(false)
                     if let applePayAuthrorizationCompletion = strongSelf.applePayAuthrorizationCompletion {
                         strongSelf.applePayAuthrorizationCompletion = nil
                         applePayAuthrorizationCompletion(.success)
@@ -1124,6 +1179,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     strongSelf.inProgressDimNode.alpha = 0.0
                     strongSelf.actionButton.isEnabled = true
                     strongSelf.updateActionButton()
+                    strongSelf.updateIsInProgress(false)
                     if let applePayAuthrorizationCompletion = strongSelf.applePayAuthrorizationCompletion {
                         strongSelf.applePayAuthrorizationCompletion = nil
                         applePayAuthrorizationCompletion(.failure)
