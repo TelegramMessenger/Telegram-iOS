@@ -242,7 +242,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 88.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
         self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -361,6 +361,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
+        var animated = true
         switch state {
             case let .button(text):
                 backgroundState = .button
@@ -370,6 +371,9 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 self.buttonTitleLabel.frame = CGRect(origin: CGPoint(x: floor((self.bounds.width - titleSize.width) / 2.0), y: floor((self.bounds.height - titleSize.height) / 2.0)), size: titleSize)
             case .scheduled:
                 backgroundState = .disabled
+                if previousState == .connecting {
+                    animated = false
+                }
             case let .active(state):
                 switch state {
                     case .on:
@@ -385,7 +389,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.applyIconParams()
         
         self.backgroundNode.isDark = dark
-        self.backgroundNode.update(state: backgroundState, animated: true)
+        self.backgroundNode.update(state: backgroundState, animated: animated)
         
         if case .active = state, let previousState = previousState, case .connecting = previousState, animated {
             self.activeDisposable.set((self.activePromise.get()
@@ -755,7 +759,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         case muted
     }
     
-    func updateGlowAndGradientAnimations(type: Gradient, previousType: Gradient? = nil) {
+    func updateGlowAndGradientAnimations(type: Gradient, previousType: Gradient? = nil, animated: Bool = true) {
         let effectivePreviousTyoe = previousType ?? .active
         
         let scale: CGFloat
@@ -794,12 +798,14 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
         if let _ = previousType {
             self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
-        } else {
+        } else if animated {
             self.maskGradientLayer.animateSpring(from: initialScale as NSNumber, to: targetScale as NSNumber, keyPath: "transform.scale", duration: 0.45)
         }
         
         self.foregroundGradientLayer.colors = targetColors
-        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        if animated {
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        }
     }
     
     private func playMuteAnimation() {
@@ -1081,6 +1087,16 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                         self.playMuteAnimation()
                     }
                     self.transition = nil
+                } else {
+                    if self.maskBlobView.isHidden {
+                        self.updateGlowAndGradientAnimations(type: .muted, previousType: nil, animated: false)
+                        self.maskCircleLayer.isHidden = false
+                        self.maskProgressLayer.isHidden = true
+                        self.maskGradientLayer.isHidden = false
+                        self.maskBlobView.isHidden = false
+                        self.maskBlobView.startAnimating()
+                        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    }
                 }
             case .button:
                 self.updatedActive?(true)
@@ -1537,7 +1553,6 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
         self.isColored = isColored
         super.init(size: CGSize(width: 100.0, height: 100.0))
         
-        self.scale = 0.8
         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
     }
     
@@ -1632,15 +1647,25 @@ final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
             }
             
             var useTiredAnimation = false
+            var useAngryAnimation = false
             let val = Float.random(in: 0.0..<1.0)
             if val <= 0.01 {
                 useTiredAnimation = true
+            } else if val <= 0.05 {
+                useAngryAnimation = true
             }
             
-            let normalAnimations = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_7"]
+            let normalAnimations = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_7", "VoiceHand_8"]
             let tiredAnimations = ["VoiceHand_5", "VoiceHand_6"]
-            let animations = useTiredAnimation ? tiredAnimations : normalAnimations
-            
+            let angryAnimations = ["VoiceHand_9", "VoiceHand_10"]
+            let animations: [String]
+            if useTiredAnimation {
+                animations = tiredAnimations
+            } else if useAngryAnimation {
+                animations = angryAnimations
+            } else {
+                animations = normalAnimations
+            }
             if let animationName = animations.randomElement() {
                 self.trackTo(item: ManagedAnimationItem(source: .local(animationName)))
             }

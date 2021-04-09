@@ -133,10 +133,8 @@ final class VoiceChatTimerNode: ASDisplayNode {
         let timerText: String
         if elapsedTime >= 86400 {
             timerText = timeIntervalString(strings: self.strings, value: elapsedTime)
-        } else if elapsedTime < 0 {
-            timerText = "\(textForTimeout(value: abs(elapsedTime)))"
         } else {
-            timerText = textForTimeout(value: elapsedTime)
+            timerText = textForTimeout(value: abs(elapsedTime))
         }
         
         if self.updateTimer == nil {

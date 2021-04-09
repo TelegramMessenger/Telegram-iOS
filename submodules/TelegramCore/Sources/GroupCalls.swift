@@ -79,7 +79,7 @@ public enum GetCurrentGroupCallError {
     case generic
 }
 
-public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
+public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
     return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
     |> mapError { _ -> GetCurrentGroupCallError in
         return .generic
@@ -91,6 +91,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 guard let info = GroupCallInfo(call) else {
                     return nil
                 }
+                
                 
                 var peers: [Peer] = []
                 var peerPresences: [PeerId: PeerPresence] = [:]
@@ -107,6 +108,17 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         peers.append(peer)
                     }
+                }
+                if let peerId = peerId {
+                    transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                        if let cachedData = current as? CachedChannelData {
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall.init(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
+                        } else if let cachedData = current as? CachedGroupData {
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
+                        } else {
+                            return current
+                        }
+                    })
                 }
                 
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in

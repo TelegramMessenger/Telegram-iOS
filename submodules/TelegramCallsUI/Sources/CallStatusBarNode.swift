@@ -347,7 +347,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         var title: String = ""
         var speakerSubtitle: String = ""
         
-        let textFont = Font.regular(13.0)
+        let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
         var displaySpeakerSubtitle = false
@@ -381,7 +381,22 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             displaySpeakerSubtitle = speakerSubtitle != title && !speakerSubtitle.isEmpty
             
-            if let membersCount = membersCount {
+            var requiresTimer = false
+            if let scheduleTime = self.currentGroupCallState?.info?.scheduleTimestamp {
+                requiresTimer = true
+                
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                let elapsedTime = scheduleTime - currentTime
+                let timerText: String
+                if elapsedTime >= 86400 {
+                    timerText = timeIntervalString(strings: presentationData.strings, value: elapsedTime)
+                } else if elapsedTime < 0 {
+                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
+                } else {
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).0
+                }
+                segments.append(.text(0, NSAttributedString(string: timerText, font: textFont, textColor: textColor)))
+            } else if let membersCount = membersCount {
                 var membersPart = presentationData.strings.VoiceChat_Status_Members(membersCount)
                 if membersPart.contains("[") && membersPart.contains("]") {
                     if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
@@ -433,6 +448,19 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             
             self.backgroundNode.connectingColor = color
+            
+            if requiresTimer {
+                if self.currentCallTimer == nil {
+                    let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                        self?.update()
+                    }, queue: Queue.mainQueue())
+                    timer.start()
+                    self.currentCallTimer = timer
+                }
+            } else if let currentCallTimer = self.currentCallTimer {
+                self.currentCallTimer = nil
+                currentCallTimer.invalidate()
+            }
         }
         
         if self.subtitleNode.segments != segments && !displaySpeakerSubtitle {
