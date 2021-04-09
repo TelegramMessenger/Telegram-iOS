@@ -1723,7 +1723,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil {
+                    if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil && !strongSelf.animatingAppearance {
                         strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
                     }
                 }
@@ -2876,9 +2876,24 @@ public final class VoiceChatController: ViewController {
                 topInset = listSize.height
             }
             
-            let offset = offset + topInset
+            var bottomEdge: CGFloat = 0.0
+            self.listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ListViewItemNode {
+                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.contentContainer.view)
+                    if convertedFrame.maxY > bottomEdge {
+                        bottomEdge = convertedFrame.maxY
+                    }
+                }
+            }
+
+            
+            let offset = (bottomEdge.isZero ? 0.0 : offset) + topInset
             self.floatingHeaderOffset = offset
-                    
+             
+            if bottomEdge.isZero {
+                bottomEdge = self.listNode.frame.minY + 46.0 + 56.0
+            }
+            
             let rawPanelOffset = offset + listTopInset - topPanelHeight
             let panelOffset = max(layoutTopInset, rawPanelOffset)
             let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: size.width, height: topPanelHeight))
@@ -2920,16 +2935,6 @@ public final class VoiceChatController: ViewController {
             }
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: 24.0)
             
-            var bottomEdge: CGFloat = 0.0
-            self.listNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? ListViewItemNode {
-                    let convertedFrame = self.listNode.view.convert(itemNode.frame, to: self.contentContainer.view)
-                    if convertedFrame.maxY > bottomEdge {
-                        bottomEdge = convertedFrame.maxY
-                    }
-                }
-            }
-
             let listMaxY = listTopInset + listSize.height
             let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
 
@@ -3388,16 +3393,20 @@ public final class VoiceChatController: ViewController {
             guard let (layout, navigationHeight) = self.validLayout else {
                 return
             }
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            self.updateFloatingHeaderOffset(offset: 0.0, transition: .immediate)
             
-            let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
-
+            self.animatingAppearance = true
+            
             let initialBounds = self.contentContainer.bounds
+            let topPanelFrame = self.topPanelNode.view.convert(self.topPanelNode.bounds, to: self.view)
             self.contentContainer.bounds = initialBounds.offsetBy(dx: 0.0, dy: -(layout.size.height - topPanelFrame.minY))
             self.contentContainer.isHidden = false
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
             transition.animateView({
                 self.contentContainer.view.bounds = initialBounds
             }, completion: { _ in
+                self.animatingAppearance = false
                 if self.actionButton.supernode !== self.bottomPanelNode {
                     self.actionButton.ignoreHierarchyChanges = true
                     self.audioButton.isHidden = false
@@ -3731,6 +3740,7 @@ public final class VoiceChatController: ViewController {
         
         private var animatingInsertion = false
         private var animatingExpansion = false
+        private var animatingAppearance = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {

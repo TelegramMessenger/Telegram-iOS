@@ -132,7 +132,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
         let elapsedTime = scheduleTime - currentTime
         let timerText: String
         if elapsedTime >= 86400 {
-            timerText = timeIntervalString(strings: self.strings, value: elapsedTime)
+            timerText = timeIntervalString(strings: self.strings, value: elapsedTime).uppercased()
         } else {
             timerText = textForTimeout(value: abs(elapsedTime))
         }
