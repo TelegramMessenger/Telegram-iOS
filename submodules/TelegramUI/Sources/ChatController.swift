@@ -1873,7 +1873,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let receiptMessageId = invoice.receiptMessageId {
                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             } else {
-                                strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, messageId: messageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                let inputData = Promise<BotCheckoutController.InputData?>()
+                                inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, messageId: message.id)
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                                    return .single(nil)
+                                })
+                                strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, messageId: messageId, inputData: inputData), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
                         }
                     }

@@ -45,8 +45,21 @@ private enum BotCheckoutSection: Int32 {
 }
 
 enum BotCheckoutEntry: ItemListNodeEntry {
+    enum StableId: Hashable {
+        case header
+        case price(Int)
+        case actionPlaceholder(Int)
+        case tip
+        case paymentMethod
+        case shippingInfo
+        case shippingMethod
+        case nameInfo
+        case emailInfo
+        case phoneInfo
+    }
+
     case header(PresentationTheme, TelegramMediaInvoice, String)
-    case price(Int, PresentationTheme, String, String, Bool, Bool)
+    case price(Int, PresentationTheme, String, String, Bool, Bool, Int?)
     case tip(Int, PresentationTheme, String, String, String, Int64, Int64, [(String, Int64)])
     case paymentMethod(PresentationTheme, String, String)
     case shippingInfo(PresentationTheme, String, String)
@@ -54,6 +67,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
     case nameInfo(PresentationTheme, String, String)
     case emailInfo(PresentationTheme, String, String)
     case phoneInfo(PresentationTheme, String, String)
+    case actionPlaceholder(Int, Int)
     
     var section: ItemListSectionId {
         switch self {
@@ -66,13 +80,15 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         }
     }
     
-    var stableId: Int32 {
+    var sortId: Int32 {
         switch self {
             case .header:
                 return 0
-            case let .price(index, _, _, _, _, _):
+            case let .price(index, _, _, _, _, _, _):
                 return 1 + Int32(index)
             case let .tip(index, _, _, _, _, _, _, _):
+                return 1 + Int32(index)
+            case let .actionPlaceholder(index, _):
                 return 1 + Int32(index)
             case .paymentMethod:
                 return 10000 + 2
@@ -86,6 +102,31 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 return 10000 + 6
             case .phoneInfo:
                 return 10000 + 7
+        }
+    }
+
+    var stableId: StableId {
+        switch self {
+            case .header:
+                return .header
+            case let .price(index, _, _, _, _, _, _):
+                return .price(index)
+            case .tip:
+                return .tip
+            case let .actionPlaceholder(index, _):
+                return .actionPlaceholder(index)
+            case .paymentMethod:
+                return .paymentMethod
+            case .shippingInfo:
+                return .shippingInfo
+            case .shippingMethod:
+                return .shippingMethod
+            case .nameInfo:
+                return .nameInfo
+            case .emailInfo:
+                return .emailInfo
+            case .phoneInfo:
+                return .phoneInfo
         }
     }
     
@@ -106,8 +147,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsFinal, lhsHasSeparator):
-                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsFinal, rhsHasSeparator) = rhs {
+            case let .price(lhsIndex, lhsTheme, lhsText, lhsValue, lhsFinal, lhsHasSeparator, lhsShimmeringIndex):
+                if case let .price(rhsIndex, rhsTheme, rhsText, rhsValue, rhsFinal, rhsHasSeparator, rhsShimmeringIndex) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -124,6 +165,9 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsHasSeparator != rhsHasSeparator {
+                        return false
+                    }
+                    if lhsShimmeringIndex != rhsShimmeringIndex {
                         return false
                     }
                     return true
@@ -183,11 +227,17 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .actionPlaceholder(index, shimmeringIndex):
+                if case .actionPlaceholder(index, shimmeringIndex) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
     static func <(lhs: BotCheckoutEntry, rhs: BotCheckoutEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
+        return lhs.sortId < rhs.sortId
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
@@ -195,8 +245,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         switch self {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
-            case let .price(_, theme, text, value, isFinal, hasSeparator):
-                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, sectionId: self.section)
+            case let .price(_, theme, text, value, isFinal, hasSeparator, shimmeringIndex):
+                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, shimmeringIndex: shimmeringIndex, sectionId: self.section)
             case let .tip(_, _, text, currency, value, numericValue, maxValue, variants):
                 return BotCheckoutTipItem(theme: presentationData.theme, strings: presentationData.strings, title: text, currency: currency, value: value, numericValue: numericValue, maxValue: maxValue, availableVariants: variants, sectionId: self.section, updateValue: { value in
                     arguments.updateTip(value)
@@ -229,6 +279,9 @@ enum BotCheckoutEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openInfo(.phone)
                 })
+            case let .actionPlaceholder(_, shimmeringIndex):
+                return ItemListDisclosureItem(presentationData: presentationData, title: " ", label: " ", sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+                }, shimmeringIndex: shimmeringIndex)
         }
     }
 }
@@ -293,7 +346,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
         
         var index = 0
         for price in paymentForm.invoice.prices {
-            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, index == 0))
+            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, index == 0, nil))
             totalPrice += price.amount
             index += 1
         }
@@ -307,7 +360,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
                         shippingOptionString = option.title
                         
                         for price in option.prices {
-                            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, false))
+                            entries.append(.price(index, presentationData.theme, price.label, formatCurrencyAmount(price.amount, currency: paymentForm.invoice.currency), false, false, nil))
                             totalPrice += price.amount
                             index += 1
                         }
@@ -320,8 +373,8 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
 
         if !entries.isEmpty {
             switch entries[entries.count - 1] {
-            case let .price(index, theme, title, value, _, _):
-                entries[entries.count - 1] = .price(index, theme, title, value, false, false)
+            case let .price(index, theme, title, value, _, _, _):
+                entries[entries.count - 1] = .price(index, theme, title, value, false, index == 0, nil)
             default:
                 break
             }
@@ -336,7 +389,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
             index += 1
         }
         
-        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: paymentForm.invoice.currency), true, true))
+        entries.append(.price(index, presentationData.theme, presentationData.strings.Checkout_TotalAmount, formatCurrencyAmount(totalPrice, currency: paymentForm.invoice.currency), true, true, nil))
         
         var paymentMethodTitle = ""
         if let currentPaymentMethod = currentPaymentMethod {
@@ -378,6 +431,15 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
         
         if paymentForm.invoice.requestedFields.contains(.phone) {
             entries.append(.phoneInfo(presentationData.theme, presentationData.strings.Checkout_Phone, formInfo?.phone ?? ""))
+        }
+    } else {
+        let numItems = 4
+        for index in 0 ..< numItems {
+            entries.append(.price(index, presentationData.theme, " ", " ", false, index == 0, index))
+        }
+
+        for index in numItems ..< numItems + 2 {
+            entries.append(.actionPlaceholder(index, index - numItems))
         }
     }
     
@@ -474,7 +536,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
@@ -514,9 +576,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
-        self.actionButton.setState(.active(""))
-        self.actionButtonPanelNode.isHidden = true
+        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
+        self.actionButton.setState(.placeholder)
         
         self.inProgressDimNode = ASDisplayNode()
         self.inProgressDimNode.alpha = 0.0
@@ -828,56 +889,33 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }
-        let themeParams: [String: Any] = [
-            "bg_color": Int32(bitPattern: self.presentationData.theme.list.plainBackgroundColor.argb),
-            "text_color": Int32(bitPattern: self.presentationData.theme.list.itemPrimaryTextColor.argb),
-            "link_color": Int32(bitPattern: self.presentationData.theme.list.itemAccentColor.argb),
-            "button_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.fillColor.argb),
-            "button_text_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.foregroundColor.argb)
-        ]
         
-        let formAndMaybeValidatedInfo = fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId, themeParams: themeParams)
-            |> mapToSignal { paymentForm -> Signal<(BotPaymentForm, BotPaymentValidatedFormInfo?), BotPaymentFormRequestError> in
-                if let current = paymentForm.savedInfo {
-                    return validateBotPaymentForm(account: context.account, saveInfo: true, messageId: messageId, formInfo: current)
-                        |> mapError { _ -> BotPaymentFormRequestError in
-                            return .generic
-                        }
-                        |> map { result -> (BotPaymentForm, BotPaymentValidatedFormInfo?) in
-                            return (paymentForm, result)
-                        }
-                        |> `catch` { _ -> Signal<(BotPaymentForm, BotPaymentValidatedFormInfo?), BotPaymentFormRequestError> in
-                            return .single((paymentForm, nil))
-                        }
-                } else {
-                    return .single((paymentForm, nil))
-                }
-            }
-        
-        self.formRequestDisposable = (formAndMaybeValidatedInfo |> deliverOnMainQueue).start(next: { [weak self] form, validatedInfo in
+        self.formRequestDisposable = (inputData.get() |> deliverOnMainQueue).start(next: { [weak self] formAndValidatedInfo in
             if let strongSelf = self {
+                guard let formAndValidatedInfo = formAndValidatedInfo else {
+                    strongSelf.controller?.dismiss()
+                    return
+                }
                 UIView.transition(with: strongSelf.view, duration: 0.25, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
                 }, completion: nil)
 
                 let savedInfo: BotPaymentRequestedInfo
-                if let current = form.savedInfo {
+                if let current = formAndValidatedInfo.form.savedInfo {
                     savedInfo = current
                 } else {
                     savedInfo = BotPaymentRequestedInfo(name: nil, phone: nil, email: nil, shippingAddress: nil)
                 }
-                strongSelf.paymentFormValue = form
+                strongSelf.paymentFormValue = formAndValidatedInfo.form
                 strongSelf.currentFormInfo = savedInfo
-                strongSelf.currentValidatedFormInfo = validatedInfo
-                if let savedCredentials = form.savedCredentials {
+                strongSelf.currentValidatedFormInfo = formAndValidatedInfo.validatedFormInfo
+                if let savedCredentials = formAndValidatedInfo.form.savedCredentials {
                     strongSelf.currentPaymentMethod = .savedCredentials(savedCredentials)
                 }
                 strongSelf.actionButton.isEnabled = true
-                strongSelf.paymentFormAndInfo.set(.single((form, savedInfo, validatedInfo, nil, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
+                strongSelf.paymentFormAndInfo.set(.single((formAndValidatedInfo.form, savedInfo, formAndValidatedInfo.validatedFormInfo, nil, strongSelf.currentPaymentMethod, strongSelf.currentTipAmount)))
                 
                 strongSelf.updateActionButton()
             }
-        }, error: { _ in
-            
         })
 
         self.addSubnode(self.actionButtonPanelNode)
@@ -958,7 +996,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
 
         let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
-        self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
+        self.actionButton.updateLayout(absoluteRect: actionButtonFrame.offsetBy(dx: self.actionButtonPanelNode.frame.minX, dy: self.actionButtonPanelNode.frame.minY), containerSize: layout.size, transition: transition)
 
         updatedInsets.bottom = bottomPanelHeight
 

@@ -22,6 +22,7 @@ swift_library(
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

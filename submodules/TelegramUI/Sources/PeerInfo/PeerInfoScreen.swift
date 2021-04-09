@@ -2389,6 +2389,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.openAvatarForEditing()
             }
         }
+
+        self.headerNode.animateOverlaysFadeIn = { [weak self] in
+            guard let strongSelf = self, let navigationBar = strongSelf.controller?.navigationBar else {
+                return
+            }
+            navigationBar.layer.animateAlpha(from: 0.0, to: navigationBar.alpha, duration: 0.25)
+        }
         
         self.headerNode.requestUpdateLayout = { [weak self] in
             guard let strongSelf = self else {

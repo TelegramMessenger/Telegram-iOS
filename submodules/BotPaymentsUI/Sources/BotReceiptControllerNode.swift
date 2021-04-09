@@ -158,7 +158,7 @@ enum BotReceiptEntry: ItemListNodeEntry {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
             case let .price(_, theme, text, value, hasSeparator, isFinal):
-                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, sectionId: self.section)
+                return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, shimmeringIndex: nil, sectionId: self.section)
             case let .paymentMethod(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
             case let .shippingInfo(_, text, value):
@@ -301,7 +301,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
+        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
         self.actionButton.setState(.active(self.presentationData.strings.Common_Done))
         
         super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
@@ -338,7 +338,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
 
         let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
-        self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
+        self.actionButton.updateLayout(absoluteRect: actionButtonFrame.offsetBy(dx: self.actionButtonPanelNode.frame.minX, dy: self.actionButtonPanelNode.frame.minY), containerSize: layout.size, transition: transition)
 
         updatedInsets.bottom = bottomPanelHeight
 
