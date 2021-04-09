@@ -173,7 +173,7 @@ extension BotPaymentRequestedInfo {
     }
 }
 
-public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -182,7 +182,16 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        return network.request(Api.functions.payments.getPaymentForm(flags: 0, peer: inputPeer, msgId: messageId.id, themeParams: nil))
+        var flags: Int32 = 0
+        var serializedThemeParams: Api.DataJSON?
+        if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
+            serializedThemeParams = Api.DataJSON.dataJSON(data: dataString)
+        }
+        if serializedThemeParams != nil {
+            flags |= 1 << 0
+        }
+
+        return network.request(Api.functions.payments.getPaymentForm(flags: flags, peer: inputPeer, msgId: messageId.id, themeParams: serializedThemeParams))
         |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }

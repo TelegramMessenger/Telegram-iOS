@@ -94,7 +94,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, passwordTip: String?, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
         self.context = context
         self.period = period
         self.requiresBiometrics = requiresBiometrics
@@ -156,6 +156,8 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.isSecureTextEntry = true
         self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
+        self.textFieldNode.textField.placeholder = passwordTip
+
         
         super.init()
         
@@ -218,7 +220,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         
         let textFieldBackgroundFrame = CGRect(origin: CGPoint(x: insets.left, y: resultSize.height - inputHeight + 12.0 - actionsHeight - insets.bottom), size: CGSize(width: resultSize.width - insets.left - insets.right, height: 25.0))
         self.textFieldNodeBackground.frame = textFieldBackgroundFrame
-        self.textFieldNode.frame = textFieldBackgroundFrame.offsetBy(dx: 0.0, dy: 1.0).insetBy(dx: 4.0, dy: 0.0)
+        self.textFieldNode.frame = textFieldBackgroundFrame.offsetBy(dx: 0.0, dy: 0.0).insetBy(dx: 4.0, dy: 0.0)
         
         self.actionNodesSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel))
         
@@ -300,10 +302,10 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     }
 }
 
-func botCheckoutPasswordEntryController(context: AccountContext, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
+func botCheckoutPasswordEntryController(context: AccountContext, strings: PresentationStrings, passwordTip: String?, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, passwordTip: passwordTip, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
         dismissImpl?()
     }, completion: { token in
         completion(token)

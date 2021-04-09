@@ -329,8 +329,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
 
         if let tip = paymentForm.invoice.tip {
             let tipTitle: String
-            //TODO:localize
-            tipTitle = "Tip (Optional)"
+            tipTitle = presentationData.strings.Checkout_OptionalTipItem
             entries.append(.tip(index, presentationData.theme, tipTitle, paymentForm.invoice.currency, "\(formatCurrencyAmount(currentTip ?? 0, currency: paymentForm.invoice.currency))", currentTip ?? 0, tip.max, tip.suggested.map { item -> (String, Int64) in
                 return ("\(formatCurrencyAmount(item, currency: paymentForm.invoice.currency))", item)
             }))
@@ -471,6 +470,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private let paymentAuthDisposable = MetaDisposable()
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
+
+    private var passwordTip: String?
+    private var passwordTipDisposable: Disposable?
     
     init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.controller = controller
@@ -826,8 +828,15 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }
+        let themeParams: [String: Any] = [
+            "bg_color": Int32(bitPattern: self.presentationData.theme.list.plainBackgroundColor.argb),
+            "text_color": Int32(bitPattern: self.presentationData.theme.list.itemPrimaryTextColor.argb),
+            "link_color": Int32(bitPattern: self.presentationData.theme.list.itemAccentColor.argb),
+            "button_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.fillColor.argb),
+            "button_text_color": Int32(bitPattern: self.presentationData.theme.list.itemCheckColors.foregroundColor.argb)
+        ]
         
-        let formAndMaybeValidatedInfo = fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
+        let formAndMaybeValidatedInfo = fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId, themeParams: themeParams)
             |> mapToSignal { paymentForm -> Signal<(BotPaymentForm, BotPaymentValidatedFormInfo?), BotPaymentFormRequestError> in
                 if let current = paymentForm.savedInfo {
                     return validateBotPaymentForm(account: context.account, saveInfo: true, messageId: messageId, formInfo: current)
@@ -879,12 +888,28 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.actionButton.isEnabled = false
         
         self.listNode.supernode?.insertSubnode(self.inProgressDimNode, aboveSubnode: self.listNode)
+
+        self.passwordTipDisposable = (twoStepVerificationConfiguration(account: self.context.account)
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            switch value {
+            case .notSet:
+                break
+            case let .set(hint, _, _, _):
+                if !hint.isEmpty {
+                    strongSelf.passwordTip = hint
+                }
+            }
+        })
     }
     
     deinit {
         self.formRequestDisposable?.dispose()
         self.payDisposable.dispose()
         self.paymentAuthDisposable.dispose()
+        self.passwordTipDisposable?.dispose()
     }
     
     private func updateActionButton() {
@@ -1083,10 +1108,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             if let tipAmount = strongSelf.currentTipAmount {
                                 totalAmount += tipAmount
 
-                                //TODO:localize
                                 if let fractional = currencyToFractionalAmount(value: tipAmount, currency: paymentForm.invoice.currency) {
                                     let amount = NSDecimalNumber(value: fractional)
-                                    items.append(PKPaymentSummaryItem(label: "Tip", amount: amount))
+                                    items.append(PKPaymentSummaryItem(label: strongSelf.presentationData.strings.Checkout_TipItem, amount: amount))
                                 }
                             }
 
@@ -1126,7 +1150,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        let paymentText = strongSelf.presentationData.strings.Checkout_PaymentLiabilityAlert
+                            .replacingOccurrences(of: "{target}", with: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            .replacingOccurrences(of: "{payment_system}", with: providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: paymentText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
@@ -1222,7 +1250,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             period = 1 * 60 * 60
             requiresBiometrics = false
         }
-        self.present(botCheckoutPasswordEntryController(context: self.context, strings: self.presentationData.strings, cartTitle: cardTitle, period: period, requiresBiometrics: requiresBiometrics, completion: { [weak self] token in
+        self.present(botCheckoutPasswordEntryController(context: self.context, strings: self.presentationData.strings, passwordTip: self.passwordTip, cartTitle: cardTitle, period: period, requiresBiometrics: requiresBiometrics, completion: { [weak self] token in
             if let strongSelf = self {
                 let durationString = timeIntervalString(strings: strongSelf.presentationData.strings, value: period)
                 
