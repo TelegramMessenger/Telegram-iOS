@@ -276,7 +276,9 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     
     private let receiptData = Promise<(BotPaymentInvoice, BotPaymentRequestedInfo?, BotPaymentShippingOption?, String?, TelegramMediaInvoice, Int64?)?>(nil)
     private var dataRequestDisposable: Disposable?
-    
+
+    private let actionButtonPanelNode: ASDisplayNode
+    private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     
     init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
@@ -293,6 +295,12 @@ final class BotReceiptControllerNode: ItemListControllerNode {
             
             return (ItemListPresentationData(presentationData), (nodeState, arguments))
         }
+
+        self.actionButtonPanelNode = ASDisplayNode()
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+
+        self.actionButtonPanelSeparator = ASDisplayNode()
+        self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
         self.actionButton.setState(.active(self.presentationData.strings.Common_Done))
@@ -301,12 +309,18 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         self.dataRequestDisposable = (requestBotPaymentReceipt(account: context.account, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
+                UIView.transition(with: strongSelf.view, duration: 0.25, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
+                }, completion: nil)
+                
                 strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle, receipt.invoiceMedia, receipt.tipAmount)))
             }
         })
         
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
-        self.addSubnode(self.actionButton)
+
+        self.addSubnode(self.actionButtonPanelNode)
+        self.actionButtonPanelNode.addSubnode(self.actionButtonPanelSeparator)
+        self.actionButtonPanelNode.addSubnode(self.actionButton)
     }
     
     deinit {
@@ -315,13 +329,21 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var updatedInsets = layout.intrinsicInsets
-        updatedInsets.bottom += BotCheckoutActionButton.height + 16.0 * 2.0
 
-        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
-        
-        let actionButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: layout.size.height - 16.0 - BotCheckoutActionButton.height - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 16.0 * 2.0, height: BotCheckoutActionButton.height))
+        let bottomPanelHorizontalInset: CGFloat = 16.0
+        let bottomPanelVerticalInset: CGFloat = 16.0
+        let bottomPanelHeight = max(updatedInsets.bottom, layout.inputHeight ?? 0.0) + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
+
+        transition.updateFrame(node: self.actionButtonPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight)))
+        transition.updateFrame(node: self.actionButtonPanelSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+
+        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(size: actionButtonFrame.size, transition: transition)
+
+        updatedInsets.bottom = bottomPanelHeight
+
+        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
     }
     
     @objc func actionButtonPressed() {

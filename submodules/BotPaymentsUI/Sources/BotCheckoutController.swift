@@ -52,7 +52,7 @@ public final class BotCheckoutController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let displayNode = BotCheckoutControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = BotCheckoutControllerNode(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }

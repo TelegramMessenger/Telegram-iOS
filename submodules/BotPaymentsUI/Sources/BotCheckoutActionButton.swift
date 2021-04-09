@@ -138,6 +138,11 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                         
                         self.progressBackgroundNode.layer.add(basicAnimation, forKey: "progressRotation")
                     case let .active(title):
+                        if let applePayButton = self.applePayButton {
+                            self.applePayButton = nil
+                            applePayButton.removeFromSuperview()
+                        }
+
                         if case .active = previousState {
                             let makeLayout = TextNode.asyncLayout(self.labelNode)
                             let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: validLayout, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

@@ -18,12 +18,13 @@ class BotCheckoutTipItem: ListViewItem, ItemListItem {
     let maxValue: Int64
     let availableVariants: [(String, Int64)]
     let updateValue: (Int64) -> Void
+    let updatedFocus: (Bool) -> Void
 
     let sectionId: ItemListSectionId
     
     let requestsNoInset: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, title: String, currency: String, value: String, numericValue: Int64, maxValue: Int64, availableVariants: [(String, Int64)], sectionId: ItemListSectionId, updateValue: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String, currency: String, value: String, numericValue: Int64, maxValue: Int64, availableVariants: [(String, Int64)], sectionId: ItemListSectionId, updateValue: @escaping (Int64) -> Void, updatedFocus: @escaping (Bool) -> Void) {
         self.theme = theme
         self.strings = strings
         self.title = title
@@ -33,6 +34,7 @@ class BotCheckoutTipItem: ListViewItem, ItemListItem {
         self.maxValue = maxValue
         self.availableVariants = availableVariants
         self.updateValue = updateValue
+        self.updatedFocus = updatedFocus
         self.sectionId = sectionId
     }
     
@@ -264,6 +266,18 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
                         strongSelf.textNode.clipsToBounds = true
                         strongSelf.textNode.textField.delegate = strongSelf.formatterDelegate
+
+                        /*let toolbar: UIToolbar = UIToolbar()
+                        toolbar.tintColor = item.theme.rootController.navigationBar.accentTextColor
+                        toolbar.barTintColor = item.theme.rootController.navigationBar.backgroundColor
+                        toolbar.barStyle = .default
+                        toolbar.items = [
+                            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: self, action: nil),
+                            UIBarButtonItem(title: item.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.dismissKeyboard))
+                        ]
+                        toolbar.sizeToFit()
+
+                        strongSelf.textNode.textField.inputAccessoryView = toolbar*/
                     }
 
                     strongSelf.textNode.textField.typingAttributes = [NSAttributedString.Key.font: titleFont]
@@ -273,6 +287,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     strongSelf.textNode.textField.textAlignment = .right
                     strongSelf.textNode.textField.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
                     strongSelf.textNode.textField.keyboardType = .decimalPad
+                    strongSelf.textNode.textField.returnKeyType = .next
                     strongSelf.textNode.textField.tintColor = item.theme.list.itemAccentColor
 
                     var textInputFrame = CGRect(origin: CGPoint(x: params.width - leftInset - 150.0, y: -2.0), size: CGSize(width: 150.0, height: labelsContentHeight))
@@ -370,6 +385,10 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
         }
     }
 
+    @objc private func dismissKeyboard() {
+        self.textNode.textField.resignFirstResponder()
+    }
+
     @objc private func textFieldTextChanged(_ textField: UITextField) {
         let text = textField.text ?? ""
         self.labelNode.isHidden = !text.isEmpty
@@ -419,6 +438,8 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
     @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
         textField.selectedTextRange = textField.textRange(from: textField.endOfDocument, to: textField.endOfDocument)
+
+        self.item?.updatedFocus(true)
     }
 
     @objc public func textFieldDidChangeSelection(_ textField: UITextField) {
