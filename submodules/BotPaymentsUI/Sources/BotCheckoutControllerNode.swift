@@ -431,6 +431,11 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
             methods.append(current)
         }
     }
+    if let savedCredentials = form.savedCredentials {
+        if !methods.contains(.savedCredentials(savedCredentials)) {
+            methods.append(.savedCredentials(savedCredentials))
+        }
+    }
     return methods
 }
 
