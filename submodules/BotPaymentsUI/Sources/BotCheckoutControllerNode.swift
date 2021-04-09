@@ -470,6 +470,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private let paymentAuthDisposable = MetaDisposable()
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
+
+    private var passwordTip: String?
+    private var passwordTipDisposable: Disposable?
     
     init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.controller = controller
@@ -885,12 +888,28 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.actionButton.isEnabled = false
         
         self.listNode.supernode?.insertSubnode(self.inProgressDimNode, aboveSubnode: self.listNode)
+
+        self.passwordTipDisposable = (twoStepVerificationConfiguration(account: self.context.account)
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            switch value {
+            case .notSet:
+                break
+            case let .set(hint, _, _, _):
+                if !hint.isEmpty {
+                    strongSelf.passwordTip = hint
+                }
+            }
+        })
     }
     
     deinit {
         self.formRequestDisposable?.dispose()
         self.payDisposable.dispose()
         self.paymentAuthDisposable.dispose()
+        self.passwordTipDisposable?.dispose()
     }
     
     private func updateActionButton() {
@@ -1231,7 +1250,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             period = 1 * 60 * 60
             requiresBiometrics = false
         }
-        self.present(botCheckoutPasswordEntryController(context: self.context, strings: self.presentationData.strings, cartTitle: cardTitle, period: period, requiresBiometrics: requiresBiometrics, completion: { [weak self] token in
+        self.present(botCheckoutPasswordEntryController(context: self.context, strings: self.presentationData.strings, passwordTip: self.passwordTip, cartTitle: cardTitle, period: period, requiresBiometrics: requiresBiometrics, completion: { [weak self] token in
             if let strongSelf = self {
                 let durationString = timeIntervalString(strings: strongSelf.presentationData.strings, value: period)
                 
