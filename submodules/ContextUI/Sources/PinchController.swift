@@ -152,7 +152,7 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
     fileprivate let gesture: PinchSourceGesture
     fileprivate var panGesture: UIPanGestureRecognizer?
 
-    public var isPinchGestureEnabled: Bool = false {
+    public var isPinchGestureEnabled: Bool = true {
         didSet {
             if self.isPinchGestureEnabled != oldValue {
                 self.gesture.isEnabled = self.isPinchGestureEnabled
