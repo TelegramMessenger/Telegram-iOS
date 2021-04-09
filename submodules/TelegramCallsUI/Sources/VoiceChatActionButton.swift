@@ -656,11 +656,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
             if self.maskBlobView.presentationAudioLevel > 0.22 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.35))
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.15 ..< 0.35))
             } else if self.maskBlobView.presentationAudioLevel > 0.01 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.77 ..< 0.95), y: CGFloat.random(in: 0.1 ..< 0.35))
+                newValue = CGPoint(x: CGFloat.random(in: 0.57 ..< 0.85), y: CGFloat.random(in: 0.15 ..< 0.45))
             } else {
-                newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
+                newValue = CGPoint(x: CGFloat.random(in: 0.6 ..< 0.75), y: CGFloat.random(in: 0.25 ..< 0.45))
             }
             self.foregroundGradientLayer.startPoint = newValue
             

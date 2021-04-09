@@ -157,7 +157,7 @@ public struct HumanReadableStringFormat {
     }
 }
 
-public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, format: HumanReadableStringFormat? = nil) -> String {
+public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, alwaysShowTime: Bool = false, format: HumanReadableStringFormat? = nil) -> String {
     var t: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -168,7 +168,12 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
     localtime_r(&now, &timeinfoNow)
     
     if timeinfo.tm_year != timeinfoNow.tm_year {
-        let string = "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat))"
+        let string: String
+        if alwaysShowTime {
+            string = stringForMediumDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat)
+        } else {
+            string = stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)
+        }
         return format?.dateFormatString(string) ?? string
     }
     
@@ -184,7 +189,12 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
         }
         return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, format: format)
     } else {
-        let string = "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat))"
+        let string: String
+        if alwaysShowTime {
+            string = stringForMediumDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat)
+        } else {
+            string = stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)
+        }
         return format?.dateFormatString(string) ?? string
     }
 }

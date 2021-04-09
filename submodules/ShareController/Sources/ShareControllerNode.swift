@@ -595,6 +595,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.animateOut(shared: true, completion: {
                 })
                 self.completed?(peerIds)
+                
+                Queue.mainQueue().after(0.44) {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.success()
+                }
             }
             let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
