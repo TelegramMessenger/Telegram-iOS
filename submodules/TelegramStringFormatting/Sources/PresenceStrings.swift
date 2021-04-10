@@ -157,7 +157,7 @@ public struct HumanReadableStringFormat {
     }
 }
 
-public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, alwaysShowTime: Bool = false, format: HumanReadableStringFormat? = nil) -> String {
+public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, alwaysShowTime: Bool = false, allowYesterday: Bool = true, format: HumanReadableStringFormat? = nil) -> String {
     var t: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -178,7 +178,7 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
     }
     
     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
-    if dayDifference == 0 || dayDifference == -1 || dayDifference == 1 {
+    if dayDifference == 0 || (dayDifference == -1 && allowYesterday) || dayDifference == 1 {
         let day: RelativeTimestampFormatDay
         if dayDifference == 0 {
             day = .today

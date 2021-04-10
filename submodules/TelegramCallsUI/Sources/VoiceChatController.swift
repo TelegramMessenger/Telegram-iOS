@@ -650,6 +650,9 @@ public final class VoiceChatController: ViewController {
         private var didSetContentsReady: Bool = false
         private var didSetDataReady: Bool = false
         
+        private var isFirstTime = true
+        private var topInset: CGFloat?
+        
         private var peer: Peer?
         private var currentTitle: String = ""
         private var currentTitleIsCustom = false
@@ -697,7 +700,6 @@ public final class VoiceChatController: ViewController {
         private var itemInteraction: Interaction?
                 
         private let inviteDisposable = MetaDisposable()
-        
         private let memberEventsDisposable = MetaDisposable()
         private let reconnectedAsEventsDisposable = MetaDisposable()
         private let voiceSourcesDisposable = MetaDisposable()
@@ -2941,8 +2943,6 @@ public final class VoiceChatController: ViewController {
             
             let listMaxY = listTopInset + listSize.height
             let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
-
-            print("lf \(self.listNode.frame) be \(bottomEdge) bo \(bottomOffset) lmaxy \(listMaxY)")
             
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
@@ -3120,11 +3120,7 @@ public final class VoiceChatController: ViewController {
                 }
                 soundTitle = self.presentationData.strings.Call_Audio
             }
-            
-            //                    if !callState.canManageCall && (self.peer?.addressName?.isEmpty ?? true) {
-            //                        self.audioButton.isHidden = true
-            //                    }
-            
+                        
             let isScheduled = self.isScheduling || self.callState?.scheduleTimestamp != nil
             
             var soundEnabled = true
@@ -3500,8 +3496,6 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private var topInset: CGFloat?
-        private var isFirstTime = true
         private func dequeueTransition() {
             guard let (layout, _) = self.validLayout, let transition = self.enqueuedTransitions.first else {
                 return
@@ -3577,10 +3571,12 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.animatingInsertion {
-                    strongSelf.updateFloatingHeaderOffset(offset: self?.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
-                    strongSelf.animatingInsertion = false
+                if isFirstTime {
+                    strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .immediate)
+                } else if strongSelf.animatingInsertion {
+                    strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
+                strongSelf.animatingInsertion = false
                 if !strongSelf.didSetContentsReady {
                     strongSelf.didSetContentsReady = true
                     strongSelf.controller?.contentsReady.set(true)
@@ -3598,11 +3594,9 @@ public final class VoiceChatController: ViewController {
             self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
             
-            let previousEntries = self.currentEntries
+            
             var entries: [ListEntry] = []
-            
             var index: Int32 = 0
-            
             var processedPeerIds = Set<PeerId>()
             
             var canInvite = true
@@ -3714,6 +3708,11 @@ public final class VoiceChatController: ViewController {
                 index += 1
             }
             
+            guard self.didSetDataReady else {
+                return
+            }
+          
+            let previousEntries = self.currentEntries
             self.currentEntries = entries
             
             if previousEntries.count == entries.count {
@@ -3737,7 +3736,7 @@ public final class VoiceChatController: ViewController {
             } else if abs(previousEntries.count - entries.count) > 10 {
                 disableAnimation = true
             }
-            
+        
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
             let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTransition(transition)

@@ -80,7 +80,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 scheduleTimestamp: call.scheduleTimestamp,
                 subscribedToScheduled: call.subscribedToScheduled,
                 recordingStartTimestamp: nil,
-                sortAscending: true
+                sortAscending: true,
+                defaultParticipantsAreMuted: nil
             ),
             topParticipants: [],
             participantCount: 0,
@@ -122,7 +123,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 }
                 return GroupCallPanelData(
                     peerId: peerId,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, clientParams: nil, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -1105,7 +1106,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 nextParticipantsFetchOffset: nil,
                 adminIds: Set(),
                 isCreator: false,
-                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: self.stateValue.defaultParticipantMuteState == .muted, canChange: true),
+                defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: self.stateValue.defaultParticipantMuteState == .muted, canChange: true),
                 sortAscending: true,
                 recordingStartTimestamp: nil,
                 title: self.stateValue.title,
@@ -1149,6 +1150,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 loadMoreToken: state.nextParticipantsFetchOffset
             )
             
+            strongSelf.stateValue.adminIds = adminIds
+            let canManageCall = state.isCreator || strongSelf.stateValue.adminIds.contains(strongSelf.accountContext.account.peerId)
+            
             var participants: [GroupCallParticipantsContext.Participant] = []
             var topParticipants: [GroupCallParticipantsContext.Participant] = []
             if let (myPeer, cachedData) = myPeerAndCachedData {
@@ -1169,7 +1173,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     hasRaiseHand: strongSelf.temporaryHasRaiseHand,
                     activityTimestamp: strongSelf.temporaryActivityTimestamp,
                     activityRank: strongSelf.temporaryActivityRank,
-                    muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                    muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canManageCall || !state.defaultParticipantsAreMuted.isMuted, mutedByYou: false),
                     volume: nil,
                     about: about
                 ))
@@ -1184,17 +1188,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             strongSelf.membersValue = members
-            strongSelf.stateValue.adminIds = adminIds
             strongSelf.stateValue.canManageCall = state.isCreator || adminIds.contains(strongSelf.accountContext.account.peerId)
-            if (state.isCreator || strongSelf.stateValue.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
-                strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
-            }
+            strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+            
+            
             strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
             strongSelf.stateValue.title = state.title
-            
+            strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canManageCall || !state.defaultParticipantsAreMuted.isMuted, mutedByYou: false)
+        
             strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
             if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
-                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, clientParams: callInfo.clientParams, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true)), audioSessionControl: strongSelf.audioSessionControl)
+                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, clientParams: callInfo.clientParams, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted)), audioSessionControl: strongSelf.audioSessionControl)
             } else {
                 strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                     id: callInfo.id,
@@ -1206,7 +1210,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     scheduleTimestamp: state.scheduleTimestamp,
                     subscribedToScheduled: false,
                     recordingStartTimestamp: state.recordingStartTimestamp,
-                    sortAscending: state.sortAscending
+                    sortAscending: state.sortAscending,
+                    defaultParticipantsAreMuted: state.defaultParticipantsAreMuted
                 ))))
                 
                 strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -1880,7 +1885,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         scheduleTimestamp: state.scheduleTimestamp,
                         subscribedToScheduled: false,
                         recordingStartTimestamp: state.recordingStartTimestamp,
-                        sortAscending: state.sortAscending
+                        sortAscending: state.sortAscending,
+                        defaultParticipantsAreMuted: state.defaultParticipantsAreMuted
                     ))))
                     
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
