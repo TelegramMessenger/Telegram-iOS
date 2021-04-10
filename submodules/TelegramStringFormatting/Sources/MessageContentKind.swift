@@ -24,6 +24,7 @@ public enum MessageContentKindKey {
     case poll
     case restricted
     case dice
+    case invoice
 }
 
 public enum MessageContentKind: Equatable {
@@ -44,6 +45,7 @@ public enum MessageContentKind: Equatable {
     case poll(String)
     case restricted(String)
     case dice(String)
+    case invoice(String)
     
     public var key: MessageContentKindKey {
         switch self {
@@ -81,6 +83,8 @@ public enum MessageContentKind: Equatable {
             return .restricted
         case .dice:
             return .dice
+        case .invoice:
+            return .invoice
         }
     }
 }
@@ -171,6 +175,8 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
         return .poll(poll.text)
     case let dice as TelegramMediaDice:
         return .dice(dice.emoji)
+    case let invoice as TelegramMediaInvoice:
+        return .invoice(invoice.title)
     default:
         return nil
     }
@@ -220,6 +226,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (text, false)
     case let .dice(emoji):
         return (emoji, true)
+    case let .invoice(text):
+        return (text, true)
     }
 }
 
