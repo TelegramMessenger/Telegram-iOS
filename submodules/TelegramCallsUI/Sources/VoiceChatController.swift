@@ -2735,8 +2735,12 @@ public final class VoiceChatController: ViewController {
         
         @objc private func audioOutputPressed() {
             self.hapticFeedback.impact(.light)
-            
+                        
             if let _ = self.callState?.scheduleTimestamp {
+                if let callState = self.callState, let peer = self.peer, !callState.canManageCall && (peer.addressName?.isEmpty ?? true) {
+                    return
+                }
+                
                 let _ = (self.inviteLinksPromise.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
@@ -3152,6 +3156,7 @@ public final class VoiceChatController: ViewController {
             self.switchCameraButton.update(size: videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: coloredButtonAppearance, image: .flipCamera), text: "", transition: transition)
             
             self.audioButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage, isEnabled: soundEnabled), text: soundTitle, transition: transition)
+            self.audioButton.isUserInteractionEnabled = soundEnabled
             
             self.leaveButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .cancel), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
