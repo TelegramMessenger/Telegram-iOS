@@ -6442,3 +6442,5 @@ Sorry for the inconvenience.";
 "Checkout.OptionalTipItem" = "Tip (Optional)";
 "Checkout.TipItem" = "Tip";
 "Checkout.OptionalTipItemPlaceholder" = "Enter Custom";
+
+"VoiceChat.ReminderNotify" = "We will notify you when it starts.";

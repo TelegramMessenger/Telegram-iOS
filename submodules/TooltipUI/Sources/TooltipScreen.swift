@@ -44,6 +44,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let backgroundContainerNode: ASDisplayNode
     private let backgroundNode: ASImageNode
     private var effectView: UIView?
+    private var gradientNode: ASDisplayNode?
+    private var arrowGradientNode: ASDisplayNode?
     private let arrowNode: ASImageNode
     private let arrowContainer: ASDisplayNode
     private var arrowEffectView: UIView?
@@ -121,7 +123,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.arrowContainer = ASDisplayNode()
         
         let fontSize: CGFloat
-        if style == .light {
+        if case .light = style {
             self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
             self.backgroundContainerNode.clipsToBounds = true
             self.backgroundContainerNode.cornerRadius = 14.0
@@ -132,6 +134,38 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             self.arrowEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
             self.arrowContainer.view.addSubview(self.arrowEffectView!)
+            
+            let maskLayer = CAShapeLayer()
+            if let path = try? svgPath("M85.882251,0 C79.5170552,0 73.4125613,2.52817247 68.9116882,7.02834833 L51.4264069,24.5109211 C46.7401154,29.1964866 39.1421356,29.1964866 34.4558441,24.5109211 L16.9705627,7.02834833 C12.4696897,2.52817247 6.36519576,0 0,0 L85.882251,0 ", scale: CGPoint(x: 0.333333, y: 0.333333), offset: CGPoint()) {
+                maskLayer.path = path.cgPath
+            }
+            maskLayer.frame = CGRect(origin: CGPoint(), size: arrowSize)
+            self.arrowContainer.layer.mask = maskLayer
+        } else if case let .gradient(leftColor, rightColor) = style {
+            self.gradientNode = ASDisplayNode()
+            self.gradientNode?.setLayerBlock({
+                let layer = CAGradientLayer()
+                layer.colors = [leftColor.cgColor, rightColor.cgColor]
+                layer.startPoint = CGPoint()
+                layer.endPoint = CGPoint(x: 1.0, y: 0.0)
+                return layer
+            })
+            self.arrowGradientNode = ASDisplayNode()
+            self.arrowGradientNode?.setLayerBlock({
+                let layer = CAGradientLayer()
+                layer.colors = [leftColor.cgColor, rightColor.cgColor]
+                layer.startPoint = CGPoint()
+                layer.endPoint = CGPoint(x: 1.0, y: 0.0)
+                return layer
+            })
+            self.backgroundContainerNode.clipsToBounds = true
+            self.backgroundContainerNode.cornerRadius = 14.0
+            if #available(iOS 13.0, *) {
+                self.backgroundContainerNode.layer.cornerCurve = .continuous
+            }
+            fontSize = 17.0
+            
+            self.arrowContainer.addSubnode(self.arrowGradientNode!)
             
             let maskLayer = CAShapeLayer()
             if let path = try? svgPath("M85.882251,0 C79.5170552,0 73.4125613,2.52817247 68.9116882,7.02834833 L51.4264069,24.5109211 C46.7401154,29.1964866 39.1421356,29.1964866 34.4558441,24.5109211 L16.9705627,7.02834833 C12.4696897,2.52817247 6.36519576,0 0,0 L85.882251,0 ", scale: CGPoint(x: 0.333333, y: 0.333333), offset: CGPoint()) {
@@ -178,7 +212,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.containerNode.addSubnode(self.backgroundContainerNode)
         self.arrowContainer.addSubnode(self.arrowNode)
         self.backgroundNode.addSubnode(self.arrowContainer)
-        if let effectView = self.effectView {
+        if let gradientNode = self.gradientNode {
+            self.backgroundContainerNode.addSubnode(gradientNode)
+            self.containerNode.addSubnode(self.arrowContainer)
+            self.arrowNode.removeFromSupernode()
+        }
+        else if let effectView = self.effectView {
             self.backgroundContainerNode.view.addSubview(effectView)
             if let _ = self.arrowEffectView {
                 self.containerNode.addSubnode(self.arrowContainer)
@@ -259,7 +298,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let sideInset: CGFloat = 13.0 + layout.safeInsets.left
         let bottomInset: CGFloat = 10.0
-        let contentInset: CGFloat = 9.0
+        let contentInset: CGFloat = 11.0
         let contentVerticalInset: CGFloat = 11.0
         let animationSize: CGSize
         let animationInset: CGFloat
@@ -288,7 +327,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let backgroundHeight: CGFloat
         switch self.tooltipStyle {
-            case .default:
+            case .default, .gradient:
                 backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
             case .light:
                 backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
@@ -331,6 +370,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         }
+        if let gradientNode = self.gradientNode {
+            transition.updateFrame(node: gradientNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        }
         if let image = self.arrowNode.image, case let .point(rect, arrowPosition) = self.location {
             let arrowSize = image.size
             let arrowCenterX = rect.midX
@@ -348,8 +390,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     
                     transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: -backgroundFrame.minX, dy: 0.0))
                     
-                    self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowSize)
-                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(), size: arrowSize)
+                    let arrowBounds = CGRect(origin: CGPoint(), size: arrowSize)
+                    self.arrowNode.frame = arrowBounds
+                    self.arrowEffectView?.frame = arrowBounds
+                    self.arrowGradientNode?.frame = CGRect(origin: CGPoint(x: -arrowFrame.minX + backgroundFrame.minX, y: 0.0), size:  backgroundFrame.size)
                 case .right:
                     arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: rect.midY), size: CGSize(width: arrowSize.height, height: arrowSize.width))
                     
@@ -357,8 +401,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     
                     transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 0.0, dy: -backgroundFrame.minY - floorToScreenPixels((backgroundFrame.height - arrowSize.width) / 2.0)))
                     
-                    self.arrowNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
-                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
+                    let arrowBounds = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
+                    self.arrowNode.frame = arrowBounds
+                    self.arrowEffectView?.frame = arrowBounds
+                    self.arrowGradientNode?.frame = arrowBounds
             }
         } else {
             self.arrowNode.isHidden = true
@@ -508,6 +554,7 @@ public final class TooltipScreen: ViewController {
     public enum Style {
         case `default`
         case light
+        case gradient(UIColor, UIColor)
     }
     
     public let text: String

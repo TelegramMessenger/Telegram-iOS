@@ -2666,6 +2666,12 @@ public final class VoiceChatController: ViewController {
                             } else if callState.canManageCall {
                                 self.call.startScheduled()
                             } else {
+                                if !callState.subscribedToScheduled {
+                                    let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view)
+                                    self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: 100.0), .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                                        return .dismiss(consume: false)
+                                    }), in: .window(.root))
+                                }
                                 self.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
                             }
                         }
