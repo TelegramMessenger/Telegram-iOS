@@ -506,6 +506,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private let messageId: MessageId
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
+    private let completed: (String, MessageId?) -> Void
     
     private var stateValue = BotCheckoutControllerState()
     private let state = ValuePromise(BotCheckoutControllerState(), ignoreRepeated: true)
@@ -536,12 +537,13 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
         self.present = present
         self.dismissAnimated = dismissAnimated
+        self.completed = completed
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -1213,6 +1215,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 tipAmount = 0
             }
 
+            let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
+            let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
+
             self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
@@ -1227,19 +1232,32 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         strongSelf.applePayController = nil
                         applePayController.presentingViewController?.dismiss(animated: true, completion: nil)
                     }
+
+                    let proceedWithCompletion: (Bool, MessageId?) -> Void = { success, receiptMessageId in
+                        guard let strongSelf = self else {
+                            return
+                        }
+
+                        if success {
+                            strongSelf.dismissAnimated()
+                            strongSelf.completed(currencyValue, receiptMessageId)
+                        } else {
+                            strongSelf.dismissAnimated()
+                        }
+                    }
                     
                     switch result {
-                        case .done:
-                            strongSelf.dismissAnimated()
+                        case let .done(receiptMessageId):
+                            proceedWithCompletion(true, receiptMessageId)
                         case let .externalVerificationRequired(url):
                             strongSelf.updateActionButton()
-                            var dismissImpl: (() -> Void)?
-                            let controller = BotCheckoutWebInteractionController(context: strongSelf.context, url: url, intent: .externalVerification({ _ in
-                                dismissImpl?()
+                            var dismissImpl: ((Bool) -> Void)?
+                            let controller = BotCheckoutWebInteractionController(context: strongSelf.context, url: url, intent: .externalVerification({ success in
+                                dismissImpl?(success)
                             }))
-                            dismissImpl = { [weak controller] in
+                            dismissImpl = { [weak controller] success in
                                 controller?.dismiss()
-                                self?.dismissAnimated()
+                                proceedWithCompletion(success, nil)
                             }
                             strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }

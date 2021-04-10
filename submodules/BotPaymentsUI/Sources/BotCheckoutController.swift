@@ -80,6 +80,7 @@ public final class BotCheckoutController: ViewController {
     private let context: AccountContext
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
+    private let completed: (String, MessageId?) -> Void
     
     private var presentationData: PresentationData
     
@@ -87,11 +88,12 @@ public final class BotCheckoutController: ViewController {
 
     private let inputData: Promise<BotCheckoutController.InputData?>
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, MessageId?) -> Void) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
         self.inputData = inputData
+        self.completed = completed
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -121,7 +123,7 @@ public final class BotCheckoutController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }, dismissAnimated: { [weak self] in
             self?.dismiss()
-        })
+        }, completed: self.completed)
         
         //displayNode.enableInteractiveDismiss = true
         
