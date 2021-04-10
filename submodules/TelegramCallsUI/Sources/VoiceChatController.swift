@@ -1635,9 +1635,10 @@ public final class VoiceChatController: ViewController {
                     strongSelf.titleNode.isRecording = isRecording
                 }
                 if !strongSelf.didSetDataReady {
+                    strongSelf.didSetDataReady = true
+                    
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: strongSelf.currentCallMembers ?? ([], nil), invitedPeers: strongSelf.currentInvitedPeers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set())
                     
-                    strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
                 }
             })
