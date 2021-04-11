@@ -2242,7 +2242,7 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func updateSchedulePickerDates() {
+        private func updateSchedulePickerLimits() {
             let timeZone = TimeZone(secondsFromGMT: 0)!
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = timeZone
@@ -2256,8 +2256,13 @@ public final class VoiceChatController: ViewController {
             let minute = components.minute ?? 0
             components.minute = 0
             let roundedToHourDate = calendar.date(from: components)!
+            
+            components.hour = 0
+            let roundedToMidnightDate = calendar.date(from: components)!
+            
             let nextTwoHourDate = calendar.date(byAdding: .hour, value: minute > 30 ? 4 : 3, to: roundedToHourDate)
-            let maxDate = calendar.date(byAdding: .day, value: 7, to: currentDate)
+           
+            let maxDate = calendar.date(byAdding: .day, value: 8, to: roundedToMidnightDate)
             
             if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
                 self.pickerView?.maximumDate = date
@@ -2295,7 +2300,7 @@ public final class VoiceChatController: ViewController {
             pickerView.setValue(textColor, forKey: "textColor")
             self.pickerView = pickerView
             
-            self.updateSchedulePickerDates()
+            self.updateSchedulePickerLimits()
             if let currentDate = currentDate {
                 pickerView.date = currentDate
             }
@@ -2667,8 +2672,9 @@ public final class VoiceChatController: ViewController {
                                 self.call.startScheduled()
                             } else {
                                 if !callState.subscribedToScheduled {
-                                    let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view)
-                                    self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: 100.0), .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                                    let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view).center
+                                    let point = CGRect(origin: CGPoint(x: location.x - 5.0, y: location.y - 5.0 - 68.0), size: CGSize(width: 10.0, height: 10.0))
+                                    self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
                                         return .dismiss(consume: false)
                                     }), in: .window(.root))
                                 }

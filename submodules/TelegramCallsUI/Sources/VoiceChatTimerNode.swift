@@ -137,7 +137,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
         let elapsedTime = scheduleTime - currentTime
         let timerText: String
         if elapsedTime >= 86400 {
-            timerText = scheduledTimeIntervalString(strings: self.strings, value: elapsedTime).uppercased()
+            timerText = scheduledTimeIntervalString(strings: self.strings, value: elapsedTime)
         } else {
             timerText = textForTimeout(value: abs(elapsedTime))
             if elapsedTime < 0 && !self.isLate {
@@ -162,10 +162,16 @@ final class VoiceChatTimerNode: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(size)
         self.titleNode.frame = CGRect(x: floor((size.width - titleSize.width) / 2.0), y: 48.0, width: titleSize.width, height: titleSize.height)
         
+        
         self.timerNode.attributedText = NSAttributedString(string: timerText, font: Font.with(size: 68.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
         
-        let timerSize = self.timerNode.updateLayout(size)
-        self.timerNode.frame = CGRect(x: floor((size.width - timerSize.width) / 2.0), y: 80.0, width: timerSize.width, height: timerSize.height)
+        var timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
+        if timerSize.width > size.width - 32.0 {
+            self.timerNode.attributedText = NSAttributedString(string: timerText, font: Font.with(size: 60.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
+            timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
+        }
+        
+        self.timerNode.frame = CGRect(x: floor((size.width - timerSize.width) / 2.0), y: 78.0, width: timerSize.width, height: timerSize.height)
         
         self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.with(size: 21.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         let subtitleSize = self.subtitleNode.updateLayout(size)
