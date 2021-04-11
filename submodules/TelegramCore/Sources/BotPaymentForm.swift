@@ -106,6 +106,7 @@ public struct BotPaymentForm : Equatable {
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
+    public let paymentBotId: PeerId
     public let providerId: PeerId
     public let url: String
     public let nativeProvider: BotPaymentNativeProvider?
@@ -198,7 +199,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, id, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, botId, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
                         var peers: [Peer] = []
                         for user in apiUsers {
                             let parsed = TelegramUser(user: user)
@@ -224,7 +225,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
