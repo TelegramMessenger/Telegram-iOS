@@ -985,6 +985,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)
     }
+
+    public func scanTopMessages(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (Message) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.scanTopMessages(peerId: peerId, namespace: namespace, limit: limit, f)
+    }
     
     public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
         self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
@@ -3406,6 +3411,26 @@ public final class Postbox {
             }
             if let last = indices.last {
                 index = last
+            } else {
+                break
+            }
+        }
+    }
+
+    fileprivate func scanTopMessages(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (Message) -> Bool) {
+        let lowerBound = MessageIndex.lowerBound(peerId: peerId, namespace: namespace)
+        var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
+        var remainingLimit = limit
+        while remainingLimit > 0 {
+            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: nil, from: index, includeFrom: false, to: lowerBound, limit: 10)
+            remainingLimit -= 10
+            for message in messages {
+                if !f(self.renderIntermediateMessage(message)) {
+                    break
+                }
+            }
+            if let last = messages.last {
+                index = last.index
             } else {
                 break
             }

@@ -342,7 +342,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done
+    case done(receiptMessageId: MessageId?)
     case externalVerificationRequired(url: String)
 }
 
@@ -384,7 +384,27 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: I
             switch result {
                 case let .paymentResult(updates):
                     account.stateManager.addUpdates(updates)
-                    return .done
+                    var receiptMessageId: MessageId?
+                    for apiMessage in updates.messages {
+                        if let message = StoreMessage(apiMessage: apiMessage) {
+                            for media in message.media {
+                                if let action = media as? TelegramMediaAction {
+                                    if case .paymentSent = action.action {
+                                        for attribute in message.attributes {
+                                            if let reply = attribute as? ReplyMessageAttribute {
+                                                if reply.messageId == messageId {
+                                                    if case let .Id(id) = message.id {
+                                                        receiptMessageId = id
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return .done(receiptMessageId: receiptMessageId)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }
@@ -402,13 +422,35 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: I
     }
 }
 
-public struct BotPaymentReceipt {
+public struct BotPaymentReceipt : Equatable {
     public let invoice: BotPaymentInvoice
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?
     public let credentialsTitle: String
     public let invoiceMedia: TelegramMediaInvoice
     public let tipAmount: Int64?
+    
+    public static func ==(lhs: BotPaymentReceipt, rhs: BotPaymentReceipt) -> Bool {
+        if lhs.invoice != rhs.invoice {
+            return false
+        }
+        if lhs.info != rhs.info {
+            return false
+        }
+        if lhs.shippingOption != rhs.shippingOption {
+            return false
+        }
+        if lhs.credentialsTitle != rhs.credentialsTitle {
+            return false
+        }
+        if !lhs.invoiceMedia.isEqual(to: rhs.invoiceMedia) {
+            return false
+        }
+        if lhs.tipAmount != rhs.tipAmount {
+            return false
+        }
+        return true
+    }
 }
 
 public enum RequestBotPaymentReceiptError {

@@ -6444,3 +6444,5 @@ Sorry for the inconvenience.";
 "Checkout.OptionalTipItemPlaceholder" = "Enter Custom";
 
 "VoiceChat.ReminderNotify" = "We will notify you when it starts.";
+
+"Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";

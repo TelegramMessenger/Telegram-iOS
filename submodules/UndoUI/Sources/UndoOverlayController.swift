@@ -38,6 +38,7 @@ public enum UndoOverlayContent {
     case sticker(account: Account, file: TelegramMediaFile, text: String)
     case copy(text: String)
     case mediaSaved(text: String)
+    case paymentSent(currencyValue: String, itemTitle: String)
 }
 
 public enum UndoOverlayAction {
