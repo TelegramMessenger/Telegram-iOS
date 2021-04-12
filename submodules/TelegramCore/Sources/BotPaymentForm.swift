@@ -430,7 +430,7 @@ public struct BotPaymentReceipt : Equatable {
     public let credentialsTitle: String
     public let invoiceMedia: TelegramMediaInvoice
     public let tipAmount: Int64?
-    
+    public let botPaymentId: PeerId
     public static func ==(lhs: BotPaymentReceipt, rhs: BotPaymentReceipt) -> Bool {
         if lhs.invoice != rhs.invoice {
             return false
@@ -448,6 +448,9 @@ public struct BotPaymentReceipt : Equatable {
             return false
         }
         if lhs.tipAmount != rhs.tipAmount {
+            return false
+        }
+        if lhs.botPaymentId != rhs.botPaymentId {
             return false
         }
         return true
@@ -516,8 +519,10 @@ public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> 
                         startParam: "",
                         flags: []
                     )
+                    
+                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId))
 
-                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount)
+                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId)
                 }
             }
             |> castError(RequestBotPaymentReceiptError.self)
