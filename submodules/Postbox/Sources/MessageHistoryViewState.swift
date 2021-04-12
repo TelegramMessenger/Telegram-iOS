@@ -468,11 +468,11 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if items.higherThanAnchor.count == 0 {
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
                         } else {
-                            let clipIndex = items.higherThanAnchor[0].index.predecessor()
+                            let clipIndex = items.higherThanAnchor[0].index.peerLocalPredecessor()
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
                         }
                     } else {
-                        let clipIndex = items.lowerOrAtAnchor[0].index.predecessor()
+                        let clipIndex = items.lowerOrAtAnchor[0].index.peerLocalPredecessor()
                         clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
                     }
                 } else {
@@ -480,7 +480,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if items.higherThanAnchor.count == 0 {
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
                         } else {
-                            let clipIndex = items.higherThanAnchor[0].index.predecessor()
+                            let clipIndex = items.higherThanAnchor[0].index.peerLocalPredecessor()
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
                         }
                     } else {
@@ -488,7 +488,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if indices.contains(Int(items.lowerOrAtAnchor[i + 1].index.id.id)) {
                             clipIndex = items.lowerOrAtAnchor[i + 1].index
                         } else {
-                            clipIndex = items.lowerOrAtAnchor[i + 1].index.predecessor()
+                            clipIndex = items.lowerOrAtAnchor[i + 1].index.peerLocalPredecessor()
                         }
                         clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
                     }
@@ -536,11 +536,11 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if items.lowerOrAtAnchor.count == 0 {
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
                         } else {
-                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.successor()
+                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.peerLocalSuccessor()
                             clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
                         }
                     } else {
-                        let clipIndex = items.higherThanAnchor[items.higherThanAnchor.count - 1].index.successor()
+                        let clipIndex = items.higherThanAnchor[items.higherThanAnchor.count - 1].index.peerLocalSuccessor()
                         clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
                     }
                 } else {
@@ -548,7 +548,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if items.lowerOrAtAnchor.count == 0 {
                             clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
                         } else {
-                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.successor()
+                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.peerLocalSuccessor()
                             clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
                         }
                     } else {
@@ -556,7 +556,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                         if indices.contains(Int(items.higherThanAnchor[i - 1].index.id.id)) {
                             clipIndex = items.higherThanAnchor[i - 1].index
                         } else {
-                            clipIndex = items.higherThanAnchor[i - 1].index.successor()
+                            clipIndex = items.higherThanAnchor[i - 1].index.peerLocalSuccessor()
                         }
                         clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
                     }

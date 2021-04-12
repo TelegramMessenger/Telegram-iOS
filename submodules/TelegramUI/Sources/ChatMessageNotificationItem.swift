@@ -341,7 +341,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 messageText = rawText
                             }
                         case .file:
-                            let rawText = presentationData.strings.PUSH_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            let rawText = presentationData.strings.PUSH_MESSAGE_FILES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
                                 title = String(rawText[rawText.startIndex ..< index])
                                 messageText = String(rawText[rawText.index(after: index)...])
