@@ -698,7 +698,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                 
                 var updatedIndex: MessageIndex?
                 if let topIndex = topIndex {
-                    updatedIndex = topIndex.predecessor()
+                    updatedIndex = topIndex.globalPredecessor()
                 }
                 
                 transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
