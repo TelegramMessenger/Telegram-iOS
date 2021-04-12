@@ -104,9 +104,8 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
-"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
-"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
-"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_FILES_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_FILES_any" = "%1$@|sent you %2$d files";
 
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";

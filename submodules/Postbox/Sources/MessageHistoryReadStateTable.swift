@@ -315,7 +315,7 @@ final class MessageHistoryReadStateTable: Table {
                         readPastTopIndex = true
                     }
                     if maxIncomingReadIndex < messageIndex || markedUnread || readPastTopIndex {
-                        let (realDeltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.successor(), messageIndex)
+                        let (realDeltaCount, holes, messageIds) = incomingStatsInRange(maxIncomingReadIndex.peerLocalSuccessor(), messageIndex)
                         var deltaCount = realDeltaCount
                         if readPastTopIndex {
                             deltaCount = max(Int(count), deltaCount)
@@ -366,7 +366,7 @@ final class MessageHistoryReadStateTable: Table {
                     break
                 case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, count, markedUnread):
                     if maxOutgoingReadIndex < messageIndex {
-                        let messageIds: [MessageId] = outgoingIndexStatsInRange(maxOutgoingReadIndex.successor(), messageIndex)
+                        let messageIds: [MessageId] = outgoingIndexStatsInRange(maxOutgoingReadIndex.peerLocalSuccessor(), messageIndex)
                         
                         self.markReadStatesAsUpdated(messageIndex.id.peerId, namespaces: states.namespaces)
                         states.namespaces[messageIndex.id.namespace] = .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: messageIndex, count: count, markedUnread: markedUnread)

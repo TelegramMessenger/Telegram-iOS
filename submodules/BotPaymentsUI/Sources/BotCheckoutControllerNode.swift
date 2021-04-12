@@ -564,8 +564,19 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }, ensureTipInputVisible: {
             ensureTipInputVisibleImpl?()
         })
+
+        let paymentBotPeer = paymentFormAndInfo.get()
+        |> map { paymentFormAndInfo -> PeerId? in
+            return paymentFormAndInfo?.0.paymentBotId
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+            return context.account.postbox.transaction { transaction -> Peer? in
+                return peerId.flatMap(transaction.getPeer)
+            }
+        }
         
-        let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
+        let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), paymentBotPeer)
         |> map { presentationData, state, paymentFormAndInfo, botPeer -> (ItemListPresentationData, (ItemListNodeState, Any)) in
             let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botCheckoutControllerEntries(presentationData: presentationData, state: state, invoice: invoice, paymentForm: paymentFormAndInfo?.0, formInfo: paymentFormAndInfo?.1, validatedFormInfo: paymentFormAndInfo?.2, currentShippingOptionId: paymentFormAndInfo?.3, currentPaymentMethod: paymentFormAndInfo?.4, currentTip: paymentFormAndInfo?.5, botPeer: botPeer), style: .blocks, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
 
@@ -1184,7 +1195,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 }
                 return nil
             }
-            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: self.messageId.peerId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
+            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
             |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
                 if let strongSelf = self, let botPeer = botPeer {
                     if value {
