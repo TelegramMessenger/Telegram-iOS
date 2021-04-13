@@ -650,8 +650,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
 
     func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+        guard let item = self.item else {
+            return
+        }
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
-        
+
+        textInput.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: textInput.backgroundView.bounds.size)
+        self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, mediaBox: item.context.account.postbox.mediaBox, transition: transition)
         self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
 
         for contentNode in self.contentNodes {

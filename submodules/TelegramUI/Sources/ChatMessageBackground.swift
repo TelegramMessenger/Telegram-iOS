@@ -240,8 +240,16 @@ class ChatMessageBackground: ASDisplayNode {
             self.outlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
 
             self.view.addSubview(sourceView)
-            sourceView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: sourceView.bounds.size)
-            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak sourceView] _ in
+
+            let wasMaskNode = self.maskMode
+            if let wasMaskNode = wasMaskNode, !wasMaskNode {
+                self.setMaskMode(true)
+            }
+
+            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self, weak sourceView] _ in
+                if let wasMaskNode = wasMaskNode, !wasMaskNode {
+                    self?.setMaskMode(false)
+                }
                 sourceView?.removeFromSuperview()
             })
 
