@@ -26,7 +26,7 @@ public func requestStartBot(account: Account, botPeerId: PeerId, payload: String
                 }
             }
     } else {
-        return enqueueMessages(account: account, peerId: botPeerId, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]) |> mapToSignal { _ -> Signal<Void, NoError> in
+        return enqueueMessages(account: account, peerId: botPeerId, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]) |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
         }
     }

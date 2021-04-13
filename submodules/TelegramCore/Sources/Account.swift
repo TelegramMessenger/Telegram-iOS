@@ -67,6 +67,11 @@ public class UnauthorizedAccount {
     public var updateLoginTokenEvents: Signal<Void, NoError> {
         return self.updateLoginTokenPipe.signal()
     }
+
+    private let serviceNotificationPipe = ValuePipe<String>()
+    public var serviceNotificationEvents: Signal<String, NoError> {
+        return self.serviceNotificationPipe.signal()
+    }
     
     public var masterDatacenterId: Int32 {
         return Int32(self.network.mtProto.datacenterId)
@@ -83,8 +88,11 @@ public class UnauthorizedAccount {
         self.postbox = postbox
         self.network = network
         let updateLoginTokenPipe = self.updateLoginTokenPipe
+        let serviceNotificationPipe = self.serviceNotificationPipe
         self.stateManager = UnauthorizedAccountStateManager(network: network, updateLoginToken: {
             updateLoginTokenPipe.putNext(Void())
+        }, displayServiceNotification: { text in
+            serviceNotificationPipe.putNext(text)
         })
         
         network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()

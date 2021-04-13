@@ -362,7 +362,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
      
-    private let mainContextSourceNode: ContextExtractedContentContainingNode
+    let mainContextSourceNode: ContextExtractedContentContainingNode
     private let mainContainerNode: ContextControllerSourceNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
@@ -553,6 +553,40 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    override func cancelInsertionAnimations() {
+        self.shadowNode.layer.removeAllAnimations()
+
+        func process(node: ASDisplayNode) {
+            if node === self.accessoryItemNode {
+                return
+            }
+
+            if node !== self {
+                switch node {
+                case let node as ContextExtractedContentContainingNode:
+                    process(node: node.contentNode)
+                    return
+                case _ as ContextControllerSourceNode, _ as ContextExtractedContentNode:
+                    break
+                default:
+                    node.layer.removeAllAnimations()
+                    node.layer.allowsGroupOpacity = false
+                    return
+                }
+            }
+
+            guard let subnodes = node.subnodes else {
+                return
+            }
+
+            for subnode in subnodes {
+                process(node: subnode)
+            }
+        }
+
+        process(node: self)
+    }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
@@ -612,6 +646,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     layer?.allowsGroupOpacity = false
                 })
             }
+        }
+    }
+
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+        let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
+        
+        self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
+
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                let localSourceContentFrame = self.mainContextSourceNode.contentNode.view.convert(textInput.contentView.frame.offsetBy(dx: self.mainContextSourceNode.contentRect.minX, dy: self.mainContextSourceNode.contentRect.minY), to: contentNode.view)
+                textInput.contentView.frame = localSourceContentFrame
+                contentNode.animateFrom(sourceView: textInput.contentView, widthDifference: widthDifference, transition: transition)
+            }
+        }
+    }
+
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
+        if let replyInfoNode = self.replyInfoNode {
+            let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
+            replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
         }
     }
     

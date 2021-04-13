@@ -1045,7 +1045,7 @@
   CGFloat baselineNudge = (lineHeight - fontLineHeight) * 0.6f;
   
   CGRect rect = *lineFragmentRect;
-  rect.size.height = lineHeight;
+  rect.size.height = lineHeight + 2.0f;
   
   CGRect usedRect = *lineFragmentUsedRect;
   usedRect.size.height = MAX(lineHeight, usedRect.size.height);
