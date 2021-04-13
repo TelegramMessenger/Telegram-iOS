@@ -67,6 +67,9 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         func beginAnimation() {
             switch self.source {
             case let .textInput(textInput, replyPanel):
+                self.contextSourceNode.isExtractedToContextPreview = true
+                self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
+
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
                 let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
@@ -96,17 +99,23 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 }
 
                 self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: self.contextSourceNode.contentRect.minY)
+                self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
                 self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), to: CGPoint(), duration: duration, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.endAnimation()
                 })
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), .spring, duration * 0.8)
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), .spring, duration)
                 self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: duration * 0.8, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             }
         }
 
         private func endAnimation() {
+            self.contextSourceNode.isExtractedToContextPreview = false
+            self.contextSourceNode.isExtractedToContextPreviewUpdated?(false)
+            
             self.animationEnded?()
         }
 

@@ -144,9 +144,9 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         self.backgroundContent.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
     }
     
-    func offset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-        transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: 0.0, y: -value))
+        transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: -value.x, y: -value.y))
     }
     
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
@@ -164,20 +164,11 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
 
     func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: ContainedViewLayoutTransition) {
         if transition.isAnimated {
-            let wasMaskMode = self.currentMaskMode
-            if let wasMaskMode = wasMaskMode, !wasMaskMode {
-                self.fixedMaskMode = true
-                self.setMaskMode(true, mediaBox: mediaBox)
-            }
-
             let previousFrame = self.frame
             self.updateFrame(CGRect(origin: previousFrame.origin, size: sourceView.frame.size), transition: .immediate)
-            self.updateFrame(previousFrame, transition: transition, completion: { [weak self] in
-                if let wasMaskMode = wasMaskMode, !wasMaskMode {
-                    self?.fixedMaskMode = nil
-                    self?.setMaskMode(false, mediaBox: mediaBox)
-                }
-            })
+            self.updateFrame(previousFrame, transition: transition)
+
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
         }
     }
 }

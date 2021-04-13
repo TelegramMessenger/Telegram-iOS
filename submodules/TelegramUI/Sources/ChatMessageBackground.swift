@@ -241,15 +241,7 @@ class ChatMessageBackground: ASDisplayNode {
 
             self.view.addSubview(sourceView)
 
-            let wasMaskNode = self.maskMode
-            if let wasMaskNode = wasMaskNode, !wasMaskNode {
-                self.setMaskMode(true)
-            }
-
-            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self, weak sourceView] _ in
-                if let wasMaskNode = wasMaskNode, !wasMaskNode {
-                    self?.setMaskMode(false)
-                }
+            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak sourceView] _ in
                 sourceView?.removeFromSuperview()
             })
 
