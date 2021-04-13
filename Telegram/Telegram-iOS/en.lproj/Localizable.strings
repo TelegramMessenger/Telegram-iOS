@@ -6456,3 +6456,5 @@ Sorry for the inconvenience.";
 "Privacy.PaymentsClear.ShippingInfoCleared" = "Shipping info cleared.";
 "Privacy.PaymentsClear.AllInfoCleared" = "Payment and shipping info cleared.";
 
+"Settings.Tips" = "Telegram Features";
+"Settings.TipsUsername" = "TelegramTips";

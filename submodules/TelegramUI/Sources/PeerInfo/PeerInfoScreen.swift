@@ -524,6 +524,7 @@ private enum PeerInfoSettingsSection {
     case watch
     case support
     case faq
+    case tips
     case phoneNumber
     case username
     case addAccount
@@ -822,6 +823,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }))
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_FAQ, icon: PresentationResourcesSettings.faq, action: {
         interaction.openSettings(.faq)
+    }))
+    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
+        interaction.openSettings(.tips)
     }))
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
@@ -1542,6 +1546,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let hasTwoStepAuth = Promise<Bool?>(nil)
     private let hasPassport = Promise<Bool>(false)
     private let supportPeerDisposable = MetaDisposable()
+    private let tipsPeerDisposable = MetaDisposable()
     private let cachedFaq = Promise<ResolvedUrl?>(nil)
     
     private let _ready = Promise<Bool>()
@@ -2869,6 +2874,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.resolvePeerByNameDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
+        self.supportPeerDisposable.dispose()
+        self.tipsPeerDisposable.dispose()
     }
     
     override func didLoad() {
@@ -5433,6 +5440,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 })]), in: .window(.root))
             case .faq:
                 self.openFaq()
+            case .tips:
+                self.openTips()
             case .phoneNumber:
                 if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
                     self.controller?.push(ChangePhoneNumberIntroController(context: self.context, phoneNumber: phoneNumber))
@@ -5451,7 +5460,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openFaq(anchor: String? = nil) {
-        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
         self.controller?.present(controller, in: .window(.root))
         let _ = (self.cachedFaq.get()
         |> take(1)
@@ -5469,6 +5478,20 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }, dismissInput: {}, contentContext: nil)
             }
         })
+    }
+    
+    private func openTips() {
+        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+        self.controller?.present(controller, in: .window(.root))
+        
+        let context = self.context
+        let navigationController = self.controller?.navigationController as? NavigationController
+        self.tipsPeerDisposable.set((resolvePeerByName(account: context.account, name: self.presentationData.strings.Settings_TipsUsername) |> deliverOnMainQueue).start(next: { [weak controller] peerId in
+            controller?.dismiss()
+            if let peerId = peerId, let navigationController = navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+            }
+        }))
     }
     
     fileprivate func switchToAccount(id: AccountRecordId) {
