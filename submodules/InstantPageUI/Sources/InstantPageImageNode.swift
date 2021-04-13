@@ -15,6 +15,7 @@ import LocationResources
 import LiveLocationPositionNode
 import AppBundle
 import TelegramUIPreferences
+import ContextUI
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -34,7 +35,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let longPressMedia: (InstantPageMedia) -> Void
     
     private var fetchControls: FetchControls?
-    
+
+    private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
     private let linkIconNode: ASImageNode
@@ -48,7 +50,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
@@ -59,15 +61,17 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.fit = fit
         self.openMedia = openMedia
         self.longPressMedia = longPressMedia
-        
+
+        self.pinchContainerNode = PinchSourceContainerNode()
         self.imageNode = TransformImageNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.linkIconNode = ASImageNode()
         self.pinNode = ChatMessageLiveLocationPositionNode()
         
         super.init()
-        
-        self.addSubnode(self.imageNode)
+
+        self.pinchContainerNode.contentNode.addSubnode(self.imageNode)
+        self.addSubnode(self.pinchContainerNode)
         
         if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
@@ -97,10 +101,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 
                 if media.url != nil {
                     self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
-                    self.addSubnode(self.linkIconNode)
+                    self.pinchContainerNode.contentNode.addSubnode(self.linkIconNode)
                 }
 
-                self.addSubnode(self.statusNode)
+                self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
             }
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
@@ -114,16 +118,14 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             }
             if file.isVideo {
                 self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
-                self.addSubnode(self.statusNode)
+                self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
             }
         } else if let map = media.media as? TelegramMediaMap {
             self.addSubnode(self.pinNode)
-            
-            var zoom: Int32 = 12
+
             var dimensions = CGSize(width: 200.0, height: 100.0)
             for attribute in self.attributes {
                 if let mapAttribute = attribute as? InstantPageMapAttribute {
-                    zoom = mapAttribute.zoom
                     dimensions = mapAttribute.dimensions
                     break
                 }
@@ -135,7 +137,19 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
             self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
-            self.addSubnode(self.statusNode)
+            self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+        }
+
+        if let activatePinchPreview = activatePinchPreview {
+            self.pinchContainerNode.activate = { sourceNode in
+                activatePinchPreview(sourceNode)
+            }
+            self.pinchContainerNode.animatedOut = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                pinchPreviewFinished?(strongSelf)
+            }
         }
     }
     
@@ -198,7 +212,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if self.currentSize != size || self.themeUpdated {
             self.currentSize = size
             self.themeUpdated = false
-            
+
+            self.pinchContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.pinchContainerNode.update(size: size, transition: .immediate)
             self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
             
             let radialStatusSize: CGFloat = 50.0

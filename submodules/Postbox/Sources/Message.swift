@@ -103,12 +103,24 @@ public struct MessageIndex: Comparable, Hashable {
         self.timestamp = timestamp
     }
     
-    public func predecessor() -> MessageIndex {
+    public func globalPredecessor() -> MessageIndex {
         let previousPeerId = self.id.peerId.predecessor
         if previousPeerId != self.id.peerId {
             return MessageIndex(id: MessageId(peerId: previousPeerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
         } else if self.id.id != 0 {
-            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
+        } else if self.id.namespace != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace - 1, id: Int32.max - 1), timestamp: self.timestamp)
+        } else if self.timestamp != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: Int32(Int8.max) - 1, id: Int32.max - 1), timestamp: self.timestamp - 1)
+        } else {
+            return self
+        }
+    }
+
+    public func peerLocalPredecessor() -> MessageIndex {
+        if self.id.id != 0 {
+            return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
         } else if self.id.namespace != 0 {
             return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace - 1, id: Int32.max - 1), timestamp: self.timestamp)
         } else if self.timestamp != 0 {
@@ -118,13 +130,17 @@ public struct MessageIndex: Comparable, Hashable {
         }
     }
     
-    public func successor() -> MessageIndex {
+    public func globalSuccessor() -> MessageIndex {
         let nextPeerId = self.id.peerId.successor
         if nextPeerId != self.id.peerId {
             return MessageIndex(id: MessageId(peerId: nextPeerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
         } else {
             return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id == Int32.max ? self.id.id : (self.id.id + 1)), timestamp: self.timestamp)
         }
+    }
+
+    public func peerLocalSuccessor() -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id == Int32.max ? self.id.id : (self.id.id + 1)), timestamp: self.timestamp)
     }
     
     public static func absoluteUpperBound() -> MessageIndex {
@@ -217,11 +233,11 @@ public struct ChatListIndex: Comparable, Hashable {
     }
     
     public var predecessor: ChatListIndex {
-        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.predecessor())
+        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.globalPredecessor())
     }
     
     public var successor: ChatListIndex {
-        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.successor())
+        return ChatListIndex(pinningIndex: self.pinningIndex, messageIndex: self.messageIndex.globalSuccessor())
     }
 }
 

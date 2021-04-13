@@ -47,7 +47,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
     
     private let maxLength: Int
     
-    init(theme: PresentationTheme, placeholder: String, maxLength: Int) {
+    init(theme: PresentationTheme, placeholder: String, maxLength: Int, returnKeyType: UIReturnKeyType = .done) {
         self.theme = theme
         self.maxLength = maxLength
         
@@ -65,7 +65,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = .default
         self.textInputNode.autocapitalizationType = .sentences
-        self.textInputNode.returnKeyType = .done
+        self.textInputNode.returnKeyType = returnKeyType
         self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
         
@@ -510,7 +510,7 @@ private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
         
-        self.firstNameInputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: firstNamePlaceholder, maxLength: maxLength)
+        self.firstNameInputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: firstNamePlaceholder, maxLength: maxLength, returnKeyType: .next)
         self.firstNameInputFieldNode.text = firstNameValue ?? ""
         
         self.lastNameInputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: lastNamePlaceholder, maxLength: maxLength)
@@ -550,15 +550,11 @@ private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
-        self.firstNameInputFieldNode.updateHeight = { [weak self] in
-            if let strongSelf = self {
-                if let _ = strongSelf.validLayout {
-                    strongSelf.requestLayout?(.animated(duration: 0.15, curve: .spring))
-                }
-            }
-        }
-        
         self.updateTheme(theme)
+        
+        self.firstNameInputFieldNode.complete = { [weak self] in
+            self?.lastNameInputFieldNode.activateInput()
+        }
     }
     
     deinit {
@@ -710,7 +706,7 @@ private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
     }
 }
 
-func voiceChatUserNameController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, doneButtonTitle: String? = nil, firstName: String?, lastName: String?, maxLength: Int, apply: @escaping (String, String) -> Void) -> AlertController {
+func voiceChatUserNameController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, doneButtonTitle: String? = nil, firstName: String?, lastName: String?, maxLength: Int, apply: @escaping ((String, String)?) -> Void) -> AlertController {
     var presentationData = sharedContext.currentPresentationData.with { $0 }
     if let forceTheme = forceTheme {
         presentationData = presentationData.withUpdated(theme: forceTheme)
@@ -733,14 +729,24 @@ func voiceChatUserNameController(sharedContext: SharedAccountContext, account: A
         guard let contentNode = contentNode else {
             return
         }
-        dismissImpl?(true)
         
         let previousFirstName = firstName ?? ""
-        let previousLastName = firstName ?? ""
-        
+        let previousLastName = lastName ?? ""
         let newFirstName = contentNode.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
         let newLastName = contentNode.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
-        apply(newFirstName, newLastName)
+        
+        if newFirstName.isEmpty {
+            contentNode.animateError()
+            return
+        }
+        
+        dismissImpl?(true)
+        
+        if previousFirstName != newFirstName || previousLastName != newLastName {
+            apply((newFirstName, newLastName))
+        } else {
+            apply(nil)
+        }
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)

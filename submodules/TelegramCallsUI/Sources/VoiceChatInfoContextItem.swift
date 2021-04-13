@@ -73,7 +73,7 @@ private final class VoiceChatInfoContextItemNode: ASDisplayNode, ContextMenuCust
         let standardIconWidth: CGFloat = 32.0
         var rightTextInset: CGFloat = sideInset
         if !iconSize.width.isZero {
-            rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset - 8.0
+            rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset - 12.0
         }
     
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))

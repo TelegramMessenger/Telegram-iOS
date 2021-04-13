@@ -1053,7 +1053,7 @@ public final class MessageHistoryView {
                                         index = 0
                                         for entry in entries {
                                             if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
-                                                maxNamespaceIndex = entry.index.predecessor()
+                                                maxNamespaceIndex = entry.index.peerLocalPredecessor()
                                                 break
                                             }
                                             index += 1
@@ -1109,7 +1109,7 @@ public final class MessageHistoryView {
                             index = 0
                             for entry in entries {
                                 if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
-                                    maxNamespaceIndex = entry.index.predecessor()
+                                    maxNamespaceIndex = entry.index.peerLocalPredecessor()
                                     break
                                 }
                                 index += 1

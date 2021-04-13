@@ -268,6 +268,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .paymentSent(currencyValue, itemTitle):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_payment", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+
+                let (rawString, attributes) = presentationData.strings.Checkout_SuccessfulTooltip(currencyValue, itemTitle)
+
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
+                for (_, range) in attributes {
+                    string.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                }
+
+                self.textNode.attributedText = string
+                displayUndo = false
+                self.originalRemainingSeconds = 5
             case let .messagesUnpinned(title, text, undo, isHidden):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -738,7 +755,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent:
                 break
             case .dice:
                 self.panelWrapperNode.clipsToBounds = true
@@ -863,6 +880,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             } else if case .autoDelete = self.content {
                 let factor: CGFloat = 0.07
                 verticalOffset = -3.0
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else if case .paymentSent = self.content {
+                let factor: CGFloat = 0.08
                 preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
             } else {
                 preferredSize = iconSize

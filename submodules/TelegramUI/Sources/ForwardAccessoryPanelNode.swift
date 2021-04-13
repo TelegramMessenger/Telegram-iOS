@@ -65,6 +65,8 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
                 return (strings.ForwardedPolls(1), true)
             case let dice as TelegramMediaDice:
                 return (dice.emoji, true)
+            case let invoice as TelegramMediaInvoice:
+                return (invoice.title, true)
             default:
                 break
         }

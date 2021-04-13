@@ -7958,6 +7958,21 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func saveDefaultGroupCallJoinAs(peer: Api.InputPeer, joinAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1465786252)
+                    peer.serialize(buffer, true)
+                    joinAs.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.saveDefaultGroupCallJoinAs", parameters: [("peer", peer), ("joinAs", joinAs)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
     }
 }

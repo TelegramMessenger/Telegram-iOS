@@ -596,7 +596,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 })
                 self.completed?(peerIds)
                 
-                Queue.mainQueue().after(0.1) {
+                Queue.mainQueue().after(0.44) {
                     if self.hapticFeedback == nil {
                         self.hapticFeedback = HapticFeedback()
                     }

@@ -16,8 +16,10 @@ import GalleryUI
 import OpenInExternalAppUI
 import LocationUI
 import UndoUI
+import ContextUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
+    private weak var controller: InstantPageController?
     private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
     private var themeSettings: PresentationThemeSettings?
@@ -89,7 +91,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+        self.controller = controller
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -556,6 +559,31 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
+                    }, activatePinchPreview: { [weak self] sourceNode in
+                        guard let strongSelf = self, let controller = strongSelf.controller else {
+                            return
+                        }
+                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                            guard let strongSelf = self else {
+                                return CGRect()
+                            }
+
+                            let localRect = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.navigationBar.frame.maxY), size: CGSize(width: strongSelf.bounds.width, height: strongSelf.bounds.height - strongSelf.navigationBar.frame.maxY))
+                            return strongSelf.view.convert(localRect, to: nil)
+                        })
+                        controller.window?.presentInGlobalOverlay(pinchController)
+                    }, pinchPreviewFinished: { [weak self] itemNode in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        for (_, listItemNode) in strongSelf.visibleItemsWithNodes {
+                            if let listItemNode = listItemNode as? InstantPagePeerReferenceNode {
+                                if listItemNode.frame.intersects(itemNode.frame) && listItemNode.frame.maxY <= itemNode.frame.maxY + 2.0 {
+                                    listItemNode.layer.animateAlpha(from: 0.0, to: listItemNode.alpha, duration: 0.25)
+                                    break
+                                }
+                            }
+                        }
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in

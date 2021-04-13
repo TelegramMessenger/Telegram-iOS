@@ -13,6 +13,10 @@ public final class WindowPanRecognizer: UIGestureRecognizer {
         
         self.previousPoints.removeAll()
     }
+
+    public func cancel() {
+        self.state = .cancelled
+    }
     
     private func addPoint(_ point: CGPoint) {
         self.previousPoints.append((point, CACurrentMediaTime()))

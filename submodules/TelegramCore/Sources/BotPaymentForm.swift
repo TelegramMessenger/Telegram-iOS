@@ -38,9 +38,8 @@ public struct BotPaymentPrice : Equatable {
 
 public struct BotPaymentInvoice : Equatable {
     public struct Tip: Equatable {
-        public var min: Int64
         public var max: Int64
-        public var `default`: Int64
+        public var suggested: [Int64]
     }
 
     public let isTest: Bool
@@ -107,6 +106,7 @@ public struct BotPaymentForm : Equatable {
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
+    public let paymentBotId: PeerId
     public let providerId: PeerId
     public let url: String
     public let nativeProvider: BotPaymentNativeProvider?
@@ -145,9 +145,9 @@ extension BotPaymentInvoice {
                     fields.insert(.emailAvailableToProvider)
                 }
                 var parsedTip: BotPaymentInvoice.Tip?
-//                if let minTipAmount = minTipAmount, let maxTipAmount = maxTipAmount, let defaultTipAmount = defaultTipAmount {
-//                    parsedTip = BotPaymentInvoice.Tip(min: minTipAmount, max: maxTipAmount, default: defaultTipAmount)
-//                }
+                if let maxTipAmount = maxTipAmount, let suggestedTipAmounts = suggestedTipAmounts {
+                    parsedTip = BotPaymentInvoice.Tip(max: maxTipAmount, suggested: suggestedTipAmounts)
+                }
                 self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
                     switch $0 {
                         case let .labeledPrice(label, amount):
@@ -174,7 +174,7 @@ extension BotPaymentRequestedInfo {
     }
 }
 
-public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -183,14 +183,23 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        return network.request(Api.functions.payments.getPaymentForm(flags: 0, peer: inputPeer, msgId: messageId.id, themeParams: nil))
+        var flags: Int32 = 0
+        var serializedThemeParams: Api.DataJSON?
+        if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
+            serializedThemeParams = Api.DataJSON.dataJSON(data: dataString)
+        }
+        if serializedThemeParams != nil {
+            flags |= 1 << 0
+        }
+
+        return network.request(Api.functions.payments.getPaymentForm(flags: flags, peer: inputPeer, msgId: messageId.id, themeParams: serializedThemeParams))
         |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, id, _, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, botId, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
                         var peers: [Peer] = []
                         for user in apiUsers {
                             let parsed = TelegramUser(user: user)
@@ -216,7 +225,7 @@ public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: M
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -334,7 +343,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done
+    case done(receiptMessageId: MessageId?)
     case externalVerificationRequired(url: String)
 }
 
@@ -376,7 +385,27 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: I
             switch result {
                 case let .paymentResult(updates):
                     account.stateManager.addUpdates(updates)
-                    return .done
+                    var receiptMessageId: MessageId?
+                    for apiMessage in updates.messages {
+                        if let message = StoreMessage(apiMessage: apiMessage) {
+                            for media in message.media {
+                                if let action = media as? TelegramMediaAction {
+                                    if case .paymentSent = action.action {
+                                        for attribute in message.attributes {
+                                            if let reply = attribute as? ReplyMessageAttribute {
+                                                if reply.messageId == messageId {
+                                                    if case let .Id(id) = message.id {
+                                                        receiptMessageId = id
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return .done(receiptMessageId: receiptMessageId)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }
@@ -399,6 +428,33 @@ public struct BotPaymentReceipt : Equatable {
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?
     public let credentialsTitle: String
+    public let invoiceMedia: TelegramMediaInvoice
+    public let tipAmount: Int64?
+    public let botPaymentId: PeerId
+    public static func ==(lhs: BotPaymentReceipt, rhs: BotPaymentReceipt) -> Bool {
+        if lhs.invoice != rhs.invoice {
+            return false
+        }
+        if lhs.info != rhs.info {
+            return false
+        }
+        if lhs.shippingOption != rhs.shippingOption {
+            return false
+        }
+        if lhs.credentialsTitle != rhs.credentialsTitle {
+            return false
+        }
+        if !lhs.invoiceMedia.isEqual(to: rhs.invoiceMedia) {
+            return false
+        }
+        if lhs.tipAmount != rhs.tipAmount {
+            return false
+        }
+        if lhs.botPaymentId != rhs.botPaymentId {
+            return false
+        }
+        return true
+    }
 }
 
 public enum RequestBotPaymentReceiptError {
@@ -419,14 +475,57 @@ public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> 
         |> mapError { _ -> RequestBotPaymentReceiptError in
             return .generic
         }
-        |> map { result -> BotPaymentReceipt in
-            switch result {
-            case let .paymentReceipt(flags, date, botId, providerId, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
-                let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
-                let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
-                let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
+        |> mapToSignal { result -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> in
+            return account.postbox.transaction { transaction -> BotPaymentReceipt in
+                switch result {
+                case let .paymentReceipt(flags, date, botId, providerId, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
+                    var peers: [Peer] = []
+                    for user in users {
+                        peers.append(TelegramUser(user: user))
+                    }
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in return updated })
+
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
+                    let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
+
+                    /*let fields = BotPaymentInvoiceFields()
+
+                    let form = BotPaymentForm(
+                        id: 0,
+                        canSaveCredentials: false,
+                        passwordMissing: false,
+                        invoice: BotPaymentInvoice(
+                            isTest: false,
+                            requestedFields: fields,
+                            currency: currency,
+                            prices: [],
+                            tip: nil
+                        ),
+                        providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)),
+                        url: "",
+                        nativeProvider: nil,
+                        savedInfo: nil,
+                        savedCredentials: nil
+                    )*/
+
+                    let invoiceMedia = TelegramMediaInvoice(
+                        title: title,
+                        description: description,
+                        photo: photo.flatMap(TelegramMediaWebFile.init),
+                        receiptMessageId: nil,
+                        currency: currency,
+                        totalAmount: totalAmount,
+                        startParam: "",
+                        flags: []
+                    )
+                    
+                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId))
+
+                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId)
+                }
             }
+            |> castError(RequestBotPaymentReceiptError.self)
         }
     }
 }

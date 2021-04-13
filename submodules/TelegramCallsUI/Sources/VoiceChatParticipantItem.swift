@@ -216,6 +216,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         return self.layoutParams?.0
     }
     
+    private var currentTitle: String?
+    
     init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -628,9 +630,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         let currentItem = self.layoutParams?.0
+        let currentTitle = self.currentTitle
         
         return { item, params, first, last in
             var updatedTheme: PresentationTheme?
+            var updatedName = false
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
             }
@@ -647,6 +651,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             let currentBoldFont: UIFont = titleFont
             
+            var updatedTitle = false
             if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     if item.style == .tile {
@@ -683,6 +688,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: group.title, font: currentBoldFont, textColor: titleColor)
             } else if let channel = item.peer as? TelegramChannel {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
+            }
+            if let currentTitle = currentTitle, currentTitle != titleAttributedString?.string {
+                updatedTitle = true
             }
             
             var wavesColor = UIColor(rgb: 0x34c759)
@@ -848,6 +856,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, first, last)
+                    strongSelf.currentTitle = titleAttributedString?.string
                     strongSelf.wavesColor = wavesColor
                     
       
@@ -955,6 +964,16 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             disabledOverlayNode?.removeFromSupernode()
                         })
                         strongSelf.disabledOverlayNode = nil
+                    }
+                    
+                    if updatedTitle, let snapshotView = strongSelf.titleNode.view.snapshotContentTree() {
+                        strongSelf.titleNode.view.superview?.insertSubview(snapshotView, aboveSubview: strongSelf.titleNode.view)
+
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        
+                        strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
                     if let animateStatusTransitionFromUp = animateStatusTransitionFromUp, !strongSelf.contextSourceNode.isExtractedToContextPreview {

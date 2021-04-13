@@ -32,7 +32,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             editPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return editPanelNode
         } else {
-            let panelNode = EditAccessoryPanelNode(context: context, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
+            let panelNode = EditAccessoryPanelNode(context: context, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
@@ -63,7 +63,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
         } else {
-            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
+            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
