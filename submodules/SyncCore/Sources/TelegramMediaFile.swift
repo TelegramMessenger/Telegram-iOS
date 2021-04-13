@@ -425,6 +425,8 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             if case .Sticker = attribute {
                 if let s = self.size, s < 300 * 1024 {
                     return !isAnimatedSticker
+                } else if self.size == nil {
+                    return !isAnimatedSticker
                 }
             }
         }
