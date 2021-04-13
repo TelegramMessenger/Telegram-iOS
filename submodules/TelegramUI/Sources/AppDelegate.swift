@@ -1974,7 +1974,7 @@ final class SharedApplicationContext {
                         if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
                             let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil

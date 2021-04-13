@@ -4273,7 +4273,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let peer = peer as? TelegramUser, let _ = peer.botInfo {
                 strongSelf.activeActionDisposable.set(requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: block).start())
                 if !block {
-                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
                     if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id)))
                     }
@@ -4643,7 +4643,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             case .help:
                 text = "/help"
             }
-            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
             
             if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId)))
@@ -5629,7 +5629,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                         
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                            return .forward(source: id, grouping: .auto, attributes: [])
+                            return .forward(source: id, grouping: .auto, attributes: [], correlationId: nil)
                         })
                         |> deliverOnMainQueue).start(next: { [weak self] messageIds in
                             if let strongSelf = self {

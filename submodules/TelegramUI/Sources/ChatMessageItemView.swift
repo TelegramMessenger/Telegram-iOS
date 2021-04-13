@@ -729,6 +729,9 @@ public class ChatMessageItemView: ListViewItemNode {
             avatarNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: self.apparentFrame.height - 38.0 - self.insets.top - 2.0 - UIScreenPixel), size: CGSize(width: 38.0, height: 38.0))
         }
     }
+
+    func cancelInsertionAnimations() {
+    }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         if short {

@@ -1780,7 +1780,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
                         if let firstEntry = historyView.originalView.entries.first {
-                            var isPeerJoined = false
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
                             for media in firstEntry.message.media {
                                 if let action = media as? TelegramMediaAction {
@@ -1892,6 +1891,28 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 } else if transition.scrolledToSomeIndex {
                     self?.scrolledToSomeIndex?()
+                }
+
+                if let currentSendAnimationCorrelationId = strongSelf.currentSendAnimationCorrelationId {
+                    var foundItemNode: ChatMessageItemView?
+                    strongSelf.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                            for (message, _) in item.content {
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                                        if attribute.correlationId == currentSendAnimationCorrelationId {
+                                            foundItemNode = itemNode
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if let foundItemNode = foundItemNode {
+                        strongSelf.currentSendAnimationCorrelationId = nil
+                        strongSelf.animationCorrelationMessageFound?(foundItemNode, currentSendAnimationCorrelationId)
+                    }
                 }
                 
                 strongSelf.hasActiveTransition = false
@@ -2245,4 +2266,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         })
         self.selectionScrollDisplayLink?.isPaused = false
     }
+
+    private var currentSendAnimationCorrelationId: Int64?
+    func setCurrentSendAnimationCorrelationId(_ value: Int64?) {
+        self.currentSendAnimationCorrelationId = value
+    }
+
+    var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
 }

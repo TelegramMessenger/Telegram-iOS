@@ -36,6 +36,8 @@ final class UnauthorizedApplicationContext {
     let isReady = Promise<Bool>()
     
     var authorizationCompleted: Bool = false
+
+    private var serviceNotificationEventsDisposable: Disposable?
     
     init(apiId: Int32, apiHash: String, sharedContext: SharedAccountContextImpl, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
         self.sharedContext = sharedContext
@@ -71,6 +73,20 @@ final class UnauthorizedApplicationContext {
         }, { result in
             ApplicationSpecificNotice.setPermissionWarning(accountManager: sharedContext.accountManager, permission: .cellularData, value: 0)
         })
+
+        self.serviceNotificationEventsDisposable = (account.serviceNotificationEvents
+        |> deliverOnMainQueue).start(next: { [weak self] text in
+            if let strongSelf = self {
+                let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
+                let alertController = textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(alertController, in: .window(.root))
+            }
+        })
+    }
+
+    deinit {
+        self.serviceNotificationEventsDisposable?.dispose()
     }
 }
 

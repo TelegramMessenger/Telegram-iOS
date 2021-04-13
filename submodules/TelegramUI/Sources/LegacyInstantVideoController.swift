@@ -198,7 +198,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 }
                 
                 let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: PixelDimensions(finalDimensions), flags: [.instantRoundVideo])])
-                var message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
+                var message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                 
                 let scheduleTime: Int32? = scheduleTimestamp > 0 ? scheduleTimestamp : nil
                 

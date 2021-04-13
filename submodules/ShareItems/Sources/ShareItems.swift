@@ -403,11 +403,11 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     for item in items {
         switch item {
             case let .text(text):
-                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
             case let .media(media):
                 switch media {
                     case let .media(reference):
-                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey)
+                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil)
                         messages.append(message)
                         mediaMessages.append(message)
                         

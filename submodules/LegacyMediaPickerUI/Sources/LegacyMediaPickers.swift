@@ -254,7 +254,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?
     }
 }
 
-public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMessage, Void> {
+public func legacyEnqueueGifMessage(account: Account, data: Data, correlationId: Int64? = nil) -> Signal<EnqueueMessage, Void> {
     return Signal { subscriber in
         if let previewImage = UIImage(data: data) {
             let dimensions = previewImage.size
@@ -286,7 +286,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<Enqu
             fileAttributes.append(.Animated)
             
             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
-            subscriber.putNext(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
+            subscriber.putNext(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId))
             subscriber.putCompletion()
         } else {
             subscriber.putError(Void())
@@ -296,7 +296,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<Enqu
     } |> runOn(Queue.concurrentDefaultQueue())
 }
 
-public func legacyEnqueueVideoMessage(account: Account, data: Data) -> Signal<EnqueueMessage, Void> {
+public func legacyEnqueueVideoMessage(account: Account, data: Data, correlationId: Int64? = nil) -> Signal<EnqueueMessage, Void> {
     return Signal { subscriber in
         if let previewImage = UIImage(data: data) {
             let dimensions = previewImage.size
@@ -328,7 +328,7 @@ public func legacyEnqueueVideoMessage(account: Account, data: Data) -> Signal<En
             fileAttributes.append(.Animated)
             
             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
-            subscriber.putNext(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
+            subscriber.putNext(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId))
             subscriber.putCompletion()
         } else {
             subscriber.putError(Void())
@@ -391,7 +391,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             }
                                             
                                             var text = caption ?? ""                                            
-                                            messages.append(.message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                            messages.append(.message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil))
                                         }
                                     }
                                 case let .asset(asset):
@@ -407,7 +407,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if let timer = item.timer, timer > 0 && timer <= 60 {
                                         attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                     }
-                                    messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                    messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil))
                                 case .tempFile:
                                     break
                             }
@@ -418,13 +418,13 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     arc4random_buf(&randomId, 8)
                                     let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
                                     let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
-                                    messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                    messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil))
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
                                     let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
-                                    messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                    messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil))
                                 default:
                                     break
                             }
@@ -552,7 +552,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }
-                            messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                            messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil))
                     }
                 }
             }
