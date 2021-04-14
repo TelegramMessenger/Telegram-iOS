@@ -86,10 +86,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                 self.itemNode.cancelInsertionAnimations()
 
-                let duration: Double = 0.4
+                let duration: Double = 0.5
                 let delay: Double = 0.0
 
-                let transition: ContainedViewLayoutTransition = .animated(duration: duration * 0.8, curve: .spring)
+                let transition: ContainedViewLayoutTransition = .animated(duration: duration * 0.5, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                     itemNode.animateContentFromTextInputField(textInput: textInput, transition: transition)
@@ -100,15 +100,15 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                 self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: self.contextSourceNode.contentRect.minY)
                 self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
-                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), to: CGPoint(), duration: duration, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true, force: true, completion: { [weak self] _ in
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), to: CGPoint(), duration: duration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true, force: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.endAnimation()
                 })
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), .spring, duration * 0.8)
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), .spring, duration)
-                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: duration * 0.8, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), .custom(0.33, 0.0, 0.0, 1.0), duration * 0.5)
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.minY - targetAbsoluteRect.minY), .custom(0.33, 0.0, 0.0, 1.0), duration)
+                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: duration * 0.5, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true)
             }
         }
 
