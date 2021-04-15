@@ -676,6 +676,8 @@ final class SharedApplicationContext {
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
+            
+            
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -781,6 +783,21 @@ final class SharedApplicationContext {
         }
         |> deliverOnMainQueue
         |> mapToSignal { accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
+            //Tommy: set default custom theme when starting app first time
+            let _ = (accountManager.transaction { transaction -> Void in
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                    let current: PresentationThemeSettings
+                    if let entry = entry as? PresentationThemeSettings {
+                        current = entry
+                    } else {
+                        let defaultSettings = PresentationThemeSettings.defaultSettings
+                        current = PresentationThemeSettings(theme: defaultSettings.theme, themeSpecificAccentColors: [0: _customClassicColorPreset], themeSpecificChatWallpapers: defaultSettings.themeSpecificChatWallpapers, useSystemFont: defaultSettings.useSystemFont, fontSize: defaultSettings.fontSize, listsFontSize: defaultSettings.listsFontSize, chatBubbleSettings: defaultSettings.chatBubbleSettings, automaticThemeSwitchSetting: defaultSettings.automaticThemeSwitchSetting, largeEmoji: defaultSettings.largeEmoji, disableAnimations: defaultSettings.disableAnimations)
+                    }
+                    
+                    return current
+                })
+            }).start()
+            
             self.mainWindow?.hostView.containerView.backgroundColor =  initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
             let legacyBasePath = appGroupUrl.path
@@ -923,6 +940,8 @@ final class SharedApplicationContext {
             
             return .single(sharedApplicationContext)
         })
+        
+        
         
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
             

@@ -7,7 +7,14 @@ private func patternWallpaper(slug: String, topColor: UInt32, bottomColor: UInt3
    return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
 }
 
+//Tommny: custom preset
+public var _customClassicColorPreset = PresentationThemeAccentColor(index: 199, baseColor: .preset, accentColor: 0xff00bfa5, bubbleColors: (0xffE1FFC7, 0xffE1FFC7), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xffD6E2EE, bottomColor: 0xffD6E2EE, intensity: 50, rotation: 45))
+//for testing
+//public var _customClassicColorPreset = PresentationThemeAccentColor(index: 199, baseColor: .preset, accentColor: 0xff000000, bubbleColors: (0xff000000, 0xff000000), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xff000000, bottomColor: 0xff000000, intensity: 50, rotation: 45))
+
 var dayClassicColorPresets: [PresentationThemeAccentColor] = [
+    //Tommy: our custom preset
+    _customClassicColorPreset,
     PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xfff55783, bubbleColors: (0xffd6f5ff, 0xffc9fdfe), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xfffce3ec, bottomColor: 0xfffec8ff, intensity: 50, rotation: 45)),
     PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xffff5fa9, bubbleColors: (0xfffff4d7, nil), wallpaper: patternWallpaper(slug: "51nnTjx8mFIBAAAAaFGJsMIvWkk", topColor: 0xfff6b594, bottomColor: 0xffebf6cd, intensity: 46, rotation: 45)),
     PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0xff5a9e29, bubbleColors: (0xfffff8df, 0xffdcf8c6), wallpaper: patternWallpaper(slug: "R3j69wKskFIBAAAAoUdXWCKMzCM", topColor: 0xffede6dd, bottomColor: 0xffffd59e, intensity: 50, rotation: nil)),
