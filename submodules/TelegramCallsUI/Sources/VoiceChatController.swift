@@ -843,6 +843,7 @@ public final class VoiceChatController: ViewController {
             }
             
             self.optionsButton = VoiceChatHeaderButton(context: self.context)
+            self.optionsButton.setContent(.more(optionsCircleImage(dark: false)))
             self.closeButton = VoiceChatHeaderButton(context: self.context)
             self.closeButton.setContent(.image(closeButtonImage(dark: false)))
             
@@ -2566,6 +2567,7 @@ public final class VoiceChatController: ViewController {
         
         @objc private func optionsPressed() {
             if self.optionsButton.isUserInteractionEnabled {
+                self.optionsButton.play()
                 self.optionsButton.contextAction?(self.optionsButton.containerNode, nil)
             }
         }
@@ -3219,7 +3221,7 @@ public final class VoiceChatController: ViewController {
             self.bottomCornersNode.image = cornersImage(top: false, bottom: true, dark: isFullscreen)
 
             if !self.optionsButtonIsAvatar {
-                self.optionsButton.setContent(.image(optionsButtonImage(dark: isFullscreen)), animated: transition.isAnimated)
+                self.optionsButton.setContent(.more(optionsCircleImage(dark: isFullscreen)), animated: transition.isAnimated)
             }
             self.closeButton.setContent(.image(closeButtonImage(dark: isFullscreen)), animated: transition.isAnimated)
             

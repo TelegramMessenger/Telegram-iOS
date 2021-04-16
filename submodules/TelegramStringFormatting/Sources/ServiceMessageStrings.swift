@@ -458,8 +458,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 } else if let duration = duration {
-                    let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
-                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let titleString = strings.Notification_VoiceChatEndedGroup(authorName, callDurationString(strings: strings, value: duration))
+                        attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
                 } else {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
                         let titleString = strings.Notification_VoiceChatStartedChannel
