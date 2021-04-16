@@ -19,7 +19,9 @@ func managedVoipConfigurationUpdates(postbox: Postbox, network: Network) -> Sign
                         })
                 }
             }
-        }).start()
+        }).start(completed: {
+            subscriber.putCompletion()
+        })
     }
     return (poll |> then(.complete() |> suspendAwareDelay(12.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }

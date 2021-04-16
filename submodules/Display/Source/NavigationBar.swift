@@ -1,6 +1,8 @@
 import UIKit
 import AsyncDisplayKit
 
+private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
+
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
 class SparseNode: ASDisplayNode {
@@ -269,7 +271,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
                 if self.titleNode.supernode == nil {
                     self.buttonsContainerNode.addSubnode(self.titleNode)
@@ -518,15 +520,13 @@ open class NavigationBar: ASDisplayNode {
                     self.leftButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
             } else {
-                if animated {
-                    if self.leftButtonNode.view.superview != nil {
-                        if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
-                            snapshotView.frame = self.leftButtonNode.frame
-                            self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
-                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                                snapshotView?.removeFromSuperview()
-                            })
-                        }
+                if animated, self.leftButtonNode.view.superview != nil {
+                    if let snapshotView = self.leftButtonNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.leftButtonNode.frame
+                        self.leftButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.leftButtonNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
                     }
                 }
                 self.leftButtonNode.removeFromSupernode()
@@ -606,9 +606,27 @@ open class NavigationBar: ASDisplayNode {
                     self.rightButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                 }
             } else {
+                if animated, self.rightButtonNode.view.superview != nil {
+                    if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.rightButtonNode.frame
+                        self.rightButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.rightButtonNode.view)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
                 self.rightButtonNode.removeFromSupernode()
             }
         } else {
+            if animated, self.rightButtonNode.view.superview != nil {
+                if let snapshotView = self.rightButtonNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.rightButtonNode.frame
+                    self.rightButtonNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.rightButtonNode.view)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
             self.rightButtonNode.removeFromSupernode()
         }
         
@@ -728,7 +746,7 @@ open class NavigationBar: ASDisplayNode {
         self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
         self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
-            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
             self.titleNode.accessibilityLabel = title
         }
         self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
@@ -804,7 +822,7 @@ open class NavigationBar: ASDisplayNode {
             self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
             self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
             }
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
@@ -1063,7 +1081,7 @@ open class NavigationBar: ASDisplayNode {
             }
         } else if let title = self.title {
             let node = ImmediateTextNode()
-            node.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: foregroundColor)
+            node.attributedText = NSAttributedString(string: title, font: titleFont, textColor: foregroundColor)
             return node
         } else {
             return nil

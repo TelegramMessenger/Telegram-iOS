@@ -129,8 +129,8 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
                     if let invite = invite {
                         interaction.shareLink(invite)
                     }
-                }, contextAction: { node in
-                    interaction.mainLinkContextAction(invite, node, nil)
+                }, contextAction: { node, gesture in
+                    interaction.mainLinkContextAction(invite, node, gesture)
                 }, viewAction: {
                 })
             case let .manage(theme, text, standalone):
@@ -331,7 +331,7 @@ public final class InviteLinkInviteController: ViewController {
             let mainInvitePromise = ValuePromise<ExportedInvitation?>(nil)
             
             self.interaction = InviteLinkInviteInteraction(context: context, mainLinkContextAction: { [weak self] invite, node, gesture in
-                guard let node = node as? ContextExtractedContentContainingNode else {
+                guard let node = node as? ContextReferenceContentNode else {
                     return
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -413,7 +413,7 @@ public final class InviteLinkInviteController: ViewController {
                     })
                 })))
 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground:  false)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
@@ -424,6 +424,12 @@ public final class InviteLinkInviteController: ViewController {
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                }
                 self?.controller?.present(shareController, in: .window(.root))
             }, manageLinks: { [weak self] in
                 let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)

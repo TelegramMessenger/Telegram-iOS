@@ -93,7 +93,11 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
         return CGSize(width: constrainedSize.width, height: 100.0)
     }
     
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        let hadLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset)
+        
         self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 29.0))
         self.sectionHeaderNode.updateLayout(size: CGSize(width: size.width, height: 29.0), leftInset: leftInset, rightInset: rightInset)
         
@@ -103,6 +107,9 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
 
         self.scrollNode.frame = CGRect(x: 0.0, y: 29.0, width: size.width, height: size.height - 29.0)
         self.scrollNode.view.contentInset = insets
+        if !hadLayout {
+            self.scrollNode.view.contentOffset = CGPoint(x: -leftInset, y: 0.0)
+        }
         
         var offset: CGFloat = inset
         if let subnodes = self.scrollNode.subnodes {

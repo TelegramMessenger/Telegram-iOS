@@ -176,6 +176,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
+    private let messageAccessibilityArea: AccessibilityAreaNode
+    
     private var highlightedState: Bool = false
     
     private var forceStopAnimations = false
@@ -198,6 +200,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
+        
+        self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
         
@@ -261,8 +265,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
         self.contextSourceNode.contentNode.addSubnode(self.placeholderNode)
-        
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.messageAccessibilityArea)
+        
+        self.messageAccessibilityArea.focused = { [weak self] in
+            self?.accessibilityElementDidBecomeFocused()
+        }
         
         self.dateAndStatusNode.openReactions = { [weak self] in
             guard let strongSelf = self, let item = strongSelf.item else {
@@ -569,6 +577,37 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+        super.updateAccessibilityData(accessibilityData)
+        
+        self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
+        self.messageAccessibilityArea.accessibilityValue = accessibilityData.value
+        self.messageAccessibilityArea.accessibilityHint = accessibilityData.hint
+        self.messageAccessibilityArea.accessibilityTraits = accessibilityData.traits
+        if let customActions = accessibilityData.customActions {
+            self.messageAccessibilityArea.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: self, selector: #selector(self.performLocalAccessibilityCustomAction(_:)), action: action.action)
+            })
+        } else {
+            self.messageAccessibilityArea.accessibilityCustomActions = nil
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
+        if let action = action as? ChatMessageAccessibilityCustomAction {
+            switch action.action {
+                case .reply:
+                    if let item = self.item {
+                        item.controllerInteraction.setupReply(item.message.id)
+                    }
+                case .options:
+                    if let item = self.item {
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                    }
+            }
+        }
+    }
+    
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
         let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
@@ -590,6 +629,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
@@ -932,7 +972,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    strongSelf.updateAccessibilityData(accessibilityData)
                     
+                    strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)

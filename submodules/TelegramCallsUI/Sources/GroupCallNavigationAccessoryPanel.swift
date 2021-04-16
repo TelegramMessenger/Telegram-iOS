@@ -260,10 +260,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_PanelJoin.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
         self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
         
-        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Title, font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
+        
+        if let (size, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
     }
     
     private func animateTextChange() {
@@ -484,7 +487,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         } else {
             isMuted = false
         }
-        self.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, color: UIColor.white), animated: transition.isAnimated)
+        self.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: false, color: UIColor.white), animated: transition.isAnimated)
         
         if isMuted != self.micButtonBackgroundNodeIsMuted {
             self.micButtonBackgroundNodeIsMuted = isMuted
@@ -498,7 +501,14 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
+        var title = self.strings.VoiceChat_Title
+        if let voiceChatTitle = self.currentData?.info.title, voiceChatTitle.count < 15 {
+            title = voiceChatTitle
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width / 2.0 - 56.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
         let titleFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 9.0), size: titleSize)

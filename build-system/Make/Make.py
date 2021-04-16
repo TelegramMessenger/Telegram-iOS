@@ -12,11 +12,10 @@ from ProjectGeneration import generate
 
 
 class BazelCommandLine:
-    def __init__(self, bazel_path, bazel_x86_64_path, override_bazel_version, override_xcode_version, bazel_user_root):
+    def __init__(self, bazel_path, override_bazel_version, override_xcode_version, bazel_user_root):
         self.build_environment = BuildEnvironment(
             base_path=os.getcwd(),
             bazel_path=bazel_path,
-            bazel_x86_64_path=bazel_x86_64_path,
             override_bazel_version=override_bazel_version,
             override_xcode_version=override_xcode_version
         )
@@ -298,7 +297,6 @@ class BazelCommandLine:
 def clean(arguments):
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
-        bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -337,14 +335,9 @@ def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
         raise Exception('Neither configurationPath nor configurationGenerator are set')
 
 
-def generate_project(arguments):
-    bazel_x86_64_path = None
-    if is_apple_silicon():
-        bazel_x86_64_path = arguments.bazel_x86_64
-            
+def generate_project(arguments):        
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
-        bazel_x86_64_path=bazel_x86_64_path,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -379,7 +372,6 @@ def generate_project(arguments):
 def build(arguments):
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
-        bazel_x86_64_path=None,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -491,13 +483,6 @@ if __name__ == '__main__':
     )
 
     generateProjectParser = subparsers.add_parser('generateProject', help='Generate Xcode project')
-    if is_apple_silicon():
-        generateProjectParser.add_argument(
-            '--bazel_x86_64',
-            required=True,
-            help='A standalone bazel x86_64 binary is required to generate a project on Apple Silicon.',
-            metavar='path'
-        )
     generateProjectParser.add_argument(
         '--buildNumber',
         required=False,

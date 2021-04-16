@@ -282,9 +282,14 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
         
         openLinkOptionsImpl = { [weak self] url in
             if let strongSelf = self {
+                var presentationData = strongSelf.presentationData
+                if !presentationData.theme.overallDarkAppearance {
+                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                }
+                
                 let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url.url)).count > 1
                 let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url.url),
                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in

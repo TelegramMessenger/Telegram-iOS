@@ -25,6 +25,7 @@ import SettingsUI
 import AppLock
 import AccountUtils
 import ContextUI
+import TelegramCallsUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -255,9 +256,28 @@ final class AuthorizedApplicationContext {
                 }
             }
         }))
-        
+
+        let postbox = context.account.postbox
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
+        |> mapToSignal { messageList -> Signal<[([Message], PeerGroupId, Bool)], NoError> in
+            return postbox.transaction { transaction -> [([Message], PeerGroupId, Bool)] in
+                return messageList.filter { item in
+                    guard let message = item.0.first else {
+                        return false
+                    }
+                    let inclusion = transaction.getPeerChatListInclusion(message.id.peerId)
+                    if case .notIncluded = inclusion {
+                        return false
+                    }
+                    return true
+                }
+            }
+        }
         |> deliverOn(Queue.mainQueue())).start(next: { [weak self] messageList in
+            if messageList.isEmpty {
+                return
+            }
+
             if let strongSelf = self, let (messages, _, notify) = messageList.last, let firstMessage = messages.first {
                 if UIApplication.shared.applicationState == .active {
                     var chatIsVisible = false
@@ -739,6 +759,12 @@ final class AuthorizedApplicationContext {
         })
         
         self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
+        if let groupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController {
+            if let overlayController = groupCallController.currentOverlayController {
+                groupCallController.parentNavigationController = self.rootController
+                self.rootController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
+            }
+        }
     }
     
     deinit {

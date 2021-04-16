@@ -38,7 +38,7 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                         if let current = current as? CachedChannelData {
                             let adminCount: Int32
                             switch admins {
-                                case let .channelParticipants(count, _, _):
+                                case let .channelParticipants(count, _, _, _):
                                     adminCount = count
                                 case .channelParticipantsNotModified:
                                     assertionFailure()
@@ -46,7 +46,7 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                             }
                             let memberCount: Int32
                             switch members {
-                                case let .channelParticipants(count, _, _):
+                                case let .channelParticipants(count, _, _, _):
                                     memberCount = count
                                 case .channelParticipantsNotModified:
                                     assertionFailure()
@@ -54,7 +54,7 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                             }
                             let bannedCount: Int32
                             switch banned {
-                                case let .channelParticipants(count, _, _):
+                                case let .channelParticipants(count, _, _, _):
                                     bannedCount = count
                                 case .channelParticipantsNotModified:
                                     assertionFailure()
@@ -62,7 +62,7 @@ func updateChannelParticipantsSummary(account: Account, peerId: PeerId) -> Signa
                             }
                             let kickedCount: Int32
                             switch kicked {
-                                case let .channelParticipants(count, _, _):
+                                case let .channelParticipants(count, _, _, _):
                                     kickedCount = count
                                 case .channelParticipantsNotModified:
                                     assertionFailure()

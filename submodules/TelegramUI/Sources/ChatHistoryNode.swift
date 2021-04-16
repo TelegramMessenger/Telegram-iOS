@@ -14,6 +14,7 @@ public enum ChatHistoryNodeLoadState: Equatable {
     public enum EmptyType: Equatable {
         case generic
         case joined
+        case clearedHistory
     }
     
     case loading

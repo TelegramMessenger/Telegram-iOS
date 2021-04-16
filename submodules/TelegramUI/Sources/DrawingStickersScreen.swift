@@ -152,6 +152,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
+        }, displayUndo: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

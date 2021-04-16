@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import UniversalMediaPlayer
 import AccountContext
 import TelegramStringFormatting
+import ManagedAnimationNode
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -147,8 +148,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     
     private let closeButton: HighlightableButtonNode
     private let actionButton: HighlightTrackingButtonNode
-    private let actionPauseNode: ASImageNode
-    private let actionPlayNode: ASImageNode
+    private let playPauseIconNode: PlayPauseIconNode
     private let rateButton: HighlightableButtonNode
     private let accessibilityAreaNode: AccessibilityAreaNode
     
@@ -248,20 +248,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.actionButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.actionButton.displaysAsynchronously = false
         
-        self.actionPauseNode = ASImageNode()
-        self.actionPauseNode.contentMode = .center
-        self.actionPauseNode.isLayerBacked = true
-        self.actionPauseNode.displaysAsynchronously = false
-        self.actionPauseNode.displayWithoutProcessing = true
-        self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
-        
-        self.actionPlayNode = ASImageNode()
-        self.actionPlayNode.contentMode = .center
-        self.actionPlayNode.isLayerBacked = true
-        self.actionPlayNode.displaysAsynchronously = false
-        self.actionPlayNode.displayWithoutProcessing = true
-        self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
-        self.actionPlayNode.isHidden = true
+        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode.customColor = self.theme.rootController.navigationBar.accentTextColor
         
         self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
         
@@ -285,8 +273,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.addSubnode(self.rateButton)
         self.addSubnode(self.accessibilityAreaNode)
         
-        self.actionButton.addSubnode(self.actionPauseNode)
-        self.actionButton.addSubnode(self.actionPlayNode)
+        self.actionButton.addSubnode(self.playPauseIconNode)
         self.addSubnode(self.actionButton)
         
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
@@ -341,8 +328,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                 } else {
                     paused = true
                 }
-                strongSelf.actionPlayNode.isHidden = !paused
-                strongSelf.actionPauseNode.isHidden = paused
+                strongSelf.playPauseIconNode.enqueueState(paused ? .play : .pause, animated: true)
                 strongSelf.actionButton.accessibilityLabel = paused ? strongSelf.strings.VoiceOver_Media_PlaybackPlay : strongSelf.strings.VoiceOver_Media_PlaybackPause
             }
         }
@@ -374,8 +360,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.rightMaskNode.image = maskImage
         
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
-        self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
-        self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
+        self.playPauseIconNode.customColor = self.theme.rootController.navigationBar.accentTextColor
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
         
@@ -477,8 +462,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 24.0, height: minHeight)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 17.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
-        transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
         
@@ -502,6 +486,56 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     @objc public func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.tapAction?()
+        }
+    }
+}
+
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.35
+    private var iconState: PlayPauseIconNodeState = .pause
+    
+    init() {
+        super.init(size: CGSize(width: 28.0, height: 28.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
         }
     }
 }

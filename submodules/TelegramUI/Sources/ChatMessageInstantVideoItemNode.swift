@@ -43,6 +43,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
+    private let messageAccessibilityArea: AccessibilityAreaNode
+    
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
@@ -64,6 +66,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
+        self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
         
@@ -109,6 +112,19 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.interactiveVideoNode)
+        self.addSubnode(self.messageAccessibilityArea)
+        
+        self.messageAccessibilityArea.activate = { [weak self] in
+            guard let strongSelf = self, let accessibilityData = strongSelf.accessibilityData else {
+                return false
+            }
+            
+            return strongSelf.interactiveVideoNode.accessibilityActivate()
+        }
+        
+        self.messageAccessibilityArea.focused = { [weak self] in
+            self?.accessibilityElementDidBecomeFocused()
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -153,6 +169,37 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
+    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+        super.updateAccessibilityData(accessibilityData)
+        
+        self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
+        self.messageAccessibilityArea.accessibilityValue = accessibilityData.value
+        self.messageAccessibilityArea.accessibilityHint = accessibilityData.hint
+        self.messageAccessibilityArea.accessibilityTraits = accessibilityData.traits
+        if let customActions = accessibilityData.customActions {
+            self.messageAccessibilityArea.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: self, selector: #selector(self.performLocalAccessibilityCustomAction(_:)), action: action.action)
+            })
+        } else {
+            self.messageAccessibilityArea.accessibilityCustomActions = nil
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
+        if let action = action as? ChatMessageAccessibilityCustomAction {
+            switch action.action {
+                case .reply:
+                    if let item = self.item {
+                        item.controllerInteraction.setupReply(item.message.id)
+                    }
+                case .options:
+                    if let item = self.item {
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil)
+                    }
+            }
+        }
+    }
+    
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
         let layoutConstants = self.layoutConstants
         
@@ -172,6 +219,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
+            
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
@@ -449,10 +498,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                 
+                    strongSelf.updateAccessibilityData(accessibilityData)
+                    
                     let transition: ContainedViewLayoutTransition
                     if animation.isAnimated {
                         transition = .animated(duration: 0.2, curve: .spring)

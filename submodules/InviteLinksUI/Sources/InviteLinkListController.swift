@@ -224,8 +224,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.shareMainLink(invite)
                     }
-                }, contextAction: { node in
-                    arguments.mainLinkContextAction(invite, node, nil)
+                }, contextAction: { node, gesture in
+                    arguments.mainLinkContextAction(invite, node, gesture)
                 }, viewAction: {
                     if let invite = invite {
                         arguments.openLink(invite)
@@ -262,7 +262,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             case let .adminsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .admin(_, _, creator):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: .firstLast, context: arguments.context, peer: creator.peer.peer!, height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: creator.peer.peer!, height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openAdmin(creator)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
         }
@@ -355,17 +355,20 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         entries.append(.linksInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
     }
     
-    if let revokedInvites = revokedInvites, !revokedInvites.isEmpty {
-        entries.append(.revokedLinksHeader(presentationData.theme, presentationData.strings.InviteLink_RevokedLinks.uppercased()))
-        if admin == nil {
-            entries.append(.revokedLinksDeleteAll(presentationData.theme, presentationData.strings.InviteLink_DeleteAllRevokedLinks))
-        }
-        var index: Int32 = 0
-        for invite in revokedInvites {
-            entries.append(.revokedLink(index, presentationData.theme, invite))
-            index += 1
+    if let revokedInvites = revokedInvites {
+        if !revokedInvites.isEmpty {
+            entries.append(.revokedLinksHeader(presentationData.theme, presentationData.strings.InviteLink_RevokedLinks.uppercased()))
+            if admin == nil {
+                entries.append(.revokedLinksDeleteAll(presentationData.theme, presentationData.strings.InviteLink_DeleteAllRevokedLinks))
+            }
+            var index: Int32 = 0
+            for invite in revokedInvites {
+                entries.append(.revokedLink(index, presentationData.theme, invite))
+                index += 1
+            }
         }
     } else if let admin = admin, admin.revokedCount > 0 {
+        entries.append(.revokedLinksHeader(presentationData.theme, presentationData.strings.InviteLink_RevokedLinks.uppercased()))
         var index: Int32 = 0
         for _ in 0 ..< admin.revokedCount {
             entries.append(.revokedLink(index, presentationData.theme, nil))
@@ -443,7 +446,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, mainLinkContextAction: { invite, node, gesture in
-        guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?(), let invite = invite else {
+        guard let node = node as? ContextReferenceContentNode, let controller = getControllerImpl?(), let invite = invite else {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -548,7 +551,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: false)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
         let controller = inviteLinkEditController(context: context, peerId: peerId, invite: nil, completion: { invite in
@@ -817,7 +820,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.invitations, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.hasLoadedOnce ? revokedInvites.invitations : nil, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -894,5 +897,19 @@ final class InviteLinkContextExtractedContentSource: ContextExtractedContentSour
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+final class InviteLinkContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

@@ -21,6 +21,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/Markdown:Markdown",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",

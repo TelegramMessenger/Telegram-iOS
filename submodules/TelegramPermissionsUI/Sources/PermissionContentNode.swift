@@ -233,7 +233,7 @@ public final class PermissionContentNode: ASDisplayNode {
         }
         if let _ = self.animationNode, size.width < size.height {
             imageSpacing = floor(availableHeight * 0.12)
-            imageSize = CGSize(width: 200.0, height: 200.0)
+            imageSize = CGSize(width: 240.0, height: 240.0)
             contentHeight += imageSize.height + imageSpacing
         }
         

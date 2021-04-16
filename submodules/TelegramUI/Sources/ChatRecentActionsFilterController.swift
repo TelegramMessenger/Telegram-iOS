@@ -306,6 +306,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
             ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
             ([.leave], presentationData.strings.Channel_AdminLogFilter_EventsLeaving),
+            ([.calls], presentationData.strings.Channel_AdminLogFilter_EventsCalls)
         ]
     }
     

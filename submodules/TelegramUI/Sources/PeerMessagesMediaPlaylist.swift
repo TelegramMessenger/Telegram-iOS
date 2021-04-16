@@ -115,7 +115,15 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             if (title ?? "").isEmpty && (performer ?? "").isEmpty {
                                 updatedTitle = file.fileName ?? ""
                             }
-                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)), long: duration > 60 * 20)
+                            
+                            let albumArt: SharedMediaPlaybackAlbumArt?
+                            if file.fileName?.lowercased().hasSuffix(".ogg") == true {
+                                albumArt = nil
+                            } else {
+                                albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))
+                            }
+                            
+                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: duration > 60 * 20)
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {

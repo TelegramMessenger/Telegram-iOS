@@ -478,14 +478,14 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                 let _ = (coordinatePromise.get()
                 |> deliverOnMainQueue).start(next: { coordinate in
                     if let coordinate = coordinate {
-                        let _ = updatePeersNearbyVisibility(account: context.account, update: .visible(latitude: coordinate.latitude, longitude: coordinate.longitude), background: false).start()
+                        let _ = context.engine.peersNearby.updatePeersNearbyVisibility(update: .visible(latitude: coordinate.latitude, longitude: coordinate.longitude), background: false).start()
                     }
                 })
             })]), nil)
             
             
         } else {
-            let _ = updatePeersNearbyVisibility(account: context.account, update: .invisible, background: false).start()
+            let _ = context.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
         }
     }, openProfile: { peer, distance in
         navigateToProfileImpl?(peer, distance)
@@ -512,7 +512,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         cancelImpl = {
             checkCreationAvailabilityDisposable.set(nil)
         }
-        checkCreationAvailabilityDisposable.set((checkPublicChannelCreationAvailability(account: context.account, location: true)
+        checkCreationAvailabilityDisposable.set((context.engine.peerNames.checkPublicChannelCreationAvailability(location: true)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
