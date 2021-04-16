@@ -1352,7 +1352,7 @@ private func markOutgoingOperationAsCompleted(transaction: Transaction, peerId: 
             if let operation = entry?.contents as? SecretChatOutgoingOperation {
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .update(operation.withUpdatedDelivered(true)))
             } else {
-                assertionFailure()
+                //assertionFailure()
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .none)
             }
         })

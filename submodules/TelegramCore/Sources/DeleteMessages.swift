@@ -35,7 +35,7 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
         }
     }
     if !resourceIds.isEmpty {
-        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+        let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
     }
     for id in ids {
         if id.peerId.namespace == Namespaces.Peer.CloudChannel && id.namespace == Namespaces.Message.Cloud {
@@ -73,7 +73,7 @@ public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBo
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
     if !resourceIds.isEmpty {
-        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+        let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
     }
 }
 
@@ -85,7 +85,7 @@ public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: P
             return true
         })
         if !resourceIds.isEmpty {
-            let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+            let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
         }
     }
     transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { _ in
