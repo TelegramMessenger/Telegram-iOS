@@ -439,7 +439,8 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     override func animateIn() {
         super.animateIn()
-        
+
+        micDecoration.isHidden = false
         micDecoration.startAnimating()
 
         innerIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
