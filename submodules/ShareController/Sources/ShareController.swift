@@ -299,7 +299,7 @@ public final class ShareController: ViewController {
     private var currentAccount: Account
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let forcedTheme: PresentationTheme?
+    private let forceTheme: PresentationTheme?
     private var activeAccountsDisposable: Disposable?
     
     private let externalShare: Bool
