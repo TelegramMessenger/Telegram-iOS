@@ -2850,6 +2850,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for itemNode in self.itemNodes {
                         itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
                     }
+                    //self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size
@@ -3089,22 +3090,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             animation = springAnimation
                             reverseAnimation = reverseSpringAnimation
-                        /*
-                     case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
-                         headerNodesTransition = (.animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y)), false, -completeOffset)
-                         animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
-                         let springAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                         springAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
-                         springAnimation.duration = duration * UIView.animationDurationFactor()
-                         springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
-                         springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
-                         springAnimation.isRemovedOnCompletion = true
-
-                         animationDuration = duration
-
-                         springAnimation.isAdditive = true
-                         animation = springAnimation
-                     */
                         case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
                             animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
                             animationDuration = duration
@@ -3188,6 +3173,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for itemNode in temporaryPreviousNodes {
                         itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
+                    self.didScrollWithOffset?(offset, .animated(duration: animationDuration, curve: animationCurve), nil)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
                     }

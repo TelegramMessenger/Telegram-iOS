@@ -367,7 +367,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private let shadowNode: ChatMessageShadowNode
-    private var transitionClippingNode: ASDisplayNode?
+    private var clippingNode: ASDisplayNode
     
     override var extractedBackgroundNode: ASDisplayNode? {
         return self.shadowNode
@@ -430,6 +430,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         self.backgroundNode = ChatMessageBackground()
         self.shadowNode = ChatMessageShadowNode()
+
+        self.clippingNode = ASDisplayNode()
+        self.clippingNode.clipsToBounds = true
+
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
@@ -482,6 +486,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundNode)
         self.mainContextSourceNode.contentNode.addSubnode(self.contentContainersWrapperNode)
+        self.mainContextSourceNode.contentNode.addSubnode(self.clippingNode)
         self.addSubnode(self.messageAccessibilityArea)
         
         self.messageAccessibilityArea.activate = { [weak self] in
@@ -656,6 +661,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
 
         textInput.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: textInput.backgroundView.bounds.size)
+
+        transition.animateFrame(node: self.clippingNode, from: CGRect(origin: self.clippingNode.frame.origin, size: textInput.backgroundView.frame.size))
+
         self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, mediaBox: item.context.account.postbox.mediaBox, transition: transition)
         self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
 
@@ -673,6 +681,28 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
             replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
         }
+    }
+
+    func animateFromMicInput(micInputNode: UIView, transition: ContainedViewLayoutTransition) -> ContextExtractedContentContainingNode? {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
+                if let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode {
+                    let scale = statusContainerNode.contentRect.height / 100.0
+                    micInputNode.transform = CGAffineTransform(scaleX: scale, y: scale)
+                    micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
+                    statusContainerNode.contentNode.view.addSubview(micInputNode)
+
+                    transition.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
+                        micInputNode?.removeFromSuperview()
+                    })
+
+                    transition.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
+
+                    return statusContainerNode
+                }
+            }
+        }
+        return nil
     }
     
     override func didLoad() {
@@ -2301,7 +2331,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 if !nameNode.isNodeLoaded {
                     nameNode.isUserInteractionEnabled = false
                 }
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(nameNode)
+                strongSelf.clippingNode.addSubnode(nameNode)
             }
             nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
             nameNode.displaysAsynchronously = !item.presentationData.isPreview
@@ -2313,7 +2343,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     credibilityIconNode = ASImageNode()
                     strongSelf.credibilityIconNode = credibilityIconNode
-                    strongSelf.mainContextSourceNode.contentNode.addSubnode(credibilityIconNode)
+                    strongSelf.clippingNode.addSubnode(credibilityIconNode)
                 }
                 credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY), size: credibilityIconImage.size)
                 credibilityIconNode.image = credibilityIconImage
@@ -2329,7 +2359,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if !adminBadgeNode.isNodeLoaded {
                         adminBadgeNode.isUserInteractionEnabled = false
                     }
-                    strongSelf.mainContextSourceNode.contentNode.addSubnode(adminBadgeNode)
+                    strongSelf.clippingNode.addSubnode(adminBadgeNode)
                     adminBadgeNode.frame = adminBadgeFrame
                 } else {
                     let previousAdminBadgeFrame = adminBadgeNode.frame
@@ -2351,7 +2381,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.forwardInfoNode = forwardInfoNode
             var animateFrame = true
             if forwardInfoNode.supernode == nil {
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(forwardInfoNode)
+                strongSelf.clippingNode.addSubnode(forwardInfoNode)
                 animateFrame = false
                 forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
@@ -2578,12 +2608,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     updatedContentNodes.append(contentNode)
                     
                     let contextSourceNode: ContextExtractedContentContainingNode
+                    let containerSupernode: ASDisplayNode
                     if isAttachent {
                         contextSourceNode = strongSelf.mainContextSourceNode
+                        containerSupernode = strongSelf.clippingNode
                     } else {
                         contextSourceNode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.mainContextSourceNode
+                        containerSupernode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.clippingNode
                     }
-                    contextSourceNode.contentNode.addSubnode(contentNode)
+                    containerSupernode.addSubnode(contentNode)
                     
                     contentNode.visibility = strongSelf.visibility
                     contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
@@ -2659,7 +2692,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(mosaicStatusNode)
+                strongSelf.clippingNode.addSubnode(mosaicStatusNode)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
@@ -2688,7 +2721,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
-                strongSelf.enableTransitionClippingNode()
             }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
@@ -2703,15 +2735,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let shareButtonNode = strongSelf.shareButtonNode {
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
             }
-            strongSelf.disableTransitionClippingNode()
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                 transition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
+
+                transition.updateFrame(node: strongSelf.clippingNode, frame: backgroundFrame)
+                transition.updateBounds(node: strongSelf.clippingNode, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size))
+
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition)
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
                 strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: transition)
             } else {
                 strongSelf.backgroundNode.frame = backgroundFrame
+                strongSelf.clippingNode.frame = backgroundFrame
+                strongSelf.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
                 strongSelf.backgroundWallpaperNode.frame = backgroundFrame
                 strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
@@ -2769,7 +2806,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         strongSelf.updateSearchTextHighlightState()
         
-        if let (awaitingAppliedReaction, f) = strongSelf.awaitingAppliedReaction {
+        /*if let (awaitingAppliedReaction, f) = strongSelf.awaitingAppliedReaction {
             var bounds = strongSelf.bounds
             let offset = bounds.origin.x
             bounds.origin.x = 0.0
@@ -2806,7 +2843,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)*/
             f()
-        }
+        }*/
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -2849,52 +2886,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
     
-    private func enableTransitionClippingNode() {
-        if self.transitionClippingNode == nil {
-            let node = ASDisplayNode()
-            node.clipsToBounds = true
-            var backgroundFrame = self.backgroundNode.frame
-            backgroundFrame = backgroundFrame.insetBy(dx: 0.0, dy: 1.0)
-            node.frame = backgroundFrame
-            node.bounds = CGRect(origin: CGPoint(x: backgroundFrame.origin.x, y: backgroundFrame.origin.y), size: backgroundFrame.size)
-            if let forwardInfoNode = self.forwardInfoNode {
-                node.addSubnode(forwardInfoNode)
-            }
-            if let replyInfoNode = self.replyInfoNode {
-                node.addSubnode(replyInfoNode)
-            }
-            if !self.contentContainers.isEmpty {
-                node.addSubnode(self.contentContainersWrapperNode)
-            } else {
-                for contentNode in self.contentNodes {
-                    node.addSubnode(contentNode)
-                }
-            }
-            self.mainContextSourceNode.contentNode.addSubnode(node)
-            self.transitionClippingNode = node
-        }
-    }
-    
-    private func disableTransitionClippingNode() {
-        if let transitionClippingNode = self.transitionClippingNode {
-            if let forwardInfoNode = self.forwardInfoNode {
-                self.mainContextSourceNode.contentNode.addSubnode(forwardInfoNode)
-            }
-            if let replyInfoNode = self.replyInfoNode {
-                self.mainContextSourceNode.contentNode.addSubnode(replyInfoNode)
-            }
-            if !self.contentContainers.isEmpty {
-                self.mainContextSourceNode.contentNode.addSubnode(self.contentContainersWrapperNode)
-            } else {
-                for contentNode in self.contentNodes {
-                    self.mainContextSourceNode.contentNode.addSubnode(contentNode)
-                }
-            }
-            transitionClippingNode.removeFromSupernode()
-            self.transitionClippingNode = nil
-        }
-    }
-    
     override func shouldAnimateHorizontalFrameTransition() -> Bool {
         if let _ = self.backgroundFrameTransition {
             return true
@@ -2909,6 +2900,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
+
+            self.clippingNode.frame = backgroundFrame
+            self.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
+
             self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
             self.backgroundWallpaperNode.frame = backgroundFrame
             self.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
@@ -2933,18 +2928,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             if let shareButtonNode = self.shareButtonNode {
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
-            }
-            
-            if let transitionClippingNode = self.transitionClippingNode {
-                var fixedBackgroundFrame = backgroundFrame
-                fixedBackgroundFrame = fixedBackgroundFrame.insetBy(dx: 0.0, dy: self.backgroundNode.type == ChatMessageBackgroundType.none ? 0.0 : 1.0)
-                
-                transitionClippingNode.frame = fixedBackgroundFrame
-                transitionClippingNode.bounds = CGRect(origin: CGPoint(x: fixedBackgroundFrame.origin.x, y: fixedBackgroundFrame.origin.y), size: fixedBackgroundFrame.size)
-                
-                if progress >= 1.0 - CGFloat.ulpOfOne {
-                    self.disableTransitionClippingNode()
-                }
             }
             
             if CGFloat(1.0).isLessThanOrEqualTo(progress) {

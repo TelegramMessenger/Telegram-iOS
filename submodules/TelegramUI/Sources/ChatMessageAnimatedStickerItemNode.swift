@@ -29,14 +29,25 @@ private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
     func setOverlayColor(_ color: UIColor?, animated: Bool)
+
+    var currentFrameIndex: Int { get }
+    func setFrameIndex(_ frameIndex: Int)
 }
 
 extension AnimatedStickerNode: GenericAnimatedStickerNode {
-    
+    func setFrameIndex(_ frameIndex: Int) {
+        self.stop()
+        self.play(fromIndex: frameIndex)
+    }
 }
 
 extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
-    
+    var currentFrameIndex: Int {
+        return 0
+    }
+
+    func setFrameIndex(_ frameIndex: Int) {
+    }
 }
 
 class ChatMessageShareButton: HighlightableButtonNode {
@@ -141,11 +152,12 @@ class ChatMessageShareButton: HighlightableButtonNode {
 }
 
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
-    private let contextSourceNode: ContextExtractedContentContainingNode
+    let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
-    private var placeholderNode: StickerShimmerEffectNode
-    private var animationNode: GenericAnimatedStickerNode?
+    private var enableSynchronousImageApply: Bool = false
+    private(set) var placeholderNode: StickerShimmerEffectNode
+    private(set) var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
     private var animateGreeting = false
@@ -250,8 +262,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             if image != nil {
                 if firstTime && !strongSelf.placeholderNode.isEmpty && !strongSelf.animateGreeting && !strongSelf.animatingGreeting {
-                    strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    strongSelf.removePlaceholder(animated: true)
+                    if strongSelf.enableSynchronousImageApply {
+                        strongSelf.removePlaceholder(animated: false)
+                    } else {
+                        strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        strongSelf.removePlaceholder(animated: true)
+                    }
                 } else {
                     strongSelf.removePlaceholder(animated: true)
                 }
@@ -436,15 +452,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func setupItem(_ item: ChatMessageItem) {
-        super.setupItem(item)
+    override func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
+        super.setupItem(item, synchronousLoad: synchronousLoad)
                 
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     let dimensions = telegramFile.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
@@ -485,7 +501,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let fitz = fitz {
                         fitzModifier = EmojiFitzModifier(emoji: fitz)
                     }
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 }
                 self.updateVisibility()
@@ -1060,7 +1076,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let animationNode = strongSelf.animationNode as? AnimatedStickerNode, strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
                         animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     }
+
+                    strongSelf.enableSynchronousImageApply = true
                     imageApply()
+                    strongSelf.enableSynchronousImageApply = false
                     
                     strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -1090,7 +1109,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {
                             strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                            strongSelf.addSubnode(updatedReplyBackgroundNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(updatedReplyBackgroundNode)
                             updatedReplyBackgroundNode.image = replyBackgroundImage
                         } else {
                             strongSelf.replyBackgroundNode?.image = replyBackgroundImage
@@ -1118,7 +1137,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let replyInfoNode = replyInfoApply()
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
-                            strongSelf.addSubnode(replyInfoNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
                         }
                         var viaBotSize = CGSize()
                         if let viaBotNode = strongSelf.viaBotNode {
@@ -1669,6 +1688,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
     }
+
+    override func cancelInsertionAnimations() {
+        self.layer.removeAllAnimations()
+    }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
@@ -1706,6 +1729,168 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
+    }
+
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+        guard let _ = self.item else {
+            return
+        }
+
+        let localSourceContentFrame = self.contextSourceNode.contentNode.view.convert(textInput.contentView.frame.offsetBy(dx: self.contextSourceNode.contentRect.minX, dy: self.contextSourceNode.contentRect.minY), to: self.contextSourceNode.contentNode.view)
+        textInput.contentView.frame = localSourceContentFrame
+
+        self.contextSourceNode.contentNode.view.addSubview(textInput.contentView)
+
+        let sourceCenter = CGPoint(
+            x: localSourceContentFrame.minX + 11.2,
+            y: localSourceContentFrame.midY - 1.8
+        )
+        let localSourceCenter = CGPoint(
+            x: sourceCenter.x - localSourceContentFrame.minX,
+            y: sourceCenter.y - localSourceContentFrame.minY
+        )
+        let localSourceOffset = CGPoint(
+            x: localSourceCenter.x - localSourceContentFrame.width / 2.0,
+            y: localSourceCenter.y - localSourceContentFrame.height / 2.0
+        )
+
+        let sourceScale: CGFloat = 28.0 / self.imageNode.frame.height
+
+        let offset = CGPoint(
+            x: sourceCenter.x - self.imageNode.frame.midX,
+            y: sourceCenter.y - self.imageNode.frame.midY
+        )
+
+        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
+        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
+        if let animationNode = self.animationNode {
+            transition.animatePositionAdditive(node: animationNode, offset: offset)
+            transition.animateTransformScale(node: animationNode, from: sourceScale)
+        }
+        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
+        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+
+        let inverseScale = 1.0 / sourceScale
+
+        transition.animatePositionAdditive(layer: textInput.contentView.layer, offset: CGPoint(), to: CGPoint(
+            x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
+            y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
+        ), removeOnCompletion: false)
+        transition.updateTransformScale(layer: textInput.contentView.layer, scale: 1.0 / sourceScale)
+
+        textInput.contentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+            textInput.contentView.removeFromSuperview()
+        })
+
+        self.imageNode.layer.animateAlpha(from: 0.0, to: self.imageNode.alpha, duration: 0.1)
+        if let animationNode = self.animationNode {
+            animationNode.layer.animateAlpha(from: 0.0, to: animationNode.alpha, duration: 0.1)
+        }
+        self.placeholderNode.layer.animateAlpha(from: 0.0, to: self.placeholderNode.alpha, duration: 0.1)
+
+        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.16)
+    }
+
+    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: ContainedViewLayoutTransition) {
+        guard let _ = self.item else {
+            return
+        }
+
+        let localSourceContentFrame = CGRect(
+            origin: CGPoint(
+                x: self.imageNode.frame.minX + self.imageNode.frame.size.width / 2.0 - stickerSource.imageNode.frame.size.width / 2.0,
+                y: self.imageNode.frame.minY + self.imageNode.frame.size.height / 2.0 - stickerSource.imageNode.frame.size.height / 2.0
+            ),
+            size: stickerSource.imageNode.frame.size
+        )
+
+        var snapshotView: UIView?
+        if let animationNode = stickerSource.animationNode {
+            snapshotView = animationNode.view.snapshotContentTree()
+        } else {
+            snapshotView = stickerSource.imageNode.view.snapshotContentTree()
+        }
+        snapshotView?.frame = localSourceContentFrame
+
+        if let snapshotView = snapshotView {
+            self.contextSourceNode.contentNode.view.addSubview(snapshotView)
+        }
+
+        let sourceCenter = CGPoint(
+            x: localSourceContentFrame.midX,
+            y: localSourceContentFrame.midY
+        )
+        let localSourceCenter = CGPoint(
+            x: sourceCenter.x - localSourceContentFrame.minX,
+            y: sourceCenter.y - localSourceContentFrame.minY
+        )
+        let localSourceOffset = CGPoint(
+            x: localSourceCenter.x - localSourceContentFrame.width / 2.0,
+            y: localSourceCenter.y - localSourceContentFrame.height / 2.0
+        )
+
+        let sourceScale: CGFloat = stickerSource.imageNode.frame.height / self.imageNode.frame.height
+
+        let offset = CGPoint(
+            x: sourceCenter.x - self.imageNode.frame.midX,
+            y: sourceCenter.y - self.imageNode.frame.midY
+        )
+
+        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
+        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
+        if let animationNode = self.animationNode {
+            transition.animatePositionAdditive(node: animationNode, offset: offset)
+            transition.animateTransformScale(node: animationNode, from: sourceScale)
+        }
+        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
+        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+
+        let inverseScale = 1.0 / sourceScale
+
+        if let snapshotView = snapshotView {
+            transition.animatePositionAdditive(layer: snapshotView.layer, offset: CGPoint(), to: CGPoint(
+                x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
+                y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
+            ), removeOnCompletion: false)
+            transition.updateTransformScale(layer: snapshotView.layer, scale: 1.0 / sourceScale)
+
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+
+            self.imageNode.layer.animateAlpha(from: 0.0, to: self.imageNode.alpha, duration: 0.05)
+            if let animationNode = self.animationNode {
+                animationNode.layer.animateAlpha(from: 0.0, to: animationNode.alpha, duration: 0.05)
+            }
+            self.placeholderNode.layer.animateAlpha(from: 0.0, to: self.placeholderNode.alpha, duration: 0.05)
+        }
+
+        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.16)
+
+        if let animationNode = stickerSource.animationNode {
+            animationNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            animationNode.layer.animateAlpha(from: 0.0, to: animationNode.alpha, duration: 0.4)
+        }
+
+        stickerSource.imageNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        stickerSource.imageNode.layer.animateAlpha(from: 0.0, to: stickerSource.imageNode.alpha, duration: 0.4)
+
+        if let placeholderNode = stickerSource.placeholderNode {
+            placeholderNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            placeholderNode.layer.animateAlpha(from: 0.0, to: placeholderNode.alpha, duration: 0.4)
+        }
+    }
+
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
+        if let replyInfoNode = self.replyInfoNode {
+            let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
+
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            if let replyBackgroundNode = self.replyBackgroundNode {
+                transition.animatePositionAdditive(node: replyBackgroundNode, offset: offset)
+                replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            }
+        }
     }
 }
 

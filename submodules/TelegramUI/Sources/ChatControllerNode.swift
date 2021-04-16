@@ -55,6 +55,7 @@ private struct ChatControllerNodeDerivedLayoutState {
     var inputContextPanelsFrame: CGRect
     var inputContextPanelsOverMainPanelFrame: CGRect
     var inputNodeHeight: CGFloat?
+    var inputNodeAdditionalHeight: CGFloat?
     var upperInputPositionBound: CGFloat?
 }
 
@@ -329,7 +330,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var inputPanelNode: ChatInputPanelNode?
     private weak var currentDismissedInputPanelNode: ASDisplayNode?
     private var secondaryInputPanelNode: ChatInputPanelNode?
-    private var accessoryPanelNode: AccessoryPanelNode?
+    private(set) var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
     private let inputContextPanelContainer: ChatControllerTitlePanelNodeContainer
     private var overlayContextPanelNode: ChatInputContextPanelNode?
@@ -337,7 +338,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var inputNode: ChatInputNode?
     private var disappearingNode: ChatInputNode?
     
-    private var textInputPanelNode: ChatTextInputPanelNode?
+    private(set) var textInputPanelNode: ChatTextInputPanelNode?
     private var inputMediaNode: ChatMediaInputNode?
     
     let navigateButtons: ChatHistoryNavigationButtons
@@ -377,7 +378,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var requestUpdateChatInterfaceState: (Bool, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
+    var requestUpdateChatInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
     var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool) -> Void = { _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
@@ -1299,9 +1300,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 accessoryPanelNode.dismiss = { [weak self, weak accessoryPanelNode] in
                     if let strongSelf = self, let accessoryPanelNode = accessoryPanelNode, strongSelf.accessoryPanelNode === accessoryPanelNode {
                         if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(true, false, { $0.withUpdatedReplyMessageId(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(true, false, { $0.withUpdatedForwardMessageIds(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
@@ -1873,8 +1874,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.updatePlainInputSeparator(transition: transition)
-        
-        self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputContextPanelsFrame: inputContextPanelsFrame, inputContextPanelsOverMainPanelFrame: inputContextPanelsOverMainPanelFrame, inputNodeHeight: inputNodeHeightAndOverflow?.0, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
+
+        let previousInputHeightValue = (self.derivedLayoutState?.inputNodeHeight ?? 0.0) + (self.derivedLayoutState?.inputNodeAdditionalHeight ?? 0.0)
+        let updatedInputHeight = (inputNodeHeightAndOverflow?.0 ?? 0.0) + (inputNodeHeightAndOverflow?.1 ?? 0.0)
+        if previousInputHeightValue != updatedInputHeight {
+            self.historyNode.didScrollWithOffset?(previousInputHeightValue - updatedInputHeight, transition, nil)
+        }
+
+        self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputContextPanelsFrame: inputContextPanelsFrame, inputContextPanelsOverMainPanelFrame: inputContextPanelsOverMainPanelFrame, inputNodeHeight: inputNodeHeightAndOverflow?.0, inputNodeAdditionalHeight: inputNodeHeightAndOverflow?.1, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
         
         //self.notifyTransitionCompletionListeners(transition: transition)
     }
@@ -2656,7 +2663,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(false, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     })

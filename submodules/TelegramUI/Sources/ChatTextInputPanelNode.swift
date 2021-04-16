@@ -294,6 +294,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.actionButtons.micButton.account = self.context?.account
         }
     }
+
+    var micButton: ChatTextInputMediaRecordingButton? {
+        return self.actionButtons.micButton
+    }
     
     private let statusDisposable = MetaDisposable()
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {

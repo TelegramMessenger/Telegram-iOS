@@ -705,7 +705,7 @@ public class ChatMessageItemView: ListViewItemNode {
         self.frame = CGRect()
     }
     
-    func setupItem(_ item: ChatMessageItem) {
+    func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
     }
     

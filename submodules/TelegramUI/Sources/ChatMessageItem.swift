@@ -434,7 +434,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
-            node.setupItem(self)
+            node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
@@ -500,7 +500,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatMessageItemView {
-                nodeValue.setupItem(self)
+                nodeValue.setupItem(self, synchronousLoad: false)
                 
                 let nodeLayout = nodeValue.asyncLayout()
                 

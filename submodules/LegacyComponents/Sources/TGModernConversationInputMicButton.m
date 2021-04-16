@@ -249,7 +249,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _innerCircleView.center = centerPoint;
     _outerCircleView.center = centerPoint;
     _decoration.center = centerPoint;
-    _innerIconWrapperView.center = centerPoint;
+    _innerIconWrapperView.center = CGPointMake(_decoration.frame.size.width / 2.0f, _decoration.frame.size.height / 2.0f);
     
     _lockPanelWrapperView.frame = CGRectMake(floor(centerPoint.x - _lockPanelWrapperView.frame.size.width / 2.0f), floor(centerPoint.y - 122.0f - _lockPanelWrapperView.frame.size.height / 2.0f), _lockPanelWrapperView.frame.size.width, _lockPanelWrapperView.frame.size.height);
     
@@ -421,7 +421,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerIconWrapperView.userInteractionEnabled = false;
         [_innerIconWrapperView addSubview:_innerIconView];
         
-        [[_presentation view] addSubview:_innerIconWrapperView];
+        //[[_presentation view] addSubview:_innerIconWrapperView];
+        [_decoration addSubview:_innerIconWrapperView];
         
         if (_lock == nil) {
             _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 40.0f)];

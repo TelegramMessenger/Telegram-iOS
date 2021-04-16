@@ -230,7 +230,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
 
-    func animateFromInputPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, localRect: CGRect, transition: ContainedViewLayoutTransition) {
+    func animateFromInputPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, localRect: CGRect, transition: ContainedViewLayoutTransition) -> CGPoint {
         if let titleNode = self.titleNode {
             let offset = CGPoint(
                 x: localRect.minX + sourceReplyPanel.titleNode.frame.minX - titleNode.frame.minX,
@@ -307,6 +307,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
 
             sourceReplyPanel.lineNode.frame = sourceReplyPanel.lineNode.frame.offsetBy(dx: localRect.minX - offset.x, dy: localRect.minY - offset.y)
             transition.animatePositionAdditive(node: sourceReplyPanel.lineNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
+
+            return offset
         }
     }
 }

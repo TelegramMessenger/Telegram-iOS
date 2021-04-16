@@ -61,7 +61,9 @@ public func setupCurrencyNumberFormatter(currency: String) -> NumberFormatter {
 
     result.append("#")
 
-    result.append(entry.decimalSeparator)
+    if entry.decimalDigits != 0 {
+        result.append(entry.decimalSeparator)
+    }
 
     for _ in 0 ..< entry.decimalDigits {
         result.append("#")
@@ -143,7 +145,9 @@ public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
             }
         }
         result.append("\(integerPart)")
-        result.append(entry.decimalSeparator)
+        if !fractional.isEmpty {
+            result.append(entry.decimalSeparator)
+        }
         for i in 0 ..< fractional.count {
             result.append(fractional[fractional.count - i - 1])
         }
@@ -187,7 +191,9 @@ public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (St
             }
         }
         result.append("\(integerPart)")
-        result.append(entry.decimalSeparator)
+        if !fractional.isEmpty {
+            result.append(entry.decimalSeparator)
+        }
         for i in 0 ..< fractional.count {
             result.append(fractional[fractional.count - i - 1])
         }

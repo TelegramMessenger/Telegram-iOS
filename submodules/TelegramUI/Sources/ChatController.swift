@@ -1042,8 +1042,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let query = query {
                 attributes.append(EmojiSearchQueryMessageAttribute(query: query))
             }
+
+            let correlationId = Int64.random(in: 0 ..< Int64.max)
+
+            var replyPanel: ReplyAccessoryPanelNode?
+            if let accessoryPanelNode = strongSelf.chatDisplayNode.accessoryPanelNode as? ReplyAccessoryPanelNode {
+                replyPanel = accessoryPanelNode
+            }
+
+            if let sourceNode = sourceNode as? ChatMediaInputStickerGridItemNode {
+                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                        var current = current
+                        current = current.updatedInputMode { current in
+                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                return .media(mode: mode, expanded: nil)
+                            }
+                            return current
+                        }
+
+                        return current
+                    })
+                })
+            } else if let sourceNode = sourceNode as? HorizontalStickerGridItemNode {
+                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+            } else if let sourceNode = sourceNode as? StickerPaneSearchStickerItemNode {
+                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+            }
             
-            strongSelf.sendMessages([.message(text: "", attributes: attributes, mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)])
+            strongSelf.sendMessages([.message(text: "", attributes: attributes, mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: correlationId)])
             return true
         }, sendGif: { [weak self] fileReference, sourceNode, sourceRect in
             if let strongSelf = self {
@@ -4616,8 +4646,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, saveInterfaceState, f in
-            self?.updateChatPresentationInterfaceState(animated: animated, interactive: true, saveInterfaceState: saveInterfaceState, { $0.updatedInterfaceState(f) })
+        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] transition, saveInterfaceState, f in
+            self?.updateChatPresentationInterfaceState(transition: transition, interactive: true, saveInterfaceState: saveInterfaceState, { $0.updatedInterfaceState(f) })
         }
         
         self.chatDisplayNode.requestUpdateInterfaceState = { [weak self] transition, interactive, f in
@@ -9758,7 +9788,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch updatedAction {
                 case .dismiss:
                     self.chatDisplayNode.updateRecordedMediaDeleted(true)
-                    break
+                    self.audioRecorder.set(.single(nil))
                 case .preview:
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
@@ -9789,6 +9819,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     })
+                    self.audioRecorder.set(.single(nil))
                 case .send:
                     self.chatDisplayNode.updateRecordedMediaDeleted(false)
                     let _ = (audioRecorderValue.takenRecordedData()
@@ -9797,6 +9828,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if data.duration < 0.5 {
                                 strongSelf.recorderFeedback?.error()
                                 strongSelf.recorderFeedback = nil
+                                strongSelf.audioRecorder.set(.single(nil))
                             } else {
                                 let randomId = arc4random64()
                                 
@@ -9815,8 +9847,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         })
                                     }
                                 })
+
+                                let correlationId = Int64.random(in: 0 ..< Int64.max)
+
+                                if let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
+                                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNode.Source.AudioMicInput(micButton: micButton)), initiated: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.audioRecorder.set(.single(nil))
+                                    })
+                                } else {
+                                    strongSelf.audioRecorder.set(.single(nil))
+                                }
                                 
-                                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)])
+                                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: correlationId)])
                                 
                                 strongSelf.recorderFeedback?.tap()
                                 strongSelf.recorderFeedback = nil
@@ -9824,7 +9869,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
             }
-            self.audioRecorder.set(.single(nil))
         } else if let videoRecorderValue = self.videoRecorderValue {
             if case .send = updatedAction {
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)

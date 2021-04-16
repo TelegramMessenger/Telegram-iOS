@@ -206,4 +206,11 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
     
     func setOverlayColor(_ color: UIColor?, animated: Bool) {
     }
+
+    func setFrameIndex(_ frameIndex: Int) {
+    }
+
+    var currentFrameIndex: Int {
+        return 0
+    }
 }
