@@ -4154,7 +4154,7 @@ public final class VoiceChatController: ViewController {
                 return
             }
             
-            let resource = LocalFileMediaResource(fileId: arc4random64())
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.call.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
             let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
             
@@ -4189,7 +4189,7 @@ public final class VoiceChatController: ViewController {
                 return
             }
             
-            let photoResource = LocalFileMediaResource(fileId: arc4random64())
+            let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
             let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
             
@@ -4254,7 +4254,7 @@ public final class VoiceChatController: ViewController {
                                 if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                     resource = LocalFileMediaResource(fileId: liveUploadData.id)
                                 } else {
-                                    resource = LocalFileMediaResource(fileId: arc4random64())
+                                    resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 }
                                 account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                 subscriber.putNext(resource)

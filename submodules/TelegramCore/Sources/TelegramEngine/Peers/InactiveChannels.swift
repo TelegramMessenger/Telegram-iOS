@@ -19,7 +19,7 @@ public struct InactiveChannel : Equatable {
     }
 }
 
-public func inactiveChannelList(network: Network) -> Signal<[InactiveChannel], NoError> {
+func _internal_inactiveChannelList(network: Network) -> Signal<[InactiveChannel], NoError> {
     return network.request(Api.functions.channels.getInactiveChannels())
     |> retryRequest
     |> map { result in

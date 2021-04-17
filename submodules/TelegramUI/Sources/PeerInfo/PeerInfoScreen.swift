@@ -5025,7 +5025,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
-        let resource = LocalFileMediaResource(fileId: arc4random64())
+        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
         
@@ -5070,7 +5070,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
-        let photoResource = LocalFileMediaResource(fileId: arc4random64())
+        let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
         
@@ -5138,7 +5138,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                 resource = LocalFileMediaResource(fileId: liveUploadData.id)
                             } else {
-                                resource = LocalFileMediaResource(fileId: arc4random64())
+                                resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                             }
                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                             subscriber.putNext(resource)
@@ -5419,7 +5419,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.controller?.push(watchSettingsController(context: self.context))
             case .support:
                 let supportPeer = Promise<PeerId?>()
-                supportPeer.set(context.engine.peerNames.supportPeerId())
+                supportPeer.set(context.engine.peers.supportPeerId())
                 
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: { [weak self] in

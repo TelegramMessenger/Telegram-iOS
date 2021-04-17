@@ -12,7 +12,7 @@ public func requestPhoneNumber(account: Account, peerId: PeerId) -> Signal<Never
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.sendPhoneNumberRequest(peer: inputPeer, randomId: arc4random64()))
+        return account.network.request(Api.functions.messages.sendPhoneNumberRequest(peer: inputPeer, randomId: Int64.random(in: Int64.min ... Int64.max)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

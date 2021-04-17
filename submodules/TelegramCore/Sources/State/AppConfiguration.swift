@@ -1,7 +1,7 @@
 import Postbox
 import SyncCore
 
-public func currentAppConfiguration(transaction: Transaction) -> AppConfiguration {
+private func currentAppConfiguration(transaction: Transaction) -> AppConfiguration {
     if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration {
         return entry
     } else {

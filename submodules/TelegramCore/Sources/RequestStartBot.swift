@@ -11,7 +11,7 @@ public func requestStartBot(account: Account, botPeerId: PeerId, payload: String
         return account.postbox.loadedPeerWithId(botPeerId)
             |> mapToSignal { botPeer -> Signal<Void, NoError> in
                 if let inputUser = apiInputUser(botPeer) {
-                    let r = account.network.request(Api.functions.messages.startBot(bot: inputUser, peer: .inputPeerEmpty, randomId: arc4random64(), startParam: payload))
+                    let r = account.network.request(Api.functions.messages.startBot(bot: inputUser, peer: .inputPeerEmpty, randomId: Int64.random(in: Int64.min ... Int64.max), startParam: payload))
                         |> mapToSignal { result -> Signal<Void, MTRpcError> in
                             account.stateManager.addUpdates(result)
                             return .complete()
@@ -48,7 +48,7 @@ public func requestStartBotInGroup(account: Account, botPeerId: PeerId, groupPee
     |> mapError { _ -> RequestStartBotInGroupError in return .generic }
     |> mapToSignal { botPeer, groupPeer -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> in
         if let botPeer = botPeer, let inputUser = apiInputUser(botPeer), let groupPeer = groupPeer, let inputGroup = apiInputPeer(groupPeer) {
-            let request = account.network.request(Api.functions.messages.startBot(bot: inputUser, peer: inputGroup, randomId: arc4random64(), startParam: payload ?? ""))
+            let request = account.network.request(Api.functions.messages.startBot(bot: inputUser, peer: inputGroup, randomId: Int64.random(in: Int64.min ... Int64.max), startParam: payload ?? ""))
             |> mapError { _ -> RequestStartBotInGroupError in
                 return .generic
             }

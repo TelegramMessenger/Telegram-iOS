@@ -245,7 +245,7 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
 
     let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment, userInitiated: userInitiated)
     if includeLogs {
-        let id = arc4random64()
+        let id = Int64.random(in: Int64.min ... Int64.max)
         let name = "\(callId.id)_\(callId.accessHash).log.json"
         let path = callLogsPath(account: account) + "/" + name
         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])

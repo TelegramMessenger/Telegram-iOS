@@ -190,7 +190,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
                                                     let role = updatedState.role
                                                     let fromSeqNo: Int32 = (topProcessedCanonicalIncomingOperationIndex + 1) * 2 + (role == .creator ? 0 : 1)
                                                     let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
-                                                    updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                                    updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                                 } else {
                                                     assertionFailure()
                                                 }
@@ -204,7 +204,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
                                                 let role = updatedState.role
                                                 let fromSeqNo: Int32 = Int32(0 * 2) + (role == .creator ? Int32(0) : Int32(1))
                                                 let toSeqNo: Int32 = (canonicalIncomingIndex - 1) * 2 + (role == .creator ? 0 : 1)
-                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: arc4random64(), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.resendOperations(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), fromSeqNo: fromSeqNo, toSeqNo: toSeqNo), state: updatedState)
                                             } else {
                                                 assertionFailure()
                                             }
@@ -230,15 +230,15 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
                                             if layerSupport >= 101 {
                                                 let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer101, locallyRequestedLayer: 101, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
-                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer101, actionGloballyUniqueId: arc4random64(), layerSupport: 101), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer101, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), layerSupport: 101), state: updatedState)
                                             } else if layerSupport >= 73 {
                                                 let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer73, locallyRequestedLayer: 73, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
-                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer73, actionGloballyUniqueId: arc4random64(), layerSupport: 101), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer73, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), layerSupport: 101), state: updatedState)
                                             } else if layerSupport >= 46 {
                                                 let sequenceBasedLayerState = SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: 46, remotelyRequestedLayer: layerSupport), rekeyState: nil, baseIncomingOperationIndex: entry.tagLocalIndex, baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: peerId, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)
                                                 updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(sequenceBasedLayerState))
-                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer46, actionGloballyUniqueId: arc4random64(), layerSupport: 101), state: updatedState)
+                                                updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: .layer46, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), layerSupport: 101), state: updatedState)
                                             } else {
                                                 throw MessageParsingError.contentParsingError
                                             }
@@ -711,7 +711,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         if let file = file {
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -737,7 +737,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             }
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -752,7 +752,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -792,7 +792,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil, fileName: nil), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                         parsedMedia.append(fileMedia)
                     case let .decryptedMessageMediaWebPage(url):
-                        parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: arc4random64()), content: .Pending(0, url)))
+                        parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                     case let .decryptedMessageMediaGeoPoint(lat, long):
                         parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
@@ -913,7 +913,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         if let file = file {
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -940,7 +940,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             }
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -971,7 +971,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -1011,7 +1011,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil, fileName: nil), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                         parsedMedia.append(fileMedia)
                     case let .decryptedMessageMediaWebPage(url):
-                        parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: arc4random64()), content: .Pending(0, url)))
+                        parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                     case let .decryptedMessageMediaGeoPoint(lat, long):
                         parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
@@ -1151,7 +1151,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         if let file = file {
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -1178,7 +1178,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             }
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -1209,7 +1209,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
-                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                                 resources.append((resource, thumb.makeData()))
                             }
@@ -1249,7 +1249,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                     let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil, fileName: nil), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                     parsedMedia.append(fileMedia)
                 case let .decryptedMessageMediaWebPage(url):
-                    parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: arc4random64()), content: .Pending(0, url)))
+                    parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                 case let .decryptedMessageMediaGeoPoint(lat, long):
                     parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                 case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):

@@ -467,7 +467,7 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                         |> castError(SignUpError.self)
                     
                     if let avatarData = avatarData {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                         account.postbox.mediaBox.storeResourceData(resource.id, data: avatarData)
                         
                         return updatePeerPhotoInternal(postbox: account.postbox, network: account.network, stateManager: nil, accountPeerId: user.id, peer: .single(user), photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource), video: avatarVideo, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { _, _ in .single([:]) })

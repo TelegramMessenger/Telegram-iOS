@@ -80,7 +80,7 @@ func deleteMessagesInteractively(transaction: Transaction, stateManager: Account
                             globallyUniqueIds.append(globallyUniqueId)
                         }
                     }
-                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: globallyUniqueIds), state: state)
+                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
                     if updatedState != state {
                         transaction.setPeerChatState(peerId, state: updatedState)
                     }
@@ -137,7 +137,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: In
                 }
                 
                 if let layer = layer {
-                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.clearHistory(layer: layer, actionGloballyUniqueId: arc4random64()), state: state)
+                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.clearHistory(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max)), state: state)
                     if updatedState != state {
                         transaction.setPeerChatState(peerId, state: updatedState)
                     }

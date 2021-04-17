@@ -157,7 +157,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 
                 var previewRepresentations: [TelegramMediaImageRepresentation] = []
                 if let previewImage = previewImage {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                     let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
                     if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
@@ -188,7 +188,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     resource = LocalFileMediaResource(fileId: liveUploadData.id)
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                 } else {
-                    resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: videoUrl.path, adjustments: resourceAdjustments)
+                    resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: videoUrl.path, adjustments: resourceAdjustments)
                 }
                 
                 if let previewImage = previewImage {
@@ -197,7 +197,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     }
                 }
                 
-                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: PixelDimensions(finalDimensions), flags: [.instantRoundVideo])])
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: Int(finalDuration), size: PixelDimensions(finalDimensions), flags: [.instantRoundVideo])])
                 var message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                 
                 let scheduleTime: Int32? = scheduleTimestamp > 0 ? scheduleTimestamp : nil

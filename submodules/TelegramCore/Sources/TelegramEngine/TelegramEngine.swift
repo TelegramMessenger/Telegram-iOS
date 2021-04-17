@@ -20,7 +20,23 @@ public final class TelegramEngine {
         return Payments(account: self.account)
     }()
 
-    public lazy var peerNames: PeerNames = {
-        return PeerNames(account: self.account)
+    public lazy var peers: Peers = {
+        return Peers(account: self.account)
+    }()
+
+    public lazy var auth: Auth = {
+        return Auth(account: self.account)
+    }()
+}
+
+public final class TelegramEngineUnauthorized {
+    public let account: UnauthorizedAccount
+
+    public init(account: UnauthorizedAccount) {
+        self.account = account
+    }
+
+    public lazy var auth: Auth = {
+        return Auth(account: self.account)
     }()
 }

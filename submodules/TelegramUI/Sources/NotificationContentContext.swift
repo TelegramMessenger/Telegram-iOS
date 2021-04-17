@@ -82,7 +82,7 @@ public final class NotificationViewControllerImpl {
         let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
         performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
         
-        TempBox.initializeShared(basePath: rootPath, processType: "notification-content", launchSpecificId: arc4random64())
+        TempBox.initializeShared(basePath: rootPath, processType: "notification-content", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let logsPath = rootPath + "/notificationcontent-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)

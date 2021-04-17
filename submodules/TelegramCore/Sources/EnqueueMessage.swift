@@ -82,9 +82,9 @@ func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
 
 private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
     if let file = media as? TelegramMediaFile {
-        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, videoThumbnails: file.videoThumbnails, immediateThumbnailData: file.immediateThumbnailData, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, videoThumbnails: file.videoThumbnails, immediateThumbnailData: file.immediateThumbnailData, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
     } else if let image = media as? TelegramMediaImage {
-        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])
+        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])
     } else {
         return media
     }
@@ -696,7 +696,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     if let generatedKey = localGroupingKeyBySourceKey[groupingKey] {
                                         localGroupingKey = generatedKey
                                     } else {
-                                        let generatedKey = arc4random64()
+                                        let generatedKey = Int64.random(in: Int64.min ... Int64.max)
                                         localGroupingKeyBySourceKey[groupingKey] = generatedKey
                                         localGroupingKey = generatedKey
                                     }

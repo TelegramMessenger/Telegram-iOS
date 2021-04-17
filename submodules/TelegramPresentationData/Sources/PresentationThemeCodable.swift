@@ -1882,9 +1882,9 @@ extension PresentationTheme: Codable {
         if let decoder = decoder as? PresentationThemeDecoding {
             let serviceBackgroundColor = decoder.serviceBackgroundColor ?? defaultServiceBackgroundColor
             decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, serviceBackgroundColor: serviceBackgroundColor)
-            index = decoder.reference?.index ?? arc4random64()
+            index = decoder.reference?.index ?? Int64.random(in: Int64.min ... Int64.max)
         } else {
-            index = arc4random64()
+            index = Int64.random(in: Int64.min ... Int64.max)
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),

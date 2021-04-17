@@ -1343,7 +1343,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                     present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
                                 }
                             case let .send(address, amount, comment):
-                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: Int64.random(in: Int64.min ... Int64.max), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
                             }
                             
                         })

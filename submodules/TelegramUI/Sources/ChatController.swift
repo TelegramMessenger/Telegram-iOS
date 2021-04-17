@@ -8674,13 +8674,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     }
                                     if fileTypes.music != fileTypes.other {
-                                        groupingKey = arc4random64()
+                                        groupingKey = Int64.random(in: Int64.min ... Int64.max)
                                     }
                                     
                                     var messages: [EnqueueMessage] = []
                                     for item in results {
                                         if let item = item {
-                                            let fileId = arc4random64()
+                                            let fileId = Int64.random(in: Int64.min ... Int64.max)
                                             let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                                             if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
@@ -8697,7 +8697,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             messages.append(message)
                                         }
                                         if let _ = groupingKey, messages.count % 10 == 0 {
-                                            groupingKey = arc4random64()
+                                            groupingKey = Int64.random(in: Int64.min ... Int64.max)
                                         }
                                     }
                                     
@@ -9621,7 +9621,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
         self.enqueueMediaMessageDisposable.set((convertToWebP(image: image, targetSize: size, targetBoundingSize: size, quality: 0.9) |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self, !data.isEmpty {
-                let resource = LocalFileMediaResource(fileId: arc4random64())
+                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
                 var fileAttributes: [TelegramMediaFileAttribute] = []
@@ -9629,7 +9629,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
                 fileAttributes.append(.ImageSize(size: PixelDimensions(size)))
                 
-                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: data.count, attributes: fileAttributes)
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: data.count, attributes: fileAttributes)
                 let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                 
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
@@ -9806,7 +9806,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 })
                             } else if let waveform = data.waveform {
-                                let resource = LocalFileMediaResource(fileId: arc4random64(), size: data.compressedData.count)
+                                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: data.compressedData.count)
                                 
                                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                                 
@@ -9830,7 +9830,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.recorderFeedback = nil
                                 strongSelf.audioRecorder.set(.single(nil))
                             } else {
-                                let randomId = arc4random64()
+                                let randomId = Int64.random(in: Int64.min ... Int64.max)
                                 
                                 let resource = LocalFileMediaResource(fileId: randomId)
                                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
@@ -9956,7 +9956,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            let messages: [EnqueueMessage] = [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)]
+            let messages: [EnqueueMessage] = [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)]
             
             let transformedMessages: [EnqueueMessage]
             if let silentPosting = silentPosting {
