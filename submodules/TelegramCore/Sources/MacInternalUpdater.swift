@@ -12,7 +12,7 @@ public enum InternalUpdaterError {
 }
 
 public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, InternalUpdaterError> {
-    return resolvePeerByName(account: account, name: source)
+    return TelegramEngine(account: account).peers.resolvePeerByName(name: source)
         |> castError(InternalUpdaterError.self)
         |> mapToSignal { peerId -> Signal<Peer?, InternalUpdaterError> in
             return account.postbox.transaction { transaction in
@@ -79,7 +79,7 @@ public enum AppUpdateDownloadResult {
 }
 
 public func downloadAppUpdate(account: Account, source: String, messageId: Int32) -> Signal<AppUpdateDownloadResult, InternalUpdaterError> {
-    return resolvePeerByName(account: account, name: source)
+    return TelegramEngine(account: account).peers.resolvePeerByName(name: source)
         |> castError(InternalUpdaterError.self)
         |> mapToSignal { peerId -> Signal<Peer?, InternalUpdaterError> in
             return account.postbox.transaction { transaction in

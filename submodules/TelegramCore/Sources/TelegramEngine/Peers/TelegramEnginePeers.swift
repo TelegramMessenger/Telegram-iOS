@@ -61,5 +61,9 @@ public extension TelegramEngine {
         public func inactiveChannelList() -> Signal<[InactiveChannel], NoError> {
             return _internal_inactiveChannelList(network: self.account.network)
         }
+
+        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
+            return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
+        }
     }
 }

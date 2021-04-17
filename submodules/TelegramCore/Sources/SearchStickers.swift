@@ -329,7 +329,7 @@ public func searchGifs(account: Account, query: String, nextOffset: String = "")
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
     } |> mapToSignal {
-         return resolvePeerByName(account: account, name: $0)
+         return _internal_resolvePeerByName(account: account, name: $0)
     } |> filter { $0 != nil }
     |> map { $0! }
     |> mapToSignal { peerId -> Signal<Peer, NoError> in

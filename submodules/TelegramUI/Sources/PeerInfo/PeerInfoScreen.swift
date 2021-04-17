@@ -3230,7 +3230,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             disposable = MetaDisposable()
             self.resolvePeerByNameDisposable = disposable
         }
-        var resolveSignal = resolvePeerByName(account: self.context.account, name: name, ageLimit: 10)
+        var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         
         var cancelImpl: (() -> Void)?
         let presentationData = self.presentationData
@@ -3294,7 +3294,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let account = self.context.account
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
-            resolveSignal = resolvePeerByName(account: self.context.account, name: peerName)
+            resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                 if let peerId = peerId {
                     return account.postbox.loadedPeerWithId(peerId)

@@ -762,7 +762,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {
-        resolveDisposable.set((resolvePeerByName(account: context.account, name: "durov") |> deliverOnMainQueue).start(next: { peerId in
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov") |> deliverOnMainQueue).start(next: { peerId in
             if let peerId = peerId {
                 navigateToChatControllerImpl?(peerId)
             }

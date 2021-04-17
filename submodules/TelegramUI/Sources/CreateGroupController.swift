@@ -398,7 +398,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             })
         }
         
-        venuesPromise.set(nearbyVenues(account: context.account, latitude: latitude, longitude: longitude)
+        venuesPromise.set(nearbyVenues(context: context, latitude: latitude, longitude: longitude)
         |> map(Optional.init))
     }
     

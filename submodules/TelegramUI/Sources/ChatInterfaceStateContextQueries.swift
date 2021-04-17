@@ -264,7 +264,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             let chatPeer = peer
-            let contextBot = resolvePeerByName(account: context.account, name: addressName)
+            let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                 if let peerId = peerId {
                     return context.account.postbox.loadedPeerWithId(peerId)

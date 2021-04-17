@@ -10901,7 +10901,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 disposable = MetaDisposable()
                 self.resolvePeerByNameDisposable = disposable
             }
-            var resolveSignal = resolvePeerByName(account: self.context.account, name: name, ageLimit: 10)
+            var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
             
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
@@ -10967,7 +10967,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let account = self.context.account
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
-                resolveSignal = resolvePeerByName(account: self.context.account, name: peerName)
+                resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
                 |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                     if let peerId = peerId {
                         return account.postbox.loadedPeerWithId(peerId)
