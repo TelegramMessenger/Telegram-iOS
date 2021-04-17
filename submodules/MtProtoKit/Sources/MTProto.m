@@ -2138,20 +2138,6 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     
     NSData *decryptedData = MTAesDecrypt(dataToDecrypt, encryptionKey.key, encryptionKey.iv);
     
-    int32_t messageDataLength = 0;
-    [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
-    
-    int32_t paddingLength = ((int32_t)decryptedData.length) - messageDataLength;
-    if (paddingLength < 12 || paddingLength > 1024) {
-        __unused NSData *result = MTSha256(decryptedData);
-        return nil;
-    }
-    
-    if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length) {
-        __unused NSData *result = MTSha256(decryptedData);
-        return nil;
-    }
-    
     int xValue = 8;
     NSMutableData *msgKeyLargeData = [[NSMutableData alloc] init];
     [msgKeyLargeData appendBytes:effectiveAuthKey.authKey.bytes + 88 + xValue length:32];
@@ -2160,8 +2146,21 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
     
-    if (![messageKey isEqualToData:embeddedMessageKey])
+    if (![messageKey isEqualToData:embeddedMessageKey]) {
         return nil;
+    }
+
+    int32_t messageDataLength = 0;
+    [decryptedData getBytes:&messageDataLength range:NSMakeRange(28, 4)];
+
+    int32_t paddingLength = ((int32_t)decryptedData.length) - messageDataLength;
+    if (paddingLength < 12 || paddingLength > 1024) {
+        return nil;
+    }
+
+    if (messageDataLength < 0 || messageDataLength > (int32_t)decryptedData.length) {
+        return nil;
+    }
     
     return decryptedData;
 }
