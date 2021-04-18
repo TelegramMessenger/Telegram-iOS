@@ -461,7 +461,7 @@ final class AuthorizedApplicationContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (acceptTermsOfService(account: strongSelf.context.account, id: termsOfServiceUpdate.id)
+                    let _ = (strongSelf.context.engine.accountData.acceptTermsOfService(id: termsOfServiceUpdate.id)
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let strongSelf = self, let botName = botName {

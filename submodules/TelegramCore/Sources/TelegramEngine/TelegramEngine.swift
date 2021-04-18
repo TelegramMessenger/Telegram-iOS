@@ -27,6 +27,10 @@ public final class TelegramEngine {
     public lazy var auth: Auth = {
         return Auth(account: self.account)
     }()
+
+    public lazy var accountData: AccountData = {
+        return AccountData(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {

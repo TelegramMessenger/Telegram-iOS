@@ -65,5 +65,9 @@ public extension TelegramEngine {
         public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
             return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
         }
+
+        public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+            return _internal_searchPeers(account: self.account, query: query)
+        }
     }
 }
