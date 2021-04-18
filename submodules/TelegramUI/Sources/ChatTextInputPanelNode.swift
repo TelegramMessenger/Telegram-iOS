@@ -2182,9 +2182,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let backgroundView = UIImageView(image: backgroundImage)
         backgroundView.frame = self.textInputBackgroundNode.frame
 
-        guard let contentView = textInputNode.view.snapshotView(afterScreenUpdates: false) else {
+        //let previousTintColor = textInputNode.view.tintColor
+        //textInputNode.view.tintColor = .clear
+
+        guard let contentView = textInputNode.view.snapshotView(afterScreenUpdates: true) else {
+            //textInputNode.view.tintColor = previousTintColor
             return nil
         }
+        //textInputNode.view.tintColor = previousTintColor
         contentView.frame = textInputNode.frame
 
         return ChatMessageTransitionNode.Source.TextInput(

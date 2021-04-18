@@ -174,6 +174,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         }
 
         func beginAnimation() {
+            let verticalDuration: Double = 0.5
+            let horizontalDuration: Double = verticalDuration * 0.5
+            let delay: Double = 0.0
+
             switch self.source {
             case let .textInput(textInput, replyPanel):
                 self.contextSourceNode.isExtractedToContextPreview = true
@@ -194,10 +198,6 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 }
 
                 self.itemNode.cancelInsertionAnimations()
-
-                let verticalDuration: Double = 0.5
-                let horizontalDuration: Double = verticalDuration * 0.7
-                let delay: Double = 0.0
 
                 let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
@@ -264,10 +264,6 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                 self.itemNode.cancelInsertionAnimations()
 
-                let verticalDuration: Double = 0.5
-                let horizontalDuration: Double = verticalDuration * 0.25
-                let delay: Double = 0.0
-
                 let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
                 if let itemNode = self.itemNode as? ChatMessageAnimatedStickerItemNode {
@@ -313,10 +309,6 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                         snapshotView.frame = sourceAbsoluteRect
 
                         container.isHidden = true
-
-                        let verticalDuration: Double = 0.5
-                        let horizontalDuration: Double = verticalDuration * 0.7
-                        let delay: Double = 0.0
 
                         let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
