@@ -265,7 +265,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 self.itemNode.cancelInsertionAnimations()
 
                 let verticalDuration: Double = 0.5
-                let horizontalDuration: Double = verticalDuration * 0.5
+                let horizontalDuration: Double = verticalDuration * 0.25
                 let delay: Double = 0.0
 
                 let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
