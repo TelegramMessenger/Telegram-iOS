@@ -679,7 +679,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
-            replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
         }
     }
 

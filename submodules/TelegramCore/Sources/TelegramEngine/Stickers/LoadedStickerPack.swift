@@ -95,8 +95,8 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
         }
 }
 
-public func loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceActualized: Bool) -> Signal<LoadedStickerPack, NoError> {
-    return cachedStickerPack(postbox: postbox, network: network, reference: reference, forceRemote: forceActualized)
+func _internal_loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceActualized: Bool) -> Signal<LoadedStickerPack, NoError> {
+    return _internal_cachedStickerPack(postbox: postbox, network: network, reference: reference, forceRemote: forceActualized)
     |> map { result -> LoadedStickerPack in
         switch result {
             case .none:

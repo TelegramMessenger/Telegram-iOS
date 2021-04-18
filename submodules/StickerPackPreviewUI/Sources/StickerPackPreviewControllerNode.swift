@@ -521,7 +521,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
-                        let _ = (removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete)
+                        let _ = (self.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                         |> deliverOnMainQueue).start(next: { [weak self] indexAndItems in
                             guard let strongSelf = self, let (positionInList, _) = indexAndItems else {
                                 return
@@ -532,7 +532,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
                         }
                     } else {
-                        let _ = addStickerPackInteractively(postbox: self.context.account.postbox, info: info, items: items).start()
+                        let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
                         if !dismissOnAction {
                             self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
                         }

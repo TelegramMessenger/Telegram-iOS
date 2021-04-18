@@ -729,7 +729,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, animated: Bool) {
         self.emptyType = emptyType
         if let emptyType = emptyType, self.emptyNode == nil {
-            let emptyNode = ChatEmptyNode(account: self.context.account, interaction: self.interfaceInteraction)
+            let emptyNode = ChatEmptyNode(context: self.context, interaction: self.interfaceInteraction)
             if let (size, insets) = self.validEmptyNodeLayout {
                 emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: size, insets: insets, transition: .immediate)
             }

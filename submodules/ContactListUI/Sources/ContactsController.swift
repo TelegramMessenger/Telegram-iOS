@@ -526,11 +526,10 @@ public class ContactsController: ViewController {
         })
     }
     
-    
     private func prepareRandomGreetingSticker() {
         let context = self.context
         self.preloadedSticker.set(.single(nil)
-        |> then(randomGreetingSticker(account: context.account)
+        |> then(context.engine.stickers.randomGreetingSticker()
         |> map { item in
             return item?.file
         }))

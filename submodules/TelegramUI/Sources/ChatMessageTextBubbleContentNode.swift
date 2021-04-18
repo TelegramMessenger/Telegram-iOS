@@ -644,10 +644,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     func animateFrom(sourceView: UIView, widthDifference: CGFloat, transition: ContainedViewLayoutTransition) {
         self.view.addSubview(sourceView)
 
-        sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak sourceView] _ in
+        sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak sourceView] _ in
             sourceView?.removeFromSuperview()
         })
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
 
         let offset = CGPoint(
             x: sourceView.frame.minX - (self.textNode.frame.minX - 0.0),

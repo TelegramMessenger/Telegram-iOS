@@ -29,7 +29,7 @@ public final class ArchivedStickerPackItem {
     }
 }
 
-public func archivedStickerPacks(account: Account, namespace: ArchivedStickerPacksNamespace = .stickers) -> Signal<[ArchivedStickerPackItem], NoError> {
+func _internal_archivedStickerPacks(account: Account, namespace: ArchivedStickerPacksNamespace = .stickers) -> Signal<[ArchivedStickerPackItem], NoError> {
     var flags: Int32 = 0
     if case .masks = namespace {
         flags |= 1 << 0
@@ -50,7 +50,7 @@ public func archivedStickerPacks(account: Account, namespace: ArchivedStickerPac
     }
 }
 
-public func removeArchivedStickerPack(account: Account, info: StickerPackCollectionInfo) -> Signal<Void, NoError> {
+func _internal_removeArchivedStickerPack(account: Account, info: StickerPackCollectionInfo) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.messages.uninstallStickerSet(stickerset: Api.InputStickerSet.inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)

@@ -58,7 +58,7 @@ public struct SearchStickersScope: OptionSet {
     public static let remote = SearchStickersScope(rawValue: 1 << 1)
 }
 
-public func randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?, NoError> {
+func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?, NoError> {
     return account.postbox.transaction { transaction -> FoundStickerItem? in
         var stickerItems: [FoundStickerItem] = []
         for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudGreetingStickers) {
@@ -70,7 +70,7 @@ public func randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?,
     }
 }
 
-public func searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
+func _internal_searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
     if scope.isEmpty {
         return .single([])
     }
@@ -265,7 +265,7 @@ public struct FoundStickerSets {
     }
 }
 
-public func searchStickerSetsRemotely(network: Network, query: String) -> Signal<FoundStickerSets, NoError> {
+func _internal_searchStickerSetsRemotely(network: Network, query: String) -> Signal<FoundStickerSets, NoError> {
     return network.request(Api.functions.messages.searchStickerSets(flags: 0, q: query, hash: 0))
         |> mapError {_ in}
         |> mapToSignal { value in
@@ -291,7 +291,7 @@ public func searchStickerSetsRemotely(network: Network, query: String) -> Signal
     }
 }
 
-public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundStickerSets, NoError> {
+func _internal_searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundStickerSets, NoError> {
     return postbox.transaction { transaction -> Signal<FoundStickerSets, NoError> in
         let infos = transaction.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks)
         
@@ -324,7 +324,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
     } |> switchToLatest
 }
 
-public func searchGifs(account: Account, query: String, nextOffset: String = "") -> Signal<ChatContextResultCollection?, NoError> {
+func _internal_searchGifs(account: Account, query: String, nextOffset: String = "") -> Signal<ChatContextResultCollection?, NoError> {
    return account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"

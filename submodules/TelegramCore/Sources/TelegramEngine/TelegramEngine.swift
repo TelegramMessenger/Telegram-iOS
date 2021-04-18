@@ -31,6 +31,18 @@ public final class TelegramEngine {
     public lazy var accountData: AccountData = {
         return AccountData(account: self.account)
     }()
+
+    public lazy var stickers: Stickers = {
+        return Stickers(account: self.account)
+    }()
+
+    public lazy var peerManagement: PeerManagement = {
+        return PeerManagement(account: self.account)
+    }()
+
+    public lazy var localization: Localization = {
+        return Localization(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {
@@ -42,5 +54,9 @@ public final class TelegramEngineUnauthorized {
 
     public lazy var auth: Auth = {
         return Auth(account: self.account)
+    }()
+
+    public lazy var localization: Localization = {
+        return Localization(account: self.account)
     }()
 }

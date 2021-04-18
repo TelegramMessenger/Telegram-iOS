@@ -2733,7 +2733,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> map(Optional.init)
             ))
             self.privacySettings.set(.single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
-            self.archivedPacks.set(.single(nil) |> then(archivedStickerPacks(account: context.account) |> map(Optional.init)))
+            self.archivedPacks.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
             self.hasPassport.set(.single(false) |> then(twoStepAuthData(context.account.network)
             |> map { value -> Bool in
                 return value.hasSecretValues
@@ -2834,7 +2834,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.preloadHistoryDisposable.set(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerId))
             
             self.preloadedSticker.set(.single(nil)
-            |> then(randomGreetingSticker(account: context.account)
+            |> then(context.engine.stickers.randomGreetingSticker()
             |> map { item in
                 return item?.file
             }))

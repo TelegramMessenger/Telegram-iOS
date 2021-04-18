@@ -238,7 +238,7 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        self.itemsDisposable = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: false)
+        self.itemsDisposable = (context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: false)
         |> deliverOnMainQueue).start(next: { [weak self] contents in
             guard let strongSelf = self else {
                 return
@@ -340,9 +340,9 @@ private final class StickerPackContainer: ASDisplayNode {
                 return
             }
             if installed {
-                let _ = removeStickerPackInteractively(postbox: strongSelf.context.account.postbox, id: info.id, option: .delete).start()
+                let _ = strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete).start()
             } else {
-                let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items).start()
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
             }
             
             switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {

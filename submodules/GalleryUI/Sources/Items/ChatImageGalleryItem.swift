@@ -353,7 +353,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         |> delay(0.15, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
-        let signal = stickerPacksAttachedToMedia(account: context.account, media: media)
+        let signal = context.engine.stickers.stickerPacksAttachedToMedia(media: media)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()

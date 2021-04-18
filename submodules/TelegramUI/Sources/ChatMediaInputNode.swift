@@ -783,14 +783,14 @@ final class ChatMediaInputNode: ChatInputNode {
             guard let strongSelf = self, let info = info as? StickerPackCollectionInfo else {
                 return
             }
-            let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+            let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
             |> mapToSignal { result -> Signal<Void, NoError> in
                 switch result {
                     case let .result(info, items, installed):
                         if installed {
                             return .complete()
                         } else {
-                            return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                         }
                     case .fetching:
                         break

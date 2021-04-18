@@ -790,7 +790,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
                 
-        let animatedEmojiStickers = loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false)
+        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
         |> map { animatedEmoji -> [String: [StickerPackItem]] in
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
             switch animatedEmoji {

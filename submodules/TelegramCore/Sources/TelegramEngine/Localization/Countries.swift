@@ -102,7 +102,7 @@ public final class CountriesList: PreferencesEntry, Equatable {
 }
 
 
-public func getCountriesList(accountManager: AccountManager, network: Network, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
+func _internal_getCountriesList(accountManager: AccountManager, network: Network, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
     let fetch: ([Country]?, Int32?) -> Signal<[Country], NoError> = { current, hash in
         return network.request(Api.functions.help.getCountriesList(langCode: langCode ?? "", hash: hash ?? 0))
         |> retryRequest

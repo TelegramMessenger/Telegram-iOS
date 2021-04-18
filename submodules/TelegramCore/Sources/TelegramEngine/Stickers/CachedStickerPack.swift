@@ -36,7 +36,7 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
     }
 }
 
-public func cachedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceRemote: Bool) -> Signal<CachedStickerPackResult, NoError> {
+func _internal_cachedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceRemote: Bool) -> Signal<CachedStickerPackResult, NoError> {
     return postbox.transaction { transaction -> CachedStickerPackResult? in
         if let (info, items, local) = cachedStickerPack(transaction: transaction, reference: reference) {
             if local {

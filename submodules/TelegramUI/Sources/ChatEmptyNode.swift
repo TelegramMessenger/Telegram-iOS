@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AppBundle
 import LocalizedPeerData
 import TelegramStringFormatting
+import AccountContext
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -67,7 +68,7 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
 }
 
 private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
     private let titleNode: ImmediateTextNode
@@ -92,8 +93,8 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
         }
     }
     
-    init(account: Account, interaction: ChatPanelInterfaceInteraction?) {
-        self.account = account
+    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+        self.context = context
         self.interaction = interaction
         
         self.titleNode = ImmediateTextNode()
@@ -162,7 +163,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
             if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
-                sticker = randomGreetingSticker(account: self.account)
+                sticker = self.context.engine.stickers.randomGreetingSticker()
                 |> map { item -> TelegramMediaFile? in
                     return item?.file
                 }
@@ -195,7 +196,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
                     let index = ItemCollectionItemIndex(index: 0, id: 0)
                     let collectionId = ItemCollectionId(namespace: 0, id: 0)
                     let stickerPackItem = StickerPackItem(index: index, file: sticker, indexKeys: [])
-                    let item = ChatMediaInputStickerGridItem(account: strongSelf.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
+                    let item = ChatMediaInputStickerGridItem(account: strongSelf.context.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
                     strongSelf.stickerItem = item
                     strongSelf.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
                     strongSelf.stickerNode.isVisibleInGrid = true
@@ -234,7 +235,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
 }
 
 private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
     private let titleNode: ImmediateTextNode
@@ -259,8 +260,8 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
         }
     }
     
-    init(account: Account, interaction: ChatPanelInterfaceInteraction?) {
-        self.account = account
+    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+        self.context = context
         self.interaction = interaction
         
         self.titleNode = ImmediateTextNode()
@@ -339,7 +340,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
             if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = .single(preloadedSticker)
             } else {
-                sticker = randomGreetingSticker(account: self.account)
+                sticker = self.context.engine.stickers.randomGreetingSticker()
                 |> map { item -> TelegramMediaFile? in
                     return item?.file
                 }
@@ -372,7 +373,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
                     let index = ItemCollectionItemIndex(index: 0, id: 0)
                     let collectionId = ItemCollectionId(namespace: 0, id: 0)
                     let stickerPackItem = StickerPackItem(index: index, file: sticker, indexKeys: [])
-                    let item = ChatMediaInputStickerGridItem(account: strongSelf.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
+                    let item = ChatMediaInputStickerGridItem(account: strongSelf.context.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
                     strongSelf.stickerItem = item
                     strongSelf.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
                     strongSelf.stickerNode.isVisibleInGrid = true
@@ -783,7 +784,7 @@ private enum ChatEmptyNodeContentType {
 }
 
 final class ChatEmptyNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
     private let backgroundNode: ASImageNode
@@ -793,8 +794,8 @@ final class ChatEmptyNode: ASDisplayNode {
     
     private var content: (ChatEmptyNodeContentType, ASDisplayNode & ChatEmptyNodeContent)?
     
-    init(account: Account, interaction: ChatPanelInterfaceInteraction?) {
-        self.account = account
+    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+        self.context = context
         self.interaction = interaction
         
         self.backgroundNode = ASImageNode()
@@ -827,7 +828,7 @@ final class ChatEmptyNode: ASDisplayNode {
         if case .replyThread = interfaceState.chatLocation {
             contentType = .regular
         } else if let peer = interfaceState.renderedPeer?.peer, !isScheduledMessages {
-            if peer.id == self.account.peerId {
+            if peer.id == self.context.account.peerId {
                 contentType = .cloud
             } else if let _ = peer as? TelegramSecretChat {
                 contentType = .secret
@@ -872,9 +873,9 @@ final class ChatEmptyNode: ASDisplayNode {
                 case .cloud:
                     node = ChatEmptyNodeCloudChatContent()
                 case .peerNearby:
-                    node = ChatEmptyNodeNearbyChatContent(account: self.account, interaction: self.interaction)
+                    node = ChatEmptyNodeNearbyChatContent(context: self.context, interaction: self.interaction)
                 case .greeting:
-                    node = ChatEmptyNodeGreetingChatContent(account: self.account, interaction: self.interaction)
+                    node = ChatEmptyNodeGreetingChatContent(context: self.context, interaction: self.interaction)
             }
             self.content = (contentType, node)
             self.addSubnode(node)

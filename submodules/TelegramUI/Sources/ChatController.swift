@@ -829,7 +829,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
+                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), strongSelf.context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
                 ).start(next: { actions, animatedEmojiStickers, chatTextSelectionTips in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
@@ -6144,7 +6144,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> switchToLatest
                     |> deliverOnMainQueue).start(next: { [weak self] added in
                         if let strongSelf = self {
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(account: strongSelf.context.account, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: false, action: { _ in return false }), in: .current)
                         }
                     })
                 }
@@ -9436,7 +9436,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
         }
         if let value = value {
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: false, action: { [weak self] action in
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, context: self.context, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: false, action: { [weak self] action in
                 if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState), action == .undo {
                     strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                 }

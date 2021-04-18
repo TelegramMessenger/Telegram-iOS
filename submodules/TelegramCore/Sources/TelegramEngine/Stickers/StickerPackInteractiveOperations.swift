@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func addStickerPackInteractively(postbox: Postbox, info: StickerPackCollectionInfo, items: [ItemCollectionItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
+func _internal_addStickerPackInteractively(postbox: Postbox, info: StickerPackCollectionInfo, items: [ItemCollectionItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
         switch info.id.namespace {
@@ -44,11 +44,11 @@ public enum RemoveStickerPackOption {
     case archive
 }
 
-public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
-    return removeStickerPacksInteractively(postbox: postbox, ids: [id], option: option)
+func _internal_removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
+    return _internal_removeStickerPacksInteractively(postbox: postbox, ids: [id], option: option)
 }
 
-public func removeStickerPacksInteractively(postbox: Postbox, ids: [ItemCollectionId], option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
+func _internal_removeStickerPacksInteractively(postbox: Postbox, ids: [ItemCollectionId], option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
     return postbox.transaction { transaction -> (Int, [ItemCollectionItem])? in
         var commonNamespace: SynchronizeInstalledStickerPacksOperationNamespace?
         for id in ids { 
@@ -91,7 +91,7 @@ public func removeStickerPacksInteractively(postbox: Postbox, ids: [ItemCollecti
     }
 }
 
-public func markFeaturedStickerPacksAsSeenInteractively(postbox: Postbox, ids: [ItemCollectionId]) -> Signal<Void, NoError> {
+func _internal_markFeaturedStickerPacksAsSeenInteractively(postbox: Postbox, ids: [ItemCollectionId]) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let idsSet = Set(ids)
         var items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)

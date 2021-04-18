@@ -82,7 +82,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         self.acceptsFocusWhenInOverlay = true
         self.statusBar.statusBarStyle = .Ignore
         
-        self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
+        self.stickerPackContents.set(context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: true))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
