@@ -729,19 +729,20 @@ public final class OngoingCallContext {
                         }
                     })
                 }
+
+                strongSelf.signalingDataDisposable = callSessionManager.beginReceivingCallSignalingData(internalId: internalId, { [weak self] dataList in
+                    queue.async {
+                        self?.withContext { context in
+                            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                for data in dataList {
+                                    context.addSignaling(data)
+                                }
+                            }
+                        }
+                    }
+                })
             }
         }))
-        
-        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)).start(next: { [weak self] data in
-            print("data received")
-            queue.async {
-                self?.withContext { context in
-                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                        context.addSignaling(data)
-                    }
-                }
-            }
-        })
     }
     
     deinit {
