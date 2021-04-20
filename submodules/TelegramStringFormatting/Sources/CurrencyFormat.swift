@@ -209,3 +209,20 @@ public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (St
         return ("", "", false)
     }
 }
+
+public struct CurrencyFormat {
+    public var symbol: String
+    public var symbolOnLeft: Bool
+    public var decimalSeparator: String
+    public var decimalDigits: Int
+
+    public init?(currency: String) {
+        guard let entry = currencyFormatterEntries[currency] else {
+            return nil
+        }
+        self.symbol = entry.symbol
+        self.symbolOnLeft = entry.symbolOnLeft
+        self.decimalSeparator = entry.decimalSeparator
+        self.decimalDigits = entry.decimalDigits
+    }
+}
