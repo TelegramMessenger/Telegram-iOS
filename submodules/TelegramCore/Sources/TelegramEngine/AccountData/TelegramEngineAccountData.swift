@@ -12,7 +12,7 @@ public extension TelegramEngine {
 		    return _internal_acceptTermsOfService(account: self.account, id: id)
 		}
 
-		func resetAccountDueTermsOfService() -> Signal<Void, NoError> {
+		public func resetAccountDueTermsOfService() -> Signal<Void, NoError> {
 			return _internal_resetAccountDueTermsOfService(network: self.account.network)
 		}
     }
