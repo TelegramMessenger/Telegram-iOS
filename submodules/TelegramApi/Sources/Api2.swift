@@ -9020,7 +9020,7 @@ public extension Api {
         case inputBotInlineMessageMediaVenue(flags: Int32, geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageGame(flags: Int32, replyMarkup: Api.ReplyMarkup?)
-        case inputBotInlineMessageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String, replyMarkup: Api.ReplyMarkup?)
+        case inputBotInlineMessageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, replyMarkup: Api.ReplyMarkup?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -9092,9 +9092,9 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
-                case .inputBotInlineMessageMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let replyMarkup):
+                case .inputBotInlineMessageMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let replyMarkup):
                     if boxed {
-                        buffer.appendInt32(-717976187)
+                        buffer.appendInt32(-672693723)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -9104,7 +9104,6 @@ public extension Api {
                     serializeBytes(payload, buffer: buffer, boxed: false)
                     serializeString(provider, buffer: buffer, boxed: false)
                     providerData.serialize(buffer, true)
-                    serializeString(startParam, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
     }
@@ -9124,8 +9123,8 @@ public extension Api {
                 return ("inputBotInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("replyMarkup", replyMarkup)])
                 case .inputBotInlineMessageGame(let flags, let replyMarkup):
                 return ("inputBotInlineMessageGame", [("flags", flags), ("replyMarkup", replyMarkup)])
-                case .inputBotInlineMessageMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let replyMarkup):
-                return ("inputBotInlineMessageMediaInvoice", [("flags", flags), ("title", title), ("description", description), ("photo", photo), ("invoice", invoice), ("payload", payload), ("provider", provider), ("providerData", providerData), ("startParam", startParam), ("replyMarkup", replyMarkup)])
+                case .inputBotInlineMessageMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let replyMarkup):
+                return ("inputBotInlineMessageMediaInvoice", [("flags", flags), ("title", title), ("description", description), ("photo", photo), ("invoice", invoice), ("payload", payload), ("provider", provider), ("providerData", providerData), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -9310,11 +9309,9 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
-            var _9: String?
-            _9 = parseString(reader)
-            var _10: Api.ReplyMarkup?
+            var _9: Api.ReplyMarkup?
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+                _9 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -9324,10 +9321,9 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.InputBotInlineMessage.inputBotInlineMessageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9!, replyMarkup: _10)
+            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.InputBotInlineMessage.inputBotInlineMessageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, replyMarkup: _9)
             }
             else {
                 return nil
@@ -9939,7 +9935,7 @@ public extension Api {
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaGame(id: Api.InputGame)
-        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String)
+        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String?)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
         case inputMediaDice(emoticon: String)
@@ -10052,7 +10048,7 @@ public extension Api {
                     break
                 case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam):
                     if boxed {
-                        buffer.appendInt32(-186607933)
+                        buffer.appendInt32(-646342540)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -10062,7 +10058,7 @@ public extension Api {
                     serializeBytes(payload, buffer: buffer, boxed: false)
                     serializeString(provider, buffer: buffer, boxed: false)
                     providerData.serialize(buffer, true)
-                    serializeString(startParam, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     break
                 case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period, let proximityNotificationRadius):
                     if boxed {
@@ -10373,7 +10369,7 @@ public extension Api {
                 _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
             var _9: String?
-            _9 = parseString(reader)
+            if Int(_1!) & Int(1 << 1) != 0 {_9 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -10382,9 +10378,9 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            let _c9 = _9 != nil
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9!)
+                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9)
             }
             else {
                 return nil

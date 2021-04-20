@@ -157,6 +157,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                                 jsonParams = data
                             }
                         }
+                        let isVideoMuted = (flags & (1 << 14)) != 0
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -167,6 +168,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
+                            isVideoMuted: isVideoMuted,
                             volume: volume,
                             about: about
                         ))
@@ -473,6 +475,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                                 jsonParams = data
                             }
                         }
+                        let isVideoMuted = (flags & (1 << 14)) != 0
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -483,6 +486,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                             activityTimestamp: activeDate.flatMap(Double.init),
                             activityRank: nil,
                             muteState: muteState,
+                            isVideoMuted: isVideoMuted,
                             volume: volume,
                             about: about
                         ))
@@ -717,6 +721,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                             jsonParams = data
                                         }
                                     }
+                                    let isVideoMuted = (flags & (1 << 14)) != 0
                                     if !state.participants.contains(where: { $0.peer.id == peer.id }) {
                                         state.participants.append(GroupCallParticipantsContext.Participant(
                                             peer: peer,
@@ -728,6 +733,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                             activityTimestamp: activeDate.flatMap(Double.init),
                                             activityRank: nil,
                                             muteState: muteState,
+                                            isVideoMuted: isVideoMuted,
                                             volume: volume,
                                             about: about
                                         ))
@@ -881,6 +887,7 @@ public final class GroupCallParticipantsContext {
         public var activityTimestamp: Double?
         public var activityRank: Int?
         public var muteState: MuteState?
+        public var isVideoMuted: Bool
         public var volume: Int32?
         public var about: String?
         
@@ -894,6 +901,7 @@ public final class GroupCallParticipantsContext {
             activityTimestamp: Double?,
             activityRank: Int?,
             muteState: MuteState?,
+            isVideoMuted: Bool,
             volume: Int32?,
             about: String?
         ) {
@@ -906,6 +914,7 @@ public final class GroupCallParticipantsContext {
             self.activityTimestamp = activityTimestamp
             self.activityRank = activityRank
             self.muteState = muteState
+            self.isVideoMuted = isVideoMuted
             self.volume = volume
             self.about = about
         }
@@ -944,6 +953,9 @@ public final class GroupCallParticipantsContext {
                 return false
             }
             if lhs.muteState != rhs.muteState {
+                return false
+            }
+            if lhs.isVideoMuted != rhs.isVideoMuted {
                 return false
             }
             if lhs.volume != rhs.volume {
@@ -1129,6 +1141,7 @@ public final class GroupCallParticipantsContext {
                 public var activityTimestamp: Double?
                 public var raiseHandRating: Int64?
                 public var muteState: Participant.MuteState?
+                public var isVideoMuted: Bool
                 public var participationStatusChange: ParticipationStatusChange
                 public var volume: Int32?
                 public var about: String?
@@ -1142,6 +1155,7 @@ public final class GroupCallParticipantsContext {
                     activityTimestamp: Double?,
                     raiseHandRating: Int64?,
                     muteState: Participant.MuteState?,
+                    isVideoMuted: Bool,
                     participationStatusChange: ParticipationStatusChange,
                     volume: Int32?,
                     about: String?,
@@ -1154,6 +1168,7 @@ public final class GroupCallParticipantsContext {
                     self.activityTimestamp = activityTimestamp
                     self.raiseHandRating = raiseHandRating
                     self.muteState = muteState
+                    self.isVideoMuted = isVideoMuted
                     self.participationStatusChange = participationStatusChange
                     self.volume = volume
                     self.about = about
@@ -1689,6 +1704,7 @@ public final class GroupCallParticipantsContext {
                         activityTimestamp: activityTimestamp,
                         activityRank: previousActivityRank,
                         muteState: muteState,
+                        isVideoMuted: participantUpdate.isVideoMuted,
                         volume: volume,
                         about: participantUpdate.about
                     )
@@ -1766,7 +1782,7 @@ public final class GroupCallParticipantsContext {
         }))
     }
     
-    public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, volume: Int32?, raiseHand: Bool?) {
+    public func updateMuteState(peerId: PeerId, muteState: Participant.MuteState?, isVideoMuted: Bool?, volume: Int32?, raiseHand: Bool?) {
         if let current = self.stateValue.overlayState.pendingMuteStateChanges[peerId] {
             if current.state == muteState {
                 return
@@ -1813,8 +1829,15 @@ public final class GroupCallParticipantsContext {
             if let volume = volume, volume > 0 {
                 flags |= 1 << 1
             }
+            var muted: Api.Bool?
             if let muteState = muteState, (!muteState.canUnmute || peerId == myPeerId || muteState.mutedByYou) {
                 flags |= 1 << 0
+                muted = .boolTrue
+            }
+            var videoMuted: Api.Bool?
+            if let isVideoMuted = isVideoMuted {
+                videoMuted = isVideoMuted ? .boolTrue : .boolFalse
+                flags |= 1 << 3
             }
             let raiseHandApi: Api.Bool?
             if let raiseHand = raiseHand {
@@ -1824,7 +1847,7 @@ public final class GroupCallParticipantsContext {
                 raiseHandApi = nil
             }
                         
-            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, volume: volume, raiseHand: raiseHandApi))
+            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: muted, volume: volume, raiseHand: raiseHandApi, videoMuted: videoMuted))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
@@ -1865,11 +1888,11 @@ public final class GroupCallParticipantsContext {
     }
     
     public func raiseHand() {
-        self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: true)
+        self.updateMuteState(peerId: self.myPeerId, muteState: nil, isVideoMuted: nil, volume: nil, raiseHand: true)
     }
     
     public func lowerHand() {
-        self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: false)
+        self.updateMuteState(peerId: self.myPeerId, muteState: nil, isVideoMuted: nil, volume: nil, raiseHand: false)
     }
     
     public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {
@@ -1984,6 +2007,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                     jsonParams = data
                 }
             }
+            let isVideoMuted = (flags & (1 << 14)) != 0
             
             self.init(
                 peerId: peerId,
@@ -1993,6 +2017,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 activityTimestamp: activeDate.flatMap(Double.init),
                 raiseHandRating: raiseHandRating,
                 muteState: muteState,
+                isVideoMuted: isVideoMuted,
                 participationStatusChange: participationStatusChange,
                 volume: volume,
                 about: about,
@@ -2040,6 +2065,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                         jsonParams = data
                     }
                 }
+                let isVideoMuted = (flags & (1 << 14)) != 0
                 
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,
@@ -2049,6 +2075,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     activityTimestamp: activeDate.flatMap(Double.init),
                     raiseHandRating: raiseHandRating,
                     muteState: muteState,
+                    isVideoMuted: isVideoMuted,
                     participationStatusChange: participationStatusChange,
                     volume: volume,
                     about: about,

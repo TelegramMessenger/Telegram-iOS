@@ -932,6 +932,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             activityTimestamp: strongSelf.temporaryActivityTimestamp,
                             activityRank: strongSelf.temporaryActivityRank,
                             muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                            isVideoMuted: true,
                             volume: nil,
                             about: about
                         ))
@@ -1012,6 +1013,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         activityTimestamp: strongSelf.temporaryActivityTimestamp,
                         activityRank: strongSelf.temporaryActivityRank,
                         muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                        isVideoMuted: true,
                         volume: nil,
                         about: about
                     ))
@@ -1174,6 +1176,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     activityTimestamp: strongSelf.temporaryActivityTimestamp,
                     activityRank: strongSelf.temporaryActivityRank,
                     muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canManageCall || !state.defaultParticipantsAreMuted.isMuted, mutedByYou: false),
+                    isVideoMuted: true,
                     volume: nil,
                     about: about
                 ))
@@ -1748,6 +1751,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 activityTimestamp: strongSelf.temporaryActivityTimestamp,
                                 activityRank: strongSelf.temporaryActivityRank,
                                 muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
+                                isVideoMuted: true,
                                 volume: nil,
                                 about: about
                             ))
@@ -2330,7 +2334,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if id == peerId {
                 self.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
                 if sync {
-                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume, raiseHand: nil)
+                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, isVideoMuted: nil, volume: volume, raiseHand: nil)
                 }
                 break
             }
@@ -2438,19 +2442,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 canThenUnmute = true
             }
             let muteState = isMuted ? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canThenUnmute, mutedByYou: mutedByYou) : nil
-            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil, raiseHand: nil)
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, isVideoMuted: nil, volume: nil, raiseHand: nil)
             return muteState
         } else {
             if peerId == self.joinAsPeerId {
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil, raiseHand: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, isVideoMuted: nil, volume: nil, raiseHand: nil)
                 return nil
             } else if self.stateValue.canManageCall || self.stateValue.adminIds.contains(self.accountContext.account.peerId) {
                 let muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, volume: nil, raiseHand: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: muteState, isVideoMuted: nil, volume: nil, raiseHand: nil)
                 return muteState
             } else {
                 self.setVolume(peerId: peerId, volume: 10000, sync: true)
-                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: nil, raiseHand: nil)
+                self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, isVideoMuted: nil, volume: nil, raiseHand: nil)
                 return nil
             }
         }
