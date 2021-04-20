@@ -1050,27 +1050,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 replyPanel = accessoryPanelNode
             }
 
-            if let sourceNode = sourceNode as? ChatMediaInputStickerGridItemNode {
-                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                        var current = current
-                        current = current.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                return .media(mode: mode, expanded: nil)
-                            }
-                            return current
+            if strongSelf.chatDisplayNode.shouldAnimateMessageTransition {
+                if let sourceNode = sourceNode as? ChatMediaInputStickerGridItemNode {
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
+                        guard let strongSelf = self else {
+                            return
                         }
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                            var current = current
+                            current = current.updatedInputMode { current in
+                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil)
+                                }
+                                return current
+                            }
 
-                        return current
+                            return current
+                        })
                     })
-                })
-            } else if let sourceNode = sourceNode as? HorizontalStickerGridItemNode {
-                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
-            } else if let sourceNode = sourceNode as? StickerPaneSearchStickerItemNode {
-                strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+                } else if let sourceNode = sourceNode as? HorizontalStickerGridItemNode {
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+                } else if let sourceNode = sourceNode as? StickerPaneSearchStickerItemNode {
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+                }
             }
             
             strongSelf.sendMessages([.message(text: "", attributes: attributes, mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: correlationId)])
@@ -4512,7 +4514,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: 0.5, curve: .custom(0.33, 0.0, 0.0, 1.0)), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.4, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -9740,8 +9742,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isScheduledMessages = true
                 }
                 
-                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: self.view.convert(currentInputPanelFrame, to: nil), context: self.context, peerId: peerId, slowmodeState: !isScheduledMessages ? self.presentationInterfaceState.slowmodeState : nil, hasSchedule: !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat, send: { [weak self] message in
+                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: self.view.convert(currentInputPanelFrame, to: nil), context: self.context, peerId: peerId, slowmodeState: !isScheduledMessages ? self.presentationInterfaceState.slowmodeState : nil, hasSchedule: !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat, send: { [weak self] videoController, message in
                     if let strongSelf = self {
+                        guard let message = message else {
+                            strongSelf.videoRecorder.set(.single(nil))
+                            return
+                        }
+
                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                             if let strongSelf = self {
@@ -9750,7 +9757,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 })
                             }
                         })
-                        let updatedMessage = message.withUpdatedReplyToMessageId(replyMessageId)
+                        let correlationId = Int64.random(in: 0 ..< Int64.max)
+                        let updatedMessage = message
+                            .withUpdatedReplyToMessageId(replyMessageId)
+                            .withUpdatedCorrelationId(correlationId)
+
+                        if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNode.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController] in
+                                videoController?.hideVideoSnapshot()
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.videoRecorder.set(.single(nil))
+                            })
+                        } else {
+                            strongSelf.videoRecorder.set(.single(nil))
+                        }
+
                         strongSelf.sendMessages([updatedMessage])
                     }
                 }, displaySlowmodeTooltip: { [weak self] node, rect in
@@ -9850,7 +9873,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                                 let correlationId = Int64.random(in: 0 ..< Int64.max)
 
-                                if let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
+                                if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
                                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNode.Source.AudioMicInput(micButton: micButton)), initiated: {
                                         guard let strongSelf = self else {
                                             return
@@ -9873,7 +9896,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if case .send = updatedAction {
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)
                 videoRecorderValue.completeVideo()
-                self.videoRecorder.set(.single(nil))
             } else {
                 if case .dismiss = updatedAction {
                     self.chatDisplayNode.updateRecordedMediaDeleted(true)

@@ -782,6 +782,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             transition = protoTransition
         }
+
+        var previousListBottomInset: CGFloat?
+        if !self.historyNode.frame.isEmpty {
+            previousListBottomInset = self.historyNode.insets.top
+        }
         
         self.scheduledLayoutTransitionRequest = nil
         if case .overlay = self.chatPresentationInterfaceState.mode {
@@ -1875,10 +1880,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.updatePlainInputSeparator(transition: transition)
 
-        let previousInputHeightValue = (self.derivedLayoutState?.inputNodeHeight ?? 0.0) + (self.derivedLayoutState?.inputNodeAdditionalHeight ?? 0.0)
-        let updatedInputHeight = (inputNodeHeightAndOverflow?.0 ?? 0.0) + (inputNodeHeightAndOverflow?.1 ?? 0.0)
-        if previousInputHeightValue != updatedInputHeight {
-            self.historyNode.didScrollWithOffset?(previousInputHeightValue - updatedInputHeight, transition, nil)
+        let listBottomInset = self.historyNode.insets.bottom
+        if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
+            self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
         }
 
         self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputContextPanelsFrame: inputContextPanelsFrame, inputContextPanelsOverMainPanelFrame: inputContextPanelsOverMainPanelFrame, inputNodeHeight: inputNodeHeightAndOverflow?.0, inputNodeAdditionalHeight: inputNodeHeightAndOverflow?.1, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
@@ -2683,7 +2687,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let accessoryPanelNode = self.accessoryPanelNode as? ReplyAccessoryPanelNode {
                             replyPanel = accessoryPanelNode
                         }
-                        if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode, let textInput = inputPanelNode.makeSnapshotForTransition() {
+                        if self.shouldAnimateMessageTransition, let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode, let textInput = inputPanelNode.makeSnapshotForTransition() {
                             let source: ChatMessageTransitionNode.Source = .textInput(textInput: textInput, replyPanel: replyPanel)
                             self.messageTransitionNode.add(correlationId: correlationId, source: source, initiated: {
                             })
@@ -2892,5 +2896,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         self.historyNode.isHidden = isBlurred
+    }
+
+    var shouldAnimateMessageTransition: Bool {
+        switch self.historyNode.visibleContentOffset() {
+        case .known(0.0):
+            return true
+        default:
+            return false
+        }
     }
 }

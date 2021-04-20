@@ -135,7 +135,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     {
 		_running = false;
 		
-		[self stopRecording:^{}];
+		[self stopRecording:^(__unused bool success) {}];
 		
 		[_captureSession stopRunning];
 		[self captureSessionDidStopRunning];
@@ -300,7 +300,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)captureSessionDidStopRunning
 {
-	[self stopRecording:^{}];
+	[self stopRecording:^(__unused bool success) {}];
 	[self destroyVideoPipeline];
 }
 
@@ -701,7 +701,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	[recorder prepareToRecord];
 }
 
-- (void)stopRecording:(void (^)())completed
+- (void)stopRecording:(void (^)(bool))completed
 {
     [[TGVideoCameraPipeline cameraQueue] dispatch:^
     {
@@ -709,7 +709,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
         {
             if (_recordingStatus != TGVideoCameraRecordingStatusRecording) {
                 if (completed) {
-                    completed();
+                    completed(false);
                 }
                 return;
             }
@@ -721,7 +721,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
         [_recorder finishRecording:^{
             __unused __auto_type description = [self description];
             if (completed) {
-                completed();
+                completed(true);
             }
         }];
     }];

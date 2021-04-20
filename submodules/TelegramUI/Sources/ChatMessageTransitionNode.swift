@@ -139,9 +139,18 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             }
         }
 
+        final class VideoMessage {
+            let view: UIView
+
+            init(view: UIView) {
+                self.view = view
+            }
+        }
+
         case textInput(textInput: TextInput, replyPanel: ReplyAccessoryPanelNode?)
         case stickerMediaInput(input: StickerInput, replyPanel: ReplyAccessoryPanelNode?)
         case audioMicInput(AudioMicInput)
+        case videoMessage(VideoMessage)
     }
 
     private final class AnimatingItemNode: ASDisplayNode {
@@ -340,6 +349,35 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                         }
                     }
                 }
+            case let .videoMessage(videoMessage):
+                let transition: ContainedViewLayoutTransition = .animated(duration: verticalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
+
+                if let itemNode = self.itemNode as? ChatMessageInstantVideoItemNode {
+                    itemNode.cancelInsertionAnimations()
+
+                    self.contextSourceNode.isExtractedToContextPreview = true
+                    self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
+
+                    self.containerNode.addSubnode(self.contextSourceNode.contentNode)
+
+                    let sourceAbsoluteRect = videoMessage.view.frame
+                    let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+
+                    videoMessage.view.frame = videoMessage.view.frame.offsetBy(dx: targetAbsoluteRect.midX - sourceAbsoluteRect.midX, dy: targetAbsoluteRect.midY - sourceAbsoluteRect.midY)
+
+                    self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
+                    self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true, force: true)
+
+                    self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+
+                        strongSelf.endAnimation()
+                    })
+
+                    itemNode.animateFromSnapshot(snapshotView: videoMessage.view, transition: transition)
+                }
             }
         }
 
@@ -372,6 +410,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
     private var animatingItemNodes: [AnimatingItemNode] = []
 
+    var hasScheduledTransitions: Bool {
+        return self.currentPendingItem != nil
+    }
+
     init(listNode: ChatHistoryListNode) {
         self.listNode = listNode
 
@@ -402,17 +444,20 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             contextSourceNode = itemNode.contextSourceNode
         } else if let itemNode = itemNode as? ChatMessageAnimatedStickerItemNode {
             contextSourceNode = itemNode.contextSourceNode
+        } else if let itemNode = itemNode as? ChatMessageInstantVideoItemNode {
+            contextSourceNode = itemNode.contextSourceNode
         }
 
         if let contextSourceNode = contextSourceNode {
             let animatingItemNode = AnimatingItemNode(itemNode: itemNode, contextSourceNode: contextSourceNode, source: source)
             self.animatingItemNodes.append(animatingItemNode)
-            if case .audioMicInput = source {
+            switch source {
+            case .audioMicInput, .videoMessage:
                 let overlayController = OverlayTransitionContainerController()
                 overlayController.displayNode.addSubnode(animatingItemNode)
                 animatingItemNode.overlayController = overlayController
                 itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
-            } else {
+            default:
                 self.addSubnode(animatingItemNode)
             }
 
