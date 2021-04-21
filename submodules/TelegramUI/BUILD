@@ -218,6 +218,7 @@ swift_library(
         "//submodules/DatePickerNode:DatePickerNode",
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/Speak:Speak",
+        "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
     ],
     visibility = [
         "//visibility:public",

@@ -169,6 +169,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                     arguments.addPack(info)
                 }, removePack: {
                     arguments.removePack(info)
+                }, toggleSelected: {
                 })
         }
     }
@@ -232,7 +233,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
         var index: Int32 = 0
         for item in packs {
             if !installedIds.contains(item.info.id) {
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), stickerSettings.loopAnimatedStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), stickerSettings.loopAnimatedStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false, selectable: true)))
                 index += 1
             }
         }

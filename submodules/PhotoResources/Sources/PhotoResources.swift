@@ -627,6 +627,11 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                 thumbnailImage = image
             }
+            
+            if quality == .blurred && fullSizeImage != nil {
+                thumbnailImage = fullSizeImage
+                fullSizeImage = nil
+            }
                         
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
@@ -2298,7 +2303,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryPhotoDatas(account: account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously)
     
     return signal
@@ -2347,8 +2352,8 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
             }
             
             var blurredThumbnailImage: UIImage?
-            if let thumbnailImage = thumbnailImage {
-              if max(thumbnailImage.width, thumbnailImage.height) > 200 {
+            if let thumbnailImage = thumbnailImage, !skipThumbnail {
+                if max(thumbnailImage.width, thumbnailImage.height) > 200 {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)

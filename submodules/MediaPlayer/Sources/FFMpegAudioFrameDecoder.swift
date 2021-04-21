@@ -11,11 +11,29 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     
     private var delayedFrames: [MediaTrackFrame] = []
     
-    init(codecContext: FFMpegAVCodecContext) {
+    init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int = 2) {
         self.codecContext = codecContext
         self.audioFrame = FFMpegAVFrame()
         
-        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: channelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+    }
+    
+    func decodeRaw(frame: MediaTrackDecodableFrame) -> Data? {
+        let status = frame.packet.send(toDecoder: self.codecContext)
+        if status == 0 {
+            let result = self.codecContext.receive(into: self.audioFrame)
+            if case .success = result {
+                guard let data = self.swrContext.resample(self.audioFrame) else {
+                    return nil
+                }
+                
+                return data
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
     }
     
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {

@@ -40,6 +40,11 @@ public enum ContactsPeerItemSelection: Equatable {
     case selectable(selected: Bool)
 }
 
+public enum ContactsPeerItemSelectionPosition: Equatable {
+    case left
+    case right
+}
+
 public struct ContactsPeerItemEditing: Equatable {
     public var editable: Bool
     public var editing: Bool
@@ -130,6 +135,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let badge: ContactsPeerItemBadge?
     let enabled: Bool
     let selection: ContactsPeerItemSelection
+    let selectionPosition: ContactsPeerItemSelectionPosition
     let editing: ContactsPeerItemEditing
     let options: [ItemListPeerItemRevealOption]
     let additionalActions: [ContactsPeerItemAction]
@@ -148,7 +154,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -161,6 +167,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.badge = badge
         self.enabled = enabled
         self.selection = selection
+        self.selectionPosition = selectionPosition
         self.editing = editing
         self.options = options
         self.additionalActions = additionalActions
@@ -518,7 +525,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
             }
-            let leftInset: CGFloat = 65.0 + params.leftInset
+            var leftInset: CGFloat = 65.0 + params.leftInset
             var rightInset: CGFloat = 10.0 + params.rightInset
             
             let updatedSelectionNode: CheckNode?
@@ -527,7 +534,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             case .none:
                 updatedSelectionNode = nil
             case let .selectable(selected):
-                rightInset += 38.0
+                switch item.selectionPosition {
+                    case .left:
+                        leftInset += 38.0
+                    case .right:
+                        rightInset += 38.0
+                }
                 isSelected = selected
                 
                 let selectionNode: CheckNode
@@ -999,14 +1011,29 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             if let updatedSelectionNode = updatedSelectionNode {
+                                let hadSelectionNode = strongSelf.selectionNode != nil
                                 if strongSelf.selectionNode !== updatedSelectionNode {
                                     strongSelf.selectionNode?.removeFromSupernode()
                                     strongSelf.selectionNode = updatedSelectionNode
                                     strongSelf.addSubnode(updatedSelectionNode)
                                 }
-                                updatedSelectionNode.setSelected(isSelected, animated: animated)
+                                updatedSelectionNode.setSelected(isSelected, animated: true)
                                 
-                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 22.0 - 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
+                                switch item.selectionPosition {
+                                    case .left:
+                                        updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
+                                    case .right:
+                                        updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 22.0 - 17.0, y: floor((nodeLayout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
+                                }
+                                
+                                if !hadSelectionNode {
+                                    switch item.selectionPosition {
+                                        case .left:
+                                            transition.animateFrame(node: updatedSelectionNode, from: updatedSelectionNode.frame.offsetBy(dx: -38.0, dy: 0.0))
+                                        case .right:
+                                            transition.animateFrame(node: updatedSelectionNode, from: updatedSelectionNode.frame.offsetBy(dx: 38.0, dy: 0.0))
+                                    }
+                                }
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

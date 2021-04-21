@@ -147,6 +147,7 @@ public final class NotificationViewControllerImpl {
                 return nil
             }, requestSetAlternateIconName: { _, f in
                 f(false)
+            }, forceOrientation: { _ in
             })
             
             let presentationDataPromise = Promise<PresentationData>()

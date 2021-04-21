@@ -1446,6 +1446,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
         }, sendFile: nil,
         sendSticker: nil,
         requestMessageActionUrlAuth: nil,
+        joinVoiceChat: nil,
         present: { c, a in
             presentControllerImpl?(c, a)
         }, dismissInput: {

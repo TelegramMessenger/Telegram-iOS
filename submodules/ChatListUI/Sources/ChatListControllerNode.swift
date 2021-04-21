@@ -421,6 +421,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let filterBecameEmpty: (ChatListFilter?) -> Void
     private let filterEmptyAction: (ChatListFilter?) -> Void
     
+    fileprivate var onFilterSwitch: (() -> Void)?
+    
     private var presentationData: PresentationData
     
     private var itemNodes: [ChatListFilterTabEntryId: ChatListContainerItemNode] = [:]
@@ -625,6 +627,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
+            self.onFilterSwitch?()
+            
             self.transitionFractionOffset = 0.0
             if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
                 for (id, itemNode) in self.itemNodes {
@@ -810,6 +814,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
             return
         }
+        self.onFilterSwitch?()
         if id != self.selectedId, let index = self.availableFilters.firstIndex(where: { $0.id == id }) {
             if let itemNode = self.itemNodes[id] {
                 self.selectedId = id
@@ -1074,6 +1079,12 @@ final class ChatListControllerNode: ASDisplayNode {
                 return
             }
             strongSelf.emptyListAction?()
+        }
+        
+        self.containerNode.onFilterSwitch = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controller?.dismissAllUndoControllers()
+            }
         }
     }
     

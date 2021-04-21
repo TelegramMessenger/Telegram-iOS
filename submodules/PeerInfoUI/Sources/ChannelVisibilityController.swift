@@ -28,20 +28,18 @@ private final class ChannelVisibilityControllerArguments {
     let updateCurrentType: (CurrentChannelType) -> Void
     let updatePublicLinkText: (String?, String) -> Void
     let scrollToPublicLinkText: () -> Void
-    let displayPrivateLinkMenu: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let revokePeerId: (PeerId) -> Void
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
-    let linkContextAction: (ASDisplayNode) -> Void
+    let linkContextAction: (ASDisplayNode, ContextGesture?) -> Void
     let manageInviteLinks: () -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode) -> Void, manageInviteLinks: @escaping () -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
         self.scrollToPublicLinkText = scrollToPublicLinkText
-        self.displayPrivateLinkMenu = displayPrivateLinkMenu
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.revokePeerId = revokePeerId
         self.copyLink = copyLink
@@ -302,8 +300,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.shareLink(invite)
                     }
-                }, contextAction: { node in
-                    arguments.linkContextAction(node)
+                }, contextAction: { node, gesture in
+                    arguments.linkContextAction(node, gesture)
                 }, viewAction: {
                     
                 })
@@ -820,9 +818,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
-    peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: context.account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
+    peersDisablingAddressNameAssignment.set(.single(nil) |> then(context.engine.peerNames.channelAddressNameAssignmentAvailability(peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return adminedPublicChannels(account: context.account, location: false)
+            return context.engine.peerNames.adminedPublicChannels(scope: .all)
             |> map(Optional.init)
         } else {
             return .single([])
@@ -831,7 +829,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     var dismissImpl: (() -> Void)?
     var nextImpl: (() -> Void)?
-    var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -874,7 +871,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .peer(peerId), name: text)
+            checkAddressNameDisposable.set((context.engine.peerNames.validateAddressNameInteractive(domain: .peer(peerId), name: text)
             |> deliverOnMainQueue).start(next: { result in
                 updateState { state in
                     return state.withUpdatedAddressNameValidationStatus(result)
@@ -883,8 +880,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         }
     }, scrollToPublicLinkText: {
         scrollToPublicLinkTextImpl?()
-    }, displayPrivateLinkMenu: { text in
-        displayPrivateLinkMenuImpl?(text)
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.revealedRevokePeerId) || (peerId != nil && fromPeerId == nil) {
@@ -898,7 +893,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             return state.withUpdatedRevokingPeerId(peerId)
         }
         
-        revokeAddressNameDisposable.set((updateAddressName(account: context.account, domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
+        revokeAddressNameDisposable.set((context.engine.peerNames.updateAddressName(domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
             updateState { state in
                 return state.withUpdatedRevokingPeerId(nil)
             }
@@ -923,7 +918,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         }
         presentControllerImpl?(shareController, nil)
-    }, linkContextAction: { node in
+    }, linkContextAction: { node, gesture in
         guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
             return
         }
@@ -1048,7 +1043,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             })
         })))
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: nil)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)
@@ -1106,7 +1101,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        updateAddressNameDisposable.set((updateAddressName(account: context.account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        updateAddressNameDisposable.set((context.engine.peerNames.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
@@ -1178,7 +1173,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                         |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
-                            return updateAddressName(account: context.account, domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                            return context.engine.peerNames.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -1382,35 +1377,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 if let navigationController = controller.navigationController as? NavigationController {
                     navigationController.replaceAllButRootController(context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)), animated: true)
                 }
-            }
-        }
-    }
-    displayPrivateLinkMenuImpl = { [weak controller] text in
-        if let strongController = controller {
-            var resultItemNode: ListViewItemNode?
-            let _ = strongController.frameForItemNode({ itemNode in
-                if let itemNode = itemNode as? ItemListActionItemNode {
-                    if let tag = itemNode.tag as? ChannelVisibilityEntryTag {
-                        if tag == .privateLink {
-                            resultItemNode = itemNode
-                            return true
-                        }
-                    }
-                }
-                return false
-            })
-            if let resultItemNode = resultItemNode {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopyLink, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopyLink), action: {
-                    UIPasteboard.general.string = text
-                })])
-                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
-                    if let strongController = controller, let resultItemNode = resultItemNode {
-                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
-                    } else {
-                        return nil
-                    }
-                }))
             }
         }
     }

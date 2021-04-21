@@ -11,14 +11,7 @@ import UniversalMediaPlayer
 import AppBundle
 import ContextUI
 import AnimationUI
-
-private func generatePauseIcon(_ theme: PresentationTheme) -> UIImage? {
-    return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause"), color: theme.chat.inputPanel.actionControlForegroundColor)
-}
-
-private func generatePlayIcon(_ theme: PresentationTheme) -> UIImage? {
-    return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPlay"), color: theme.chat.inputPanel.actionControlForegroundColor)
-}
+import ManagedAnimationNode
 
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
     
@@ -30,7 +23,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     let sendButton: HighlightTrackingButtonNode
     private var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     let playButton: HighlightableButtonNode
-    let pauseButton: HighlightableButtonNode
+    private let playPauseIconNode: PlayPauseIconNode
     private let waveformButton: ASButtonNode
     let waveformBackgroundNode: ASImageNode
     
@@ -76,13 +69,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         
         self.playButton = HighlightableButtonNode()
         self.playButton.displaysAsynchronously = false
-        self.playButton.setImage(generatePlayIcon(theme), for: [])
-        self.playButton.isUserInteractionEnabled = false
-        self.pauseButton = HighlightableButtonNode()
-        self.pauseButton.displaysAsynchronously = false
-        self.pauseButton.setImage(generatePauseIcon(theme), for: [])
-        self.pauseButton.isHidden = true
-        self.pauseButton.isUserInteractionEnabled = false
+        
+        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode.enqueueState(.play, animated: false)
+        self.playPauseIconNode.customColor = theme.chat.inputPanel.actionControlForegroundColor
         
         self.waveformButton = ASButtonNode()
         self.waveformButton.accessibilityTraits.insert(.startsMediaSession)
@@ -106,9 +96,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.sendButton)
         self.addSubnode(self.waveformScubberNode)
         self.addSubnode(self.playButton)
-        self.addSubnode(self.pauseButton)
         self.addSubnode(self.durationLabel)
         self.addSubnode(self.waveformButton)
+        self.playButton.addSubnode(self.playPauseIconNode)
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -168,6 +158,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 if let context = self.context {
                     let mediaManager = context.sharedContext.mediaManager
                     let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                    mediaPlayer.actionAtEnd = .action{ [weak mediaPlayer] in
+                        mediaPlayer?.seek(timestamp: 0.0)
+                    }
                     self.mediaPlayer = mediaPlayer
                     self.durationLabel.defaultDuration = Double(recordedMediaPreview.duration)
                     self.durationLabel.status = mediaPlayer.status
@@ -177,11 +170,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         if let strongSelf = self {
                             switch status.status {
                                 case .playing, .buffering(_, true, _, _):
-                                    strongSelf.playButton.isHidden = true
+                                    strongSelf.playPauseIconNode.enqueueState(.pause, animated: true)
                                 default:
-                                    strongSelf.playButton.isHidden = false
+                                    strongSelf.playPauseIconNode.enqueueState(.play, animated: true)
                             }
-                            strongSelf.pauseButton.isHidden = !strongSelf.playButton.isHidden
                         }
                     }))
                 }
@@ -223,7 +215,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         }
         
         transition.updateFrame(node: self.playButton, frame: CGRect(origin: CGPoint(x: leftInset + 52.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
-        transition.updateFrame(node: self.pauseButton, frame: CGRect(origin: CGPoint(x: leftInset + 50.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
+        self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: -2.0, y: -1.0), size: CGSize(width: 26.0, height: 26.0))
+
         let waveformBackgroundFrame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 90.0, height: 33.0))
         transition.updateFrame(node: self.waveformBackgroundNode, frame: waveformBackgroundFrame)
         transition.updateFrame(node: self.waveformButton, frame: CGRect(origin: CGPoint(x: leftInset + 45.0, y: 0.0), size: CGSize(width: width - leftInset - rightInset - 90.0, height: panelHeight)))
@@ -259,10 +252,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             
             self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
             self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
-            
-            self.pauseButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
-            self.pauseButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
-            
+                        
             self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
             self.waveformScubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.3, delay: 0.1)
@@ -312,3 +302,52 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
 }
 
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.35
+    private var iconState: PlayPauseIconNodeState = .pause
+    
+    init() {
+        super.init(size: CGSize(width: 28.0, height: 28.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
+        }
+    }
+}

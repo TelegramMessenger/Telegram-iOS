@@ -60,7 +60,8 @@ public func paragraphStyleWithAlignment(_ alignment: NSTextAlignment) -> NSParag
 public func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAttributes, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
     let nsString = string as NSString
     let result = NSMutableAttributedString()
-    var remainingRange = NSMakeRange(0, nsString.length)
+    let wholeRange = NSMakeRange(0, nsString.length)
+    var remainingRange = wholeRange
     
     var bodyAttributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key.font: attributes.body.font, NSAttributedString.Key.foregroundColor: attributes.body.textColor, NSAttributedString.Key.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
     if !attributes.body.additionalAttributes.isEmpty {
@@ -93,7 +94,7 @@ public func parseMarkdownIntoAttributedString(_ string: String, attributes: Mark
                     result.append(NSAttributedString(string: parsedLinkText, attributes: linkAttributes))
                 }
             } else if character == UInt16(("*" as UnicodeScalar).value) {
-                if range.location + 1 != remainingRange.length {
+                if range.location + 1 != wholeRange.length {
                     let nextCharacter = nsString.character(at: range.location + 1)
                     if nextCharacter == character {
                         remainingRange = NSMakeRange(range.location + range.length + 1, remainingRange.location + remainingRange.length - (range.location + range.length + 1))

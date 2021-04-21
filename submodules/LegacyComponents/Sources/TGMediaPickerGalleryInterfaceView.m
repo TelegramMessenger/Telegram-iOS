@@ -108,6 +108,8 @@
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {
+        [[LegacyComponentsGlobals provider] makeViewDisableInteractiveKeyboardGestureRecognizer:self];
+        
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
         _context = context;

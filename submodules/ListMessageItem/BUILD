@@ -31,6 +31,7 @@ swift_library(
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/ContextUI:ContextUI",
         "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",

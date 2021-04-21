@@ -64,6 +64,33 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
     }
 }
 
+public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
+    let iconSignal: Signal<UIImage?, NoError>
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: false) {
+        iconSignal = signal
+            |> map { imageVersions -> UIImage? in
+                return imageVersions?.0
+        }
+    } else {
+        let peerId = peer.id
+        var displayLetters = peer.displayLetters
+        if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
+            displayLetters = [displayLetters[0]]
+        }
+        iconSignal = Signal { subscriber in
+            let image = generateImage(size, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarPlaceholderFont(size: 13.0), letters: displayLetters, peerId: peerId)
+            })?.withRenderingMode(.alwaysOriginal)
+            
+            subscriber.putNext(image)
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+    }
+    return iconSignal
+}
+
 public func peerAvatarImage(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false, provideUnrounded: Bool = false) -> Signal<(UIImage, UIImage)?, NoError>? {
     if let imageData = peerAvatarImageData(account: account, peerReference: peerReference, authorOfMessage: authorOfMessage, representation: representation, synchronousLoad: synchronousLoad) {
         return imageData

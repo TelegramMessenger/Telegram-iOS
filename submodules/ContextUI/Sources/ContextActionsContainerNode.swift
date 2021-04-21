@@ -439,6 +439,7 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 final class ContextActionsContainerNode: ASDisplayNode {
     private let blurBackground: Bool
     private let shadowNode: ASImageNode
+    private let additionalShadowNode: ASImageNode?
     private let additionalActionsNode: InnerActionsContainerNode?
     private let actionsNode: InnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
@@ -466,10 +467,19 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.isHidden = true
         
         var items = items
-        if let firstItem = items.first, case let .custom(item, additional) = firstItem, additional {
+        if let firstItem = items.first, case let .custom(_, additional) = firstItem, additional {
+            let additionalShadowNode = ASImageNode()
+            additionalShadowNode.displaysAsynchronously = false
+            additionalShadowNode.displayWithoutProcessing = true
+            additionalShadowNode.image = self.shadowNode.image
+            additionalShadowNode.contentMode = .scaleToFill
+            additionalShadowNode.isHidden = true
+            self.additionalShadowNode = additionalShadowNode
+            
             self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
             items.removeFirst()
         } else {
+            self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
@@ -493,6 +503,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.shadowNode)
+        self.additionalShadowNode.flatMap(self.addSubnode)
         self.additionalActionsNode.flatMap(self.scrollNode.addSubnode)
         self.scrollNode.addSubnode(self.actionsNode)
         self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
@@ -508,9 +519,13 @@ final class ContextActionsContainerNode: ASDisplayNode {
         var contentSize = CGSize()
         let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, transition: transition)
             
-        if let additionalActionsNode = self.additionalActionsNode {
+        if let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode {
             let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, transition: transition)
             contentSize = additionalActionsSize
+            
+            let bounds = CGRect(origin: CGPoint(), size: additionalActionsSize)
+            transition.updateFrame(node: additionalShadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
+            additionalShadowNode.isHidden = widthClass == .compact
             
             transition.updateFrame(node: additionalActionsNode, frame: CGRect(origin: CGPoint(), size: additionalActionsSize))
             contentSize.height += 8.0

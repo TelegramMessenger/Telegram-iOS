@@ -19,6 +19,8 @@ import AppBundle
 import LocalizedPeerData
 import TextSelectionNode
 import UrlEscaping
+import UndoUI
+import ManagedAnimationNode
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -26,8 +28,6 @@ private let editImage = generateTintedImage(image: UIImage(bundleImageName: "Med
 
 private let backwardImage = generateTintedImage(image:  UIImage(bundleImageName: "Media Gallery/BackwardButton"), color: .white)
 private let forwardImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ForwardButton"), color: .white)
-private let pauseImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PauseButton"), color: .white)
-private let playImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PlayButton"), color: .white)
 
 private let cloudFetchIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: UIColor.white)
 
@@ -107,6 +107,8 @@ class CaptionScrollWrapperNode: ASDisplayNode {
     }
 }
 
+
+
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -126,9 +128,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let textNode: ImmediateTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
-    private let backwardButton: HighlightableButtonNode
-    private let forwardButton: HighlightableButtonNode
+    private let backwardButton: PlaybackButtonNode
+    private let forwardButton: PlaybackButtonNode
     private let playbackControlButton: HighlightableButtonNode
+    private let playPauseIconNode: PlayPauseIconNode
     
     private let statusButtonNode: HighlightTrackingButtonNode
     private let statusNode: RadialStatusNode
@@ -136,11 +139,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var currentMessageText: NSAttributedString?
     private var currentAuthorNameText: String?
     private var currentDateText: String?
-    
+        
     private var currentMessage: Message?
-    
     private var currentWebPageAndMedia: (TelegramMediaWebpage, Media)?
-    
     private let messageContextDisposable = MetaDisposable()
     
     private var videoFramePreviewNode: (ASImageNode, ImmediateTextNode)?
@@ -148,10 +149,16 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var playbackControl: (() -> Void)?
-    var seekBackward: (() -> Void)?
-    var seekForward: (() -> Void)?
-    
+    var seekBackward: ((Double) -> Void)?
+    var seekForward: ((Double) -> Void)?
+    var setPlayRate: ((Double) -> Void)?
     var fetchControl: (() -> Void)?
+    
+    var interacting: ((Bool) -> Void)?
+    
+    private var seekTimer: SwiftSignalKit.Timer?
+    private var currentIsPaused: Bool = true
+    private var seekRate: Double = 1.0
     
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var openActionOptions: ((GalleryControllerInteractionTapAction) -> Void)?
@@ -169,13 +176,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                     case let .fetch(status, seekable):
+                        self.currentIsPaused = true
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
                         self.backwardButton.isHidden = !seekable
                         self.forwardButton.isHidden = !seekable
                         if status == .Local {
                             self.playbackControlButton.isHidden = false
-                            self.playbackControlButton.setImage(playImage, for: [])
+                            self.playPauseIconNode.enqueueState(.play, animated: true)
                         } else {
                             self.playbackControlButton.isHidden = true
                         }
@@ -184,7 +192,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         var statusState: RadialStatusNodeState = .none
                         switch status {
-                            case let .Fetching(isActive, progress):
+                            case let .Fetching(_, progress):
                                 let adjustedProgress = max(progress, 0.027)
                                 statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                             case .Local:
@@ -197,12 +205,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.statusNode.transitionToState(statusState, completion: {})
                         self.statusButtonNode.isUserInteractionEnabled = statusState != .none
                     case let .playback(paused, seekable):
+                        self.currentIsPaused = paused
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
                         self.backwardButton.isHidden = !seekable
                         self.forwardButton.isHidden = !seekable
                         self.playbackControlButton.isHidden = false
-                        self.playbackControlButton.setImage(paused ? playImage : pauseImage, for: [])
+                        
+                        let icon: PlayPauseIconNodeState
+                        if let wasPlaying = self.wasPlaying {
+                            icon = wasPlaying ? .pause : .play
+                        } else {
+                            icon = paused ? .play : .pause
+                        }
+                        self.playPauseIconNode.enqueueState(icon, animated: true)
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                 }
@@ -298,16 +314,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
-        self.backwardButton = HighlightableButtonNode()
+        self.backwardButton = PlaybackButtonNode()
         self.backwardButton.isHidden = true
-        self.backwardButton.setImage(backwardImage, for: [])
+        self.backwardButton.backgroundIconNode.image = backwardImage
         
-        self.forwardButton = HighlightableButtonNode()
+        self.forwardButton = PlaybackButtonNode()
         self.forwardButton.isHidden = true
-        self.forwardButton.setImage(forwardImage, for: [])
+        self.forwardButton.forward = true
+        self.forwardButton.backgroundIconNode.image = forwardImage
         
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
+        
+        self.playPauseIconNode = PlayPauseIconNode()
         
         self.statusButtonNode = HighlightTrackingButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -356,6 +375,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.contentNode.addSubnode(self.backwardButton)
         self.contentNode.addSubnode(self.forwardButton)
         self.contentNode.addSubnode(self.playbackControlButton)
+        self.playbackControlButton.addSubnode(self.playPauseIconNode)
         
         self.contentNode.addSubnode(self.statusNode)
         self.contentNode.addSubnode(self.statusButtonNode)
@@ -390,6 +410,97 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         super.didLoad()
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        
+        let backwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekBackwardLongPress(_:)))
+        backwardLongPressGestureRecognizer.minimumPressDuration = 0.3
+        self.backwardButton.view.addGestureRecognizer(backwardLongPressGestureRecognizer)
+        
+        let forwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekForwardLongPress(_:)))
+        forwardLongPressGestureRecognizer.minimumPressDuration = 0.3
+        self.forwardButton.view.addGestureRecognizer(forwardLongPressGestureRecognizer)
+    }
+    
+    private var wasPlaying: Bool?
+    @objc private func seekBackwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        switch gestureRecognizer.state {
+            case .began:
+                self.interacting?(true)
+                self.backwardButton.isPressing = true
+                self.wasPlaying = !self.currentIsPaused
+                if self.wasPlaying == true {
+                    self.playbackControl?()
+                }
+                
+                var time: Double = 0.0
+                let seekTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak self] in
+                    if let strongSelf = self {
+                        var delta: Double = 0.8
+                        if time >= 4.0 {
+                            delta = 3.2
+                        } else if time >= 2.0 {
+                            delta = 1.6
+                        }
+                        time += 0.1
+                        
+                        strongSelf.seekBackward?(delta)
+                    }
+                }, queue: Queue.mainQueue())
+                self.seekTimer = seekTimer
+                seekTimer.start()
+            case .ended, .cancelled:
+                self.interacting?(false)
+                self.backwardButton.isPressing = false
+                self.seekTimer?.invalidate()
+                self.seekTimer = nil
+                if self.wasPlaying == true {
+                    self.playbackControl?()
+                }
+                self.wasPlaying = nil
+            default:
+                break
+        }
+    }
+    
+    @objc private func seekForwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        switch gestureRecognizer.state {
+            case .began:
+                self.interacting?(true)
+                self.forwardButton.isPressing = true
+                self.wasPlaying = !self.currentIsPaused
+                if self.wasPlaying == false {
+                    self.playbackControl?()
+                }
+                
+                self.seekRate = 4.0
+                self.setPlayRate?(self.seekRate)
+                let seekTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
+                    if let strongSelf = self {
+                        if strongSelf.seekRate == 4.0 {
+                            strongSelf.seekRate = 8.0
+                        }
+                        strongSelf.setPlayRate?(strongSelf.seekRate)
+                        if strongSelf.seekRate == 8.0 {
+                            strongSelf.seekTimer?.invalidate()
+                            strongSelf.seekTimer = nil
+                        }
+                    }
+                }, queue: Queue.mainQueue())
+                self.seekTimer = seekTimer
+                seekTimer.start()
+            case .ended, .cancelled:
+                self.interacting?(false)
+                self.forwardButton.isPressing = false
+                self.setPlayRate?(1.0)
+                self.seekTimer?.invalidate()
+                self.seekTimer = nil
+                
+                if self.wasPlaying == false {
+                    self.playbackControl?()
+                }
+                self.wasPlaying = nil
+            default:
+                break
+        }
     }
     
     private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any], _ index: Int) -> GalleryControllerInteractionTapAction? {
@@ -672,14 +783,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.deleteButton.frame = deleteFrame
         self.editButton.frame = editFrame
 
-        if let image = self.backwardButton.image(for: .normal) {
+        if let image = self.backwardButton.backgroundIconNode.image {
             self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
         }
-        if let image = self.forwardButton.image(for: .normal) {
+        if let image = self.forwardButton.backgroundIconNode.image {
             self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
         }
         
         self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.playPauseIconNode.frame = self.playbackControlButton.bounds.offsetBy(dx: 2.0, dy: 2.0)
         
         let statusSize = CGSize(width: 28.0, height: 28.0)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((width - statusSize.width) / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
@@ -786,7 +898,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
                     } else {
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.interacting?(true)
+                        
+                        var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        if !presentationData.theme.overallDarkAppearance {
+                            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        }
+                        
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
                             let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
@@ -821,6 +939,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         }
                     
                         let actionSheet = ActionSheetController(presentationData: presentationData)
+                        actionSheet.dismissed = { [weak self] _ in
+                            self?.interacting?(false)
+                        }
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -850,7 +971,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
         self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
             if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                var presentationData = strongSelf.presentationData
+                if !presentationData.theme.overallDarkAppearance {
+                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
                 var items: [ActionSheetItem] = []
                 var personalPeerName: String?
                 var isChannel = false
@@ -897,6 +1022,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
+                    strongSelf.interacting?(true)
+                    actionSheet.dismissed = { [weak self] _ in
+                        self?.interacting?(false)
+                    }
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -909,12 +1038,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     @objc func actionButtonPressed() {
+        self.interacting?(true)
+        
         if let currentMessage = self.currentMessage {
             let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
                 return transaction.getMessageGroup(currentMessage.id) ?? []
             } |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    var forceTheme: PresentationTheme?
+                    if !presentationData.theme.overallDarkAppearance {
+                        forceTheme = defaultDarkColorPresentationTheme
+                        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    }
                     var generalMessageContentKind: MessageContentKind?
                     var beganContentKindScanning = false
                     var messageContentKinds = Set<MessageContentKindKey>()
@@ -953,7 +1089,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     if availableOpenInOptions(context: strongSelf.context, item: item).count > 1 {
                                         preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
                                             if let strongSelf = self {
-                                                let openInController = OpenInActionSheetController(context: strongSelf.context, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                                let openInController = OpenInActionSheetController(context: strongSelf.context, forceTheme: defaultDarkColorPresentationTheme, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                                     if let strongSelf = self {
                                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                                     }
@@ -991,7 +1127,50 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 }
                             }
                         }
-                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction)
+                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
+                        shareController.dismissed = { [weak self] _ in
+                            self?.interacting?(false)
+                        }
+                        shareController.completed = { [weak self] peerIds in
+                            if let strongSelf = self {
+                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                                    var peers: [Peer] = []
+                                    for peerId in peerIds {
+                                        if let peer = transaction.getPeer(peerId) {
+                                            peers.append(peer)
+                                        }
+                                    }
+                                    return peers
+                                } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                    if let strongSelf = self {
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        
+                                        let text: String
+                                        var savedMessages = false
+                                        if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                                            savedMessages = true
+                                        } else {
+                                            if peers.count == 1, let peer = peers.first {
+                                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                                            } else if let peer = peers.first {
+                                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                                            } else {
+                                                text = ""
+                                            }
+                                        }
+                                        
+                                        strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                    }
+                                })
+                            }
+                        }
                         strongSelf.controllerInteraction?.presentController(shareController, nil)
                     } else {
                         var singleText = presentationData.strings.Media_ShareItem(1)
@@ -1012,7 +1191,50 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         let shareAction: ([Message]) -> Void = { messages in
                             if let strongSelf = self {
-                                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), preferredAction: preferredAction)
+                                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), preferredAction: preferredAction, forceTheme: forceTheme)
+                                shareController.dismissed = { [weak self] _ in
+                                    self?.interacting?(false)
+                                }
+                                shareController.completed = { [weak self] peerIds in
+                                    if let strongSelf = self {
+                                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                                            var peers: [Peer] = []
+                                            for peerId in peerIds {
+                                                if let peer = transaction.getPeer(peerId) {
+                                                    peers.append(peer)
+                                                }
+                                            }
+                                            return peers
+                                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                            if let strongSelf = self {
+                                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                
+                                                let text: String
+                                                var savedMessages = false
+                                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                                    text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                                                    savedMessages = true
+                                                } else {
+                                                    if peers.count == 1, let peer = peers.first {
+                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                                                    } else if let peer = peers.first {
+                                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                                                    } else {
+                                                        text = ""
+                                                    }
+                                                }
+                                                
+                                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                            }
+                                        })
+                                    }
+                                }
                                 strongSelf.controllerInteraction?.presentController(shareController, nil)
                             }
                         }
@@ -1041,7 +1263,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
             })
         } else if let (webPage, media) = self.currentWebPageAndMedia {
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            var presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            var forceTheme: PresentationTheme?
+            if !presentationData.theme.overallDarkAppearance {
+                forceTheme = defaultDarkColorPresentationTheme
+                presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+            }
             
             var preferredAction = ShareControllerPreferredAction.default
             var subject = ShareControllerSubject.media(.webPage(webPage: WebpageReference(webPage), media: media))
@@ -1064,7 +1291,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     if availableOpenInOptions(context: self.context, item: item).count > 1 {
                         preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
                             if let strongSelf = self {
-                                let openInController = OpenInActionSheetController(context: strongSelf.context, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                let openInController = OpenInActionSheetController(context: strongSelf.context, forceTheme: forceTheme, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                     if let strongSelf = self {
                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                     }
@@ -1089,7 +1316,50 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                 }
             }
-            let shareController = ShareController(context: self.context, subject: subject, preferredAction: preferredAction)
+            let shareController = ShareController(context: self.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
+            shareController.dismissed = { [weak self] _ in
+                self?.interacting?(false)
+            }
+            shareController.completed = { [weak self] peerIds in
+                if let strongSelf = self {
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                        var peers: [Peer] = []
+                        for peerId in peerIds {
+                            if let peer = transaction.getPeer(peerId) {
+                                peers.append(peer)
+                            }
+                        }
+                        return peers
+                    } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                        if let strongSelf = self {
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            var savedMessages = false
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                text = presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One
+                                savedMessages = true
+                            } else {
+                                if peers.count == 1, let peer = peers.first {
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0
+                                } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0
+                                } else if let peer = peers.first {
+                                    let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0
+                                } else {
+                                    text = ""
+                                }
+                            }
+                            
+                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                        }
+                    })
+                }
+            }
             self.controllerInteraction?.presentController(shareController, nil)
         }
     }
@@ -1106,11 +1376,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     @objc func backwardButtonPressed() {
-        self.seekBackward?()
+        self.interacting?(true)
+        self.seekBackward?(15.0)
+        self.interacting?(false)
     }
     
     @objc func forwardButtonPressed() {
-        self.seekForward?()
+        self.interacting?(true)
+        self.seekForward?(15.0)
+        self.interacting?(false)
     }
     
     @objc private func statusPressed() {
@@ -1172,5 +1446,121 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 videoFramePreviewNode?.removeFromSupernode()
             })
         }
+    }
+}
+
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.35
+    private var iconState: PlayPauseIconNodeState = .pause
+    
+    init() {
+        super.init(size: CGSize(width: 40.0, height: 40.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
+        }
+    }
+}
+
+private let circleDiameter: CGFloat = 80.0
+
+private final class PlaybackButtonNode: HighlightTrackingButtonNode {
+    let backgroundIconNode: ASImageNode
+    let textNode: ImmediateTextNode
+    
+    var forward: Bool = false
+
+    var isPressing = false {
+        didSet {
+            if self.isPressing != oldValue && !self.isPressing {
+                self.highligthedChanged(false)
+            }
+        }
+    }
+    
+    init() {
+        self.backgroundIconNode = ASImageNode()
+        self.backgroundIconNode.isLayerBacked = true
+        self.backgroundIconNode.displaysAsynchronously = false
+        self.backgroundIconNode.displayWithoutProcessing = true
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.attributedText = NSAttributedString(string: "15", font: Font.with(size: 11.0, design: .round, weight: .semibold, traits: []), textColor: .white)
+        
+        super.init(pointerStyle: .circle)
+        
+        self.addSubnode(self.backgroundIconNode)
+        self.addSubnode(self.textNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.backgroundIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.backgroundIconNode.alpha = 0.4
+                    
+                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.textNode.alpha = 0.4
+                    
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.18, curve: .linear)
+                    let angle = CGFloat.pi / 4.0 + 0.226
+                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: strongSelf.forward ? angle : -angle)
+                } else if !strongSelf.isPressing {
+                    strongSelf.backgroundIconNode.alpha = 1.0
+                    strongSelf.backgroundIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    strongSelf.textNode.alpha = 1.0
+                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
+                    transition.updateTransformRotation(node: strongSelf.backgroundIconNode, angle: 0.0)
+                }
+            }
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        self.backgroundIconNode.frame = self.bounds
+        
+        let size = self.bounds.size
+        let textSize = self.textNode.updateLayout(size)
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0) + UIScreenPixel), size: textSize)
     }
 }

@@ -45,30 +45,46 @@ public enum RemoveStickerPackOption {
 }
 
 public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
+    return removeStickerPacksInteractively(postbox: postbox, ids: [id], option: option)
+}
+
+public func removeStickerPacksInteractively(postbox: Postbox, ids: [ItemCollectionId], option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
     return postbox.transaction { transaction -> (Int, [ItemCollectionItem])? in
-        let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
-        switch id.namespace {
-            case Namespaces.ItemCollection.CloudStickerPacks:
-                namespace = .stickers
-            case Namespaces.ItemCollection.CloudMaskPacks:
-                namespace = .masks
-            default:
-                namespace = nil
+        var commonNamespace: SynchronizeInstalledStickerPacksOperationNamespace?
+        for id in ids { 
+            let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
+            switch id.namespace {
+                case Namespaces.ItemCollection.CloudStickerPacks:
+                    namespace = .stickers
+                case Namespaces.ItemCollection.CloudMaskPacks:
+                    namespace = .masks
+                default:
+                    namespace = nil
+            }
+            if commonNamespace == nil && namespace != nil {
+                commonNamespace = namespace
+            } else if commonNamespace != namespace {
+                fatalError()
+            }
         }
-        if let namespace = namespace {
+        if let namespace = commonNamespace {
             let content: AddSynchronizeInstalledStickerPacksOperationContent
             switch option {
                 case .delete:
-                    content = .remove([id])
+                    content = .remove(ids)
                 case .archive:
-                    content = .archive([id])
+                    content = .archive(ids)
             }
-            let index = transaction.getItemCollectionsInfos(namespace: id.namespace).firstIndex(where: { $0.0 == id })
-            let items = transaction.getItemCollectionItems(collectionId: id)
-            
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content, noDelay: false)
-            transaction.removeItemCollection(collectionId: id)
-            return index.flatMap { ($0, items) }
+            if let id = ids.first {
+                let index = transaction.getItemCollectionsInfos(namespace: id.namespace).firstIndex(where: { $0.0 == id })
+                let items = transaction.getItemCollectionItems(collectionId: id)
+                
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content, noDelay: false)
+                transaction.removeItemCollection(collectionId: id)
+                return index.flatMap { ($0, items) }
+            } else {
+                return nil
+            }
         } else {
             return nil
         }

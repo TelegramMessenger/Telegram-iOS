@@ -281,7 +281,13 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
             if let peer = view.peers[view.peerId] as? TelegramChannel, peer.addressName == nil {
                 entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
             }
-            entries.append(.addMemberInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembersHelp : presentationData.strings.Channel_Members_AddMembersHelp))
+            if let peer = view.peers[view.peerId] as? TelegramChannel {
+                if peer.flags.contains(.isGigagroup) {
+                    entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Group_Members_AddMembersHelp))
+                } else if case .broadcast = peer.info {
+                    entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Channel_Members_AddMembersHelp))
+                }
+            }
         }
 
         

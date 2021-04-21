@@ -11,6 +11,7 @@ import TextSelectionNode
 import ReactionSelectionNode
 import ContextUI
 import ChatInterfaceState
+import UndoUI
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -119,6 +120,7 @@ public final class ChatControllerInteraction {
     let openMessageStats: (MessageId) -> Void
     let editMessageMedia: (MessageId, Bool) -> Void
     let copyText: (String) -> Void
+    let displayUndo: (UndoOverlayContent) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -167,7 +169,7 @@ public final class ChatControllerInteraction {
         updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void,
         updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void,
         openMessageShareMenu: @escaping (MessageId) -> Void,
-        presentController: @escaping  (ViewController, Any?) -> Void,
+        presentController: @escaping (ViewController, Any?) -> Void,
         navigationController: @escaping () -> NavigationController?,
         chatControllerNode: @escaping () -> ASDisplayNode?,
         reactionContainerNode: @escaping () -> ReactionSelectionParentNode?,
@@ -209,6 +211,7 @@ public final class ChatControllerInteraction {
         openMessageStats: @escaping (MessageId) -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         copyText: @escaping (String) -> Void,
+        displayUndo: @escaping (UndoOverlayContent) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -286,7 +289,7 @@ public final class ChatControllerInteraction {
         self.openMessageStats = openMessageStats
         self.editMessageMedia = editMessageMedia
         self.copyText = copyText
-        
+        self.displayUndo = displayUndo
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -340,6 +343,7 @@ public final class ChatControllerInteraction {
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
+        }, displayUndo: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

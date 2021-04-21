@@ -157,7 +157,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
         let supportPeer = Promise<PeerId?>()
-        supportPeer.set(supportPeerId(account: context.account))
+        supportPeer.set(context.engine.peerNames.supportPeerId())
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var faqUrl = presentationData.strings.Settings_FAQ_URL
@@ -180,7 +180,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 dismissImpl?()
                 
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
-                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, present: { controller, arguments in
+                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {}, contentContext: nil)
             })

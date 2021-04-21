@@ -53,11 +53,13 @@ public func stringForMediumDate(timestamp: Int32, strings: PresentationStrings, 
     
     let dateString: String
     let separator = dateTimeFormat.dateSeparator
+    let suffix = dateTimeFormat.dateSuffix
+    let displayYear = dateTimeFormat.requiresFullYear ? year - 100 + 2000 : year - 100
     switch dateTimeFormat.dateFormat {
         case .monthFirst:
-            dateString = String(format: "%d%@%d%@%02d", month, separator, day, separator, year - 100)
+            dateString = String(format: "%02d%@%02d%@%02d%@", month, separator, day, separator, displayYear, suffix)
         case .dayFirst:
-            dateString = String(format: "%d%@%02d%@%02d", day, separator, month, separator, year - 100)
+            dateString = String(format: "%02d%@%02d%@%02d%@", day, separator, month, separator, displayYear, suffix)
     }
     
     let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)

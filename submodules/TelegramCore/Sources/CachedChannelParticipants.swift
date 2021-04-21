@@ -205,13 +205,13 @@ extension ChannelParticipant {
             case let .channelParticipantBanned(flags, userId, restrictedBy, date, bannedRights):
                 let hasLeft = (flags & (1 << 0)) != 0
                 let banInfo = ChannelParticipantBannedInfo(rights: TelegramChatBannedRights(apiBannedRights: bannedRights), restrictedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: restrictedBy), timestamp: date, isMember: !hasLeft)
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: banInfo, rank: nil)
+                self = .member(id: userId.peerId, invitedAt: date, adminInfo: nil, banInfo: banInfo, rank: nil)
             case let .channelParticipantAdmin(flags, userId, _, promotedBy, date, adminRights, rank: rank):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil, rank: rank)
             case let .channelParticipantSelf(userId, _, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantLeft(userId):
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
+                self = .member(id: userId.peerId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
         }
     }
 }

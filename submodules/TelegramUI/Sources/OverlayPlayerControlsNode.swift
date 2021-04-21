@@ -12,6 +12,7 @@ import TelegramUIPreferences
 import AccountContext
 import PhotoResources
 import AppBundle
+import ManagedAnimationNode
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
@@ -114,6 +115,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var currentIsPaused: Bool?
     private let playPauseButton: IconButtonNode
+    private let playPauseIconNode: PlayPauseIconNode
     
     private var currentOrder: MusicPlaybackSettingsOrder?
     private let orderButton: IconButtonNode
@@ -211,6 +213,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.playPauseButton = IconButtonNode()
         self.playPauseButton.displaysAsynchronously = false
         
+        self.playPauseIconNode = PlayPauseIconNode()
+        
         self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
         self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: presentationData.theme.list.itemPrimaryTextColor)
         
@@ -240,6 +244,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.backwardButton)
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.playPauseButton)
+        self.playPauseButton.addSubnode(self.playPauseIconNode)
         
         self.addSubnode(self.separatorNode)
         
@@ -323,10 +328,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 if strongSelf.wasPlaying {
                     isPaused = false
                 }
+                
+                let isFirstTime = strongSelf.currentIsPaused == nil
                 if strongSelf.currentIsPaused != isPaused {
                     strongSelf.currentIsPaused = isPaused
                     
-                    strongSelf.updatePlayPauseButton(paused: isPaused)
+                    strongSelf.updatePlayPauseButton(paused: isPaused, animated: !isFirstTime)
                 }
                 
                 strongSelf.playPauseButton.isEnabled = true
@@ -548,7 +555,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
         self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: presentationData.theme.list.itemPrimaryTextColor)
         if let isPaused = self.currentIsPaused {
-            self.updatePlayPauseButton(paused: isPaused)
+            self.updatePlayPauseButton(paused: isPaused, animated: false)
         }
         if let order = self.currentOrder {
             self.updateOrderButton(order)
@@ -611,11 +618,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         }
     }
     
-    private func updatePlayPauseButton(paused: Bool) {
+    private func updatePlayPauseButton(paused: Bool, animated: Bool) {
+        self.playPauseIconNode.customColor = self.presentationData.theme.list.itemPrimaryTextColor
         if paused {
-            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.playPauseIconNode.enqueueState(.play, animated: animated)
         } else {
-            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.playPauseIconNode.enqueueState(.pause, animated: animated)
         }
     }
     
@@ -779,7 +787,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         transition.updateFrame(node: self.backwardButton, frame: CGRect(origin: buttonsRect.origin, size: buttonSize))
         transition.updateFrame(node: self.forwardButton, frame: CGRect(origin: CGPoint(x: buttonsRect.maxX - buttonSize.width, y: buttonsRect.minY), size: buttonSize))
-        transition.updateFrame(node: self.playPauseButton, frame: CGRect(origin: CGPoint(x: buttonsRect.minX + floor((buttonsRect.width - buttonSize.width) / 2.0), y: buttonsRect.minY), size: buttonSize))
+        
+        let playPauseFrame = CGRect(origin: CGPoint(x: buttonsRect.minX + floor((buttonsRect.width - buttonSize.width) / 2.0), y: buttonsRect.minY), size: buttonSize)
+        transition.updateFrame(node: self.playPauseButton, frame: playPauseFrame)
+        transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: -6.0, y: -6.0), size: CGSize(width: 76.0, height: 76.0)))
         
         return panelHeight
     }
@@ -890,5 +901,55 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             return nil
         }
         return result
+    }
+}
+
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.35
+    private var iconState: PlayPauseIconNodeState = .pause
+    
+    init() {
+        super.init(size: CGSize(width: 76.0, height: 76.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
+        }
     }
 }

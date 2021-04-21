@@ -346,7 +346,13 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
+    private var animatingOut = false
     func animateOut(completion: (() -> Void)? = nil) {
+        guard !self.animatingOut else {
+            return
+        }
+        self.animatingOut = true
+        
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
@@ -354,6 +360,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             let internalCompletion: () -> Void = { [weak self] in
                 if let strongSelf = self, dimCompleted && offsetCompleted {
                     strongSelf.dismiss?()
+                    strongSelf.animatingOut = true
                 }
                 completion?()
             }

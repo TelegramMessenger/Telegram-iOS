@@ -50,7 +50,10 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         switch contentType {
             case .generic:
                 break
-            case .name, .address:
+            case .name:
+                self.textField.textField.autocorrectionType = .no
+                self.textField.textField.keyboardType = .asciiCapable
+            case .address:
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
                 self.textField.textField.keyboardType = .phonePad

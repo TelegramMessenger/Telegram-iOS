@@ -20,16 +20,18 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let icon: ContactListActionItemIcon
     let highlight: ContactListActionItemHighlight
     let clearHighlightAutomatically: Bool
+    let accessible: Bool
     let action: () -> Void
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.title = title
         self.icon = icon
         self.highlight = highlight
         self.header = header
         self.clearHighlightAutomatically = clearHighlightAutomatically
+        self.accessible = accessible
         self.action = action
     }
     
@@ -203,6 +205,14 @@ class ContactListActionItemNode: ListViewItemNode {
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
                         strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
+                    }
+                    
+                    if item.accessible && strongSelf.activateArea.supernode == nil {
+                        strongSelf.view.accessibilityElementsHidden = false
+                        strongSelf.addSubnode(strongSelf.activateArea)
+                    } else if !item.accessible && strongSelf.activateArea.supernode != nil {
+                        strongSelf.view.accessibilityElementsHidden = true
+                        strongSelf.activateArea.removeFromSupernode()
                     }
                     
                     let _ = titleApply()

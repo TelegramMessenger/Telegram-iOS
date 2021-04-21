@@ -378,7 +378,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
-                                    if servicePeer {
+                                    if user.isDeleted {
+                                        state = .none
+                                    } else if servicePeer {
                                         let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if user.flags.contains(.isSupport) {

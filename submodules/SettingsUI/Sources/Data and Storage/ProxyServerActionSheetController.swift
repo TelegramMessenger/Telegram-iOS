@@ -239,7 +239,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                 attributedString = NSAttributedString(string: text, font: textFont, textColor: theme.destructiveActionTextColor)
         }
         self.statusTextNode.attributedText = attributedString
-        self.setNeedsLayout()
+        self.requestLayoutUpdate()
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -396,7 +396,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                 strongSelf.buttonNode.isUserInteractionEnabled = false
                 strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.SocksProxySetup_Connecting, font: Font.regular(20.0), textColor: strongSelf.theme.primaryTextColor)
                 strongSelf.activityIndicator.isHidden = false
-                strongSelf.setNeedsLayout()
+                strongSelf.requestLayoutUpdate()
                 
                 let signal = strongSelf.network.connectionStatus
                 |> filter { status in
@@ -428,7 +428,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                             })
                             strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: strongSelf.theme.controlAccentColor)
                             strongSelf.buttonNode.isUserInteractionEnabled = true
-                            strongSelf.setNeedsLayout()
+                            strongSelf.requestLayoutUpdate()
                             
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.SocksProxySetup_FailedToConnect, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                         }

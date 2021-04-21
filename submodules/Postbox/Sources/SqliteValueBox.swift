@@ -65,7 +65,7 @@ struct SqlitePreparedStatement {
         }
         return res == SQLITE_ROW
     }
-    
+
     struct SqlError: Error {
         var code: Int32
     }
@@ -234,10 +234,8 @@ public final class SqliteValueBox: ValueBox {
         
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         let path = basePath + "/db_sqlite"
-        
-        #if DEBUG
-        print("Instance \(self) opening sqlite at \(path)")
-        #endif
+
+        postboxLog("Instance \(self) opening sqlite at \(path)")
         
         #if DEBUG
         let exists = FileManager.default.fileExists(atPath: path)
@@ -297,8 +295,10 @@ public final class SqliteValueBox: ValueBox {
             let _ = try? FileManager.default.removeItem(atPath: path)
             preconditionFailure("Couldn't open database")
         }
-        
-        sqlite3_busy_timeout(database.handle, 1000 * 10000)
+
+        postboxLog("Did open DB at \(path)")
+
+        sqlite3_busy_timeout(database.handle, 5 * 1000)
         
         var resultCode: Bool = true
         
@@ -306,8 +306,12 @@ public final class SqliteValueBox: ValueBox {
         assert(resultCode)
         resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
         assert(resultCode)
+
+        postboxLog("Did set up cipher")
         
         if self.isEncrypted(database) {
+            postboxLog("Database is encrypted")
+
             if let encryptionParameters = encryptionParameters {
                 precondition(encryptionParameters.salt.data.count == 16)
                 precondition(encryptionParameters.key.data.count == 32)
@@ -316,12 +320,15 @@ public final class SqliteValueBox: ValueBox {
                 
                 resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
                 assert(resultCode)
+
+                postboxLog("Setting encryption key")
                 
                 if self.isEncrypted(database) {
+                    postboxLog("Encryption key is invalid")
+
                     if isTemporary || isReadOnly {
                         return nil
                     }
-                    postboxLog("Encryption key is invalid")
                     
                     for fileName in dabaseFileNames {
                         let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
@@ -354,6 +361,8 @@ public final class SqliteValueBox: ValueBox {
                 assert(resultCode)
             }
         } else if let encryptionParameters = encryptionParameters, encryptionParameters.forceEncryptionIfNoSet {
+            postboxLog("Not encrypted")
+
             let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
             
             if FileManager.default.fileExists(atPath: path) {
@@ -409,6 +418,8 @@ public final class SqliteValueBox: ValueBox {
                 }
             }
         }
+
+        postboxLog("Did set up encryption")
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
@@ -421,6 +432,9 @@ public final class SqliteValueBox: ValueBox {
         assert(resultCode)
         resultCode = database.execute("PRAGMA cipher_memory_security = OFF")
         assert(resultCode)
+
+        postboxLog("Did set up pragmas")
+
         //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
         //database.execute("PRAGMA journal_size_limit=1536")
         
@@ -441,8 +455,12 @@ public final class SqliteValueBox: ValueBox {
         
         let _ = self.runPragma(database, "checkpoint_fullfsync = 1")
         assert(self.runPragma(database, "checkpoint_fullfsync") == "1")
+
+        postboxLog("Did set up checkpoint_fullfsync")
         
         self.beginInternal(database: database)
+
+        postboxLog("Did begin transaction")
         
         let result = self.getUserVersion(database)
         
@@ -462,8 +480,12 @@ public final class SqliteValueBox: ValueBox {
         for table in self.listFullTextTables(database) {
             self.fullTextTables[table.id] = table
         }
+
+        postboxLog("Did load tables")
         
         self.commitInternal(database: database)
+
+        postboxLog("Did commit final")
         
         lock.unlock()
         
@@ -518,7 +540,21 @@ public final class SqliteValueBox: ValueBox {
     
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
+        postboxLog("isEncrypted prepare...")
+
+        let allIsOk = Atomic<Bool>(value: false)
+        let databasePath = self.databasePath
+        DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: {
+            if allIsOk.with({ $0 }) == false {
+                postboxLog("Timeout reached, discarding database")
+                try? FileManager.default.removeItem(atPath: databasePath)
+
+                exit(0)
+            }
+        })
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
+        let _ = allIsOk.swap(true)
+        postboxLog("isEncrypted prepare done")
         if statement == nil {
             postboxLog("isEncrypted: sqlite3_prepare_v2 status = \(status) [\(self.databasePath)]")
             return true
@@ -536,6 +572,7 @@ public final class SqliteValueBox: ValueBox {
             preparedStatement.destroy()
             return true
         }
+        postboxLog("isEncrypted step done")
         preparedStatement.destroy()
         return status == SQLITE_NOTADB
     }

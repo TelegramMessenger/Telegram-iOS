@@ -101,7 +101,7 @@ private final class ImportManager {
         
         var totalMediaBytes = 0
         for entry in self.entries {
-            self.entryProgress[entry.0.path] = (Int(entry.0.uncompressedSize), 0)
+            self.entryProgress[entry.1] = (Int(entry.0.uncompressedSize), 0)
             totalMediaBytes += Int(entry.0.uncompressedSize)
         }
         self.totalBytes = self.mainFileSize + totalMediaBytes
@@ -277,8 +277,8 @@ private final class ImportManager {
                 guard let strongSelf = self else {
                     return
                 }
-                if let (size, _) = strongSelf.entryProgress[entry.0.path] {
-                    strongSelf.entryProgress[entry.0.path] = (size, Int(progress * Float(entry.0.uncompressedSize)))
+                if let (size, _) = strongSelf.entryProgress[entry.1] {
+                    strongSelf.entryProgress[entry.1] = (size, Int(progress * Float(entry.0.uncompressedSize)))
                     strongSelf.updateProgress()
                 }
             }, error: { [weak self] error in
@@ -290,8 +290,9 @@ private final class ImportManager {
                 guard let strongSelf = self else {
                     return
                 }
-                Logger.shared.log("ChatImportScreen", "updateState entry \(entry.1) has completed upload")
-                strongSelf.activeEntries.removeValue(forKey: entry.0.path)
+                Logger.shared.log("ChatImportScreen", "updateState entry \(entry.1) has completed upload, previous active entries: \(strongSelf.activeEntries.keys)")
+                strongSelf.activeEntries.removeValue(forKey: entry.1)
+                Logger.shared.log("ChatImportScreen", "removed active entry \(entry.1), current active entries: \(strongSelf.activeEntries.keys)")
                 strongSelf.updateState()
             }))
         }
@@ -533,7 +534,7 @@ public final class ChatImportActivityScreen: ViewController {
             self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
-            self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes))))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData)))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {

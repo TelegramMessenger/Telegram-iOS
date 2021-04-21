@@ -46,7 +46,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         
         self.textInputNode = EditableTextNode()
         self.textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
@@ -77,7 +77,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         self.textInputNode.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
@@ -276,6 +276,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         self.validLayout = size
         
         var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
+        let spacing: CGFloat = 5.0
         
         let titleSize = self.titleNode.measure(measureSize)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
@@ -283,7 +284,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         let textSize = self.textNode.measure(measureSize)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
-        origin.y += textSize.height + 6.0
+        origin.y += textSize.height + 6.0 + spacing
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -304,7 +305,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
             }
         }
         
-        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
+        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 9.0, right: 18.0)
         
         var contentWidth = max(titleSize.width, minActionsWidth)
         contentWidth = max(contentWidth, 234.0)
@@ -325,7 +326,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight))
         transition.updateAlpha(node: self.inputFieldNode, alpha: inputHeight > 0.0 ? 1.0 : 0.0)
         
-        let resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + actionsHeight + inputHeight + insets.top + insets.bottom)
+        let resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + spacing + inputHeight + actionsHeight  + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -424,6 +425,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
         presentationDataDisposable.dispose()
     }
     dismissImpl = { [weak controller] animated in
+        contentNode.inputFieldNode.deactivateInput()
         if animated {
             controller?.dismissAnimated()
         } else {
