@@ -245,11 +245,11 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
 
     let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment, userInitiated: userInitiated)
     if includeLogs {
-        let id = arc4random64()
+        let id = Int64.random(in: Int64.min ... Int64.max)
         let name = "\(callId.id)_\(callId.accessHash).log.json"
         let path = callLogsPath(account: account) + "/" + name
         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-        let message = EnqueueMessage.message(text: comment, attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+        let message = EnqueueMessage.message(text: comment, attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
         return rate
         |> then(enqueueMessages(account: account, peerId: peerId, messages: [message])
         |> mapToSignal({ _ -> Signal<Void, NoError> in
@@ -257,7 +257,7 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
         }))
     } else if !comment.isEmpty {
         return rate
-        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
         |> mapToSignal({ _ -> Signal<Void, NoError> in
             return .single(Void())
         }))

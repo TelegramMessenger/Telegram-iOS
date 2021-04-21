@@ -20,7 +20,7 @@ public struct FoundPeer: Equatable {
     }
 }
 
-public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
     let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { _ in

@@ -512,7 +512,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         cancelImpl = {
             checkCreationAvailabilityDisposable.set(nil)
         }
-        checkCreationAvailabilityDisposable.set((context.engine.peerNames.checkPublicChannelCreationAvailability(location: true)
+        checkCreationAvailabilityDisposable.set((context.engine.peers.checkPublicChannelCreationAvailability(location: true)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()

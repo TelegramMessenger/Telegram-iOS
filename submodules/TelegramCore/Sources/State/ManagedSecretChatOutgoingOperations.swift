@@ -258,7 +258,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                             layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
                     }
                     if let layer = layer {
-                        updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: arc4random64(), layerSupport: 46), state: updatedState)
+                        updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .reportLayerSupport(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), layerSupport: 46), state: updatedState)
                     }
                     transaction.setPeerChatState(peerId, state: updatedState)
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
@@ -1352,7 +1352,7 @@ private func markOutgoingOperationAsCompleted(transaction: Transaction, peerId: 
             if let operation = entry?.contents as? SecretChatOutgoingOperation {
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .update(operation.withUpdatedDelivered(true)))
             } else {
-                assertionFailure()
+                //assertionFailure()
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .none)
             }
         })
@@ -1377,7 +1377,7 @@ private func replaceOutgoingOperationWithEmptyMessage(transaction: Transaction, 
     if let layer = layer {
         transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex, { entry in
             if let _ = entry?.contents as? SecretChatOutgoingOperation {
-                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .update(SecretChatOutgoingOperation(contents: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), mutable: true, delivered: false)))
+                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .update(SecretChatOutgoingOperation(contents: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: [globallyUniqueId]), mutable: true, delivered: false)))
             } else {
                 assertionFailure()
                 return PeerOperationLogEntryUpdate(mergedIndex: .remove, contents: .none)
@@ -1519,7 +1519,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                         }
                     }
                 } else {
-                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
+                    replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: Int64.random(in: Int64.min ... Int64.max))
                     deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [messageId])
                     return .complete()
                 }
@@ -1646,7 +1646,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     if asService {
         let actionRandomId: Int64
         if wasDelivered {
-            actionRandomId = arc4random64()
+            actionRandomId = Int64.random(in: Int64.min ... Int64.max)
         } else {
             actionRandomId = globallyUniqueId
         }

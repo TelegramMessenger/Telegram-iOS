@@ -8,7 +8,7 @@ public enum AddressNameValidationStatus: Equatable {
 }
 
 public extension TelegramEngine {
-    final class PeerNames {
+    final class Peers {
         private let account: Account
 
         init(account: Account) {
@@ -56,6 +56,18 @@ public extension TelegramEngine {
 
         public func supportPeerId() -> Signal<PeerId?, NoError> {
             return _internal_supportPeerId(account: self.account)
+        }
+
+        public func inactiveChannelList() -> Signal<[InactiveChannel], NoError> {
+            return _internal_inactiveChannelList(network: self.account.network)
+        }
+
+        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
+            return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
+        }
+
+        public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+            return _internal_searchPeers(account: self.account, query: query)
         }
     }
 }

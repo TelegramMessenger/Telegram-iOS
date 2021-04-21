@@ -718,7 +718,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     var value = stat()
                                     if stat(result.fileURL.path, &value) == 0 {
                                         if let data = try? Data(contentsOf: result.fileURL) {
-                                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
                                         }

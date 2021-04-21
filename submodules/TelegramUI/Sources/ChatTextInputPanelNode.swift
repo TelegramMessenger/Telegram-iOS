@@ -162,20 +162,30 @@ private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPres
 }
 
 private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
-private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
-    if let current = currentTextInputBackgroundImage {
+private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackgroundColor: UIColor?, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
+    if let backgroundColor = backgroundColor, let current = currentTextInputBackgroundImage {
         if current.0.isEqual(backgroundColor) && current.1.isEqual(strokeColor) && current.2.isEqual(to: diameter) {
             return current.3
         }
     }
     
     let image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
-        context.setFillColor(backgroundColor.cgColor)
-        context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
-        
-        context.setBlendMode(.clear)
-        context.setFillColor(UIColor.clear.cgColor)
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+        } else {
+            context.clear(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+        }
+
+        if let inputBackgroundColor = inputBackgroundColor {
+            context.setBlendMode(.normal)
+            context.setFillColor(inputBackgroundColor.cgColor)
+        } else {
+            context.setBlendMode(.clear)
+            context.setFillColor(UIColor.clear.cgColor)
+        }
         context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+            
         context.setBlendMode(.normal)
         context.setStrokeColor(strokeColor.cgColor)
         let strokeWidth: CGFloat = 1.0
@@ -183,7 +193,9 @@ private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIC
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
     })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
     if let image = image {
-        currentTextInputBackgroundImage = (backgroundColor, strokeColor, diameter, image)
+        if let backgroundColor = backgroundColor {
+            currentTextInputBackgroundImage = (backgroundColor, strokeColor, diameter, image)
+        }
         return image
     } else {
         return nil
@@ -205,6 +217,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textInputNode: EditableTextNode?
     
     let textInputBackgroundNode: ASImageNode
+    private var transparentTextInputBackgroundImage: UIImage?
     let actionButtons: ChatTextInputActionButtonsNode
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     private let counterTextNode: ImmediateTextNode
@@ -280,6 +293,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         didSet {
             self.actionButtons.micButton.account = self.context?.account
         }
+    }
+
+    var micButton: ChatTextInputMediaRecordingButton? {
+        return self.actionButtons.micButton
     }
     
     private let statusDisposable = MetaDisposable()
@@ -636,7 +653,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
             
-            let updatedMaxHeight = (CGFloat(maxNumberOfLines) * 22.0 + 10.0)
+            let updatedMaxHeight = (CGFloat(maxNumberOfLines) * (22.0 + 2.0) + 10.0)
             
             textFieldHeight = max(textFieldMinHeight, min(updatedMaxHeight, unboundTextFieldHeight))
         } else {
@@ -779,7 +796,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColor
                 }
                 
-                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, inputBackgroundColor: nil, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                self.transparentTextInputBackgroundImage = textInputBackgroundImage(backgroundColor: nil, inputBackgroundColor: interfaceState.theme.chat.inputPanel.inputBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 
                 self.searchLayoutClearImageNode.image = PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme)
                 
@@ -2151,6 +2169,34 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         return nil
+    }
+
+    func makeSnapshotForTransition() -> ChatMessageTransitionNode.Source.TextInput? {
+        guard let backgroundImage = self.transparentTextInputBackgroundImage else {
+            return nil
+        }
+        guard let textInputNode = self.textInputNode else {
+            return nil
+        }
+
+        let backgroundView = UIImageView(image: backgroundImage)
+        backgroundView.frame = self.textInputBackgroundNode.frame
+
+        //let previousTintColor = textInputNode.view.tintColor
+        //textInputNode.view.tintColor = .clear
+
+        guard let contentView = textInputNode.view.snapshotView(afterScreenUpdates: true) else {
+            //textInputNode.view.tintColor = previousTintColor
+            return nil
+        }
+        //textInputNode.view.tintColor = previousTintColor
+        contentView.frame = textInputNode.frame
+
+        return ChatMessageTransitionNode.Source.TextInput(
+            backgroundView: backgroundView,
+            contentView: contentView,
+            sourceRect: self.view.convert(self.bounds, to: nil)
+        )
     }
 }
 

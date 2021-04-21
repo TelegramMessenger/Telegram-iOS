@@ -1108,7 +1108,7 @@ public final class VoiceChatController: ViewController {
                                     dismissController?()
                                     
                                     if let strongSelf = self {
-                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                                         |> deliverOnMainQueue).start(next: { [weak self] _ in
                                             if let strongSelf = self {
                                                 strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return true })
@@ -4708,7 +4708,7 @@ public final class VoiceChatController: ViewController {
                 return
             }
             
-            let resource = LocalFileMediaResource(fileId: arc4random64())
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.call.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
             let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
             
@@ -4743,7 +4743,7 @@ public final class VoiceChatController: ViewController {
                 return
             }
             
-            let photoResource = LocalFileMediaResource(fileId: arc4random64())
+            let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
             let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
             
@@ -4808,7 +4808,7 @@ public final class VoiceChatController: ViewController {
                                 if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                     resource = LocalFileMediaResource(fileId: liveUploadData.id)
                                 } else {
-                                    resource = LocalFileMediaResource(fileId: arc4random64())
+                                    resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 }
                                 account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                 subscriber.putNext(resource)

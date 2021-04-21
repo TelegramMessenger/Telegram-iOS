@@ -881,7 +881,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 foundRemotePeers = (
                     .single((currentRemotePeersValue.0, currentRemotePeersValue.1, true))
                     |> then(
-                        searchPeers(account: context.account, query: query)
+                        context.engine.peers.searchPeers(query: query)
                         |> map { ($0.0, $0.1, false) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )

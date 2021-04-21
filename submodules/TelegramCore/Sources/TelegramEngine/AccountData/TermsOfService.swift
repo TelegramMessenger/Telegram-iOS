@@ -34,7 +34,7 @@ extension TermsOfServiceUpdate {
     }
 }
 
-public func acceptTermsOfService(account: Account, id: String) -> Signal<Void, NoError> {
+func _internal_acceptTermsOfService(account: Account, id: String) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.help.acceptTermsOfService(id: .dataJSON(data: id)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
@@ -45,7 +45,7 @@ public func acceptTermsOfService(account: Account, id: String) -> Signal<Void, N
     }
 }
 
-public func resetAccountDueTermsOfService(network: Network) -> Signal<Void, NoError> {
+func _internal_resetAccountDueTermsOfService(network: Network) -> Signal<Void, NoError> {
     return network.request(Api.functions.account.deleteAccount(reason: "Decline ToS update"))
     |> retryRequest
     |> map { _ in return }

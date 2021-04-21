@@ -54,10 +54,12 @@ final class UnauthorizedAccountStateManager {
     private var updateService: UnauthorizedUpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
     private let updateLoginToken: () -> Void
+    private let displayServiceNotification: (String) -> Void
     
-    init(network: Network, updateLoginToken: @escaping () -> Void) {
+    init(network: Network, updateLoginToken: @escaping () -> Void, displayServiceNotification: @escaping (String) -> Void) {
         self.network = network
         self.updateLoginToken = updateLoginToken
+        self.displayServiceNotification = displayServiceNotification
     }
     
     deinit {
@@ -69,11 +71,17 @@ final class UnauthorizedAccountStateManager {
             if self.updateService == nil {
                 self.updateService = UnauthorizedUpdateMessageService()
                 let updateLoginToken = self.updateLoginToken
+                let displayServiceNotification = self.displayServiceNotification
                 self.updateServiceDisposable.set(self.updateService!.pipe.signal().start(next: { updates in
                     for update in updates {
                         switch update {
                         case .updateLoginToken:
                             updateLoginToken()
+                        case let .updateServiceNotification(flags, _, _, message, _, _):
+                            let popup = (flags & (1 << 0)) != 0
+                            if popup {
+                                displayServiceNotification(message)
+                            }
                         default:
                             break
                         }

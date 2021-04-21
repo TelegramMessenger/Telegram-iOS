@@ -267,7 +267,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"CNY": {
 		"code": "CNY",
@@ -1356,7 +1356,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 1
+		"decimalDigits": 0
 	},
 	"VUV": {
 		"code": "VUV",

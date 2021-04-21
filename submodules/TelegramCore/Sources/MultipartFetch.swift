@@ -445,7 +445,7 @@ private final class MultipartFetchManager {
     init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, partReady: @escaping (Int, Data) -> Void, reportCompleteSize: @escaping (Int) -> Void) {
         self.resource = resource
         self.parameters = parameters
-        self.consumerId = arc4random64()
+        self.consumerId = Int64.random(in: Int64.min ... Int64.max)
         
         self.completeSize = size
         if let size = size {

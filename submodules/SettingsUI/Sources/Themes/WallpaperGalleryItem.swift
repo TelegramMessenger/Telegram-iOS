@@ -407,7 +407,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
                     displaySize = dimensions.dividedByScreenScale().integralFloor
-                    signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
+                    signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max)))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
                     subtitleSignal = .single(nil)

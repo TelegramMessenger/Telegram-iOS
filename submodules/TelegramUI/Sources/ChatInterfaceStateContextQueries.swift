@@ -127,7 +127,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .installed:
                         scope = [.installed]
                 }
-                return searchStickers(account: context.account, query: query.basicEmoji.0, scope: scope)
+                return context.engine.stickers.searchStickers(query: query.basicEmoji.0, scope: scope)
                 |> castError(ChatContextQueryError.self)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
@@ -264,7 +264,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             let chatPeer = peer
-            let contextBot = resolvePeerByName(account: context.account, name: addressName)
+            let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                 if let peerId = peerId {
                     return context.account.postbox.loadedPeerWithId(peerId)
@@ -338,13 +338,13 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             return signal |> then(contextBot)
         case let .emojiSearch(query, languageCode, range):
-            var signal = searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 2)
+            var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: query.count < 2)
             if !languageCode.lowercased().hasPrefix("en") {
                 signal = signal
                 |> mapToSignal { keywords in
                     return .single(keywords)
                     |> then(
-                        searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                        context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
                         |> map { englishKeywords in
                             return keywords + englishKeywords
                         }

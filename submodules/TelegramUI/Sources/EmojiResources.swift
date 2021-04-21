@@ -9,6 +9,7 @@ import WebPBinding
 import MediaResources
 import Emoji
 import AppBundle
+import AccountContext
 
 public struct EmojiThumbnailResourceId: MediaResourceId {
     public let emoji: String
@@ -284,17 +285,17 @@ private final class Buffer {
     var data = Data()
 }
 
-func fetchEmojiSpriteResource(postbox: Postbox, network: Network, resource: EmojiSpriteResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let packName = "P\(resource.packId)_by_AEStickerBot"
     
-    return loadedStickerPack(postbox: postbox, network: network, reference: .name(packName), forceActualized: false)
+    return TelegramEngine(account: account).stickers.loadedStickerPack(reference: .name(packName), forceActualized: false)
     |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { result -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         switch result {
             case let .result(_, items, _):
                 if let sticker = items[Int(resource.stickerId)] as? StickerPackItem {
                     return Signal { subscriber in
-                        guard let fetchResource = postbox.mediaBox.fetchResource else {
+                        guard let fetchResource = account.postbox.mediaBox.fetchResource else {
                             return EmptyDisposable
                         }
 

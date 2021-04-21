@@ -497,7 +497,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     guard let name = configuration.imageBotUsername else {
                         return .single(nil)
                     }
-                    return resolvePeerByName(account: context.account, name: name)
+                    return context.engine.peers.resolvePeerByName(name: name)
                     |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                         if let peerId = peerId {
                             return context.account.postbox.loadedPeerWithId(peerId)

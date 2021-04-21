@@ -258,7 +258,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
                 if !addedRead.isEmpty {
-                    let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: strongSelf.context.account.postbox, ids: addedRead).start()
+                    let _ = strongSelf.context.engine.stickers.markFeaturedStickerPacksAsSeenInteractively(ids: addedRead).start()
                 }
                 
                 if bottomIndex >= strongSelf.gridNode.items.count - 15 {
@@ -295,84 +295,9 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 }
                 let account = strongSelf.context.account
                 if install {
-                    let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
-                    /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                    |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                        switch result {
-                        case let .result(info, items, installed):
-                            if installed {
-                                return .complete()
-                            } else {
-                                return preloadedStickerPackThumbnail(account: account, info: info, items: items)
-                                |> filter { $0 }
-                                |> ignoreValues
-                                |> then(
-                                    addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                    |> ignoreValues
-                                )
-                                |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                }
-                                |> then(.single((info, items)))
-                            }
-                        case .fetching:
-                            break
-                        case .none:
-                            break
-                        }
-                        return .complete()
-                    }
-                    |> deliverOnMainQueue
-                    
-                    let context = strongSelf.context
-                    var cancelImpl: (() -> Void)?
-                    let progressSignal = Signal<Never, NoError> { subscriber in
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                            cancelImpl?()
-                        }))
-                        self?.controller?.present(controller, in: .window(.root))
-                        return ActionDisposable { [weak controller] in
-                            Queue.mainQueue().async() {
-                                controller?.dismiss()
-                            }
-                        }
-                    }
-                    |> runOn(Queue.mainQueue())
-                    |> delay(1.0, queue: Queue.mainQueue())
-                    let progressDisposable = progressSignal.start()
-                    
-                    installSignal = installSignal
-                    |> afterDisposed {
-                        Queue.mainQueue().async {
-                            progressDisposable.dispose()
-                        }
-                    }
-                    cancelImpl = {
-                        self?.installDisposable.set(nil)
-                    }
-                        
-                    strongSelf.installDisposable.set(installSignal.start(next: { info, items in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        /*var animateInAsReplacement = false
-                        if let navigationController = strongSelf.controllerInteraction.navigationController() {
-                            for controller in navigationController.overlayControllers {
-                                if let controller = controller as? UndoOverlayController {
-                                    controller.dismissWithCommitActionAndReplacementAnimation()
-                                    animateInAsReplacement = true
-                                }
-                            }
-                        }
-                        
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                            return true
-                        }))*/
-                    }))*/
+                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
                 } else {
-                    let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                    let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                     |> deliverOnMainQueue).start(next: { _ in
                     })
                 }
@@ -1165,85 +1090,9 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             }
             let account = strongSelf.context.account
             if install {
-                let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
-                /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                    switch result {
-                    case let .result(info, items, installed):
-                        if installed {
-                            return .complete()
-                        } else {
-                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
-                            |> filter { $0 }
-                            |> ignoreValues
-                            |> then(
-                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                |> ignoreValues
-                            )
-                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                return .complete()
-                            }
-                            |> then(.single((info, items)))
-                        }
-                    case .fetching:
-                        break
-                    case .none:
-                        break
-                    }
-                    return .complete()
-                }
-                |> deliverOnMainQueue
-                
-                let context = strongSelf.context
-                var cancelImpl: (() -> Void)?
-                let progressSignal = Signal<Never, NoError> { subscriber in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                        cancelImpl?()
-                    }))
-                    self?.controller?.present(controller, in: .window(.root))
-                    return ActionDisposable { [weak controller] in
-                        Queue.mainQueue().async() {
-                            controller?.dismiss()
-                        }
-                    }
-                }
-                |> runOn(Queue.mainQueue())
-                |> delay(0.12, queue: Queue.mainQueue())
-                let progressDisposable = progressSignal.start()
-                
-                installSignal = installSignal
-                |> afterDisposed {
-                    Queue.mainQueue().async {
-                        progressDisposable.dispose()
-                    }
-                }
-                cancelImpl = {
-                    self?.installDisposable.set(nil)
-                }
-                    
-                strongSelf.installDisposable.set(installSignal.start(next: { info, items in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    var animateInAsReplacement = false
-                    if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                        for controller in navigationController.overlayControllers {
-                            if let controller = controller as? UndoOverlayController {
-                                controller.dismissWithCommitActionAndReplacementAnimation()
-                                animateInAsReplacement = true
-                            }
-                        }
-                    }
-                    
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    /*strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                        return true
-                    }))*/
-                }))*/
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
             } else {
-                let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
@@ -1268,22 +1117,22 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
         if !text.isEmpty {
-            let account = self.context.account
+            let context = self.context
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text.basicEmoji.0)
+                    signals = .single([context.engine.stickers.searchStickers(query: text.basicEmoji.0)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
-                    var signal = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
                     if !languageCode.lowercased().hasPrefix("en") {
                         signal = signal
                         |> mapToSignal { keywords in
                             return .single(keywords)
                             |> then(
-                                searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
+                                context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
                                 |> map { englishKeywords in
                                     return keywords + englishKeywords
                                 }
@@ -1296,7 +1145,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(searchStickers(account: self.context.account, query: emoji.basicEmoji.0)
+                            signals.append(context.engine.stickers.searchStickers(query: emoji.basicEmoji.0)
                             |> take(1)
                             |> map { (emoji, $0) })
                         }
@@ -1320,8 +1169,8 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 })
             }
             
-            let local = searchStickerSets(postbox: context.account.postbox, query: text)
-            let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
+            let local = context.engine.stickers.searchStickerSets(query: text)
+            let remote = context.engine.stickers.searchStickerSetsRemotely(query: text)
             |> delay(0.2, queue: Queue.mainQueue())
             let rawPacks = local
             |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in

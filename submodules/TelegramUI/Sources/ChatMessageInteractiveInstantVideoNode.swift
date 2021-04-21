@@ -39,7 +39,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     private var statusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
-    private var videoFrame: CGRect?
+    private(set) var videoFrame: CGRect?
     
     private var item: ChatMessageBubbleContentItem?
     private var automaticDownload: Bool?
@@ -830,6 +830,29 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }, false, true, isUnconsumed, nil)
         } else {
             return nil
+        }
+    }
+
+    func animateFromSnapshot(snapshotView: UIView, transition: ContainedViewLayoutTransition) {
+        guard let videoFrame = self.videoFrame else {
+            return
+        }
+
+        let scale = videoFrame.height / snapshotView.frame.height
+        snapshotView.transform = CGAffineTransform(scaleX: scale, y: scale)
+        snapshotView.center = CGPoint(x: videoFrame.midX, y: videoFrame.midY)
+
+        self.view.addSubview(snapshotView)
+
+        transition.updateAlpha(layer: snapshotView.layer, alpha: 0.0, completion: { [weak snapshotView] _ in
+            snapshotView?.removeFromSuperview()
+        })
+
+        transition.animateTransformScale(node: self, from: 1.0 / scale)
+
+        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
+        if let durationNode = self.durationNode {
+            durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
         }
     }
 }

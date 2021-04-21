@@ -17,6 +17,7 @@ import FileMediaResourceStatus
 import CheckNode
 import MusicAlbumArtResources
 import AudioBlob
+import ContextUI
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -38,6 +39,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
+    private(set) var statusContainerNode: ContextExtractedContentContainingNode?
     private var statusNode: SemanticStatusNode?
     private var playbackAudioLevelView: VoiceBlobView?
     private var streamingStatusNode: SemanticStatusNode?
@@ -129,6 +131,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         self.consumableContentNode = ASImageNode()
+
+        self.statusContainerNode = ContextExtractedContentContainingNode()
         
         super.init()
         
@@ -136,6 +140,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.fetchingTextNode)
         self.addSubnode(self.fetchingCompactTextNode)
+        if let statusContainerNode = self.statusContainerNode {
+            self.addSubnode(statusContainerNode)
+        }
     }
     
     deinit {
@@ -683,11 +690,20 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                                         
                             strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
-                            strongSelf.statusNode?.frame = progressFrame
+                            strongSelf.statusNode?.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
+
+                            strongSelf.statusContainerNode?.frame = progressFrame
+                            strongSelf.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
+                            strongSelf.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
+
                             strongSelf.playbackAudioLevelView?.frame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
+
+                            strongSelf.statusContainerNode?.frame = progressFrame
+                            strongSelf.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
+                            strongSelf.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
                             
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -937,8 +953,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
             self.statusNode = statusNode
-            statusNode.frame = progressFrame
-            self.addSubnode(statusNode)
+
+            self.statusContainerNode?.contentNode.insertSubnode(statusNode, at: 0)
+            self.statusContainerNode?.frame = progressFrame
+            self.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
+            self.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
+            statusNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
         } else if let statusNode = self.statusNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
         }

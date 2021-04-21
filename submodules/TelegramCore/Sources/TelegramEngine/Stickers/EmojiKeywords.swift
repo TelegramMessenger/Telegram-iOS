@@ -11,7 +11,7 @@ private enum SearchEmojiKeywordsIntermediateResult {
     case completed([EmojiKeywordItem])
 }
 
-public func searchEmojiKeywords(postbox: Postbox, inputLanguageCode: String, query: String, completeMatch: Bool) -> Signal<[EmojiKeywordItem], NoError> {
+func _internal_searchEmojiKeywords(postbox: Postbox, inputLanguageCode: String, query: String, completeMatch: Bool) -> Signal<[EmojiKeywordItem], NoError> {
     guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return .single([])
     }

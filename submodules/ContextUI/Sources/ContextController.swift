@@ -918,7 +918,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     intermediateCompletion()
                 })
                 contentParentNode.updateAbsoluteRect?(self.contentContainerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y + contentContainerOffset.y), self.bounds.size)
-                contentParentNode.applyAbsoluteOffset?(-contentContainerOffset.y, transitionCurve, transitionDuration)
+                contentParentNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: -contentContainerOffset.y), transitionCurve, transitionDuration)
                 
                 if let reactionContextNode = self.reactionContextNode {
                     reactionContextNode.animateOut(to: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size), animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)

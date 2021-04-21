@@ -2738,7 +2738,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> map(Optional.init)
             ))
             self.privacySettings.set(.single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
-            self.archivedPacks.set(.single(nil) |> then(archivedStickerPacks(account: context.account) |> map(Optional.init)))
+            self.archivedPacks.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
             self.hasPassport.set(.single(false) |> then(twoStepAuthData(context.account.network)
             |> map { value -> Bool in
                 return value.hasSecretValues
@@ -2839,7 +2839,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.preloadHistoryDisposable.set(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerId))
             
             self.preloadedSticker.set(.single(nil)
-            |> then(randomGreetingSticker(account: context.account)
+            |> then(context.engine.stickers.randomGreetingSticker()
             |> map { item in
                 return item?.file
             }))
@@ -3237,7 +3237,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             disposable = MetaDisposable()
             self.resolvePeerByNameDisposable = disposable
         }
-        var resolveSignal = resolvePeerByName(account: self.context.account, name: name, ageLimit: 10)
+        var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         
         var cancelImpl: (() -> Void)?
         let presentationData = self.presentationData
@@ -3301,7 +3301,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let account = self.context.account
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
-            resolveSignal = resolvePeerByName(account: self.context.account, name: peerName)
+            resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                 if let peerId = peerId {
                     return account.postbox.loadedPeerWithId(peerId)
@@ -4280,7 +4280,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let peer = peer as? TelegramUser, let _ = peer.botInfo {
                 strongSelf.activeActionDisposable.set(requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: block).start())
                 if !block {
-                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
                     if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id)))
                     }
@@ -4650,7 +4650,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             case .help:
                 text = "/help"
             }
-            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
+            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
             
             if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId)))
@@ -5032,7 +5032,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
-        let resource = LocalFileMediaResource(fileId: arc4random64())
+        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
         
@@ -5077,7 +5077,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
-        let photoResource = LocalFileMediaResource(fileId: arc4random64())
+        let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
         
@@ -5145,7 +5145,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                 resource = LocalFileMediaResource(fileId: liveUploadData.id)
                             } else {
-                                resource = LocalFileMediaResource(fileId: arc4random64())
+                                resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                             }
                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                             subscriber.putNext(resource)
@@ -5426,7 +5426,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.controller?.push(watchSettingsController(context: self.context))
             case .support:
                 let supportPeer = Promise<PeerId?>()
-                supportPeer.set(context.engine.peerNames.supportPeerId())
+                supportPeer.set(context.engine.peers.supportPeerId())
                 
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: { [weak self] in
@@ -5652,7 +5652,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                         
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                            return .forward(source: id, grouping: .auto, attributes: [])
+                            return .forward(source: id, grouping: .auto, attributes: [], correlationId: nil)
                         })
                         |> deliverOnMainQueue).start(next: { [weak self] messageIds in
                             if let strongSelf = self {

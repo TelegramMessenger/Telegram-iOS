@@ -168,7 +168,7 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = WebP.convert(fromWebP: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 let colorData = NSMutableData()
@@ -245,7 +245,7 @@ private func fetchCachedScaledImageRepresentation(resource: MediaResource, resou
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
 
                 let size: CGSize
@@ -318,7 +318,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 
                 let fullSizeImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil)
                 
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -352,7 +352,7 @@ private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, re
             return Signal({ subscriber in
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrame.path), options: [.mappedIfSafe]) {
                     if let image = UIImage(data: data) {
-                        let path = NSTemporaryDirectory() + "\(arc4random64())"
+                        let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                         let url = URL(fileURLWithPath: path)
                         
                         let size = representation.size
@@ -387,7 +387,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 45.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -413,7 +413,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
 private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            let path = NSTemporaryDirectory() + "\(arc4random64())"
+            let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
             let url = URL(fileURLWithPath: path)
             
             if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
@@ -477,7 +477,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                 data = unzippedData
             }
             
-            let path = NSTemporaryDirectory() + "\(arc4random64())"
+            let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
             let url = URL(fileURLWithPath: path)
             
             var colors: [UIColor] = []
@@ -619,7 +619,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 45.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -652,7 +652,7 @@ private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: M
         switch result {
             case let .artworkData(data):
                 if let image = UIImage(data: data) {
-                    let path = NSTemporaryDirectory() + "\(arc4random64())"
+                    let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                     let url = URL(fileURLWithPath: path)
                     
                     var size = image.size
@@ -694,7 +694,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         return .never()
     }
     return Signal({ subscriber in
-        let path = NSTemporaryDirectory() + "\(arc4random64())"
+        let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
         let url = URL(fileURLWithPath: path)
         
         let nsString = (resource.emoji as NSString)
@@ -803,7 +803,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
     |> mapToSignal { data in
         return Signal({ subscriber in
             if let data = data, let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 let size = CGSize(width: 160.0, height: 160.0)

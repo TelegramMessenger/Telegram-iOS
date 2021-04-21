@@ -18,7 +18,7 @@ public enum ResolvePeerByNameOptionRemote {
     case update
 }
 
-public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
+func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
     var normalizedName = name
     if normalizedName.hasPrefix("@") {
        normalizedName = String(normalizedName[name.index(after: name.startIndex)...])

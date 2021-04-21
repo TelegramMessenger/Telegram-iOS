@@ -62,6 +62,8 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
     
     private var maskView: UIImageView?
+
+    private var fixedMaskMode: Bool?
     
     var hasImage: Bool {
         return self.backgroundContent.contents != nil
@@ -94,7 +96,9 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         }
     }
     
-    func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, mediaBox: MediaBox, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode: Bool) {
+    func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, mediaBox: MediaBox, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode inputMaskMode: Bool) {
+        let maskMode = self.fixedMaskMode ?? inputMaskMode
+
         if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics {
             self.currentType = type
             self.theme = theme
@@ -140,19 +144,31 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         self.backgroundContent.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
     }
     
-    func offset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-        transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: 0.0, y: -value))
+        transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: -value.x, y: -value.y))
     }
     
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
         self.backgroundContent.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
     }
     
-    func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition) {
+    func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if let maskView = self.maskView {
-            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width + maskInset * 2.0, height: value.size.height + maskInset * 2.0)))
+            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
         }
-        transition.updateFrame(node: self, frame: value)
+        transition.updateFrame(node: self, frame: value, completion: { _ in
+            completion()
+        })
+    }
+
+    func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: ContainedViewLayoutTransition) {
+        if transition.isAnimated {
+            let previousFrame = self.frame
+            self.updateFrame(CGRect(origin: previousFrame.origin, size: sourceView.frame.size), transition: .immediate)
+            self.updateFrame(previousFrame, transition: transition)
+
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        }
     }
 }

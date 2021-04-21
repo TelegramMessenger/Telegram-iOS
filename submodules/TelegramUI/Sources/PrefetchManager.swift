@@ -52,7 +52,7 @@ private final class PrefetchManagerImpl {
             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
         }
         
-        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false), appConfiguration)
+        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, TelegramEngine(account: account).stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), appConfiguration)
         |> map { orderedPreloadMedia, stickerPack, appConfiguration -> [PrefetchMediaItem] in
             let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: account)
             let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }

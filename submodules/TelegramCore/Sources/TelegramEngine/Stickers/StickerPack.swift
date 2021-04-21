@@ -58,7 +58,7 @@ extension StickerPackCollectionInfo {
     }
 }
 
-public func stickerPacksAttachedToMedia(account: Account, media: AnyMediaReference) -> Signal<[StickerPackReference], NoError> {
+func _internal_stickerPacksAttachedToMedia(account: Account, media: AnyMediaReference) -> Signal<[StickerPackReference], NoError> {
     let inputMedia: Api.InputStickeredMedia
     let resourceReference: MediaResourceReference
     if let imageReference = media.concrete(TelegramMediaImage.self), let reference = imageReference.media.reference, case let .cloud(imageId, accessHash, fileReference) = reference, let representation = largestImageRepresentation(imageReference.media.representations) {

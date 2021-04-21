@@ -140,7 +140,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             self?.nextPressed()
         }
         
-        loadServerCountryCodes(accountManager: sharedContext.accountManager, network: account.network, completion: { [weak self] in
+        loadServerCountryCodes(accountManager: sharedContext.accountManager, engine: TelegramEngineUnauthorized(account: self.account), completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateCountryCode()
             }

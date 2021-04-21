@@ -32,7 +32,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                                     var globallyUniqueIds: [Int64] = []
                                     if let globallyUniqueId = message.globallyUniqueId {
                                         globallyUniqueIds.append(globallyUniqueId)
-                                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: globallyUniqueIds), state: state)
+                                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
                                         if updatedState != state {
                                             transaction.setPeerChatState(message.id.peerId, state: updatedState)
                                         }
@@ -75,7 +75,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                             }
                             
                             if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
-                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), state: state)
+                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: [globallyUniqueId]), state: state)
                                 if updatedState != state {
                                     transaction.setPeerChatState(messageId.peerId, state: updatedState)
                                 }
@@ -106,7 +106,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                             }
                             
                             if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
-                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: [globallyUniqueId]), state: state)
+                                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: [globallyUniqueId]), state: state)
                                 if updatedState != state {
                                     transaction.setPeerChatState(messageId.peerId, state: updatedState)
                                 }

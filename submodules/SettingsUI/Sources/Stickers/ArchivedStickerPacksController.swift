@@ -268,7 +268,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             namespace = .masks
     }
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
-    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: context.account, namespace: namespace) |> map(Optional.init)))
+    stickerPacks.set(.single(archived) |> then(context.engine.stickers.archivedStickerPacks(namespace: namespace) |> map(Optional.init)))
     
     actionsDisposable.add(stickerPacks.get().start(next: { packs in
         updatedPacks(packs)
@@ -302,17 +302,16 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         if !add {
             return
         }
-        let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+        let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
             switch result {
             case let .result(info, items, installed):
                 if installed {
                     return .complete()
                 } else {
-                    return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
+                    return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                         |> ignoreValues
                         |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                            return .complete()
                         }
                         |> then(.single((info, items)))
                 }
@@ -336,7 +335,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 }
             }
             
-            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                 return true
             }), nil)
             
@@ -390,7 +389,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                     
                     return .complete()
             }
-            removePackDisposables.set((removeArchivedStickerPack(account: context.account, info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
+            removePackDisposables.set((context.engine.stickers.removeArchivedStickerPack(info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
                 updateState { state in
                     var removingPackIds = state.removingPackIds
                     removingPackIds.remove(info.id)
