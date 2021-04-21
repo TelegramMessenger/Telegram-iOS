@@ -406,6 +406,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 let immediateThumbnailData: Data?
                 var id: Int64
                 switch item {
+                case .custom:
+                    representations = []
+                    videoRepresentations = []
+                    immediateThumbnailData = nil
+                    id = 0
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -696,6 +701,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             let immediateThumbnailData: Data?
             var id: Int64
             switch item {
+                case .custom:
+                    representations = []
+                    videoRepresentations = []
+                    immediateThumbnailData = nil
+                    id = 0
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
