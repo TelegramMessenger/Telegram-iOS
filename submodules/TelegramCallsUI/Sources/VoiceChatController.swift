@@ -664,7 +664,11 @@ public final class VoiceChatController: ViewController {
                             if case .list = peerEntry.style {
                                 interaction.peerContextAction(peerEntry, node, nil)
                             } else {
-                                interaction.pinPeer(peer.id, peerEntry.ssrc)
+                                if peerEntry.pinned {
+                                    interaction.peerContextAction(peerEntry, node, nil)
+                                } else {
+                                    interaction.pinPeer(peer.id, peerEntry.ssrc)
+                                }
                             }
                         }, contextAction: peerEntry.style == .list ? { node, gesture in
                             interaction.peerContextAction(peerEntry, node, gesture)
@@ -703,6 +707,7 @@ public final class VoiceChatController: ViewController {
         private let mainVideoClippingNode: ASDisplayNode
         private var mainVideoContainerNode: MainVideoContainerNode?
         private var mainParticipantNode: VoiceChatParticipantItemNode
+        private var minimizeButton: HighlightTrackingButtonNode
         private let listNode: ListView
         private let tileListNode: ListView
         private let topPanelNode: ASDisplayNode
@@ -869,7 +874,10 @@ public final class VoiceChatController: ViewController {
             }
             
             self.mainParticipantNode = VoiceChatParticipantItemNode()
+            self.minimizeButton = HighlightTrackingButtonNode()
+            self.minimizeButton.alpha = 0.65
             
+            self.minimizeButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Minimize"), color: .white), for: .normal)
             self.listNode = ListView()
             self.listNode.alpha = self.isScheduling ? 0.0 : 1.0
             self.listNode.isUserInteractionEnabled = !self.isScheduling
@@ -1665,6 +1673,7 @@ public final class VoiceChatController: ViewController {
                 self.contentContainer.addSubnode(self.mainVideoClippingNode)
                 self.mainVideoClippingNode.addSubnode(mainVideoContainer)
                 self.mainVideoClippingNode.addSubnode(self.mainParticipantNode)
+                self.mainVideoClippingNode.addSubnode(self.minimizeButton)
             }
             self.contentContainer.addSubnode(self.listNode)
             self.contentContainer.addSubnode(self.topPanelNode)
@@ -1676,6 +1685,8 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.scheduleTextNode)
             self.contentContainer.addSubnode(self.tileListNode)
             self.addSubnode(self.transitionContainerNode)
+            
+            self.minimizeButton.addTarget(self, action: #selector(self.minimizePressed), forControlEvents: .touchUpInside)
             
             let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
             |> mapToSignal { ids -> Signal<[Peer], NoError> in
@@ -2162,6 +2173,18 @@ public final class VoiceChatController: ViewController {
                     strongSelf.dismissScheduled()
                 }
             }
+            
+            self.minimizeButton.highligthedChanged = { [weak self] highlighted in
+                if let strongSelf = self {
+                    if highlighted {
+                        strongSelf.minimizeButton.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.minimizeButton.alpha = 0.26
+                    } else {
+                        strongSelf.minimizeButton.alpha = 0.65
+                        strongSelf.minimizeButton.layer.animateAlpha(from: 0.26, to: 0.65, duration: 0.2)
+                    }
+                }
+            }
         }
         
         deinit {
@@ -2181,6 +2204,11 @@ public final class VoiceChatController: ViewController {
             self.voiceSourcesDisposable.dispose()
             self.updateAvatarDisposable.dispose()
             self.ignoreConnectingTimer?.invalidate()
+        }
+        
+        @objc private func minimizePressed() {
+            self.displayMode = .fullscreen(controlsHidden: true)
+            self.mainVideoContainerNode?.tapped?()
         }
 
         private func openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -3285,27 +3313,25 @@ public final class VoiceChatController: ViewController {
                 
                 let offset: CGFloat
                 var mainParticipantNodeWidth = videoClippingFrame.width
-                if case let .fullscreen(controlsHidden) = effectiveDisplayMode, !isLandscape {
-                    offset = controlsHidden ? 66.0 : 140.0
-                    mainParticipantNodeWidth -= 50.0
-                } else {
+                if case let .fullscreen(controlsHidden) = effectiveDisplayMode {
                     if isLandscape {
-                        mainParticipantNodeWidth -= 50.0
                         offset = 56.0 + 6.0 + layout.intrinsicInsets.bottom
+                        mainParticipantNodeWidth -= controlsHidden ? 66.0 : 140.0
                     } else {
-                        offset = 56.0 + 6.0
+                        offset = controlsHidden ? 66.0 : 140.0
+                        mainParticipantNodeWidth -= 50.0
                     }
+                } else {
+                    offset = 56.0 + 6.0
                 }
-                
-                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: mainParticipantNodeWidth, height: 56.0))
-                
+                                
                 if let entry = self.pinnedEntry, let interaction = self.itemInteraction {
                     self.mainParticipantNode.isHidden = false
                     let item = entry.item(context: self.context, presentationData: self.presentationData, interaction: interaction, transparent: true)
                     let itemNode = self.mainParticipantNode
                     item.updateNode(async: { $0() }, node: {
                         return itemNode
-                    }, params: ListViewItemLayoutParams(width: mainParticipantNodeWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .Crossfade, completion: { (layout, apply) in
+                    }, params: ListViewItemLayoutParams(width: mainParticipantNodeWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
                         itemNode.contentSize = layout.contentSize
                         itemNode.insets = layout.insets
                         itemNode.isUserInteractionEnabled = false
@@ -3315,6 +3341,9 @@ public final class VoiceChatController: ViewController {
                 } else {
                     self.mainParticipantNode.isHidden = true
                 }
+                
+                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: mainParticipantNodeWidth, height: 56.0))
+                transition.updateFrame(node: self.minimizeButton, frame: CGRect(x: mainParticipantNodeWidth + 1.0, y: videoClippingFrame.height - offset + 7.0, width: 44.0, height: 44.0))
                 
                 transition.updateFrame(node: self.mainVideoClippingNode, frame: videoClippingFrame)
                 transition.updateFrame(node: mainVideoContainer, frame: videoContainerFrame, completion: { [weak self] _ in

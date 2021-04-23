@@ -164,13 +164,17 @@ private let tileSize = CGSize(width: 84.0, height: 84.0)
 private let backgroundCornerRadius: CGFloat = 14.0
 private let avatarSize: CGFloat = 40.0
 
+private let accentColor: UIColor = UIColor(rgb: 0x007aff)
+private let constructiveColor: UIColor = UIColor(rgb: 0x34c759)
+private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
+
 private let borderLineWidth: CGFloat = 2.0
 private let borderImage = generateImage(CGSize(width: tileSize.width, height: tileSize.height), rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
     
     context.setLineWidth(borderLineWidth)
-    context.setStrokeColor(UIColor(rgb: 0x007aff).cgColor)
+    context.setStrokeColor(accentColor.cgColor)
     
     context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: (borderLineWidth - UIScreenPixel) / 2.0, dy: (borderLineWidth - UIScreenPixel) / 2.0), cornerRadius: backgroundCornerRadius - UIScreenPixel).cgPath)
     context.strokePath()
@@ -841,6 +845,23 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             if item.transparent && item.style == .list {
                 titleFont = Font.semibold(17.0)
                 titleColor = UIColor(rgb: 0xffffff, alpha: 0.65)
+            } else if case .tile = item.style {
+                switch item.text {
+                    case let .text(_, textColor):
+                        switch textColor {
+                            case .generic:
+                                titleColor = item.presentationData.theme.list.itemPrimaryTextColor
+                            case .accent:
+                                titleColor = item.presentationData.theme.list.itemAccentColor
+                            case .constructive:
+                                titleColor = constructiveColor
+                            case .destructive:
+                                titleColor = destructiveColor
+                        }
+                    default:
+                        break
+                }
+                
             }
             let currentBoldFont: UIFont = titleFont
             
@@ -862,14 +883,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             }
                             titleAttributedString = string
                         case .tile:
-                            let textColor: UIColor
-                            switch item.icon {
-                                case .wantsToSpeak:
-                                    textColor = item.presentationData.theme.list.itemAccentColor
-                                default:
-                                    textColor = titleColor
-                            }
-                            titleAttributedString = NSAttributedString(string: firstName, font: titleFont, textColor: textColor)
+                            titleAttributedString = NSAttributedString(string: firstName, font: titleFont, textColor: titleColor)
                     }
                 } else if let firstName = user.firstName, !firstName.isEmpty {
                     titleAttributedString = NSAttributedString(string: firstName, font: currentBoldFont, textColor: titleColor)
@@ -914,9 +928,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         textColorValue = item.presentationData.theme.list.itemAccentColor
                         wavesColor = textColorValue
                     case .constructive:
-                        textColorValue = UIColor(rgb: 0x34c759)
+                        textColorValue = constructiveColor
                     case .destructive:
-                        textColorValue = UIColor(rgb: 0xff3b30)
+                        textColorValue = destructiveColor
                         wavesColor = textColorValue
                     }
                     if item.transparent && item.style == .list {
@@ -935,9 +949,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 case .accent:
                     textColorValue = item.presentationData.theme.list.itemAccentColor
                 case .constructive:
-                    textColorValue = UIColor(rgb: 0x34c759)
+                    textColorValue = constructiveColor
                 case .destructive:
-                    textColorValue = UIColor(rgb: 0xff3b30)
+                    textColorValue = destructiveColor
                 }
                 expandedStatusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             } else {
@@ -1167,10 +1181,14 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     if updatedTitle, let snapshotView = strongSelf.titleNode.view.snapshotContentTree() {
                         strongSelf.titleNode.view.superview?.insertSubview(snapshotView, aboveSubview: strongSelf.titleNode.view)
 
+                        if item.transparent {
+                            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                            strongSelf.titleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.2, additive: true)
+                        }
+
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })
-                        
                         strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     

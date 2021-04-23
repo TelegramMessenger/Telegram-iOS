@@ -678,7 +678,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyAnimationNode.alpha = alpha
         self.emptyAnimationNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2, completion: { [weak self] _ in
             if let strongSelf = self {
-                if !previousAlpha.isZero && alpha.isZero {
+                if !previousAlpha.isZero && strongSelf.emptyAnimationNode.alpha.isZero {
                     strongSelf.emptyAnimationNode.visibility = false
                 }
             }
