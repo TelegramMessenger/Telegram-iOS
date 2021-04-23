@@ -1886,6 +1886,64 @@ public final class GroupCallParticipantsContext {
             }
         }))
     }
+
+    public func updateVideoState(peerId: PeerId, isVideoMuted: Bool) {
+        let disposable = MetaDisposable()
+
+        let account = self.account
+        let id = self.id
+        let accessHash = self.accessHash
+
+        let signal: Signal<Api.Updates?, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<Api.Updates?, NoError> in
+            guard let inputPeer = inputPeer else {
+                return .single(nil)
+            }
+            var flags: Int32 = 0
+            var videoMuted: Api.Bool?
+
+            videoMuted = isVideoMuted ? .boolTrue : .boolFalse
+            flags |= 1 << 3
+
+            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: nil, volume: nil, raiseHand: nil, videoMuted: videoMuted))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                return .single(nil)
+            }
+        }
+
+        disposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] updates in
+            guard let strongSelf = self else {
+                return
+            }
+
+            if let updates = updates {
+                var stateUpdates: [GroupCallParticipantsContext.Update] = []
+
+                loop: for update in updates.allUpdates {
+                    switch update {
+                    case let .updateGroupCallParticipants(call, participants, version):
+                        switch call {
+                        case let .inputGroupCall(updateCallId, _):
+                            if updateCallId != id {
+                                continue loop
+                            }
+                        }
+                        stateUpdates.append(.state(update: GroupCallParticipantsContext.Update.StateUpdate(participants: participants, version: version, removePendingMuteStates: [peerId])))
+                    default:
+                        break
+                    }
+                }
+
+                strongSelf.addUpdates(updates: stateUpdates)
+
+                strongSelf.account.stateManager.addUpdates(updates)
+            }
+        }))
+    }
     
     public func raiseHand() {
         self.updateMuteState(peerId: self.myPeerId, muteState: nil, isVideoMuted: nil, volume: nil, raiseHand: true)
