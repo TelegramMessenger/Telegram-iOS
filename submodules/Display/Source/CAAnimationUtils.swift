@@ -72,7 +72,7 @@ public extension CALayer {
             animation.isAdditive = additive
             
             if !delay.isZero {
-                animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
+                animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
             
@@ -102,7 +102,7 @@ public extension CALayer {
             }
             
             if !delay.isZero {
-                animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
+                animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
             
@@ -278,7 +278,7 @@ public extension CALayer {
         self.animateKeyframes(values: values.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position")
     }
     
-    func animateFrame(from: CGRect, to: CGRect, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateFrame(from: CGRect, to: CGRect, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to && !force {
             if let completion = completion {
                 completion(true)

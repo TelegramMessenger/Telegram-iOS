@@ -230,14 +230,14 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
 
-    func animateFromInputPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, localRect: CGRect, transition: ContainedViewLayoutTransition) -> CGPoint {
+    func animateFromInputPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, localRect: CGRect, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) -> CGPoint {
         if let titleNode = self.titleNode {
             let offset = CGPoint(
                 x: localRect.minX + sourceReplyPanel.titleNode.frame.minX - titleNode.frame.minX,
                 y: localRect.minY + sourceReplyPanel.titleNode.frame.midY - titleNode.frame.midY
             )
 
-            transition.animatePositionAdditive(node: titleNode, offset: offset)
+            horizontalTransition.animatePositionAdditive(node: titleNode, offset: offset)
 
             self.addSubnode(sourceReplyPanel.titleNode)
 
@@ -247,7 +247,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             })
 
             sourceReplyPanel.titleNode.frame = sourceReplyPanel.titleNode.frame.offsetBy(dx: localRect.minX - offset.x, dy: localRect.minY - offset.y)
-            transition.animatePositionAdditive(node: sourceReplyPanel.titleNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
+            horizontalTransition.animatePositionAdditive(node: sourceReplyPanel.titleNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
         }
 
         if let textNode = self.textNode {
@@ -256,7 +256,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 y: localRect.minY + sourceReplyPanel.textNode.frame.midY - textNode.frame.midY
             )
 
-            transition.animatePositionAdditive(node: textNode, offset: offset)
+            horizontalTransition.animatePositionAdditive(node: textNode, offset: offset)
 
             self.addSubnode(sourceReplyPanel.textNode)
 
@@ -266,7 +266,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             })
 
             sourceReplyPanel.textNode.frame = sourceReplyPanel.textNode.frame.offsetBy(dx: localRect.minX - offset.x, dy: localRect.minY - offset.y)
-            transition.animatePositionAdditive(node: sourceReplyPanel.textNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
+            horizontalTransition.animatePositionAdditive(node: sourceReplyPanel.textNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
         }
 
         if let imageNode = self.imageNode {
@@ -275,7 +275,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 y: localRect.minY + sourceReplyPanel.imageNode.frame.midY - imageNode.frame.midY
             )
 
-            transition.animatePositionAdditive(node: imageNode, offset: offset)
+            horizontalTransition.animatePositionAdditive(node: imageNode, offset: offset)
 
             self.addSubnode(sourceReplyPanel.imageNode)
 
@@ -285,7 +285,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             })
 
             sourceReplyPanel.imageNode.frame = sourceReplyPanel.imageNode.frame.offsetBy(dx: localRect.minX - offset.x, dy: localRect.minY - offset.y)
-            transition.animatePositionAdditive(node: sourceReplyPanel.imageNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
+            horizontalTransition.animatePositionAdditive(node: sourceReplyPanel.imageNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
         }
 
         do {
@@ -296,7 +296,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 y: localRect.minY + sourceReplyPanel.lineNode.frame.minY - lineNode.frame.minY
             )
 
-            transition.animatePositionAdditive(node: lineNode, offset: offset)
+            horizontalTransition.animatePositionAdditive(node: lineNode, offset: offset)
 
             self.addSubnode(sourceReplyPanel.lineNode)
 
@@ -306,7 +306,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             })
 
             sourceReplyPanel.lineNode.frame = sourceReplyPanel.lineNode.frame.offsetBy(dx: localRect.minX - offset.x, dy: localRect.minY - offset.y)
-            transition.animatePositionAdditive(node: sourceReplyPanel.lineNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
+            horizontalTransition.animatePositionAdditive(node: sourceReplyPanel.lineNode, offset: CGPoint(x: offset.x, y: offset.y), removeOnCompletion: false)
 
             return offset
         }

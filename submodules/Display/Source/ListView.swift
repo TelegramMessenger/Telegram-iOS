@@ -214,6 +214,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)?
+    public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
     
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
@@ -2129,6 +2130,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         offsetHeight = 0.0
                         
                         nextNode.updateFrame(nextNode.frame.offsetBy(dx: 0.0, dy: nextHeight), within: self.visibleSize)
+                        self.didScrollWithOffset?(nextHeight, .immediate, nextNode)
                         
                         nextNode.apparentHeight = 0.0
                         
@@ -2238,6 +2240,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y -= offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2249,6 +2252,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y += offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(-offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2674,7 +2678,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             }
                         }
                         
-                        self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
+                        //self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
                     }
                     
                     for itemNode in self.itemNodes {
@@ -2761,8 +2765,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         updateSizeAndInsetsTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                     }
                 }
-                
-                self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+
+                if !offsetFix.isZero {
+                    //self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+                }
                 
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
@@ -2773,7 +2779,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
                     offsetFix += snappedTopInset
                     
-                    self.didScrollWithOffset?(-offsetFix, .immediate, nil)
+                    //self.didScrollWithOffset?(-snappedTopInset, .immediate, nil)
                     
                     for itemNode in self.itemNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
@@ -2847,10 +2853,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         self?.updateItemNodesVisibilities(onlyPositive: false)
                     }
                     self.layer.add(animation, forKey: nil)
-                    for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
+                    if !completeOffset.isZero {
+                        for itemNode in self.itemNodes {
+                            itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
+                        }
+                        self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                     }
-                    //self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size
@@ -2888,8 +2896,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 springAnimation.isAdditive = true
                 self.layer.add(springAnimation, forKey: nil)
-                for itemNode in self.itemNodes {
-                    itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: .spring, duration: duration)
+
+                if !completeOffset.isZero {
+                    for itemNode in self.itemNodes {
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: .spring, duration: duration)
+                    }
+                    self.didScrollWithOffset?(-completeOffset, .animated(duration: duration, curve: .spring), nil)
                 }
             } else {
                 if let snapshotView = snapshotView {
@@ -3026,7 +3038,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
                 
                 if let offset = offset, !offset.isZero {
-                    self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
+                    //self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
                     let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
                     for itemNode in temporaryPreviousNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)
@@ -3173,7 +3185,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for itemNode in temporaryPreviousNodes {
                         itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
-                    self.didScrollWithOffset?(offset, .animated(duration: animationDuration, curve: animationCurve), nil)
+                    self.didScrollWithOffset?(-offset, .animated(duration: animationDuration, curve: animationCurve), nil)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
                     }

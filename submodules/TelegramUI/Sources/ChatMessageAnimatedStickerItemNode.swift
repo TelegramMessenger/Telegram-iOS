@@ -1885,7 +1885,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
-            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, horizontalTransition: transition, verticalTransition: transition)
             if let replyBackgroundNode = self.replyBackgroundNode {
                 transition.animatePositionAdditive(node: replyBackgroundNode, offset: offset)
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)

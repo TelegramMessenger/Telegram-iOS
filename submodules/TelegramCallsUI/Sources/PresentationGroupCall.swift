@@ -365,6 +365,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var reconnectingAsPeer: Peer?
     
     public private(set) var isVideo: Bool
+    private let isVideoEnabled: Bool
     
     private var temporaryJoinTimestamp: Int32
     private var temporaryActivityTimestamp: Double?
@@ -591,9 +592,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
 
-        if accountContext.sharedContext.immediateExperimentalUISettings.demoVideoChats {
-            self.videoCapturer = OngoingCallVideoCapturer(keepLandscape: false)
-        }
+        self.isVideoEnabled = accountContext.sharedContext.immediateExperimentalUISettings.demoVideoChats
         self.isVideo = self.videoCapturer != nil
         
         var didReceiveAudioOutputs = false
@@ -1307,7 +1306,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideo, enableNoiseSuppression: enableNoiseSuppression)
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideoEnabled, enableNoiseSuppression: enableNoiseSuppression)
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in
@@ -2327,6 +2326,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isVideo = true
         if let videoCapturer = self.videoCapturer {
             self.callContext?.requestVideo(videoCapturer)
+
+            self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: false)
         }
     }
     
@@ -2335,6 +2336,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if let _ = self.videoCapturer {
             self.videoCapturer = nil
             self.callContext?.disableVideo()
+
+            self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: true)
         }
     }
     

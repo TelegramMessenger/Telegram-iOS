@@ -654,32 +654,34 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
 
-    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
         guard let item = self.item else {
             return
         }
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
+        let heightDifference = self.backgroundNode.frame.height - textInput.backgroundView.frame.height
 
-        textInput.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: textInput.backgroundView.bounds.size)
+        horizontalTransition.animateFrame(node: self.clippingNode, from: CGRect(origin: CGPoint(x: self.clippingNode.frame.minX, y: textInput.backgroundView.frame.minY), size: textInput.backgroundView.frame.size))
+        horizontalTransition.animateOffsetAdditive(layer: self.clippingNode.layer, offset: textInput.backgroundView.frame.minY - self.clippingNode.frame.minY)
 
-        transition.animateFrame(node: self.clippingNode, from: CGRect(origin: self.clippingNode.frame.origin, size: textInput.backgroundView.frame.size))
-
-        self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, mediaBox: item.context.account.postbox.mediaBox, transition: transition)
-        self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
+        self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, mediaBox: item.context.account.postbox.mediaBox, transition: horizontalTransition)
+        self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: horizontalTransition)
 
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
                 let localSourceContentFrame = self.mainContextSourceNode.contentNode.view.convert(textInput.contentView.frame.offsetBy(dx: self.mainContextSourceNode.contentRect.minX, dy: self.mainContextSourceNode.contentRect.minY), to: contentNode.view)
                 textInput.contentView.frame = localSourceContentFrame
-                contentNode.animateFrom(sourceView: textInput.contentView, widthDifference: widthDifference, transition: transition)
+                contentNode.animateFrom(sourceView: textInput.contentView, widthDifference: widthDifference, transition: horizontalTransition)
+            } else if let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+                horizontalTransition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: 0.0, y: heightDifference))
             }
         }
     }
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
-            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, horizontalTransition: horizontalTransition, verticalTransition: verticalTransition)
         }
     }
 

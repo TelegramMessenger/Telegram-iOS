@@ -4087,6 +4087,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+
+            //print("didScrollWithOffset offset: \(offset), itemNode: \(String(describing: itemNode))")
             
             if offset > 0.0 {
                 if var scrolledToMessageIdValue = strongSelf.scrolledToMessageIdValue {
@@ -4108,6 +4110,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
 
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+        }
+
+        self.chatDisplayNode.historyNode.addContentOffset = { [weak self] offset, itemNode in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatDisplayNode.messageTransitionNode.addContentOffset(offset: offset, itemNode: itemNode)
         }
         
         if case .pinnedMessages = self.presentationInterfaceState.subject {

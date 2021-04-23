@@ -433,7 +433,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             if let outgoingStatus = outgoingStatus {
                 switch outgoingStatus {
                     case .Sending:
-                        statusWidth = 13.0
+                        statusWidth = floor(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
                         
                         if checkReadNode == nil {
                             checkReadNode = ASImageNode()
