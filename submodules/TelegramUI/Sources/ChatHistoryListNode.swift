@@ -1588,7 +1588,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public func scrollToEndOfHistory() {
         self.beganDragging?()
         switch self.visibleContentOffset() {
-            case .known(0.0):
+            case let .known(value) where value <= CGFloat.ulpOfOne:
                 break
             default:
                 let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true, highlight: false), id: self.takeNextHistoryLocationId())

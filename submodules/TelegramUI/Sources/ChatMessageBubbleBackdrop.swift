@@ -165,7 +165,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: ContainedViewLayoutTransition) {
         if transition.isAnimated {
             let previousFrame = self.frame
-            self.updateFrame(CGRect(origin: previousFrame.origin, size: sourceView.frame.size), transition: .immediate)
+            self.updateFrame(CGRect(origin: CGPoint(x: previousFrame.minX, y: sourceView.frame.minY), size: sourceView.frame.size), transition: .immediate)
             self.updateFrame(previousFrame, transition: transition)
 
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)

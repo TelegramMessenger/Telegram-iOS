@@ -505,9 +505,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBarSeparatorNode = ASDisplayNode()
         self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
 
-        self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode)
+        var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
+        self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode, getContentAreaInScreenSpace: {
+            return getContentAreaInScreenSpaceImpl?() ?? CGRect()
+        })
         
         super.init()
+
+        getContentAreaInScreenSpaceImpl = { [weak self] in
+            guard let strongSelf = self else {
+                return CGRect()
+            }
+
+            return strongSelf.view.convert(strongSelf.frameForVisibleArea(), to: nil)
+        }
         
         self.controller?.presentationContext.topLevelSubview = { [weak self] in
             guard let strongSelf = self else {
@@ -787,6 +798,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.historyNode.frame.isEmpty {
             previousListBottomInset = self.historyNode.insets.top
         }
+
+        self.messageTransitionNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         self.scheduledLayoutTransitionRequest = nil
         if case .overlay = self.chatPresentationInterfaceState.mode {
@@ -1880,9 +1893,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.updatePlainInputSeparator(transition: transition)
 
-        let listBottomInset = self.historyNode.insets.bottom
+        let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
-            self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
+            //self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
         }
 
         self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputContextPanelsFrame: inputContextPanelsFrame, inputContextPanelsOverMainPanelFrame: inputContextPanelsOverMainPanelFrame, inputNodeHeight: inputNodeHeightAndOverflow?.0, inputNodeAdditionalHeight: inputNodeHeightAndOverflow?.1, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
@@ -2900,7 +2913,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     var shouldAnimateMessageTransition: Bool {
         switch self.historyNode.visibleContentOffset() {
-        case .known(0.0):
+        case let .known(value) where value < 20.0:
             return true
         default:
             return false
