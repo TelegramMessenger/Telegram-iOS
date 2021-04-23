@@ -765,6 +765,7 @@ public final class VoiceChatController: ViewController {
         
         private var currentEntries: [ListEntry] = []
         private var currentTileEntries: [ListEntry] = []
+        private var pinnedEntry: ListEntry?
         
         private var peerViewDisposable: Disposable?
         private let leaveDisposable = MetaDisposable()
@@ -3149,6 +3150,12 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func cameraPressed() {
+            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: {
+                
+            })
+            self.controller?.present(controller, in: .window(.root))
+            
+            return
             if self.call.isVideo {
                 self.call.disableVideo()
             } else {
@@ -3277,16 +3284,37 @@ public final class VoiceChatController: ViewController {
                 transition.updateFrame(node: self.transitionContainerNode, frame: CGRect(x: sideInset, y: topEdgeY, width: layout.size.width - sideInset * 2.0, height: max(0.0, bottomEdgeY - topEdgeY)))
                 
                 let offset: CGFloat
+                var mainParticipantNodeWidth = videoClippingFrame.width
                 if case let .fullscreen(controlsHidden) = effectiveDisplayMode, !isLandscape {
                     offset = controlsHidden ? 66.0 : 140.0
+                    mainParticipantNodeWidth -= 50.0
                 } else {
                     if isLandscape {
+                        mainParticipantNodeWidth -= 50.0
                         offset = 56.0 + 6.0 + layout.intrinsicInsets.bottom
                     } else {
                         offset = 56.0 + 6.0
                     }
                 }
-                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: videoClippingFrame.width - videoInset * 2.0, height: 56.0))
+                
+                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: mainParticipantNodeWidth, height: 56.0))
+                
+                if let entry = self.pinnedEntry, let interaction = self.itemInteraction {
+                    self.mainParticipantNode.isHidden = false
+                    let item = entry.item(context: self.context, presentationData: self.presentationData, interaction: interaction, transparent: true)
+                    let itemNode = self.mainParticipantNode
+                    item.updateNode(async: { $0() }, node: {
+                        return itemNode
+                    }, params: ListViewItemLayoutParams(width: mainParticipantNodeWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .Crossfade, completion: { (layout, apply) in
+                        itemNode.contentSize = layout.contentSize
+                        itemNode.insets = layout.insets
+                        itemNode.isUserInteractionEnabled = false
+                        
+                        apply(ListViewItemApply(isOnScreen: true))
+                    })
+                } else {
+                    self.mainParticipantNode.isHidden = true
+                }
                 
                 transition.updateFrame(node: self.mainVideoClippingNode, frame: videoClippingFrame)
                 transition.updateFrame(node: mainVideoContainer, frame: videoContainerFrame, completion: { [weak self] _ in
@@ -3611,6 +3639,7 @@ public final class VoiceChatController: ViewController {
                 if !self.isFullscreen {
                     self.isExpanded = true
                     self.updateIsFullscreen(true)
+                    self.tileListNode.isHidden = false
                 }
                 if case .fullscreen = effectiveDisplayMode {
                 } else {
@@ -3699,27 +3728,30 @@ public final class VoiceChatController: ViewController {
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
+            let tileListWidth: CGFloat
             let tileListHeight: CGFloat = 84.0
-            self.tileListNode.bounds = CGRect(x: 0.0, y: 0.0, width: tileListHeight, height: layout.size.width - layout.safeInsets.left - layout.safeInsets.right)
-            
             let tileListPosition: CGPoint
             let tileListTransform: CATransform3D
+            let tileListInset: CGFloat = 16.0
             let tileListUpdateSizeAndInsets: ListViewUpdateSizeAndInsets
             if isLandscape {
+                tileListWidth = layout.size.height
                 tileListPosition =  CGPoint(
                     x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - tileListHeight / 2.0,
                     y: layout.size.height / 2.0
                 )
                 tileListTransform = CATransform3DIdentity
-                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.height), insets: UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0), duration: duration, curve: curve)
+                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.height), insets: UIEdgeInsets(top: tileListInset, left: 0.0, bottom: tileListInset, right: 0.0), duration: duration, curve: curve)
             } else {
+                tileListWidth = layout.size.width
                 tileListPosition = CGPoint(
                     x: layout.safeInsets.left + layout.size.width / 2.0,
                     y: layout.size.height - min(bottomPanelHeight, fullscreenBottomAreaHeight + layout.intrinsicInsets.bottom) - tileListHeight / 2.0
                 )
                 tileListTransform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
-                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.width), insets: UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0), duration: duration, curve: curve)
+                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.width), insets: UIEdgeInsets(top: tileListInset + layout.safeInsets.left, left: 0.0, bottom: tileListInset + layout.safeInsets.left, right: 0.0), duration: duration, curve: curve)
             }
+            self.tileListNode.bounds = CGRect(x: 0.0, y: 0.0, width: tileListHeight, height: tileListWidth)
             transition.updatePosition(node: self.tileListNode, position: tileListPosition)
             self.tileListNode.transform = tileListTransform
             self.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: tileListUpdateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -4291,31 +4323,13 @@ public final class VoiceChatController: ViewController {
                 )))
                 index += 1
             }
-            
+                        
             guard self.didSetDataReady else {
                 return
             }
             
-            if let entry = pinnedEntry, let interaction = self.itemInteraction {
-                self.mainParticipantNode.isHidden = false
-                let item = entry.item(context: self.context, presentationData: self.presentationData, interaction: interaction, transparent: true)
-                let itemNode = self.mainParticipantNode
-                item.updateNode(async: { $0() }, node: {
-                    return itemNode
-                }, params: ListViewItemLayoutParams(width: self.bounds.width, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .Crossfade, completion: { (layout, apply) in
-//                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: width, height: layout.size.height))
-//
-                    itemNode.contentSize = layout.contentSize
-                    itemNode.insets = layout.insets
-//                    itemNode.frame = nodeFrame
-                    itemNode.isUserInteractionEnabled = false
-                    
-                    apply(ListViewItemApply(isOnScreen: true))
-                })
-            } else {
-                self.mainParticipantNode.isHidden = true
-            }
-          
+            self.pinnedEntry = pinnedEntry
+            
             let previousEntries = self.currentEntries
             let previousTileEntries = self.currentTileEntries
             self.currentEntries = entries
