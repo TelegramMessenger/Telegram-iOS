@@ -1,10 +1,10 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "CallListUI",
-    module_name = "CallListUI",
+    name = "ImportStickerPackUI",
+    module_name = "ImportStickerPackUI",
     srcs = glob([
-        "Sources/**/*.swift",
+		"Sources/**/*.swift",
     ]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -14,20 +14,20 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
-        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
-        "//submodules/ItemListUI:ItemListUI",
-        "//submodules/AvatarNode:AvatarNode",
-        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ShareController:ShareController",
+	"//submodules/ItemListUI:ItemListUI",
+        "//submodules/StickerResources:StickerResources",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
-        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/TextFormat:TextFormat",
         "//submodules/MergeLists:MergeLists",
-        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
-        "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
-        "//submodules/ContextUI:ContextUI",
-        "//submodules/TelegramBaseController:TelegramBaseController",
+        "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

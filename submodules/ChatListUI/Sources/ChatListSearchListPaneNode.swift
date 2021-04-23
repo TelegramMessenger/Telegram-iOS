@@ -689,7 +689,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let emptyResultsTitleNode: ImmediateTextNode
     private let emptyResultsTextNode: ImmediateTextNode
     private let emptyResultsAnimationNode: AnimatedStickerNode
-    private var animationSize: CGSize = CGSize()
+    private var emptyResultsAnimationSize: CGSize = CGSize()
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
     
@@ -792,8 +792,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         super.init()
                 
         if let path = getAppBundle().path(forResource: "ChatListNoResults", ofType: "tgs") {
-            self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            self.animationSize = CGSize(width: 124.0, height: 124.0)
+            self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.emptyResultsAnimationSize = CGSize(width: 148.0, height: 148.0)
         }
         
         self.addSubnode(self.recentListNode)
@@ -1935,21 +1935,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
-        let emptyAnimationHeight = self.animationSize.height
+        let emptyAnimationHeight = self.emptyResultsAnimationSize.height
         let emptyAnimationSpacing: CGFloat = 8.0
-//        if case .landscape = layout.orientation, case .compact = layout.metrics.widthClass {
-//            emptyAnimationHeight = 0.0
-//            emptyAnimationSpacing = 0.0
-//        }
         let emptyTextSpacing: CGFloat = 8.0
         let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
         let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
         
         let textTransition = ContainedViewLayoutTransition.immediate
-        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.animationSize.width) / 2.0, y: emptyAnimationY), size: self.animationSize))
+        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
         textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
         textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
-        self.emptyResultsAnimationNode.updateLayout(size: self.animationSize)
+        self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
         
         if !hadValidLayout {
             while !self.enqueuedRecentTransitions.isEmpty {

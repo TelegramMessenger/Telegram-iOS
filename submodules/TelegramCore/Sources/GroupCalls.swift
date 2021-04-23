@@ -202,7 +202,6 @@ public func createGroupCall(account: Account, peerId: PeerId, title: String?, sc
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        
         var flags: Int32 = 0
         if let _ = title {
             flags |= (1 << 0)
@@ -1188,10 +1187,12 @@ public final class GroupCallParticipantsContext {
     
     public final class MemberEvent {
         public let peerId: PeerId
+        public let canUnmute: Bool
         public let joined: Bool
         
-        public init(peerId: PeerId, joined: Bool) {
+        public init(peerId: PeerId, canUnmute: Bool, joined: Bool) {
             self.peerId = peerId
+            self.canUnmute = canUnmute
             self.joined = joined
         }
     }
@@ -1643,7 +1644,7 @@ public final class GroupCallParticipantsContext {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         updatedParticipants.remove(at: index)
                         updatedTotalCount = max(0, updatedTotalCount - 1)
-                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, joined: false))
+                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, canUnmute: false, joined: false))
                     } else if isVersionUpdate {
                         updatedTotalCount = max(0, updatedTotalCount - 1)
                     }
@@ -1666,7 +1667,7 @@ public final class GroupCallParticipantsContext {
                         updatedParticipants.remove(at: index)
                     } else if case .joined = participantUpdate.participationStatusChange {
                         updatedTotalCount += 1
-                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, joined: true))
+                        strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, canUnmute: participantUpdate.muteState?.canUnmute ?? true, joined: true))
                     }
 
                     var activityTimestamp: Double?

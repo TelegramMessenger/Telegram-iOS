@@ -678,7 +678,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }
             } else {
-                if parsedUrl.host == "settings" {
+                if parsedUrl.host == "importStickers" {
+                    handleResolvedUrl(.importStickers)
+                } else if parsedUrl.host == "settings" {
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {

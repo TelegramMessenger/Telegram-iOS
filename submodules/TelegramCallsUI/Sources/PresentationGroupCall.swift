@@ -546,7 +546,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var toneRenderer: PresentationCallToneRenderer?
     
     private var videoCapturer: OngoingCallVideoCapturer?
-    
+    private var useFrontCamera: Bool = true
     private let incomingVideoSourcePromise = Promise<[PeerId: UInt32]>([:])
     public var incomingVideoSources: Signal<[PeerId: UInt32], NoError> {
         return self.incomingVideoSourcePromise.get()
@@ -1908,7 +1908,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 |> mapToSignal { event -> Signal<PresentationGroupCallMemberEvent, NoError> in
                     return postbox.transaction { transaction -> Signal<PresentationGroupCallMemberEvent, NoError> in
                         if let peer = transaction.getPeer(event.peerId) {
-                            return .single(PresentationGroupCallMemberEvent(peer: peer, joined: event.joined))
+                            let isContact = transaction.isPeerContact(peerId: event.peerId)
+                            let isInChatList = transaction.getPeerChatListIndex(event.peerId) != nil
+                            return .single(PresentationGroupCallMemberEvent(peer: peer, isContact: isContact, isInChatList: isInChatList, canUnmute: event.canUnmute, joined: event.joined))
                         } else {
                             return .complete()
                         }
@@ -1916,13 +1918,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> switchToLatest
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] event in
-                    guard let strongSelf = self else {
+                    guard let strongSelf = self, event.peer.id != strongSelf.stateValue.myPeerId else {
                         return
                     }
-                    if event.peer.id == strongSelf.stateValue.myPeerId {
-                        return
+                    var skip = false
+                    if let participantsCount = strongSelf.participantsContext?.immediateState?.totalCount, participantsCount >= 250 {
+                        if event.peer.isVerified || event.isContact || event.isInChatList || (strongSelf.stateValue.defaultParticipantMuteState == .muted && event.canUnmute) {
+                            skip = false
+                        } else {
+                            skip = true
+                        }
                     }
-                    strongSelf.memberEventsPipe.putNext(event)
+                    if !skip {
+                        strongSelf.memberEventsPipe.putNext(event)
+                    }
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {
@@ -2330,6 +2339,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
             self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: true)
         }
+    }
+    
+    public func switchVideoCamera() {
+        self.useFrontCamera = !self.useFrontCamera
+        self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
     
     public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {

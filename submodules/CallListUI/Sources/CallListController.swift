@@ -263,6 +263,9 @@ public final class CallListController: TelegramBaseController {
                 }
             }
         })
+        self.controllerNode.startNewCall = { [weak self] in
+            self?.beginCallImpl()
+        }
         self._ready.set(self.controllerNode.ready)
         self.displayNodeDidLoad()
     }

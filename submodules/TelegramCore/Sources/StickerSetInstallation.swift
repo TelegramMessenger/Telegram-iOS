@@ -134,7 +134,6 @@ public final class CoveredStickerSet : Equatable {
 }
 
 public func installStickerSetInteractively(account: Account, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<InstallStickerSetResult, InstallStickerSetError> {
-    
     return account.network.request(Api.functions.messages.installStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), archived: .boolFalse)) |> mapError { _ -> InstallStickerSetError in
         return .generic
         } |> mapToSignal { result -> Signal<InstallStickerSetResult, InstallStickerSetError> in

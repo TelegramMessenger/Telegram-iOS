@@ -949,8 +949,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case let .joinVoiceChat(peerId, invite):
                         strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in
-                            
                         }), .window(.root), nil)
+                    case .importStickers:
+                        break
                 }
             }
         }))

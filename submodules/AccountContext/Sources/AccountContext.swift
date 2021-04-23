@@ -186,6 +186,7 @@ public enum ResolvedUrl {
     #endif
     case settings(ResolvedUrlSettingsSection)
     case joinVoiceChat(PeerId, String?)
+    case importStickers
 }
 
 public enum NavigateToChatKeepStack {

@@ -289,10 +289,16 @@ public struct PresentationGroupCallMembers: Equatable {
 
 public final class PresentationGroupCallMemberEvent {
     public let peer: Peer
+    public let isContact: Bool
+    public let isInChatList: Bool
+    public let canUnmute: Bool
     public let joined: Bool
     
-    public init(peer: Peer, joined: Bool) {
+    public init(peer: Peer, isContact: Bool, isInChatList: Bool, canUnmute: Bool, joined: Bool) {
         self.peer = peer
+        self.isContact = isContact
+        self.isInChatList = isInChatList
+        self.canUnmute = canUnmute
         self.joined = joined
     }
 }
@@ -341,6 +347,7 @@ public protocol PresentationGroupCall: class {
     func lowerHand()
     func requestVideo()
     func disableVideo()
+    func switchVideoCamera()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
     func setFullSizeVideo(peerId: PeerId?)
