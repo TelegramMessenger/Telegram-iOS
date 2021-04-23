@@ -437,6 +437,7 @@ public final class VoiceChatController: ViewController {
             var raisedHand: Bool
             var displayRaisedHandStatus: Bool
             var pinned: Bool
+            var style: VoiceChatParticipantItem.LayoutStyle
             
             var stableId: PeerId {
                 return self.peer.id
@@ -483,6 +484,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.pinned != rhs.pinned {
+                    return false
+                }
+                if lhs.style != rhs.style {
                     return false
                 }
                 return true
@@ -569,7 +573,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction, style: VoiceChatParticipantItem.LayoutStyle, transparent: Bool) -> ListViewItem {
+            func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction, transparent: Bool) -> ListViewItem {
                 switch self {
                     case let .invite(_, _, text, isLink):
                         return VoiceChatActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .generic(UIImage(bundleImageName: isLink ? "Chat/Context Menu/Link" : "Chat/Context Menu/AddUser")!), action: {
@@ -648,21 +652,21 @@ public final class VoiceChatController: ViewController {
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, style: style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             if let ssrc = peerEntry.ssrc {
-                                return interaction.getPeerVideo(ssrc, style != .list)
+                                return interaction.getPeerVideo(ssrc, peerEntry.style != .list)
                             } else {
                                 return nil
                             }
                         }, revealOptions: revealOptions, revealed: peerEntry.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                             interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                         }, action: { node in
-                            if case .list = style {
+                            if case .list = peerEntry.style {
                                 interaction.peerContextAction(peerEntry, node, nil)
                             } else {
                                 interaction.pinPeer(peer.id, peerEntry.ssrc)
                             }
-                        }, contextAction: style != .list ? { node, gesture in
+                        }, contextAction: peerEntry.style == .list ? { node, gesture in
                             interaction.peerContextAction(peerEntry, node, gesture)
                         } : nil, getIsExpanded: {
                             return interaction.isExpanded
@@ -673,12 +677,12 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, canInvite: Bool, crossFade: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction, style: VoiceChatParticipantItem.LayoutStyle) -> ListTransition {
+        private func preparedTransition(from fromEntries: [ListEntry], to toEntries: [ListEntry], isLoading: Bool, isEmpty: Bool, canInvite: Bool, crossFade: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListTransition {
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
             
             let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-            let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction, style: style, transparent: false), directionHint: nil) }
-            let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction, style: style, transparent: false), directionHint: nil) }
+            let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction, transparent: false), directionHint: nil) }
+            let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction, transparent: false), directionHint: nil) }
             
             return ListTransition(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, canInvite: canInvite, crossFade: crossFade, count: toEntries.count, animated: animated)
         }
@@ -700,7 +704,7 @@ public final class VoiceChatController: ViewController {
         private var mainVideoContainerNode: MainVideoContainerNode?
         private var mainParticipantNode: VoiceChatParticipantItemNode
         private let listNode: ListView
-        private let horizontalListNode: ListView
+        private let tileListNode: ListView
         private let topPanelNode: ASDisplayNode
         private let topPanelEdgeNode: ASDisplayNode
         private let topPanelBackgroundNode: ASDisplayNode
@@ -732,9 +736,8 @@ public final class VoiceChatController: ViewController {
         private let titleNode: VoiceChatTitleNode
         
         private var enqueuedTransitions: [ListTransition] = []
+        private var enqueuedTileTransitions: [ListTransition] = []
         private var floatingHeaderOffset: CGFloat?
-        
-        private var enqueuedHorizontalTransitions: [ListTransition] = []
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         private var didSetContentsReady: Bool = false
@@ -761,6 +764,7 @@ public final class VoiceChatController: ViewController {
         private var currentActiveButtonColor: UIColor?
         
         private var currentEntries: [ListEntry] = []
+        private var currentTileEntries: [ListEntry] = []
         
         private var peerViewDisposable: Disposable?
         private let leaveDisposable = MetaDisposable()
@@ -875,11 +879,11 @@ public final class VoiceChatController: ViewController {
                 return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
             }
             
-            self.horizontalListNode = ListView()
-            self.horizontalListNode.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
-            self.horizontalListNode.clipsToBounds = true
-            self.horizontalListNode.isHidden = true
-            self.horizontalListNode.accessibilityPageScrolledString = { row, count in
+            self.tileListNode = ListView()
+            self.tileListNode.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
+            self.tileListNode.clipsToBounds = true
+            self.tileListNode.isHidden = true
+            self.tileListNode.accessibilityPageScrolledString = { row, count in
                 return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
             }
             
@@ -1669,7 +1673,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.bottomPanelNode)
             self.contentContainer.addSubnode(self.timerNode)
             self.contentContainer.addSubnode(self.scheduleTextNode)
-            self.contentContainer.addSubnode(self.horizontalListNode)
+            self.contentContainer.addSubnode(self.tileListNode)
             self.addSubnode(self.transitionContainerNode)
             
             let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
@@ -1929,12 +1933,13 @@ public final class VoiceChatController: ViewController {
                                     
                                     loop: for i in 0 ..< strongSelf.currentEntries.count {
                                         let entry = strongSelf.currentEntries[i]
+                                        let tileEntry = strongSelf.currentTileEntries[i]
                                         switch entry {
                                         case let .peer(peerEntry):
                                             if peerEntry.ssrc == source {
                                                 let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
-                                                strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, style: .list, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
-                                                strongSelf.horizontalListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, style: .tile(isLandscape: strongSelf.isLandscape), transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                strongSelf.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: tileEntry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
                                                 break loop
                                             }
                                         default:
@@ -1955,12 +1960,13 @@ public final class VoiceChatController: ViewController {
                         
                         loop: for j in 0 ..< strongSelf.currentEntries.count {
                             let entry = strongSelf.currentEntries[j]
+                            let tileEntry = strongSelf.currentTileEntries[j]
                             switch entry {
                             case let .peer(peerEntry):
                                 if peerEntry.ssrc == ssrc {
                                     let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
-                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, style: .list, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
-                                    strongSelf.horizontalListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, style: .tile(isLandscape: strongSelf.isLandscape), transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                    strongSelf.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: tileEntry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
                                     break loop
                                 }
                             default:
@@ -2028,15 +2034,19 @@ public final class VoiceChatController: ViewController {
                         case .default:
                             strongSelf.displayMode = .fullscreen(controlsHidden: false)
                         case let .fullscreen(controlsHidden):
-                            if controlsHidden && !isLandscape {
-                                strongSelf.displayMode = .default
+                            if controlsHidden {
+                                if !isLandscape {
+                                    strongSelf.displayMode = .default
+                                } else {
+                                    strongSelf.displayMode = .fullscreen(controlsHidden: false)
+                                }
                             } else {
                                 strongSelf.displayMode = .fullscreen(controlsHidden: true)
                             }
                     }
                     
                     if case .default = effectiveDisplayMode, case .fullscreen = strongSelf.displayMode {
-                        strongSelf.horizontalListNode.isHidden = false
+                        strongSelf.tileListNode.isHidden = false
                         
                         var minimalVisiblePeerid: (PeerId, CGFloat)?
                         var verticalItemNodes: [PeerId: VoiceChatParticipantItemNode] = [:]
@@ -2059,7 +2069,7 @@ public final class VoiceChatController: ViewController {
                         strongSelf.animatingExpansion = true
                         
                         let completion = {
-                            strongSelf.horizontalListNode.forEachItemNode { itemNode in
+                            strongSelf.tileListNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item, let otherItemNode = verticalItemNodes[item.peer.id] {
                                     itemNode.transitionIn(from: otherItemNode, containerNode: strongSelf)
                                 }
@@ -2081,7 +2091,7 @@ public final class VoiceChatController: ViewController {
                                     index += 1
                                 }
                             }
-                            strongSelf.horizontalListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
+                            strongSelf.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
                                 completion()
                             })
                         } else {
@@ -2089,8 +2099,8 @@ public final class VoiceChatController: ViewController {
                         }
                     } else if case .fullscreen = effectiveDisplayMode, case .default = strongSelf.displayMode {
                         var minimalVisiblePeerid: (PeerId, CGFloat)?
-                        var horizontalItemNodes: [PeerId: VoiceChatParticipantItemNode] = [:]
-                        strongSelf.horizontalListNode.forEachItemNode { itemNode in
+                        var tileItemNodes: [PeerId: VoiceChatParticipantItemNode] = [:]
+                        strongSelf.tileListNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item {
                                 let convertedFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.transitionContainerNode.view)
                                 if let (_, x) = minimalVisiblePeerid {
@@ -2100,7 +2110,7 @@ public final class VoiceChatController: ViewController {
                                 } else if convertedFrame.minX >= 0.0 {
                                     minimalVisiblePeerid = (item.peer.id, convertedFrame.minX)
                                 }
-                                horizontalItemNodes[item.peer.id] = itemNode
+                                tileItemNodes[item.peer.id] = itemNode
                             }
                         }
                         
@@ -2108,7 +2118,7 @@ public final class VoiceChatController: ViewController {
                         
                         let completion = {
                             strongSelf.listNode.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item, let otherItemNode = horizontalItemNodes[item.peer.id] {
+                                if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item, let otherItemNode = tileItemNodes[item.peer.id] {
                                     itemNode.transitionIn(from: otherItemNode, containerNode: strongSelf.transitionContainerNode)
                                 }
                             }
@@ -3270,9 +3280,13 @@ public final class VoiceChatController: ViewController {
                 if case let .fullscreen(controlsHidden) = effectiveDisplayMode, !isLandscape {
                     offset = controlsHidden ? 66.0 : 140.0
                 } else {
-                    offset = 56.0 + 6.0
+                    if isLandscape {
+                        offset = 56.0 + 6.0 + layout.intrinsicInsets.bottom
+                    } else {
+                        offset = 56.0 + 6.0
+                    }
                 }
-                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: videoClippingFrame.width, height: 56.0))
+                transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: videoClippingFrame.width - videoInset * 2.0, height: 56.0))
                 
                 transition.updateFrame(node: self.mainVideoClippingNode, frame: videoClippingFrame)
                 transition.updateFrame(node: mainVideoContainer, frame: videoContainerFrame, completion: { [weak self] _ in
@@ -3280,9 +3294,9 @@ public final class VoiceChatController: ViewController {
                         strongSelf.animatingExpansion = false
                         
                         if strongSelf.bringVideoToBackOnCompletion {
-                            strongSelf.horizontalListNode.isHidden = true
+                            strongSelf.tileListNode.isHidden = true
                             strongSelf.bringVideoToBackOnCompletion = false
-                            strongSelf.contentContainer.insertSubnode(strongSelf.mainVideoClippingNode, belowSubnode: strongSelf.horizontalListNode)
+                            strongSelf.contentContainer.insertSubnode(strongSelf.mainVideoClippingNode, belowSubnode: strongSelf.tileListNode)
                         }
                     }
                 })
@@ -3576,11 +3590,17 @@ public final class VoiceChatController: ViewController {
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstTime = self.validLayout == nil
+            let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationHeight)
 
             var size = layout.size
             if case .regular = layout.metrics.widthClass {
                 size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
+            var previousIsLandscape = false
+            if let previousLayout = previousLayout, case .compact = previousLayout.metrics.widthClass, previousLayout.size.width > previousLayout.size.height {
+                previousIsLandscape = true
             }
             
             var isLandscape = false
@@ -3597,6 +3617,10 @@ public final class VoiceChatController: ViewController {
                     effectiveDisplayMode = .fullscreen(controlsHidden: false)
                 }
             }
+            
+            if previousIsLandscape != isLandscape {
+                self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+            }
                         
             if let videoIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.mainVideoClippingNode }), let listIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.listNode }) {
                 switch effectiveDisplayMode {
@@ -3606,7 +3630,7 @@ public final class VoiceChatController: ViewController {
                         }
                     case .fullscreen:
                         if listIndex > videoIndex {
-                            self.contentContainer.insertSubnode(self.mainVideoClippingNode, belowSubnode: self.horizontalListNode)
+                            self.contentContainer.insertSubnode(self.mainVideoClippingNode, belowSubnode: self.tileListNode)
                         }
                 }
             }
@@ -3675,19 +3699,30 @@ public final class VoiceChatController: ViewController {
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
-            let horizontalListHeight: CGFloat = 84.0
-            self.horizontalListNode.bounds = CGRect(x: 0.0, y: 0.0, width: horizontalListHeight, height: layout.size.width - layout.safeInsets.left - layout.safeInsets.right)
+            let tileListHeight: CGFloat = 84.0
+            self.tileListNode.bounds = CGRect(x: 0.0, y: 0.0, width: tileListHeight, height: layout.size.width - layout.safeInsets.left - layout.safeInsets.right)
             
-            let horizontalListY = isLandscape ? layout.size.height - layout.intrinsicInsets.bottom - 42.0 : layout.size.height - min(bottomPanelHeight, fullscreenBottomAreaHeight + layout.intrinsicInsets.bottom) - 42.0
+            let tileListPosition: CGPoint
+            let tileListTransform: CATransform3D
+            let tileListUpdateSizeAndInsets: ListViewUpdateSizeAndInsets
             if isLandscape {
-                transition.updatePosition(node: self.horizontalListNode, position: CGPoint(x: layout.safeInsets.left + layout.size.width / 2.0, y: horizontalListY))
-                self.horizontalListNode.transform = CATransform3DMakeRotation(0.0, 0.0, 0.0, 1.0)
+                tileListPosition =  CGPoint(
+                    x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - tileListHeight / 2.0,
+                    y: layout.size.height / 2.0
+                )
+                tileListTransform = CATransform3DIdentity
+                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.height), insets: UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0), duration: duration, curve: curve)
             } else {
-                transition.updatePosition(node: self.horizontalListNode, position: CGPoint(x: layout.safeInsets.left + layout.size.width / 2.0, y: horizontalListY))
-                self.horizontalListNode.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
+                tileListPosition = CGPoint(
+                    x: layout.safeInsets.left + layout.size.width / 2.0,
+                    y: layout.size.height - min(bottomPanelHeight, fullscreenBottomAreaHeight + layout.intrinsicInsets.bottom) - tileListHeight / 2.0
+                )
+                tileListTransform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
+                tileListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: tileListHeight, height: layout.size.width), insets: UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0), duration: duration, curve: curve)
             }
-
-            self.horizontalListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: horizontalListHeight, height: layout.size.width), insets: UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            transition.updatePosition(node: self.tileListNode, position: tileListPosition)
+            self.tileListNode.transform = tileListTransform
+            self.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: tileListUpdateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
             transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topCornersY), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0)))
             
@@ -3881,7 +3916,7 @@ public final class VoiceChatController: ViewController {
                 while !self.enqueuedTransitions.isEmpty {
                     self.dequeueTransition()
                 }
-                while !self.enqueuedHorizontalTransitions.isEmpty {
+                while !self.enqueuedTileTransitions.isEmpty {
                     self.dequeueTransition()
                 }
             }
@@ -3964,12 +3999,12 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func enqueueHorizontalTransition(_ transition: ListTransition) {
-            self.enqueuedHorizontalTransitions.append(transition)
+        private func enqueueTileTransition(_ transition: ListTransition) {
+            self.enqueuedTileTransitions.append(transition)
             
             if let _ = self.validLayout {
-                while !self.enqueuedHorizontalTransitions.isEmpty {
-                    self.dequeueHorizontalTransition()
+                while !self.enqueuedTileTransitions.isEmpty {
+                    self.dequeueTileTransition()
                 }
             }
         }
@@ -4061,11 +4096,11 @@ public final class VoiceChatController: ViewController {
             })
         }
 
-        private func dequeueHorizontalTransition() {
-            guard let _ = self.validLayout, let transition = self.enqueuedHorizontalTransitions.first else {
+        private func dequeueTileTransition() {
+            guard let _ = self.validLayout, let transition = self.enqueuedTileTransitions.first else {
                 return
             }
-            self.enqueuedHorizontalTransitions.remove(at: 0)
+            self.enqueuedTileTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
             let isFirstTime = self.isFirstTime
@@ -4080,7 +4115,7 @@ public final class VoiceChatController: ViewController {
             options.insert(.LowLatency)
             options.insert(.PreferSynchronousResourceLoading)
             
-            self.horizontalListNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            self.tileListNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: nil, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
             })
         }
         
@@ -4094,8 +4129,8 @@ public final class VoiceChatController: ViewController {
             self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
             
-            
             var entries: [ListEntry] = []
+            var tileEntries: [ListEntry] = []
             var index: Int32 = 0
             var processedPeerIds = Set<PeerId>()
             
@@ -4188,9 +4223,28 @@ public final class VoiceChatController: ViewController {
                     volume: member.volume,
                     raisedHand: member.hasRaiseHand,
                     displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id),
-                    pinned: memberPeer.id == self.effectiveSpeakerWithVideo?.0
+                    pinned: memberPeer.id == self.effectiveSpeakerWithVideo?.0,
+                    style: .list
                 ))
                 entries.append(entry)
+                
+                let tileEntry: ListEntry = .peer(PeerEntry(
+                    peer: memberPeer,
+                    about: member.about,
+                    isMyPeer: self.callState?.myPeerId == member.peer.id,
+                    ssrc: member.ssrc,
+                    presence: nil,
+                    activityTimestamp: Int32.max - 1 - index,
+                    state: memberState,
+                    muteState: memberMuteState,
+                    canManageCall: self.callState?.canManageCall ?? false,
+                    volume: member.volume,
+                    raisedHand: member.hasRaiseHand,
+                    displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id),
+                    pinned: memberPeer.id == self.effectiveSpeakerWithVideo?.0,
+                    style: .tile(isLandscape: self.isLandscape)
+                ))
+                tileEntries.append(tileEntry)
                 index += 1
                 
                 if memberPeer.id == self.effectiveSpeakerWithVideo?.0 {
@@ -4207,7 +4261,8 @@ public final class VoiceChatController: ViewController {
                         volume: member.volume,
                         raisedHand: member.hasRaiseHand,
                         displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id),
-                        pinned: true
+                        pinned: true,
+                        style: .list
                     ))
                 }
             }
@@ -4231,7 +4286,8 @@ public final class VoiceChatController: ViewController {
                     volume: nil,
                     raisedHand: false,
                     displayRaisedHandStatus: false,
-                    pinned: false
+                    pinned: false,
+                    style: .list
                 )))
                 index += 1
             }
@@ -4242,7 +4298,7 @@ public final class VoiceChatController: ViewController {
             
             if let entry = pinnedEntry, let interaction = self.itemInteraction {
                 self.mainParticipantNode.isHidden = false
-                let item = entry.item(context: self.context, presentationData: self.presentationData, interaction: interaction, style: .list, transparent: true)
+                let item = entry.item(context: self.context, presentationData: self.presentationData, interaction: interaction, transparent: true)
                 let itemNode = self.mainParticipantNode
                 item.updateNode(async: { $0() }, node: {
                     return itemNode
@@ -4261,7 +4317,9 @@ public final class VoiceChatController: ViewController {
             }
           
             let previousEntries = self.currentEntries
+            let previousTileEntries = self.currentTileEntries
             self.currentEntries = entries
+            self.currentTileEntries = tileEntries
             
             if previousEntries.count == entries.count {
                 var allEqual = true
@@ -4289,11 +4347,11 @@ public final class VoiceChatController: ViewController {
             }
         
             let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
-            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!, style: .list)
+            let transition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTransition(transition)
             
-            let horizontalTransition = preparedTransition(from: previousEntries, to: entries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!, style: .tile(isLandscape: self.isLandscape))
-            self.enqueueHorizontalTransition(horizontalTransition)
+            let tileTransition = preparedTransition(from: previousTileEntries, to: tileEntries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
+            self.enqueueTileTransition(tileTransition)
         }
         
         private func updatePinnedParticipant() {

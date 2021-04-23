@@ -6458,3 +6458,6 @@ Sorry for the inconvenience.";
 
 "Settings.Tips" = "Telegram Features";
 "Settings.TipsUsername" = "TelegramTips";
+
+"Calls.NoVoiceAndVideoCallsPlaceholder" = "Your recent voice and video calls will appear here.";
+"Calls.StartNewCall" = "Start New Call";
