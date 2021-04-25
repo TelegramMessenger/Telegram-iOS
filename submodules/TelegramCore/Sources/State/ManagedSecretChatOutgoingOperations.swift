@@ -1520,7 +1520,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                     }
                 } else {
                     replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: Int64.random(in: Int64.min ... Int64.max))
-                    deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [messageId])
+                    _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [messageId])
                     return .complete()
                 }
             } else {

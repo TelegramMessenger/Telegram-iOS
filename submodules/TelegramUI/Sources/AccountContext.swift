@@ -166,7 +166,7 @@ public final class AccountContextImpl: AccountContext {
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
         if let locationManager = self.sharedContextImpl.locationManager {
-            self.liveLocationManager = LiveLocationManagerImpl(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
+            self.liveLocationManager = LiveLocationManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
@@ -295,7 +295,7 @@ public final class AccountContextImpl: AccountContext {
     public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex) {
         switch location {
         case .peer:
-            let _ = applyMaxReadIndexInteractively(postbox: self.account.postbox, stateManager: self.account.stateManager, index: messageIndex).start()
+            let _ = self.engine.messages.applyMaxReadIndexInteractively(index: messageIndex).start()
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             context.applyMaxReadIndex(messageIndex: messageIndex)

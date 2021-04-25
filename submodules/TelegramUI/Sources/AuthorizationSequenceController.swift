@@ -110,7 +110,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.presentationData.theme)
+            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, account: self.account, theme: self.presentationData.theme)
             controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
                     if let strings = strings {

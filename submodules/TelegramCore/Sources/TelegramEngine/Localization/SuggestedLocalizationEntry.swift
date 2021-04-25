@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func markSuggestedLocalizationAsSeenInteractively(postbox: Postbox, languageCode: String) -> Signal<Void, NoError> {
+func _internal_markSuggestedLocalizationAsSeenInteractively(postbox: Postbox, languageCode: String) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { current in
             if let current = current as? SuggestedLocalizationEntry {

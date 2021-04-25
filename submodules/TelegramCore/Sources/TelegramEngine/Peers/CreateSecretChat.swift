@@ -9,7 +9,7 @@ public enum CreateSecretChatError {
     case limitExceeded
 }
 
-public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
+func _internal_createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateSecretChatError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return validatedEncryptionConfig(postbox: account.postbox, network: account.network)

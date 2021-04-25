@@ -192,7 +192,7 @@ public final class LocationViewController: ViewController {
                         return state
                     }
                     
-                    let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start(completed: { [weak self] in
+                    let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
@@ -261,7 +261,7 @@ public final class LocationViewController: ViewController {
                                     return state
                                 }
                                 
-                                let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
+                                let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }

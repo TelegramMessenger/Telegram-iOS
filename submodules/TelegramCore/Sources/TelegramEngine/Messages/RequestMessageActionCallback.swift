@@ -24,7 +24,7 @@ public enum MessageActionCallbackError {
     case userBlocked
 }
 
-public func requestMessageActionCallbackPasswordCheck(account: Account, messageId: MessageId, isGame: Bool, data: MemoryBuffer?) -> Signal<Never, MessageActionCallbackError> {
+func _internal_requestMessageActionCallbackPasswordCheck(account: Account, messageId: MessageId, isGame: Bool, data: MemoryBuffer?) -> Signal<Never, MessageActionCallbackError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
      |> castError(MessageActionCallbackError.self)
      |> take(1)
@@ -72,7 +72,7 @@ public func requestMessageActionCallbackPasswordCheck(account: Account, messageI
     }
 }
 
-public func requestMessageActionCallback(account: Account, messageId: MessageId, isGame :Bool, password: String?, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, MessageActionCallbackError> {
+func _internal_requestMessageActionCallback(account: Account, messageId: MessageId, isGame :Bool, password: String?, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, MessageActionCallbackError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> castError(MessageActionCallbackError.self)
     |> take(1)
@@ -179,7 +179,7 @@ public enum MessageActionUrlSubject {
     case url(String)
 }
 
-public func requestMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject) -> Signal<MessageActionUrlAuthResult, NoError> {
+func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject) -> Signal<MessageActionUrlAuthResult, NoError> {
     let request: Signal<Api.UrlAuthResult?, MTRpcError>
     var flags: Int32 = 0
     switch subject {
@@ -221,7 +221,7 @@ public func requestMessageActionUrlAuth(account: Account, subject: MessageAction
     }
 }
 
-public func acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool) -> Signal<MessageActionUrlAuthResult, NoError> {
+func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool) -> Signal<MessageActionUrlAuthResult, NoError> {
     var flags: Int32 = 0
     if allowWriteAccess {
         flags |= Int32(1 << 0)

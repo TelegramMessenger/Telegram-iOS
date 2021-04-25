@@ -327,7 +327,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     var applySignal: Signal<Bool, ChannelDiscussionGroupError>
                     var updatedPeerId: PeerId? = nil
                     if let legacyGroup = groupPeer as? TelegramGroup {
-                        applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
+                        applySignal = context.engine.peers.convertGroupToSupergroup(peerId: legacyGroup.id)
                         |> mapError { error -> ChannelDiscussionGroupError in
                             switch error {
                             case .tooManyChannels:

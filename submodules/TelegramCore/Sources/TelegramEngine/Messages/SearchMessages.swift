@@ -184,7 +184,7 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
     return SearchMessagesResult(messages: messages, readStates: readStates, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
-public func searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
         case let .peer(peerId, fromId, tags, topMsgId, minDate, maxDate):
@@ -379,7 +379,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     }
 }
 
-public func downloadMessage(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Message?, NoError> {
+func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Message?, NoError> {
     return postbox.transaction { transaction -> Message? in
         return transaction.getMessage(messageId)
     } |> mapToSignal { message in
@@ -562,7 +562,7 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
     }
 }
 
-public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, threadId: Int64?, timestamp: Int32) -> Signal<MessageId?, NoError> {
+func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, threadId: Int64?, timestamp: Int32) -> Signal<MessageId?, NoError> {
     return account.postbox.transaction { transaction -> Signal<MessageId?, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .single(transaction.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
@@ -672,7 +672,7 @@ public enum UpdatedRemotePeerError {
     case generic
 }
 
-public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
+func _internal_updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
     if let inputUser = peer.inputUser {
         return network.request(Api.functions.users.getUsers(id: [inputUser]))
         |> mapError { _ -> UpdatedRemotePeerError in

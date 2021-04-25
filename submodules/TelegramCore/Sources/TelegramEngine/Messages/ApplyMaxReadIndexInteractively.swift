@@ -5,13 +5,13 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
+func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
+        _internal_applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
     }
 }
     
-func applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex)  {
+func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex)  {
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)

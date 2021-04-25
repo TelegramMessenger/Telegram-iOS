@@ -161,7 +161,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                 }
                 if let value = value, value != defaultValue {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                        let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                         |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
                             |> `catch` { _ -> Signal<Void, NoError> in

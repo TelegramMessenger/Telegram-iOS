@@ -1807,7 +1807,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                         c.dismiss(completion: {
                                             if let strongSelf = self {
                                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                                             }
                                         })
                                     })))
@@ -1826,7 +1826,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                         c.dismiss(completion: {
                                             if let strongSelf = self {
                                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                                             }
                                         })
                                     })))
@@ -1941,7 +1941,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                                 c.dismiss(completion: {
                                                     if let strongSelf = self {
                                                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                                        let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                                                     }
                                                 })
                                             })))
@@ -1960,7 +1960,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                                 c.dismiss(completion: {
                                                     if let strongSelf = self {
                                                         strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                                        let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                                                     }
                                                 })
                                             })))
@@ -3836,7 +3836,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     guard let strongSelf = self else {
                         return
                     }
-                    var createSignal = createSecretChat(account: strongSelf.context.account, peerId: peerId)
+                    var createSignal = strongSelf.context.engine.peers.createSecretChat(peerId: peerId)
                     var cancelImpl: (() -> Void)?
                     let progressSignal = Signal<Never, NoError> { subscriber in
                         if let strongSelf = self {
@@ -5605,7 +5605,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                         }))
                     }
@@ -5622,7 +5622,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                             }
                         }))
                     }
@@ -7149,7 +7149,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                             })
                             return .complete()
                         case .groupFull:
-                            let signal = convertGroupToSupergroup(account: context.account, peerId: groupPeer.id)
+                            let signal = context.engine.peers.convertGroupToSupergroup(peerId: groupPeer.id)
                             |> map(Optional.init)
                             |> `catch` { error -> Signal<PeerId?, NoError> in
                                 switch error {

@@ -5,14 +5,14 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
+func _internal_currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
     return network.request(Api.functions.help.getConfig())
         |> retryRequest
         |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
             switch result {
                 case let .config(config):
                     if let suggestedLangCode = config.suggestedLangCode {
-                        return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
+                        return _internal_suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
                     } else {
                         return .single(nil)
                     }
@@ -20,7 +20,7 @@ public func currentlySuggestedLocalization(network: Network, extractKeys: [Strin
         }
 }
 
-public func suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {
+func _internal_suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {
     return combineLatest(network.request(Api.functions.langpack.getLanguages(langPack: "")), network.request(Api.functions.langpack.getStrings(langPack: "", langCode: languageCode, keys: extractKeys)))
         |> retryRequest
         |> map { languages, strings -> SuggestedLocalizationInfo in
@@ -40,7 +40,7 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
         }
 }
 
-public func availableLocalizations(postbox: Postbox, network: Network, allowCached: Bool) -> Signal<[LocalizationInfo], NoError> {
+func _internal_availableLocalizations(postbox: Postbox, network: Network, allowCached: Bool) -> Signal<[LocalizationInfo], NoError> {
     let cached: Signal<[LocalizationInfo], NoError>
     if allowCached {
         cached = postbox.transaction { transaction -> Signal<[LocalizationInfo], NoError> in
@@ -69,7 +69,7 @@ public enum DownloadLocalizationError {
     case generic
 }
 
-public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, DownloadLocalizationError> {
+func _internal_downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, DownloadLocalizationError> {
     return network.request(Api.functions.langpack.getLangPack(langPack: "", langCode: languageCode))
     |> mapError { _ -> DownloadLocalizationError in
         return .generic
@@ -100,16 +100,16 @@ public enum DownloadAndApplyLocalizationError {
     case generic
 }
 
-public func downloadAndApplyLocalization(accountManager: AccountManager, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
-    return requestLocalizationPreview(network: network, identifier: languageCode)
+func _internal_downloadAndApplyLocalization(accountManager: AccountManager, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+    return _internal_requestLocalizationPreview(network: network, identifier: languageCode)
     |> mapError { _ -> DownloadAndApplyLocalizationError in
         return .generic
     }
     |> mapToSignal { preview -> Signal<Void, DownloadAndApplyLocalizationError> in
         var primaryAndSecondaryLocalizations: [Signal<Localization, DownloadLocalizationError>] = []
-        primaryAndSecondaryLocalizations.append(downloadLocalization(network: network, languageCode: preview.languageCode))
+        primaryAndSecondaryLocalizations.append(_internal_downloadLocalization(network: network, languageCode: preview.languageCode))
         if let secondaryCode = preview.baseLanguageCode {
-            primaryAndSecondaryLocalizations.append(downloadLocalization(network: network, languageCode: secondaryCode))
+            primaryAndSecondaryLocalizations.append(_internal_downloadLocalization(network: network, languageCode: secondaryCode))
         }
         return combineLatest(primaryAndSecondaryLocalizations)
         |> mapError { _ -> DownloadAndApplyLocalizationError in

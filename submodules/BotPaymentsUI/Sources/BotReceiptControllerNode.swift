@@ -306,7 +306,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
-        self.dataRequestDisposable = (requestBotPaymentReceipt(account: context.account, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
+        self.dataRequestDisposable = (context.engine.payments.requestBotPaymentReceipt(messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
                 UIView.transition(with: strongSelf.view, duration: 0.25, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
                 }, completion: nil)

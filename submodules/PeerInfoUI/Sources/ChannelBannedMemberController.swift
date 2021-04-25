@@ -650,7 +650,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                 }
                                 
                                 if peerId.namespace == Namespaces.Peer.CloudGroup {
-                                    let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                                    let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                                     |> map(Optional.init)
                                     |> `catch` { error -> Signal<PeerId?, NoError> in
                                         switch error {

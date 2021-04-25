@@ -343,7 +343,7 @@ final class CallListControllerNode: ASDisplayNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forEveryone).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messageIds, type: .forEveryone).start()
                 }))
                 
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, color: .destructive, action: { [weak actionSheet] in
@@ -353,7 +353,7 @@ final class CallListControllerNode: ASDisplayNode {
                         return
                     }
                     
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forLocalPeer).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messageIds, type: .forLocalPeer).start()
                 }))
                     
                 actionSheet.setItemGroups([

@@ -1216,9 +1216,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let account = strongSelf.context.account
+                    let context = strongSelf.context
                     if requiresPassword {
-                        strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallbackPasswordCheck(account: account, messageId: messageId, isGame: isGame, data: data)
+                        strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestMessageActionCallbackPasswordCheck(messageId: messageId, isGame: isGame, data: data)
                         |> afterDisposed {
                             updateProgress()
                         })
@@ -1226,7 +1226,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let controller = ownershipTransferController(context: context, initialError: error, present: { c, a in
                                     strongSelf.present(c, in: .window(.root), with: a)
                                 }, commit: { password in
-                                    return requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: password, data: data)
+                                    return context.engine.messages.requestMessageActionCallback(messageId: messageId, isGame: isGame, password: password, data: data)
                                     |> afterDisposed {
                                         updateProgress()
                                     }
@@ -1236,7 +1236,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.present(controller, in: .window(.root))
                             }))
                     } else {
-                        strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: nil, data: data)
+                        strongSelf.messageActionCallbackDisposable.set(((context.engine.messages.requestMessageActionCallback(messageId: messageId, isGame: isGame, password: nil, data: data)
                         |> afterDisposed {
                             updateProgress()
                         })
@@ -1269,7 +1269,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return $0
                     }
                 })
-                strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), requestMessageActionUrlAuth(account: strongSelf.context.account, subject: subject) |> afterDisposed {
+                strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), strongSelf.context.engine.messages.requestMessageActionUrlAuth(subject: subject) |> afterDisposed {
                     Queue.mainQueue().async {
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -1318,7 +1318,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 }
                                             })
                                             
-                                            strongSelf.messageActionUrlAuthDisposable.set(((acceptMessageActionUrlAuth(account: strongSelf.context.account, subject: subject, allowWriteAccess: allowWriteAccess) |> afterDisposed {
+                                            strongSelf.messageActionUrlAuthDisposable.set(((strongSelf.context.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess) |> afterDisposed {
                                                 Queue.mainQueue().async {
                                                     if let strongSelf = self {
                                                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -2094,7 +2094,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] controller, f in
                         if let strongSelf = self {
-                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: [id], type: .forLocalPeer).start()
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [id], type: .forLocalPeer).start()
                         }
                         f(.dismissWithoutContent)
                     })))
@@ -2325,7 +2325,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return
                 } else {
-                    let _ = sendScheduledMessageNowInteractively(postbox: strongSelf.context.account.postbox, messageId: messageIds.first!).start()
+                    let _ = strongSelf.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).start()
                 }
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
@@ -2346,7 +2346,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         break
                                     }
                                 }
-                                strongSelf.editMessageDisposable.set((requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: time) |> deliverOnMainQueue).start(next: { result in
+                                strongSelf.editMessageDisposable.set((strongSelf.context.engine.messages.requestEditMessage(messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: time) |> deliverOnMainQueue).start(next: { result in
                                 }, error: { error in
                                 }))
                             }
@@ -2841,7 +2841,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
                         if let isLarge = isLarge {
                             if isLarge {
-                                return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                                return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
                                 |> map(Optional.init)
                             } else {
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
@@ -4995,9 +4995,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
-                        let account = strongSelf.context.account
-                        let _ = (strongSelf.context.account.postbox.transaction { transasction -> Void in
-                            deleteAllMessagesWithForwardAuthor(transaction: transasction, mediaBox: account.postbox.mediaBox, peerId: message.id.peerId, forwardAuthorId: peer.id, namespace: Namespaces.Message.Cloud)
+                        let context = strongSelf.context
+                        let _ = (context.account.postbox.transaction { transasction -> Void in
+                            context.engine.messages.deleteAllMessagesWithForwardAuthor(transaction: transasction, peerId: message.id.peerId, forwardAuthorId: peer.id, namespace: Namespaces.Message.Cloud)
                         }).start()
                         let _ = reportRepliesMessage(account: strongSelf.context.account, messageId: message.id, deleteMessage: true, deleteHistory: true, reportSpam: reportSpam).start()
                     })
@@ -5028,10 +5028,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
-                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
                                 completion(.dismissWithoutContent)
                             } else if (messages.first?.flags.isSending ?? false) {
-                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
                                 completion(.dismissWithoutContent)
                             } else {
                                 if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
@@ -5325,7 +5325,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         threadId = makeMessageThreadId(replyThreadMessage.messageId)
                     }
                     
-                    strongSelf.messageIndexDisposable.set((searchMessageIdByTimestamp(account: strongSelf.context.account, peerId: peerId, threadId: threadId, timestamp: timestamp) |> deliverOnMainQueue).start(next: { messageId in
+                    strongSelf.messageIndexDisposable.set((strongSelf.context.engine.messages.searchMessageIdByTimestamp(peerId: peerId, threadId: threadId, timestamp: timestamp) |> deliverOnMainQueue).start(next: { messageId in
                         if let strongSelf = self {
                             strongSelf.loadingMessage.set(.single(nil))
                             if let messageId = messageId {
@@ -7829,7 +7829,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         case .clearHistory:
             if case let .peer(peerId) = self.chatLocation {
-                let account = self.context.account
+                let context = self.context
                 
                 let beginClear: (InteractiveHistoryClearingType) -> Void = { [weak self] type in
                     guard let strongSelf = self else {
@@ -7849,7 +7849,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
                         if value == .commit {
-                            let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
+                            let _ = context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
                                 self?.chatDisplayNode.historyNode.historyAppearsCleared = false
                             })
                             return true
@@ -10076,7 +10076,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             self.searchDisposable = searchDisposable
                         }
 
-                        let search = searchMessages(account: self.context.account, location: searchState.location, query: searchState.query, state: nil, limit: limit)
+                        let search = self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: nil, limit: limit)
                         |> delay(0.2, queue: Queue.mainQueue())
                         self.searchResult.set(search
                         |> map { (result, state) -> (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? in
@@ -10130,7 +10130,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             searchDisposable = MetaDisposable()
                             self.searchDisposable = searchDisposable
                         }
-                        searchDisposable.set((searchMessages(account: self.context.account, location: searchState.location, query: searchState.query, state: loadMoreState, limit: limit)
+                        searchDisposable.set((self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: loadMoreState, limit: limit)
                         |> delay(0.2, queue: Queue.mainQueue())
                         |> deliverOnMainQueue).start(next: { [weak self] results, updatedState in
                             guard let strongSelf = self else {
@@ -11613,13 +11613,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                             if actions.contains(3) {
-                                let mediaBox = strongSelf.context.account.postbox.mediaBox
-                                let _ = strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                                    deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: mediaBox, peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
+                                let context = strongSelf.context
+                                let _ = context.account.postbox.transaction({ transaction -> Void in
+                                    context.engine.messages.deleteAllMessagesWithAuthor(transaction: transaction, peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
                                 }).start()
-                                let _ = clearAuthorHistory(account: strongSelf.context.account, peerId: peerId, memberId: author.id).start()
+                                let _ = strongSelf.context.engine.messages.clearAuthorHistory(peerId: peerId, memberId: author.id).start()
                             } else if actions.contains(0) {
-                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                             if actions.contains(1) {
                                 let _ = removePeerMember(account: strongSelf.context.account, peerId: peerId, memberId: author.id).start()
@@ -11657,7 +11657,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                 }
             }))
         }
@@ -11684,7 +11684,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                     f(.dismissWithoutContent)
                 }
             })))
@@ -11692,7 +11692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                 }
             }))
         }
@@ -11714,7 +11714,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             contextItems.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
                     f(.dismissWithoutContent)
                 }
             })))
@@ -11722,7 +11722,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
                 }
             }))
         }

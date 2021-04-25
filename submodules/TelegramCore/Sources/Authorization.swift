@@ -31,6 +31,44 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
     transaction.removeAuth()
 }
 
+private struct Regex {
+    let pattern: String
+    let options: NSRegularExpression.Options!
+
+    private var matcher: NSRegularExpression {
+        return try! NSRegularExpression(pattern: self.pattern, options: self.options)
+    }
+
+    init(_ pattern: String) {
+        self.pattern = pattern
+        self.options = []
+    }
+
+    func match(_ string: String, options: NSRegularExpression.MatchingOptions = []) -> Bool {
+        return self.matcher.numberOfMatches(in: string, options: options, range: NSMakeRange(0, string.utf16.count)) != 0
+    }
+}
+
+private protocol RegularExpressionMatchable {
+    func match(_ regex: Regex) -> Bool
+}
+
+private struct MatchString: RegularExpressionMatchable {
+    private let string: String
+
+    init(_ string: String) {
+        self.string = string
+    }
+
+    func match(_ regex: Regex) -> Bool {
+        return regex.match(self.string)
+    }
+}
+
+private func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> Bool {
+    return matchable.match(pattern)
+}
+
 public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
     let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(flags: 0))
     
@@ -39,7 +77,7 @@ public func sendAuthorizationCode(accountManager: AccountManager, account: Unaut
         return (result, account)
     }
     |> `catch` { error -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
-        switch (error.errorDescription ?? "") {
+        switch MatchString(error.errorDescription ?? "") {
             case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
                 let range = error.errorDescription.range(of: "MIGRATE_")!
                 let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
@@ -85,7 +123,6 @@ public func sendAuthorizationCode(accountManager: AccountManager, account: Unaut
             return account
         }
         |> mapError { _ -> AuthorizationCodeRequestError in
-            return .generic(info: nil)
         }
     }
 }
@@ -123,7 +160,7 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                                 transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, syncContacts: syncContacts)))
                                         
                                     }
-                                    } |> mapError { _ -> AuthorizationCodeRequestError in return .generic(info: nil) }
+                                    } |> mapError { _ -> AuthorizationCodeRequestError in }
                             }
                     } else {
                         return .fail(.generic(info: nil))
@@ -136,7 +173,6 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
         }
     }
     |> mapError { _ -> AuthorizationCodeRequestError in
-        return .generic(info: nil)
     }
     |> switchToLatest
 }
@@ -233,7 +269,6 @@ public func authorizeWithCode(accountManager: AccountManager, account: Unauthori
                         }
                         |> switchToLatest
                         |> mapError { _ -> AuthorizationCodeVerificationError in
-                                return .generic
                         }
                     }
                 default:
@@ -244,7 +279,6 @@ public func authorizeWithCode(accountManager: AccountManager, account: Unauthori
         }
     }
     |> mapError { _ -> AuthorizationCodeVerificationError in
-        return .generic
     }
     |> switchToLatest
 }
@@ -294,7 +328,6 @@ public func authorizeWithPassword(accountManager: AccountManager, account: Unaut
         }
         |> switchToLatest
         |> mapError { _ -> AuthorizationPasswordVerificationError in
-            return .generic
         }
     }
 }
@@ -369,7 +402,7 @@ public func performPasswordRecovery(accountManager: AccountManager, account: Una
             }
         }
         |> switchToLatest
-        |> mapError { _ in return PasswordRecoveryError.expired }
+        |> mapError { _ -> PasswordRecoveryError in }
     }
 }
 
@@ -418,7 +451,7 @@ public func performAccountReset(account: UnauthorizedAccount) -> Signal<Void, Ac
                 }
             }
         }
-        |> mapError { _ in return AccountResetError.generic }
+        |> mapError { _ -> AccountResetError in }
     }
 }
 
@@ -497,7 +530,6 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
         }
     }
     |> mapError { _ -> SignUpError in
-        return .generic
     }
     |> switchToLatest
 }

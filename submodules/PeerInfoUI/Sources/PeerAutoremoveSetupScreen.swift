@@ -212,7 +212,7 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
                 }
                 
                 if updated {
-                    let signal = setChatMessageAutoremoveTimeoutInteractively(account: context.account, peerId: peerId, timeout: resolvedValue)
+                    let signal = context.engine.peers.setChatMessageAutoremoveTimeoutInteractively(peerId: peerId, timeout: resolvedValue)
                     |> deliverOnMainQueue
                     
                     applyDisposable.set((signal
