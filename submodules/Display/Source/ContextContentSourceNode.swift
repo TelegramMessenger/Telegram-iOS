@@ -24,10 +24,27 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
         
         self.addSubnode(self.contentNode)
     }
+
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.contentNode.supernode === self {
+            return self.contentNode.hitTest(self.view.convert(point, to: self.contentNode.view), with: event)
+        } else {
+            return nil
+        }
+    }
 }
 
 public final class ContextExtractedContentNode: ASDisplayNode {
     public var customHitTest: ((CGPoint) -> UIView?)?
+
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = self.view.hitTest(point, with: event)
+        if result === self.view {
+            return nil
+        } else {
+            return result
+        }
+    }
 }
 
 public final class ContextControllerContentNode: ASDisplayNode {

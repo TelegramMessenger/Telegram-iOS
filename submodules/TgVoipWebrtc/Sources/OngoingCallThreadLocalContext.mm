@@ -1272,6 +1272,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
+- (void)removeIncomingVideoSource:(uint32_t)ssrc {
+    if (_instance) {
+        _instance->removeIncomingVideoSource(ssrc);
+    }
+}
+
 - (void)parseJsonIntoParticipant:(NSString *)payload participant:(tgcalls::GroupParticipantDescription &)participant {
     NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
     if (payloadData == nil) {

@@ -205,6 +205,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)removeIncomingVideoSource:(uint32_t)ssrc;
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)setIsMuted:(bool)isMuted;
 - (void)setIsNoiseSuppressionEnabled:(bool)isNoiseSuppressionEnabled;

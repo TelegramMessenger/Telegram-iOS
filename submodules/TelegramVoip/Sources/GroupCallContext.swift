@@ -288,6 +288,10 @@ public final class OngoingGroupCallContext {
                 return ssrc as NSNumber
             })
         }
+
+        func removeIncomingVideoSource(_ ssrc: UInt32) {
+            self.context.removeIncomingVideoSource(ssrc)
+        }
         
         func setVolume(ssrc: UInt32, volume: Double) {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
@@ -591,6 +595,12 @@ public final class OngoingGroupCallContext {
     public func removeSsrcs(ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.removeSsrcs(ssrcs: ssrcs)
+        }
+    }
+
+    public func removeIncomingVideoSource(_ ssrc: UInt32) {
+        self.impl.with { impl in
+            impl.removeIncomingVideoSource(ssrc)
         }
     }
     

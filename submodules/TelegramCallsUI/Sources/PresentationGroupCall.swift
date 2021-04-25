@@ -1852,6 +1852,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 } else if participant.muteState?.mutedByYou == true {
                                     strongSelf.callContext?.setVolume(ssrc: ssrc, volume: 0.0)
                                 }
+                                if participant.isVideoMuted {
+                                    strongSelf.callContext?.removeIncomingVideoSource(ssrc)
+                                }
                             }
                         }
                         
