@@ -6461,3 +6461,7 @@ Sorry for the inconvenience.";
 
 "Calls.NoVoiceAndVideoCallsPlaceholder" = "Your recent voice and video calls will appear here.";
 "Calls.StartNewCall" = "Start New Call";
+
+"VoiceChat.VideoPreviewTitle" = "Video Preview";
+"VoiceChat.VideoPreviewDescription" = "Place your face in the area above for better experience.";
+"VoiceChat.VideoPreviewShare" = "Share Video";
