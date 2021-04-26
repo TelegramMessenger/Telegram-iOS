@@ -439,7 +439,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if valid {
-                            if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                            if let botId = botId, let scope = scope, let publicKey = publicKey {
                                 if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                     opaquePayload = Data()
                                     if opaqueNonce.isEmpty {
