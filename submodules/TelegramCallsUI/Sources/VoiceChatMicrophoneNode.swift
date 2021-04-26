@@ -158,12 +158,12 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
 
         context.setFillColor(parameters.color.cgColor)
         
-        var clearLineWidth: CGFloat = 4.0
+        var clearLineWidth: CGFloat = 2.0
         var lineWidth: CGFloat = 1.0 + UIScreenPixel
         if bounds.size.width > 36.0 {
             context.scaleBy(x: 2.0, y: 2.0)
         } else if bounds.size.width < 30.0 {
-            clearLineWidth = 3.0
+            clearLineWidth = 2.0
             lineWidth = 1.0
         }
         
@@ -207,18 +207,19 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             }
             
             if parameters.reverse {
-                startPoint = CGPoint(x: origin.x + length * (1.0 - parameters.transition), y: origin.y + length * (1.0 - parameters.transition))
-                endPoint = CGPoint(x: origin.x + length, y: origin.y + length)
+                startPoint = CGPoint(x: origin.x + length * (1.0 - parameters.transition), y: origin.y + length * (1.0 - parameters.transition)).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
+                endPoint = CGPoint(x: origin.x + length, y: origin.y + length).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
             } else {
-                startPoint = origin
-                endPoint = CGPoint(x: origin.x + length * parameters.transition, y: origin.y + length * parameters.transition)
+                startPoint = origin.offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
+                endPoint = CGPoint(x: origin.x + length * parameters.transition, y: origin.y + length * parameters.transition).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
             }
+            
         
             context.setBlendMode(.clear)
             context.setLineWidth(clearLineWidth)
             
-            context.move(to: startPoint)
-            context.addLine(to: endPoint)
+            context.move(to: startPoint.offsetBy(dx: 0.0, dy: 1.0 + UIScreenPixel))
+            context.addLine(to: endPoint.offsetBy(dx: 0.0, dy: 1.0 + UIScreenPixel))
             context.strokePath()
         
             context.setBlendMode(.normal)

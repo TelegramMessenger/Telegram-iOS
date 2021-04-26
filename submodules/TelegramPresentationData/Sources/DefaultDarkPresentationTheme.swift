@@ -359,7 +359,13 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         pageIndicatorInactiveColor: UIColor(white: 1.0, alpha: 0.3),
         inputClearButtonColor: UIColor(rgb: 0x8b9197),
         itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0xffffff), color2: UIColor(rgb: 0x929196), color3: UIColor(rgb: 0x333333)),
-        itemInputField: PresentationInputFieldTheme(backgroundColor: UIColor(rgb: 0x0f0f0f), strokeColor: UIColor(rgb: 0x0f0f0f), placeholderColor: UIColor(rgb: 0x8f8f8f), primaryColor: UIColor(rgb: 0xffffff), controlColor: UIColor(rgb: 0x8f8f8f))
+        itemInputField: PresentationInputFieldTheme(backgroundColor: UIColor(rgb: 0x0f0f0f), strokeColor: UIColor(rgb: 0x0f0f0f), placeholderColor: UIColor(rgb: 0x8f8f8f), primaryColor: UIColor(rgb: 0xffffff), controlColor: UIColor(rgb: 0x8f8f8f)),
+        paymentOption: PresentationThemeList.PaymentOption(
+            inactiveFillColor: UIColor(rgb: 0x00A650).withMultipliedAlpha(0.3),
+            inactiveForegroundColor: UIColor(rgb: 0x00A650),
+            activeFillColor: UIColor(rgb: 0x00A650),
+            activeForegroundColor: UIColor(rgb: 0xffffff)
+        )
     )
 
     let chatList = PresentationThemeChatList(

@@ -225,7 +225,7 @@ public final class AvatarNode: ASDisplayNode {
     
     public init(font: UIFont) {
         self.font = font
-        self.imageNode = ImageNode(enableHasImage: true)
+        self.imageNode = ImageNode(enableHasImage: true, enableAnimatedTransition: true)
         
         super.init()
         
@@ -338,7 +338,7 @@ public final class AvatarNode: ASDisplayNode {
         } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: context.currentContentSettings.with { $0 }) {
             representation = peer?.smallProfileImage
         }
-        let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
+        let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(0), peer?.displayLetters ?? [], representation)
         if updatedState != self.state || overrideImage != self.overrideImage || theme !== self.theme {
             self.state = updatedState
             self.overrideImage = overrideImage
@@ -382,7 +382,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? PeerId(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
@@ -454,10 +454,10 @@ public final class AvatarNode: ASDisplayNode {
                 colorIndex = explicitColorIndex
             } else {
                 if let peerId = parameters.peerId {
-                    if peerId.namespace == -1 {
+                    if peerId.namespace == .max {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(clamping: peerId.id))
+                        colorIndex = abs(Int(clamping: peerId.id._internalGetInt32Value()))
                     }
                 } else {
                     colorIndex = -1
@@ -631,10 +631,10 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     context.clip()
     
     let colorIndex: Int
-    if peerId.namespace == -1 {
+    if peerId.namespace == .max {
         colorIndex = -1
     } else {
-        colorIndex = Int(abs(peerId.id))
+        colorIndex = Int(abs(peerId.id._internalGetInt32Value()))
     }
     
     let colorsArray: NSArray

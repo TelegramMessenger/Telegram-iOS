@@ -130,7 +130,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
     for (accountId, items) in itemsByAccount {
-        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [ParsedPeer] in
+        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [ParsedPeer] in
             guard let state = transaction.getState() as? AuthorizedAccountState else {
                 return []
             }

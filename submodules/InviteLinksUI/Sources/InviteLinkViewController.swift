@@ -598,7 +598,7 @@ public final class InviteLinkViewController: ViewController {
                     if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
-                        let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                         for i in 0 ..< count {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
                         }
@@ -839,7 +839,7 @@ public final class InviteLinkViewController: ViewController {
                 } else {
                     let elapsedTime = expireDate - currentTime
                     if elapsedTime >= 86400 {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(timeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
                     } else {
                         subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
                         if self.countdownTimer == nil {

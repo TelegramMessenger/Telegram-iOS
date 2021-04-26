@@ -424,7 +424,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, pro
     var removeChatListKeys: [ValueBoxKey] = []
     valueBox.scan(chatListTable, keys: { key in
         let (_, _, index, type) = extractChatListKey(key)
-        if index.id.peerId.namespace != 3 { // Secret Chat
+        if index.id.peerId.namespace._internalGetInt32Value() != 3 { // Secret Chat
             sharedChatListIndexKey.setInt64(0, value: index.id.peerId.toInt64())
             valueBox.remove(chatListIndexTable, key: sharedChatListIndexKey, secure: false)
             

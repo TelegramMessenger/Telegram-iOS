@@ -956,7 +956,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     if archiveEnabled {
                         for peerId in peerIds {
-                            if peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000) {
+                            if peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(777000)) {
                                 archiveEnabled = false
                                 break
                             } else if peerId == strongSelf.context.account.peerId {

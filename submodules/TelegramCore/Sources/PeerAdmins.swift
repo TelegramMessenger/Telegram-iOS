@@ -14,7 +14,7 @@ public func removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
     return account.postbox.transaction { transaction -> Signal<Void, RemoveGroupAdminError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolFalse))
+                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, isAdmin: .boolFalse))
                     |> mapError { _ -> RemoveGroupAdminError in return .generic }
                     |> mapToSignal { result -> Signal<Void, RemoveGroupAdminError> in
                         return account.postbox.transaction { transaction -> Void in
@@ -62,7 +62,7 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
     return account.postbox.transaction { transaction -> Signal<Void, AddGroupAdminError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
+                return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, isAdmin: .boolTrue))
                 |> `catch` { error -> Signal<Api.Bool, AddGroupAdminError> in
                     if error.errorDescription == "USER_NOT_PARTICIPANT" {
                         return addGroupMember(account: account, peerId: peerId, memberId: adminId)
@@ -73,7 +73,7 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
                             return .complete()
                         }
                         |> then(
-                            account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
+                            account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, isAdmin: .boolTrue))
                             |> mapError { error -> AddGroupAdminError in
                                 return .generic
                             }

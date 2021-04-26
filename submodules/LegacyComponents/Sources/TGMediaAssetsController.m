@@ -444,7 +444,7 @@
             bool onlyGroupableMedia = true;
             for (TGMediaAsset *item in strongSelf->_selectionContext.selectedItems)
             {
-                TGMediaAsset *asset = asset;
+                TGMediaAsset *asset = item;
                 if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
                     asset = [(TGCameraCapturedVideo *)item originalAsset];
                 }

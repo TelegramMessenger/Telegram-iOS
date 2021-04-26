@@ -125,8 +125,9 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let statusNode: RadialStatusNode
     
     private var playerStatus: MediaPlayerStatus?
-    private var isLoading = ValuePromise<Bool>(false)
-    private var loadingProgress = ValuePromise<Float?>(nil)
+    private var isLoading = Promise<Bool>(false)
+    private var loadingProgress = Promise<Float?>(nil)
+    private var progress: Signal<Float?, NoError>?
     private var loadingProgressDisposable = MetaDisposable()
     private var hasProgress = false
     
@@ -241,8 +242,11 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 bufferingProgress = nil
             }
         }
-        self.loadingProgress.set(bufferingProgress)
-        self.isLoading.set(bufferingProgress != nil)
+        
+        if self.progress == nil {
+            self.loadingProgress.set(.single(bufferingProgress))
+            self.isLoading.set(.single(bufferingProgress != nil))
+        }
     }
     
     public func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -310,8 +314,16 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.isReady.set(videoNode.ready |> map { return true })
     }
     
-    func setup(item: PeerInfoAvatarListItem, synchronous: Bool, fullSizeOnly: Bool = false) {
+    func setup(item: PeerInfoAvatarListItem, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
         self.item = item
+        self.progress = progress
+        
+        if let progress = progress {
+            self.loadingProgress.set((progress
+            |> beforeNext { [weak self] next in
+                self?.isLoading.set(.single(next != nil))
+            }))
+        }
         
         let representations: [ImageRepresentationWithReference]
         let videoRepresentations: [VideoRepresentationWithReference]
@@ -322,7 +334,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
-            id = Int64(self.peer.id.id)
+            id = Int64(self.peer.id.id._internalGetInt32Value())
             if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                 id = id &+ resource.photoId
             }
@@ -333,7 +345,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if case let .cloud(imageId, _, _) = reference {
                 id = imageId
             } else {
-                id = Int64(self.peer.id.id)
+                id = Int64(self.peer.id.id._internalGetInt32Value())
             }
         }
         self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
@@ -912,7 +924,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         return items.count == 0
     }
     
-    public func update(size: CGSize, peer: Peer?, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    private var additionalEntryProgress: Signal<Float?, NoError>? = nil
+    public func update(size: CGSize, peer: Peer?, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let previousExpanded = self.isExpanded
         self.isExpanded = isExpanded
@@ -924,23 +937,38 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         if let peer = peer, !self.initializedList {
             self.initializedList = true
-            self.disposable.set((peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id)
-            |> deliverOnMainQueue).start(next: { [weak self] (complete, entries) in
+                    
+            let entry = additionalEntry
+            |> map { representation -> AvatarGalleryEntry? in
+                return representation.flatMap { AvatarGalleryEntry(representation: $0.0, peer: peer) }
+            }
+            
+            self.disposable.set(combineLatest(queue: Queue.mainQueue(), peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id), entry).start(next: { [weak self] completeAndEntries, entry in
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var (complete, entries) = completeAndEntries
                 
                 if strongSelf.galleryEntries.count > 1, entries.count == 1 && !complete {
                     return
                 }
                 
-                var entries = entries
                 var synchronous = false
                 if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(image) = updated, !image.3.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(topImage) = previous {
                     let firstEntry = AvatarGalleryEntry.image(image.0, image.1, topImage.0, image.3, image.4, image.5, image.6, image.7, image.8, image.9)
                     entries.remove(at: 0)
                     entries.insert(firstEntry, at: 0)
                     synchronous = true
+                }
+                
+                if let entry = entry {
+                    entries.insert(entry, at: 0)
+                    
+                    strongSelf.additionalEntryProgress = additionalEntry
+                    |> map { value -> Float? in
+                        return value?.1
+                    }
                 }
                 
                 if strongSelf.ignoreNextProfilePhotoUpdate {
@@ -1067,7 +1095,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
                     itemNode = addedItemNode
-                    addedItemNode.setup(item: self.items[i], synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
+                    addedItemNode.setup(item: self.items[i], progress: i == 0 ? self.additionalEntryProgress : nil, synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }

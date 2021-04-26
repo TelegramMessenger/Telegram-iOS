@@ -61,6 +61,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
+    var debugAction: (() -> Void)?
     var openStats: (() -> Void)?
     var completed: (([PeerId]) -> Void)?
     
@@ -594,6 +595,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.animateOut(shared: true, completion: {
                 })
                 self.completed?(peerIds)
+                
+                Queue.mainQueue().after(0.44) {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.success()
+                }
             }
             let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
@@ -730,6 +738,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
+        }, debugAction: { [weak self] in
+            self?.debugAction?()
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in

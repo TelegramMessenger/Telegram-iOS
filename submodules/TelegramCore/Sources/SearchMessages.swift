@@ -721,7 +721,6 @@ public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerRefe
                     return updatedPeer
                 }
                 |> mapError { _ -> UpdatedRemotePeerError in
-                    return .generic
                 }
             } else {
                 return .fail(.generic)
@@ -748,7 +747,6 @@ public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerRefe
                     return updatedPeer
                 }
                 |> mapError { _ -> UpdatedRemotePeerError in
-                    return .generic
                 }
             } else {
                 return .fail(.generic)

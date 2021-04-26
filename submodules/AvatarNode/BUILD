@@ -18,6 +18,8 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
         "//submodules/Emoji:Emoji",
+        "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/FastBlur:FastBlur",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

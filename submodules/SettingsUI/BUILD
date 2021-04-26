@@ -8,7 +8,7 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
@@ -90,7 +90,8 @@ swift_library(
         "//submodules/AuthTransferUI:AuthTransferUI",
         "//submodules/WidgetSetupScreen:WidgetSetupScreen",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
-    ] + NGDEPS,
+        "//submodules/DebugSettingsUI:DebugSettingsUI",
+    ],
     visibility = [
         "//visibility:public",
     ],

@@ -53,6 +53,7 @@ import AccountUtils
 import CoreSpotlight
 import LightweightAccountData
 import TelegramAudio
+import DebugSettingsUI
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -297,13 +298,13 @@ final class SharedApplicationContext {
                             var peerId: PeerId?
                             if let fromId = payload["from_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                             } else if let fromId = payload["chat_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                             } else if let fromId = payload["channel_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
                             }
                             
                             if let msgId = payload["msg_id"] {
@@ -833,6 +834,15 @@ final class SharedApplicationContext {
                     }
                 }
             })
+
+            /*self.mainWindow.debugAction = {
+                self.mainWindow.debugAction = nil
+                
+                let presentationData = sharedContext.currentPresentationData.with { $0 }
+                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
+                navigationController.viewControllers = [debugController(sharedContext: sharedContext, context: nil)]
+                self.mainWindow.present(navigationController, on: .root)
+            }*/
             
             presentationDataPromise.set(sharedContext.presentationData)
             
@@ -1118,6 +1128,8 @@ final class SharedApplicationContext {
                         print("Application: context took \(readyTime) to become ready")
                     }
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
+
+                    self.mainWindow.debugAction = nil
                     
                     self.mainWindow.viewController = context.rootController
                     if firstTime {
@@ -1738,7 +1750,7 @@ final class SharedApplicationContext {
             
             if let startCallContacts = startCallContacts {
                 let startCall: (Int32) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isVideo: startCallIsVideo)
+                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), isVideo: startCallIsVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -1800,7 +1812,7 @@ final class SharedApplicationContext {
                                         return result
                                     } |> deliverOnMainQueue).start(next: { peerId in
                                         if let peerId = peerId {
-                                            startCall(peerId.id)
+                                            startCall(peerId.id._internalGetInt32Value())
                                         }
                                     })
                                     processed = true
@@ -1815,7 +1827,7 @@ final class SharedApplicationContext {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let userId = Int32(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activateInput: true)
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), activateInput: true)
                     }
                 }
             }
@@ -2379,7 +2391,7 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
                 |> take(1)
                 |> map { _, accounts, _ -> AccountRecordId? in
                     for (_, account, _) in accounts {
-                        if Int(account.peerId.id) == userId {
+                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
                             return account.id
                         }
                     }
@@ -2401,16 +2413,16 @@ private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
         var peerId: PeerId?
         if let fromId = payload["from_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
         } else if let fromId = payload["chat_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
         } else if let fromId = payload["channel_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
         } else if let fromId = payload["encryption_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: Int32(fromIdValue.intValue))
+            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
         }
         return peerId
     }

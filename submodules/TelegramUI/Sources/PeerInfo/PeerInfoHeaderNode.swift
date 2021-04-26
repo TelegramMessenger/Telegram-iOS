@@ -21,6 +21,8 @@ import RadialStatusNode
 import TelegramUIPreferences
 import NGData
 import PeerInfoAvatarListNode
+import AnimationUI
+import ContextUI
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -54,7 +56,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let backgroundNode: ASImageNode
+    private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
+    private var animationNode: AnimationNode?
     
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
@@ -72,6 +76,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         
@@ -81,6 +89,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.containerNode.addSubnode(self.referenceNode)
         self.referenceNode.addSubnode(self.backgroundNode)
+        self.referenceNode.addSubnode(self.iconNode)
         self.addSubnode(self.containerNode)
         self.addSubnode(self.textNode)
         
@@ -106,49 +115,109 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     }
     
     @objc private func buttonPressed() {
+        switch self.icon {
+            case .voiceChat, .more, .leave:
+                self.animationNode?.playOnce()
+            default:
+                break
+        }
         self.action(self, nil)
     }
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        if self.theme != presentationData.theme || self.icon != icon || self.isActive != isActive {
+        let previousIcon = self.icon
+        let iconUpdated = self.icon != icon
+        let isActiveUpdated = self.isActive != isActive
+        self.isActive = isActive
+        if self.theme != presentationData.theme || self.icon != icon {
             self.theme = presentationData.theme
             self.icon = icon
-            
-            let isActiveUpdated = self.isActive != isActive
-            self.isActive = isActive
             
             var isGestureEnabled = false
             if [.mute, .voiceChat, .more].contains(icon) {
                 isGestureEnabled = true
             }
             self.containerNode.isGestureEnabled = isGestureEnabled
-            
-            if isActiveUpdated, !self.containerNode.alpha.isZero {
-                if let snapshotView = self.backgroundNode.view.snapshotContentTree() {
-                    snapshotView.frame = self.backgroundNode.view.frame
-                    self.view.addSubview(snapshotView)
-                    
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
-                if !isExpanded, let snapshotView = self.textNode.view.snapshotContentTree() {
-                    snapshotView.frame = self.textNode.view.frame
-                    self.view.addSubview(snapshotView)
-                    
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
+                        
+            let animationName: String?
+            var colors: [String: UIColor] = [:]
+            var playOnce = false
+            var seekToEnd = false
+            let iconColor = presentationData.theme.list.itemCheckColors.foregroundColor
+            switch icon {
+                case .voiceChat:
+                    animationName = "anim_profilevc"
+                    colors = ["Line 3.Group 1.Stroke 1": iconColor,
+                              "Line 1.Group 1.Stroke 1": iconColor,
+                              "Line 2.Group 1.Stroke 1": iconColor]
+                case .mute:
+                    animationName = "anim_profileunmute"
+                    colors = ["Middle.Group 1.Fill 1": iconColor,
+                              "Top.Group 1.Fill 1": iconColor,
+                              "Bottom.Group 1.Fill 1": iconColor,
+                              "EXAMPLE.Group 1.Fill 1": iconColor,
+                              "Line.Group 1.Stroke 1": iconColor]
+                    if previousIcon == .unmute {
+                        playOnce = true
+                    } else {
+                        seekToEnd = true
+                    }
+                case .unmute:
+                    animationName = "anim_profilemute"
+                    colors = ["Middle.Group 1.Fill 1": iconColor,
+                              "Top.Group 1.Fill 1": iconColor,
+                              "Bottom.Group 1.Fill 1": iconColor,
+                              "EXAMPLE.Group 1.Fill 1": iconColor,
+                              "Line.Group 1.Stroke 1": iconColor]
+                    if previousIcon == .mute {
+                        playOnce = true
+                    } else {
+                        seekToEnd = true
+                    }
+                case .more:
+                    animationName = "anim_profilemore"
+                    colors = ["Point 2.Group 1.Fill 1": iconColor,
+                              "Point 3.Group 1.Fill 1": iconColor,
+                              "Point 1.Group 1.Fill 1": iconColor]
+                case .leave:
+                    animationName = "anim_profileleave"
+                    colors = ["Arrow.Group 2.Stroke 1": iconColor,
+                              "Door.Group 1.Stroke 1": iconColor,
+                              "Arrow.Group 1.Stroke 1": iconColor]
+                default:
+                    animationName = nil
             }
             
-            self.backgroundNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+            if let animationName = animationName {
+                let animationNode: AnimationNode
+                if let current = self.animationNode {
+                    animationNode = current
+                    if iconUpdated {
+                        animationNode.setAnimation(name: animationName, colors: colors)
+                    }
+                } else {
+                    animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
+                    self.referenceNode.addSubnode(animationNode)
+                    self.animationNode = animationNode
+                }
+                animationNode.frame = CGRect(origin: CGPoint(), size: size)
+            } else if let animationNode = self.animationNode {
+                self.animationNode = nil
+                animationNode.removeFromSupernode()
+            }
+            
+            if playOnce {
+                self.animationNode?.play()
+            } else if seekToEnd {
+                self.animationNode?.seekToEnd()
+            }
+                        
+            self.backgroundNode.image = generateFilledCircleImage(diameter: 40.0, color: presentationData.theme.list.itemAccentColor)
+            self.iconNode.image = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(isActive ? presentationData.theme.list.itemAccentColor.cgColor : presentationData.theme.list.itemDisabledTextColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
                 context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                let imageName: String
+                let imageName: String?
                 switch icon {
                 case .message:
                     imageName = "Peer Info/ButtonMessage"
@@ -157,21 +226,21 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 case .videoCall:
                     imageName = "Peer Info/ButtonVideo"
                 case .voiceChat:
-                    imageName = "Peer Info/ButtonVoiceChat"
+                    imageName = nil
                 case .mute:
-                    imageName = "Peer Info/ButtonMute"
+                    imageName = nil
                 case .unmute:
-                    imageName = "Peer Info/ButtonUnmute"
+                    imageName = nil
                 case .more:
-                    imageName = "Peer Info/ButtonMore"
+                    imageName = nil
                 case .addMember:
                     imageName = "Peer Info/ButtonAddMember"
                 case .search:
                     imageName = "Peer Info/ButtonSearch"
                 case .leave:
-                    imageName = "Peer Info/ButtonLeave"
+                    imageName = nil
                 }
-                if let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
+                if let imageName = imageName, let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
                     let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
                     context.clip(to: imageRect, mask: image.cgImage!)
                     context.fill(imageRect)
@@ -179,14 +248,24 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             })
         }
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: isActive ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemDisabledTextColor)
+        let alpha: CGFloat = isActive ? 1.0 : 0.3
+        if isActiveUpdated, !self.containerNode.alpha.isZero {
+            let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            alphaTransition.updateAlpha(node: self.backgroundNode, alpha: isActive ? 1.0 : 0.3)
+            if !isExpanded {
+                alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
+            }
+        }
+        
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor)
         self.accessibilityLabel = text
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height + 6.0), size: titleSize))
-        transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.textNode, alpha: isExpanded ? 0.0 : alpha)
         
         self.referenceNode.frame = self.containerNode.bounds
     }
@@ -332,7 +411,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = Int64(peer.id.id)
+                    id = Int64(peer.id.id._internalGetInt32Value())
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
@@ -343,7 +422,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     if case let .cloud(imageId, _, _) = reference {
                         id = imageId
                     } else {
-                        id = Int64(peer.id.id)
+                        id = Int64(peer.id.id._internalGetInt32Value())
                     }
                 }
                 
@@ -622,7 +701,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = Int64(peer.id.id)
+                    id = Int64(peer.id.id._internalGetInt32Value())
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
@@ -633,7 +712,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     if case let .cloud(imageId, _, _) = reference {
                         id = imageId
                     } else {
-                        id = Int64(peer.id.id)
+                        id = Int64(peer.id.id._internalGetInt32Value())
                     }
             }
             
@@ -694,6 +773,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
     private let isSettings: Bool
+    let pinchSourceNode: PinchSourceContainerNode
     let avatarContainerNode: PeerInfoAvatarTransformContainerNode
     let listContainerTransformNode: ASDisplayNode
     let listContainerNode: PeerInfoAvatarListContainerNode
@@ -704,9 +784,12 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     var item: PeerInfoAvatarListItem?
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
+    var animateOverlaysFadeIn: (() -> Void)?
     
     init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
         self.isSettings = isSettings
+
+        self.pinchSourceNode = PinchSourceContainerNode()
         
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
@@ -715,10 +798,11 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.listContainerNode.isHidden = true
         
         super.init()
-        
-        self.addSubnode(self.avatarContainerNode)
+
+        self.addSubnode(self.pinchSourceNode)
+        self.pinchSourceNode.contentNode.addSubnode(self.avatarContainerNode)
         self.listContainerTransformNode.addSubnode(self.listContainerNode)
-        self.addSubnode(self.listContainerTransformNode)
+        self.pinchSourceNode.contentNode.addSubnode(self.listContainerTransformNode)
         
         let avatarReady = (self.avatarContainerNode.avatarNode.ready
         |> mapToSignal { _ -> Signal<Bool, NoError> in
@@ -760,10 +844,29 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 }
             }
         }
+
+        self.pinchSourceNode.activate = { [weak self] sourceNode in
+            guard let _ = self else {
+                return
+            }
+            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                return UIScreen.main.bounds
+            })
+            context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+        }
+
+        self.pinchSourceNode.animatedOut = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.animateOverlaysFadeIn?()
+        }
     }
     
     func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.arguments = (peer, theme, avatarSize, isExpanded)
+        self.pinchSourceNode.update(size: size, transition: transition)
+        self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
         self.avatarContainerNode.update(peer: peer, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
     }
     
@@ -1557,6 +1660,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var cancelUpload: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
+    var animateOverlaysFadeIn: (() -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
@@ -1670,6 +1774,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 return
             }
             strongSelf.editingContentNode.avatarNode.update(peer: peer, item: strongSelf.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
+        }
+
+        self.avatarListNode.animateOverlaysFadeIn = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.navigationButtonContainer.layer.animateAlpha(from: 0.0, to: strongSelf.navigationButtonContainer.alpha, duration: 0.25)
+            strongSelf.avatarListNode.listContainerNode.shadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.shadowNode.alpha, duration: 0.25)
+            strongSelf.avatarListNode.listContainerNode.controlsContainerNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.controlsContainerNode.alpha, duration: 0.25)
+
+            strongSelf.animateOverlaysFadeIn?()
         }
     }
     

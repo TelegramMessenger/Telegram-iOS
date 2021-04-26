@@ -207,7 +207,7 @@ final class ChatMessageAccessibilityData {
             if let chatPeer = message.peers[item.message.id.peerId] {
                 let authorName = message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 

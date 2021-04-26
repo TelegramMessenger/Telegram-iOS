@@ -41,6 +41,7 @@ public final class OpenChatMessageParams {
     public let actionInteraction: GalleryControllerActionInteraction?
     public let playlistLocation: PeerMessagesPlaylistLocation?
     public let gallerySource: GalleryControllerItemSource?
+    public let centralItemUpdated: ((MessageId) -> Void)?
     
     public init(
         context: AccountContext,
@@ -65,7 +66,8 @@ public final class OpenChatMessageParams {
         chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void,
         actionInteraction: GalleryControllerActionInteraction? = nil,
         playlistLocation: PeerMessagesPlaylistLocation? = nil,
-        gallerySource: GalleryControllerItemSource? = nil
+        gallerySource: GalleryControllerItemSource? = nil,
+        centralItemUpdated: ((MessageId) -> Void)? = nil
     ) {
         self.context = context
         self.chatLocation = chatLocation
@@ -90,5 +92,6 @@ public final class OpenChatMessageParams {
         self.actionInteraction = actionInteraction
         self.playlistLocation = playlistLocation
         self.gallerySource = gallerySource
+        self.centralItemUpdated = centralItemUpdated
     }
 }

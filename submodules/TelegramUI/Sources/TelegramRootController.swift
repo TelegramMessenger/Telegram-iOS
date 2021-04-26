@@ -15,6 +15,7 @@ import SettingsUI
 import AppBundle
 import NGData
 import DatePickerNode
+import DebugSettingsUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
