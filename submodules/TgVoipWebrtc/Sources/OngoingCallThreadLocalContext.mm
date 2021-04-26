@@ -944,7 +944,7 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
-            .enableVideo = enableVideo,
+            .videoContentType = tgcalls::VideoContentType::Generic,
             .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
