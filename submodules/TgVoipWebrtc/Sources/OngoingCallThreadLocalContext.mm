@@ -867,6 +867,16 @@ private:
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
         
+        tgcalls::VideoContentType _videoContentType;
+        switch (videoContentType) {
+        case OngoingGroupCallVideoContentTypeGeneric:
+                _videoContentType = tgcalls::VideoContentType::Generic;
+        case OngoingGroupCallVideoContentTypeScreencast:
+                _videoContentType = tgcalls::VideoContentType::Screencast;
+        case OngoingGroupCallVideoContentTypeNone:
+                _videoContentType = tgcalls::VideoContentType::None;
+        }
+        
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
@@ -944,7 +954,7 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
-            .videoContentType = videoContentType == OngoingGroupCallVideoContentTypeGeneric ? tgcalls::VideoContentType::Generic : tgcalls::VideoContentType::Screencast,
+            .videoContentType = _videoContentType,
             .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }

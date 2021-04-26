@@ -155,6 +155,7 @@ public final class OngoingGroupCallContext {
     }
     
     public enum VideoContentType {
+        case none
         case generic
         case screencast
     }
@@ -204,6 +205,8 @@ public final class OngoingGroupCallContext {
                 _videoContentType = .generic
             case .screencast:
                 _videoContentType = .screencast
+            case .none:
+                _videoContentType = .none
             }
             
             let videoSources = self.videoSources

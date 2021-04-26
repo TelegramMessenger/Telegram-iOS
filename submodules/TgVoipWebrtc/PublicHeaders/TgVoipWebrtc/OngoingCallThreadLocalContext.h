@@ -184,6 +184,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
 };
 
 typedef NS_ENUM(int32_t, OngoingGroupCallVideoContentType) {
+    OngoingGroupCallVideoContentTypeNone,
     OngoingGroupCallVideoContentTypeGeneric,
     OngoingGroupCallVideoContentTypeScreencast,
 };
