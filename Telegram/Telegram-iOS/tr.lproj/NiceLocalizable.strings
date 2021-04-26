@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "Bu yaklaşık bir tarihtir";
 "NGLab.RegDate.MenuItem" = "kayıtlı";
 "NGLab.RegDate.FetchError" = "Üzgünüz, kayıt tarihi gösterilemiyor.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Cihaz doğrulanamıyor.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Ayarları & Klasörleri iCloud ile Senkronize Et";

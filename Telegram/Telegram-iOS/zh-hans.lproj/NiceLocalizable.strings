@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "这是一个大致日期";
 "NGLab.RegDate.MenuItem" = "已注册";
 "NGLab.RegDate.FetchError" = "对不起，无法获得注册日期。";
+"NGLab.BadDeviceToken" = "抱歉，无法验证设备。";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "使用 iCloud 同步设置和分组";

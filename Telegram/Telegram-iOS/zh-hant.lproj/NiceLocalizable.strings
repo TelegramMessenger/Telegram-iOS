@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "這是一個大概的日期";
 "NGLab.RegDate.MenuItem" = "已註冊";
 "NGLab.RegDate.FetchError" = "抱歉，無法取得註冊日期。";
+"NGLab.BadDeviceToken" = "抱歉，無法驗證裝置！";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "從 iCloud 同步設定與資料夾";
@@ -142,7 +143,7 @@
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的電話號碼只會在介面中隱藏。要完全隱藏起來，請使用「隱私設定」。";
 "NicegramSettings.Other.showProfileId" = "顯示用戶ID";
-"NicegramSettings.Other.showRegDate" = "顯示註冊日期";
+"NicegramSettings.Other.showRegDate" = "顯示用戶註冊日期";
 "Premium.OnetapTranslate.LowPower" = "低電量偵測";
 "Premium.OnetapTranslate.LowPower.Notice" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";
 "Premium.rememberFolderOnExit" = "記下應用程式關閉時所在的資料夾";

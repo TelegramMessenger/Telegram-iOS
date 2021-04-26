@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "이것은 대략적인 날짜입니다";
 "NGLab.RegDate.MenuItem" = "등록됨";
 "NGLab.RegDate.FetchError" = "죄송합니다. 등록일을 확인할 수 없습니다.";
+"NGLab.BadDeviceToken" = "[iOS 11+] 장치를 확인할 수 없습니다.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "iCloud 에 설정 및 폴더 동기화";

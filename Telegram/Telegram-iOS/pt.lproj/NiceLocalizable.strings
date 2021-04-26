@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "Esta é uma data aproximada";
 "NGLab.RegDate.MenuItem" = "registrado";
 "NGLab.RegDate.FetchError" = "Desculpe, não foi possível obter a data de registro.";
+"NGLab.BadDeviceToken" = "Incapaz de verificar o dispositivo.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Sincronizar configurações e pastas com o iCloud";
@@ -142,5 +143,7 @@
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Seu número ficará oculto apenas na interface do usuário. Para ocultá-lo de outras pessoas, use as configurações de privacidade.";
 "NicegramSettings.Other.showProfileId" = "Mostrar perfil";
+"NicegramSettings.Other.showRegDate" = "Mostrar data de registro";
 "Premium.OnetapTranslate.LowPower" = "Reconhecimento em modo pouca energia";
 "Premium.OnetapTranslate.LowPower.Notice" = "O aplicativo detecta o idioma de cada mensagem em seu dispositivo. É uma tarefa de alto desempenho que pode afetar a vida útil da bateria.";
+"Premium.rememberFolderOnExit" = "Lembrar pasta atual antes de sair";
