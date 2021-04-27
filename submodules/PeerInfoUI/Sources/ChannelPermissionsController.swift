@@ -797,7 +797,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 
-                let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)
+                let signal = context.engine.peers.convertGroupToSupergroup(peerId: view.peerId)
                 |> mapError { error -> UpdateChannelSlowModeError in
                     switch error {
                     case .tooManyChannels:

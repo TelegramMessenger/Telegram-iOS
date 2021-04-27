@@ -1229,7 +1229,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
             let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
 
-            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0

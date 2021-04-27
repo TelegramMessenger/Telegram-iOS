@@ -1180,7 +1180,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !self.didSuggestLocalization {
             self.didSuggestLocalization = true
             
-            let network = self.context.account.network
+            let context = self.context
             let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
                 let languageCode: String
                 if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
@@ -1206,7 +1206,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
                     return .single(nil)
                 }
-                return suggestedLocalizationInfo(network: network, languageCode: suggestedLocalization.languageCode, extractKeys: LanguageSuggestionControllerStrings.keys)
+                return context.engine.localization.suggestedLocalizationInfo(languageCode: suggestedLocalization.languageCode, extractKeys: LanguageSuggestionControllerStrings.keys)
                 |> map({ suggestedLocalization -> (String, SuggestedLocalizationInfo)? in
                     return (value.0, suggestedLocalization)
                 })
@@ -1223,7 +1223,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }) {
                     strongSelf.present(controller, in: .window(.root))
-                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.context.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                    _ = strongSelf.context.engine.localization.markSuggestedLocalizationAsSeenInteractively(languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
             
@@ -2295,7 +2295,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }
                                 if value == .commit {
-                                    let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
+                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
                                         }

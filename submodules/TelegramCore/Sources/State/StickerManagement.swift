@@ -90,7 +90,7 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
             if pack.topItems.count < 5 && pack.topItems.count < pack.info.count {
-                return requestStickerSet(postbox: postbox, network: network, reference: .id(id: pack.info.id.id, accessHash: pack.info.accessHash))
+                return _internal_requestStickerSet(postbox: postbox, network: network, reference: .id(id: pack.info.id.id, accessHash: pack.info.accessHash))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<RequestStickerSetResult?, NoError> in
                     return .single(nil)

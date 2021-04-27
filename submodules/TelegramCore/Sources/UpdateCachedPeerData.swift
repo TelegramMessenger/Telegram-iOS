@@ -133,7 +133,7 @@ public func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId
         guard let view = views.views[.basicPeer(rawPeerId)] as? BasicPeerView else {
             return .complete()
         }
-        guard let peer = view.peer else {
+        guard let _ = view.peer else {
             return .complete()
         }
         return .single(true)

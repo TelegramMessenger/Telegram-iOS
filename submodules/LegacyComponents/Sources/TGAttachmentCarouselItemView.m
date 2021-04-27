@@ -346,6 +346,21 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_itemsSizeChangedDisposable dispose];
 }
 
+- (UIView *)getItemSnapshot:(NSString *)uniqueId {
+    for (UIView *cell in _collectionView.visibleCells) {
+        if ([cell isKindOfClass:[TGAttachmentAssetCell class]]) {
+            TGAttachmentAssetCell *assetCell = (TGAttachmentAssetCell *)cell;
+            if (assetCell.asset.identifier != nil && [assetCell.asset.identifier isEqualToString:uniqueId]) {
+                UIView *snapshotView = [assetCell snapshotViewAfterScreenUpdates:false];
+                snapshotView.frame = [assetCell convertRect:assetCell.bounds toView:nil];
+                assetCell.alpha = 0.01f;
+                return snapshotView;
+            }
+        }
+    }
+    return nil;
+}
+
 - (void)setPallete:(TGMenuSheetPallete *)pallete
 {
     _pallete = pallete;

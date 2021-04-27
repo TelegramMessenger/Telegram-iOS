@@ -24,7 +24,7 @@ public enum RequestStickerSetResult {
     }
 }
 
-public func requestStickerSet(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<RequestStickerSetResult, RequestStickerSetError> {
+func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<RequestStickerSetResult, RequestStickerSetError> {
     let collectionId: ItemCollectionId?
     let input: Api.InputStickerSet
     
@@ -133,7 +133,7 @@ public final class CoveredStickerSet : Equatable {
     }
 }
 
-public func installStickerSetInteractively(account: Account, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<InstallStickerSetResult, InstallStickerSetError> {
+func _internal_installStickerSetInteractively(account: Account, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<InstallStickerSetResult, InstallStickerSetError> {
     return account.network.request(Api.functions.messages.installStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), archived: .boolFalse)) |> mapError { _ -> InstallStickerSetError in
         return .generic
         } |> mapToSignal { result -> Signal<InstallStickerSetResult, InstallStickerSetError> in
@@ -198,7 +198,7 @@ public func installStickerSetInteractively(account: Account, info: StickerPackCo
 }
 
 
-public func uninstallStickerSetInteractively(account: Account, info: StickerPackCollectionInfo) -> Signal<Void, NoError> {
+func _internal_uninstallStickerSetInteractively(account: Account, info: StickerPackCollectionInfo) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.messages.uninstallStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)

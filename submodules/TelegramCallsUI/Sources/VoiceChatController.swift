@@ -1970,6 +1970,16 @@ public final class VoiceChatController: ViewController {
                         })
                     }
                 }
+
+                var removeRequestedVideoSources: [UInt32] = []
+                for source in strongSelf.requestedVideoSources {
+                    if !validSources.contains(source) {
+                        removeRequestedVideoSources.append(source)
+                    }
+                }
+                for source in removeRequestedVideoSources {
+                    strongSelf.requestedVideoSources.remove(source)
+                }
                 
                 var updated = false
                 for i in (0 ..< strongSelf.videoNodes.count).reversed() {
@@ -3194,6 +3204,18 @@ public final class VoiceChatController: ViewController {
                 })
                 self.controller?.present(controller, in: .window(.root))
             }
+            return;
+            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.call.isVideo {
+                    strongSelf.call.disableVideo()
+                } else {
+                    strongSelf.call.requestVideo()
+                }
+            })
+            self.controller?.present(controller, in: .window(.root))
         }
         
         @objc private func switchCameraPressed() {

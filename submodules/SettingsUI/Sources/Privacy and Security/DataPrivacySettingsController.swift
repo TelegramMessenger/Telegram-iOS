@@ -360,7 +360,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     info.insert(.shippingInfo)
                 }
                 
-                clearPaymentInfoDisposable.set((clearBotPaymentInfo(network: context.account.network, info: info)
+                clearPaymentInfoDisposable.set((context.engine.payments.clearBotPaymentInfo(info: info)
                     |> deliverOnMainQueue).start(completed: {
                         updateState { state in
                             var state = state
@@ -482,7 +482,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     if clear {
-                        clearPaymentInfoDisposable.set((clearCloudDraftsInteractively(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId)
+                        clearPaymentInfoDisposable.set((context.engine.messages.clearCloudDraftsInteractively()
                             |> deliverOnMainQueue).start(completed: {
                                 updateState { state in
                                     var state = state

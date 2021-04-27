@@ -618,7 +618,7 @@ public final class ShareController: ViewController {
                         if let error = error {
                             Queue.mainQueue().async {
                                 let _ = (account.postbox.transaction { transaction -> Peer? in
-                                    deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [id])
+                                    TelegramEngine(account: account).messages.deleteMessages(transaction: transaction, ids: [id])
                                     return transaction.getPeer(id.peerId)
                                 }
                                 |> deliverOnMainQueue).start(next: { peer in

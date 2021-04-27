@@ -174,7 +174,7 @@ extension BotPaymentRequestedInfo {
     }
 }
 
-public func fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -269,7 +269,7 @@ extension BotPaymentShippingOption {
     }
 }
 
-public func validateBotPaymentForm(account: Account, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
+func _internal_validateBotPaymentForm(account: Account, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -347,7 +347,7 @@ public enum SendBotPaymentResult {
     case externalVerificationRequired(url: String)
 }
 
-public func sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+func _internal_sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -461,7 +461,7 @@ public enum RequestBotPaymentReceiptError {
     case generic
 }
 
-public func requestBotPaymentReceipt(account: Account, messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
+func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -545,7 +545,7 @@ public struct BotPaymentInfo: OptionSet {
     public static let shippingInfo = BotPaymentInfo(rawValue: 1 << 1)
 }
 
-public func clearBotPaymentInfo(network: Network, info: BotPaymentInfo) -> Signal<Void, NoError> {
+func _internal_clearBotPaymentInfo(network: Network, info: BotPaymentInfo) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     if info.contains(.paymentInfo) {
         flags |= (1 << 0)

@@ -96,7 +96,7 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
                             }
                         } else if let operation = entry.contents as? CloudChatClearHistoryOperation {
                             if let peer = transaction.getPeer(entry.peerId) {
-                                return clearHistory(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
+                                return _internal_clearHistory(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, peer: peer, operation: operation)
                             } else {
                                 return .complete()
                             }
@@ -311,7 +311,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
         |> then(deleteUser)
         |> then(reportSignal)
         |> then(postbox.transaction { transaction -> Void in
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .all)
+            _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .all)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
@@ -330,7 +330,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
-                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .not(Namespaces.Message.allScheduled))
+                _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .not(Namespaces.Message.allScheduled))
             })
         } else {
             return .complete()
@@ -376,7 +376,7 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
     }
 }
 
-private func clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
+private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true, type: operation.type)

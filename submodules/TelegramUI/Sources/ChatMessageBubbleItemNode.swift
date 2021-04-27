@@ -35,6 +35,17 @@ private struct BubbleItemAttributes {
     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing
 }
 
+private final class ChatMessageBubbleClippingNode: ASDisplayNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = self.view.hitTest(point, with: event)
+        if result === self.view {
+            return nil
+        } else {
+            return result
+        }
+    }
+}
+
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool) {
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
@@ -367,7 +378,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private let shadowNode: ChatMessageShadowNode
-    private var clippingNode: ASDisplayNode
+    private var clippingNode: ChatMessageBubbleClippingNode
     
     override var extractedBackgroundNode: ASDisplayNode? {
         return self.shadowNode
@@ -431,7 +442,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.backgroundNode = ChatMessageBackground()
         self.shadowNode = ChatMessageShadowNode()
 
-        self.clippingNode = ASDisplayNode()
+        self.clippingNode = ChatMessageBubbleClippingNode()
         self.clippingNode.clipsToBounds = true
 
         self.messageAccessibilityArea = AccessibilityAreaNode()
@@ -705,6 +716,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         return nil
+    }
+
+    func animateContentFromMediaInput(snapshotView: UIView, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
     override func didLoad() {

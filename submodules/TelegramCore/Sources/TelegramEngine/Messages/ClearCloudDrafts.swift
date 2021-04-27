@@ -5,7 +5,7 @@ import TelegramApi
 
 import SyncCore
 
-public func clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getAllDrafts())
     |> retryRequest
     |> mapToSignal { updates -> Signal<Void, NoError> in

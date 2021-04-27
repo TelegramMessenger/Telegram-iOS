@@ -288,7 +288,7 @@ public final class CallListController: TelegramBaseController {
                 return
             }
             
-            var signal = clearCallHistory(account: strongSelf.context.account, forEveryone: forEveryone)
+            var signal = strongSelf.context.engine.messages.clearCallHistory(forEveryone: forEveryone)
             
             var cancelImpl: (() -> Void)?
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

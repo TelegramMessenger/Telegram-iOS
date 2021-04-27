@@ -256,7 +256,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private func loadMore() {
         self.isLoadingMore = true
         
-        self.loadMoreDisposable.set((searchMessages(account: self.context.account, location: self.location, query: self.searchQuery, state: self.searchState)
+        self.loadMoreDisposable.set((self.context.engine.messages.searchMessages(location: self.location, query: self.searchQuery, state: self.searchState)
         |> deliverOnMainQueue).start(next: { [weak self] (updatedResult, updatedState) in
             guard let strongSelf = self else {
                 return

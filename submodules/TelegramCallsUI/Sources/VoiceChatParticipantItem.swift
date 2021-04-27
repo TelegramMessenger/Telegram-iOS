@@ -1585,6 +1585,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }))
                         }
+                    } else {
+                        strongSelf.avatarNode.alpha = 1.0
                     }
                     
                     if item.style == .list {

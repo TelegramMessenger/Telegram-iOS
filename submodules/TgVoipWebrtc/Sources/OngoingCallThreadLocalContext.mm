@@ -859,7 +859,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit videoContentType:(OngoingGroupCallVideoContentType)videoContentType enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -867,6 +867,30 @@ private:
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
         
+        tgcalls::VideoContentType _videoContentType;
+        switch (videoContentType) {
+            case OngoingGroupCallVideoContentTypeGeneric: {
+                _videoContentType = tgcalls::VideoContentType::Generic;
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeScreencast: {
+                _videoContentType = tgcalls::VideoContentType::Screencast;
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeNone: {
+                _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
+            default: {
+                _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
+        }
+        
+        std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
@@ -944,7 +968,8 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
-            .enableVideo = enableVideo,
+            .videoContentType = _videoContentType,
+            .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
@@ -1269,6 +1294,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
             values.push_back([ssrc unsignedIntValue]);
         }
         _instance->removeSsrcs(values);
+    }
+}
+
+- (void)removeIncomingVideoSource:(uint32_t)ssrc {
+    if (_instance) {
+        _instance->removeIncomingVideoSource(ssrc);
     }
 }
 

@@ -13,7 +13,7 @@ public enum CreateGroupError {
     case serverProvided(String)
 }
 
-public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
+func _internal_createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
     return account.postbox.transaction { transaction -> Signal<PeerId?, CreateGroupError> in
         var inputUsers: [Api.InputUser] = []
         for peerId in peerIds {

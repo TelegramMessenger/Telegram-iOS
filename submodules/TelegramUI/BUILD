@@ -221,6 +221,7 @@ swift_library(
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
         "//submodules/DebugSettingsUI:DebugSettingsUI",
         "//submodules/ImportStickerPackUI:ImportStickerPackUI",
+        "//submodules/GradientBackground:GradientBackground",
     ],
     visibility = [
         "//visibility:public",

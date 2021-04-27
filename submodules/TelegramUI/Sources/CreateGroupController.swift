@@ -425,7 +425,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let createSignal: Signal<PeerId?, CreateGroupError>
             switch mode {
                 case .generic:
-                    createSignal = createGroup(account: context.account, title: title, peerIds: peerIds)
+                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
                 case .supergroup:
                     createSignal = createSupergroup(account: context.account, title: title, description: nil)
                     |> map(Optional.init)

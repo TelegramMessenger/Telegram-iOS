@@ -23,7 +23,7 @@ func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [Wr
     }
 }
 
-public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
+func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
     var resourceIds: [WrappedMediaResourceId] = []
     if deleteMedia {
         for id in ids {
@@ -57,7 +57,7 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
     })
 }
 
-public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
+func _internal_deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
     var resourceIds: [WrappedMediaResourceId] = []
     transaction.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: { media in
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
@@ -67,7 +67,7 @@ public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: Medi
     }
 }
 
-public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
+func _internal_deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
     var resourceIds: [WrappedMediaResourceId] = []
     transaction.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: { media in
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
@@ -77,7 +77,7 @@ public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBo
     }
 }
 
-public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
+func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         var resourceIds: [WrappedMediaResourceId] = []
         transaction.withAllMessages(peerId: peerId, { message in
@@ -96,7 +96,7 @@ public enum ClearCallHistoryError {
     case generic
 }
 
-public func clearCallHistory(account: Account, forEveryone: Bool) -> Signal<Never, ClearCallHistoryError> {
+func _internal_clearCallHistory(account: Account, forEveryone: Bool) -> Signal<Never, ClearCallHistoryError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var flags: Int32 = 0
         if forEveryone {
@@ -146,7 +146,7 @@ public enum SetChatMessageAutoremoveTimeoutError {
     case generic
 }
 
-public func setChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
+func _internal_setChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }

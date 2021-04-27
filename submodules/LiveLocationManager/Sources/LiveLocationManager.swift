@@ -10,9 +10,7 @@ import AccountContext
 public final class LiveLocationManagerImpl: LiveLocationManager {
     private let queue = Queue.mainQueue()
     
-    private let postbox: Postbox
-    private let network: Network
-    private let stateManager: AccountStateManager
+    private let account: Account
     private let locationManager: DeviceLocationManager
     
     private let summaryManagerImpl: LiveLocationSummaryManagerImpl
@@ -46,16 +44,14 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     
     private var invalidationTimer: (SwiftSignalKit.Timer, Int32)?
     
-    public init(postbox: Postbox, network: Network, accountPeerId: PeerId, viewTracker: AccountViewTracker, stateManager: AccountStateManager, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
-        self.postbox = postbox
-        self.network = network
-        self.stateManager = stateManager
+    public init(account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
+        self.account = account
         self.locationManager = locationManager
         
-        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, postbox: postbox, accountPeerId: accountPeerId, viewTracker: viewTracker)
+        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, postbox: account.postbox, accountPeerId: account.peerId, viewTracker: account.viewTracker)
         
         let viewKey: PostboxViewKey = .localMessageTag(.OutgoingLiveLocation)
-        self.messagesDisposable = (postbox.combinedView(keys: [viewKey])
+        self.messagesDisposable = (account.postbox.combinedView(keys: [viewKey])
         |> deliverOn(self.queue)).start(next: { [weak self] view in
             if let strongSelf = self {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -175,7 +171,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let addedStopped = stopMessageIds.subtracting(self.stopMessageIds)
         self.stopMessageIds = stopMessageIds
         for id in addedStopped {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((TelegramEngine(account: self.account).messages.requestEditLiveLocation(messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -230,7 +226,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let ids = self.broadcastToMessageIds
         let remainingIds = Atomic<Set<MessageId>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((TelegramEngine(account: self.account).messages.requestEditLiveLocation(messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -253,7 +249,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         
         let ids = self.broadcastToMessageIds.keys.filter({ $0.peerId == peerId })
         if !ids.isEmpty {
-            let _ = self.postbox.transaction({ transaction -> Void in
+            let _ = self.account.postbox.transaction({ transaction -> Void in
                 for id in ids {
                     transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?

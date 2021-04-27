@@ -397,7 +397,7 @@ public final class SharedNotificationManager {
             
             if !messagesDeleted.isEmpty {
                 let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
-                    deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: messagesDeleted)
+                    TelegramEngine(account: account).messages.deleteMessages(transaction: transaction, ids: messagesDeleted)
                 }).start()
             }
             

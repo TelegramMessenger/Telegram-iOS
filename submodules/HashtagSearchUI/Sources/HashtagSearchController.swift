@@ -43,7 +43,7 @@ public final class HashtagSearchController: TelegramBaseController {
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         let location: SearchMessagesLocation = .general(tags: nil, minDate: nil, maxDate: nil)
-        let search = searchMessages(account: context.account, location: location, query: query, state: nil)
+        let search = context.engine.messages.searchMessages(location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
         |> map { result, _ in
             return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData, result.totalCount, nil, false) })

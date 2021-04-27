@@ -154,6 +154,12 @@ public final class OngoingGroupCallContext {
         case broadcast
     }
     
+    public enum VideoContentType {
+        case none
+        case generic
+        case screencast
+    }
+    
     public struct NetworkState: Equatable {
         public var isConnected: Bool
         public var isTransitioningFromBroadcastToRtc: Bool
@@ -180,7 +186,7 @@ public final class OngoingGroupCallContext {
         
         private var broadcastPartsSource: BroadcastPartSource?
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
@@ -192,6 +198,16 @@ public final class OngoingGroupCallContext {
             }
             
             let broadcastPartsSource = self.broadcastPartsSource
+            
+            let _videoContentType: OngoingGroupCallVideoContentType
+            switch videoContentType {
+            case .generic:
+                _videoContentType = .generic
+            case .screencast:
+                _videoContentType = .screencast
+            case .none:
+                _videoContentType = .none
+            }
             
             let videoSources = self.videoSources
             self.context = GroupCallThreadLocalContext(
@@ -223,7 +239,7 @@ public final class OngoingGroupCallContext {
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
                 outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
-                enableVideo: enableVideo,
+                videoContentType: _videoContentType,
                 enableNoiseSuppression: enableNoiseSuppression
             )
             
@@ -287,6 +303,10 @@ public final class OngoingGroupCallContext {
             self.context.removeSsrcs(ssrcs.map { ssrc in
                 return ssrc as NSNumber
             })
+        }
+
+        func removeIncomingVideoSource(_ ssrc: UInt32) {
+            self.context.removeIncomingVideoSource(ssrc)
         }
         
         func setVolume(ssrc: UInt32, volume: Double) {
@@ -529,10 +549,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: enableVideo, enableNoiseSuppression: enableNoiseSuppression)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression)
         })
     }
     
@@ -591,6 +611,12 @@ public final class OngoingGroupCallContext {
     public func removeSsrcs(ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.removeSsrcs(ssrcs: ssrcs)
+        }
+    }
+
+    public func removeIncomingVideoSource(_ ssrc: UInt32) {
+        self.impl.with { impl in
+            impl.removeIncomingVideoSource(ssrc)
         }
     }
     

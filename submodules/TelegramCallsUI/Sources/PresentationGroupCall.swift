@@ -1306,7 +1306,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: self.isVideoEnabled, enableNoiseSuppression: enableNoiseSuppression)
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: enableNoiseSuppression)
                 self.incomingVideoSourcePromise.set(callContext.videoSources
                 |> deliverOnMainQueue
                 |> map { [weak self] sources -> [PeerId: UInt32] in
@@ -1851,6 +1851,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     strongSelf.callContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
                                 } else if participant.muteState?.mutedByYou == true {
                                     strongSelf.callContext?.setVolume(ssrc: ssrc, volume: 0.0)
+                                }
+                                if participant.isVideoMuted {
+                                    strongSelf.callContext?.removeIncomingVideoSource(ssrc)
                                 }
                             }
                         }

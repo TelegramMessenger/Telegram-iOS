@@ -675,6 +675,52 @@ public extension ContainedViewLayoutTransition {
             })
         }
     }
+
+    func animateTransformScale(node: ASDisplayNode, from fromScale: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        let t = node.layer.transform
+
+        switch self {
+        case .immediate:
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let calculatedFrom: CGPoint
+            let calculatedTo: CGPoint
+
+            calculatedFrom = fromScale
+            calculatedTo = CGPoint(x: 1.0, y: 1.0)
+
+            node.layer.animateScaleX(from: calculatedFrom.x, to: calculatedTo.x, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+            node.layer.animateScaleY(from: calculatedFrom.y, to: calculatedTo.y, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
+        }
+    }
+
+    func animateTransformScale(layer: CALayer, from fromScale: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let calculatedFrom: CGPoint
+            let calculatedTo: CGPoint
+
+            calculatedFrom = fromScale
+            calculatedTo = CGPoint(x: 1.0, y: 1.0)
+
+            layer.animateScaleX(from: calculatedFrom.x, to: calculatedTo.x, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+            layer.animateScaleY(from: calculatedFrom.y, to: calculatedTo.y, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
+        }
+    }
     
     func animateTransformScale(view: UIView, from fromScale: CGFloat, completion: ((Bool) -> Void)? = nil) {
         let t = view.layer.transform
@@ -920,7 +966,12 @@ public extension ContainedViewLayoutTransition {
             completion?(true)
             return
         }
-        let t = node.layer.transform
+
+        self.updateTransformScale(layer: node.layer, scale: scale, completion: completion)
+    }
+
+    func updateTransformScale(layer: CALayer, scale: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.transform
         let currentScaleX = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         var currentScaleY = sqrt((t.m21 * t.m21) + (t.m22 * t.m22) + (t.m23 * t.m23))
         if t.m22 < 0.0 {
@@ -932,16 +983,16 @@ public extension ContainedViewLayoutTransition {
             }
             return
         }
-        
+
         switch self {
             case .immediate:
-                node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
+                layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
                 if let completion = completion {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-                node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.transform), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
+                layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: layer.transform), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                     result in
                     if let completion = completion {
                         completion(result)

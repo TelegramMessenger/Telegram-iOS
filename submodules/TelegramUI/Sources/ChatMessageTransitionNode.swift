@@ -147,10 +147,19 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             }
         }
 
+        final class MediaInput {
+            let extractSnapshot: () -> UIView?
+
+            init(extractSnapshot: @escaping () -> UIView?) {
+                self.extractSnapshot = extractSnapshot
+            }
+        }
+
         case textInput(textInput: TextInput, replyPanel: ReplyAccessoryPanelNode?)
         case stickerMediaInput(input: StickerInput, replyPanel: ReplyAccessoryPanelNode?)
         case audioMicInput(AudioMicInput)
         case videoMessage(VideoMessage)
+        case mediaInput(MediaInput)
     }
 
     private final class AnimatingItemNode: ASDisplayNode {
@@ -203,7 +212,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             updatedContentAreaInScreenSpace.origin.x = 0.0
             updatedContentAreaInScreenSpace.size.width = self.clippingNode.bounds.width
 
-            let timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0)
+            //let timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0)
 
             let clippingOffset = updatedContentAreaInScreenSpace.minY - self.clippingNode.frame.minY
             self.clippingNode.frame = CGRect(origin: CGPoint(x: 0.0, y: updatedContentAreaInScreenSpace.minY), size: self.clippingNode.bounds.size)
@@ -302,8 +311,6 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                     sourceReplyPanel = ReplyPanel(titleNode: replyPanel.titleNode, textNode: replyPanel.textNode, lineNode: replyPanel.lineNode, imageNode: replyPanel.imageNode, relativeSourceRect: replySourceAbsoluteFrame)
                 }
-
-                self.itemNode.cancelInsertionAnimations()
 
                 let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
@@ -410,6 +417,54 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                     itemNode.animateFromSnapshot(snapshotView: videoMessage.view, transition: transition)
                 }
+            case let .mediaInput(mediaInput):
+                if let snapshotView = mediaInput.extractSnapshot() {
+                    if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
+                        itemNode.cancelInsertionAnimations()
+
+                        self.contextSourceNode.isExtractedToContextPreview = true
+                        self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
+
+                        self.containerNode.addSubnode(self.contextSourceNode.contentNode)
+
+                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                        let sourceBackgroundAbsoluteRect = snapshotView.frame
+                        let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
+
+                        let transition: ContainedViewLayoutTransition = .animated(duration: verticalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
+                        let verticalTransition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
+
+                        if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
+                            itemNode.animateContentFromMediaInput(snapshotView: snapshotView, horizontalTransition: verticalTransition, verticalTransition: transition)
+                        }
+
+                        self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
+
+                        snapshotView.center = targetAbsoluteRect.center.offsetBy(dx: -self.containerNode.frame.minX, dy: -self.containerNode.frame.minY)
+                        self.containerNode.view.addSubview(snapshotView)
+
+                        self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
+
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true, force: true)
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0), additive: true, force: true, completion: { [weak self] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.endAnimation()
+                        })
+
+                        verticalTransition.animateTransformScale(node: self.contextSourceNode.contentNode, from: CGPoint(x: sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width, y: sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height))
+
+                        verticalTransition.updateTransformScale(layer: snapshotView.layer, scale: CGPoint(x: 1.0 / (sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width), y: 1.0 / (sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height)))
+
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+
+                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), .custom(0.33, 0.0, 0.0, 1.0), horizontalDuration)
+                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), .custom(0.33, 0.0, 0.0, 1.0), verticalDuration)
+                    }
+                }
             }
         }
 
@@ -455,6 +510,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
     private let listNode: ChatHistoryListNode
     private let getContentAreaInScreenSpace: () -> CGRect
+    private let onTransitionEvent: (ContainedViewLayoutTransition) -> Void
 
     private var currentPendingItem: (Int64, Source, () -> Void)?
 
@@ -464,9 +520,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         return self.currentPendingItem != nil
     }
 
-    init(listNode: ChatHistoryListNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+    init(listNode: ChatHistoryListNode, getContentAreaInScreenSpace: @escaping () -> CGRect, onTransitionEvent: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.listNode = listNode
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
+        self.onTransitionEvent = onTransitionEvent
 
         super.init()
 
@@ -505,7 +562,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             
             self.animatingItemNodes.append(animatingItemNode)
             switch source {
-            case .audioMicInput, .videoMessage:
+            case .audioMicInput, .videoMessage, .mediaInput:
                 let overlayController = OverlayTransitionContainerController()
                 overlayController.displayNode.addSubnode(animatingItemNode)
                 animatingItemNode.overlayController = overlayController
@@ -527,6 +584,8 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
             animatingItemNode.frame = self.bounds
             animatingItemNode.beginAnimation()
+
+            self.onTransitionEvent(.animated(duration: 0.5, curve: .custom(0.33, 0.0, 0.0, 1.0)))
         }
     }
 

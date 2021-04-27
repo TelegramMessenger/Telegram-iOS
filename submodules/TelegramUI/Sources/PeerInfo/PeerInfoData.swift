@@ -688,7 +688,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
                     if let isLarge = isLarge {
                         if isLarge {
-                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
                             |> map(Optional.init)
                         } else {
                             return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)

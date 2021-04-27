@@ -78,7 +78,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                 
                 if isRemoved {
                     let peerId = currentPeer.id
-                    clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+                    _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
                     transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
                 }

@@ -182,7 +182,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 case let .fetchStatus(fetchStatus):
                     if let context = self.context, let message = self.message, message.flags.isSending {
                         let _ = context.account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: context.account.postbox.mediaBox, ids: [message.id])
+                            context.engine.messages.deleteMessages(transaction: transaction, ids: [message.id])
                         }).start()
                     } else {
                         switch fetchStatus {

@@ -5,7 +5,7 @@ import TelegramApi
 
 import SyncCore
 
-public func sendScheduledMessageNowInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Never, NoError> {
+func _internal_sendScheduledMessageNowInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .sendScheduledMessageImmediately, id: messageId, action: SendScheduledMessageImmediatelyAction())
     }

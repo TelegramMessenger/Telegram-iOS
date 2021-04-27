@@ -1,5 +1,6 @@
 import SwiftSignalKit
 import Postbox
+import SyncCore
 
 public enum AddressNameValidationStatus: Equatable {
     case checking
@@ -68,6 +69,30 @@ public extension TelegramEngine {
 
         public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
             return _internal_searchPeers(account: self.account, query: query)
+        }
+
+        public func updatedRemotePeer(peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
+            return _internal_updatedRemotePeer(postbox: self.account.postbox, network: self.account.network, peer: peer)
+        }
+
+        public func chatOnlineMembers(peerId: PeerId) -> Signal<Int32, NoError> {
+            return _internal_chatOnlineMembers(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+
+        public func convertGroupToSupergroup(peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
+            return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
+        }
+
+        public func createGroup(title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
+            return _internal_createGroup(account: self.account, title: title, peerIds: peerIds)
+        }
+
+        public func createSecretChat(peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
+            return _internal_createSecretChat(account: self.account, peerId: peerId)
+        }
+
+        public func setChatMessageAutoremoveTimeoutInteractively(peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
+            return _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
         }
     }
 }

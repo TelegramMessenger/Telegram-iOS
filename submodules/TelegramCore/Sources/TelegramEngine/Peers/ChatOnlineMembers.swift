@@ -3,7 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-public func chatOnlineMembers(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<Int32, NoError> {
+func _internal_chatOnlineMembers(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }

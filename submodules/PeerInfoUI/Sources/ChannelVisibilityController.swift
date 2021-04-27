@@ -1171,7 +1171,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                        let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                         |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in

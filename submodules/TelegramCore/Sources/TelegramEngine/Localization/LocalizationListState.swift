@@ -51,7 +51,7 @@ func updateLocalizationListStateInteractively(transaction: Transaction, _ f: @es
     })
 }
 
-public func synchronizedLocalizationListState(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+func _internal_synchronizedLocalizationListState(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     return network.request(Api.functions.langpack.getLanguages(langPack: ""))
     |> retryRequest
     |> mapToSignal { languages -> Signal<Never, NoError> in

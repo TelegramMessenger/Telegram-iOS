@@ -920,7 +920,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
-                let searchSignal = searchMessages(account: context.account, location: location, query: finalQuery, state: nil, limit: 50)
+                let searchSignal = context.engine.messages.searchMessages(location: location, query: finalQuery, state: nil, limit: 50)
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
                     return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                 }
@@ -929,7 +929,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> mapToSignal { searchContext -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                     if let searchContext = searchContext, searchContext.result.hasMore {
                         if let _ = searchContext.loadMoreIndex {
-                            return searchMessages(account: context.account, location: location, query: finalQuery, state: searchContext.result.state, limit: 80)
+                            return context.engine.messages.searchMessages(location: location, query: finalQuery, state: searchContext.result.state, limit: 80)
                             |> map { result, updatedState -> ChatListSearchMessagesResult in
                                 return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                             }
@@ -966,7 +966,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
                 if case let .channelMessage(_, messageId) = resolvedUrl {
-                    return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
+                    return context.engine.messages.downloadMessage(messageId: messageId)
                 } else {
                     return .single(nil)
                 }

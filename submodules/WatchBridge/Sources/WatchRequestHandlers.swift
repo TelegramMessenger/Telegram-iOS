@@ -123,7 +123,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                 |> mapToSignal({ context -> Signal<Void, NoError> in
                     if let context = context {
                         let messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId)
-                        return applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
+                        return context.engine.messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0))
                     } else {
                         return .complete()
                     }
@@ -144,7 +144,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                 |> take(1)
                 |> mapToSignal({ context -> Signal<(Message, PresentationData)?, NoError> in
                     if let context = context {
-                        let messageSignal = downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
+                        let messageSignal = context.engine.messages.downloadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
                         |> map { message -> (Message, PresentationData)? in
                             if let message = message {
                                 return (message, context.sharedContext.currentPresentationData.with { $0 })
