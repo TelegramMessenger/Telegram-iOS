@@ -16,6 +16,7 @@ import TelegramUniversalVideoContent
 import ChatInterfaceState
 import FastBlur
 import ConfettiEffect
+import GradientBackground
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -300,6 +301,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
+    let gradientBackgroundNode: GradientBackgroundNode?
     let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
@@ -466,6 +468,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.backgroundNode = WallpaperBackgroundNode()
         self.backgroundNode.displaysAsynchronously = false
+
+        self.gradientBackgroundNode = GradientBackgroundNode()
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
@@ -598,6 +602,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.enableExtractedBackgrounds = true
     
         self.addSubnode(self.backgroundNode)
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            self.addSubnode(gradientBackgroundNode)
+        }
         self.addSubnode(self.historyNodeContainer)
         self.addSubnode(self.navigateButtons)
         self.addSubnode(self.titleAccessoryPanelContainer)
@@ -1282,6 +1289,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
         self.backgroundNode.updateLayout(size: contentBounds.size, transition: transition)
+
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            transition.updateFrame(node: gradientBackgroundNode, frame: contentBounds)
+            gradientBackgroundNode.updateLayout(size: contentBounds.size, transition: transition)
+        }
+
         transition.updateFrame(node: self.historyNodeContainer, frame: contentBounds)
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
