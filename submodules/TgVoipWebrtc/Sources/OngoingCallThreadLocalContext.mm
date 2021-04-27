@@ -871,12 +871,19 @@ private:
         switch (videoContentType) {
         case OngoingGroupCallVideoContentTypeGeneric:
                 _videoContentType = tgcalls::VideoContentType::Generic;
+                break;
         case OngoingGroupCallVideoContentTypeScreencast:
                 _videoContentType = tgcalls::VideoContentType::Screencast;
+                break;
         case OngoingGroupCallVideoContentTypeNone:
                 _videoContentType = tgcalls::VideoContentType::None;
+                break;
         }
         
+        std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
@@ -955,6 +962,7 @@ private:
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
             .videoContentType = _videoContentType,
+            .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
