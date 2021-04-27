@@ -346,6 +346,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
+    private var overrideUpdateTextInputHeightTransition: ContainedViewLayoutTransition?
     
     private var animateInAsOverlayCompletion: (() -> Void)?
     private var dismissAsOverlayCompletion: (() -> Void)?
@@ -469,7 +470,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode = WallpaperBackgroundNode()
         self.backgroundNode.displaysAsynchronously = false
 
-        self.gradientBackgroundNode = GradientBackgroundNode()
+        if chatPresentationInterfaceState.chatWallpaper.isBuiltin {
+            self.gradientBackgroundNode = GradientBackgroundNode()
+        } else {
+            self.gradientBackgroundNode = nil
+        }
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
@@ -510,8 +515,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
+        var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
         self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode, getContentAreaInScreenSpace: {
             return getContentAreaInScreenSpaceImpl?() ?? CGRect()
+        }, onTransitionEvent: { transition in
+            onTransitionEventImpl?(transition)
         })
         
         super.init()
@@ -522,6 +530,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
 
             return strongSelf.view.convert(strongSelf.frameForVisibleArea(), to: nil)
+        }
+
+        onTransitionEventImpl = { [weak self] transition in
+            guard let strongSelf = self, let gradientBackgroundNode = strongSelf.gradientBackgroundNode else {
+                return
+            }
+            gradientBackgroundNode.animateEvent(transition: transition)
         }
         
         self.controller?.presentationContext.topLevelSubview = { [weak self] in
@@ -633,7 +648,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.updateHeight = { [weak self] animated in
             if let strongSelf = self, let _ = strongSelf.inputPanelNode as? ChatTextInputPanelNode, !strongSelf.ignoreUpdateHeight {
                 if strongSelf.scheduledLayoutTransitionRequest == nil {
-                    strongSelf.scheduleLayoutTransitionRequest(animated ? .animated(duration: 0.1, curve: .easeInOut) : .immediate)
+                    let transition: ContainedViewLayoutTransition
+                    if !animated {
+                        transition = .immediate
+                    } else if let overrideUpdateTextInputHeightTransition = strongSelf.overrideUpdateTextInputHeightTransition {
+                        transition = overrideUpdateTextInputHeightTransition
+                    } else {
+                        transition = .animated(duration: 0.1, curve: .easeInOut)
+                    }
+                    strongSelf.scheduleLayoutTransitionRequest(transition)
                 }
             }
         }
@@ -1908,6 +1931,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
+            if abs(listBottomInset - previousListBottomInset) > 80.0 {
+                self.gradientBackgroundNode?.animateEvent(transition: transition)
+            }
             //self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
         }
 
@@ -2000,7 +2026,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
+                let previous = self.overrideUpdateTextInputHeightTransition
+                self.overrideUpdateTextInputHeightTransition = transition
                 textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.effectiveInputState, keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, accessoryItems: chatPresentationInterfaceState.inputTextPanelState.accessoryItems, animated: transition.isAnimated)
+                self.overrideUpdateTextInputHeightTransition = previous
             } else {
                 self.textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             }

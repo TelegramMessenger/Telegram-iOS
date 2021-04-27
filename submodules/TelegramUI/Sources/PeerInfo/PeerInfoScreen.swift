@@ -3113,7 +3113,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             strongSelf.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: strongSelf.context.account, signals: signals!)
                             |> deliverOnMainQueue).start(next: { [weak self] messages in
                                 if let strongSelf = self {
-                                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: messages).start()
+                                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: messages.map { $0.message }).start()
                                 }
                             }))
                         }

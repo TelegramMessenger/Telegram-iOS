@@ -4523,7 +4523,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.4, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -8374,7 +8374,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func editMessageMediaWithLegacySignals(_ signals: [Any]) {
         let _ = (legacyAssetPickerEnqueueMessages(account: self.context.account, signals: signals)
         |> deliverOnMainQueue).start(next: { [weak self] messages in
-            self?.editMessageMediaWithMessages(messages)
+            self?.editMessageMediaWithMessages(messages.map { $0.message })
         })
     }
     
@@ -8583,14 +8583,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         done(time)
                     })
                 }
-            }, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+            }, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                guard let strongSelf = self else {
+                    completion()
+                    return
+                }
                 if !inputText.string.isEmpty {
                     //strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
-                    self?.editMessageMediaWithLegacySignals(signals!)
+                    strongSelf.editMessageMediaWithLegacySignals(signals!)
+                    completion()
                 } else {
-                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
+                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: {
+                        completion()
+                    })
                 }
             }, selectRecentlyUsedInlineBot: { [weak self] peer in
                 if let strongSelf = self, let addressName = peer.addressName {
@@ -9531,11 +9538,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil) {
+    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: @escaping (String) -> UIView? = { _ in nil }, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.context.account, signals: signals!)
-        |> deliverOnMainQueue).start(next: { [weak self] messages in
+        |> deliverOnMainQueue).start(next: { [weak self] items in
             if let strongSelf = self {
-                let messages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting, scheduleTime: scheduleTime)
+                var completionImpl: (() -> Void)? = completion
+
+                var mappedMessages: [EnqueueMessage] = []
+                for item in items {
+                    var message = item.message
+                    if let uniqueId = item.uniqueId {
+                        let correlationId = Int64.random(in: 0 ..< Int64.max)
+                        message = message.withUpdatedCorrelationId(correlationId)
+
+                        if items.count == 1 {
+                            completionImpl = nil
+                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
+                                return getAnimatedTransitionSource(uniqueId)
+                            })), initiated: {
+                                completion()
+                            })
+                        }
+                    }
+                    mappedMessages.append(message)
+                }
+
+                let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
@@ -9543,7 +9571,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
+                    completionImpl?()
                 })
+
                 strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) })
             }
         }))

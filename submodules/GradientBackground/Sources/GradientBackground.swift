@@ -86,14 +86,15 @@ private func generateGradientComponent(size: CGSize, color: UIColor) -> UIImage?
 
     c?.setBlendMode(.normal)
 
-    var gradLocs: [CGFloat] = [0, 0.1, 0.35, 1]
+    //var gradLocs: [CGFloat] = [0, 0.1, 0.35, 1]
+    var gradLocs: [CGFloat] = [0.0, 1.0]
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let radius = min(size.width / 2.0, size.height / 2.0)
 
     let colors = [
         color.cgColor,
-        color.withAlphaComponent(0.8).cgColor,
-        color.withAlphaComponent(0.3).cgColor,
+        //color.withAlphaComponent(0.8).cgColor,
+        //color.withAlphaComponent(0.3).cgColor,
         color.withAlphaComponent(0).cgColor
     ]
 
@@ -110,49 +111,11 @@ private func generateGradientComponent(size: CGSize, color: UIColor) -> UIImage?
     return image
 }
 
-private func generateGradient(with size: CGSize, gradPointArray gradPoints: [GradientPoint]) -> UIImage? {
-    UIGraphicsBeginImageContextWithOptions(size, true, 1.0)
-
-    let c = UIGraphicsGetCurrentContext()
-
-    c?.setFillColor(UIColor.white.cgColor)
-    c?.fill(CGRect(origin: CGPoint.zero, size: size))
-
-    c?.setBlendMode(.multiply)
-
-    var gradLocs: [CGFloat] = [0, 0.0, 0.35, 1]
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let radius = max(size.width, size.height)
-
-    for point in gradPoints {
-        let colors = [
-            point.color.cgColor,
-            point.color.withAlphaComponent(0.8).cgColor,
-            point.color.withAlphaComponent(0.3).cgColor,
-            point.color.withAlphaComponent(0).cgColor
-        ]
-
-        let grad = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &gradLocs)
-        if let grad = grad {
-            let newPoint = point.position.applying(
-                .init(scaleX: size.width, y: size.height)
-            )
-
-            c?.drawRadialGradient(grad, startCenter: newPoint, startRadius: 0, endCenter: newPoint, endRadius: radius, options: [])
-        }
-    }
-
-    let i = UIGraphicsGetImageFromCurrentImageContext()
-
-    UIGraphicsEndImageContext()
-
-    return i
-}
-
 public final class GradientBackgroundNode: ASDisplayNode {
     //private let imageView: UIImageView
 
     private var pointImages: [UIImageView] = []
+    private let dimView: UIView
 
     private let firstStepPoints: [CGPoint] = [
         CGPoint(x: 0.823, y: 0.086),
@@ -169,6 +132,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
     ]
 
     private var phase: Int = 0
+    private var subphase: Int = 0
 
     private var timer: Timer?
 
@@ -177,9 +141,12 @@ public final class GradientBackgroundNode: ASDisplayNode {
     override public init() {
         //self.imageView = UIImageView()
 
+        self.dimView = UIView()
+        self.dimView.backgroundColor = UIColor(white: 1.0, alpha: 0.0)
+
         super.init()
 
-        self.phase = 3
+        self.phase = 0
 
         self.backgroundColor = .white
         self.clipsToBounds = true
@@ -202,22 +169,22 @@ public final class GradientBackgroundNode: ASDisplayNode {
         //self.imageView.layer.compositingFilter = "multiplyBlendMode"
 
         let colors: [UIColor] = [
-            UIColor(rgb: 0xfff6bf),
-            UIColor(rgb: 0x76a076),
-            UIColor(rgb: 0xf6e477),
-            UIColor(rgb: 0x316b4d)
+            UIColor(rgb: 0x7FA381),
+            UIColor(rgb: 0xFFF5C5),
+            UIColor(rgb: 0x336F55),
+            UIColor(rgb: 0xFBE37D)
         ]
 
-        for color in colors {
-            let pointImage = UIImageView(image: generateGradientComponent(size: CGSize(width: 800.0, height: 800.0), color: color.withMultiplied(hue: 1.0, saturation: 1.2, brightness: 1.0)))
-            pointImage.layer.compositingFilter = "multiplyBlendMode"
-            //pointImage.layer.compositingFilter = "additionBlendMode"
-            pointImage.alpha = 0.7
+        for i in 0 ..< colors.count {
+            let pointImage = UIImageView(image: generateGradientComponent(size: CGSize(width: 300.0, height: 300.0), color: colors[i].withMultiplied(hue: 1.0, saturation: 1.1, brightness: 1.1)))
+            //pointImage.layer.compositingFilter = "multiplyBlendMode"
             self.view.addSubview(pointImage)
             self.pointImages.append(pointImage)
         }
 
-        if #available(iOS 10.0, *) {
+        self.view.addSubview(self.dimView)
+
+        /*if #available(iOS 10.0, *) {
             let timer = Timer(timeInterval: 2.0, repeats: true, block: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
@@ -229,7 +196,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
             })
             self.timer = timer
             RunLoop.main.add(timer, forMode: .common)
-        }
+        }*/
     }
 
     deinit {
@@ -239,12 +206,28 @@ public final class GradientBackgroundNode: ASDisplayNode {
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
 
+        self.dimView.frame = CGRect(origin: CGPoint(), size: size)
+
         let positions: [CGPoint]
 
-        if self.phase % 2 == 0 {
-            positions = shiftArray(array: firstStepPoints, offset: self.phase / 2)
-        } else {
-            positions = shiftArray(array: nextStepPoints, offset: self.phase / 2 + 1)
+        let basePositions: [CGPoint] = [
+            CGPoint(x: 0.1, y: 0.1),
+            CGPoint(x: 0.1, y: 0.9),
+            CGPoint(x: 0.9, y: 0.9),
+            CGPoint(x: 0.9, y: 0.1),
+        ]
+
+        switch self.phase % 4 {
+        case 0:
+            positions = basePositions
+        case 1:
+            positions = shiftArray(array: basePositions, offset: 1)
+        case 2:
+            positions = shiftArray(array: basePositions, offset: 2)
+        case 3:
+            positions = shiftArray(array: basePositions, offset: 3)
+        default:
+            preconditionFailure()
         }
 
         for i in 0 ..< firstStepPoints.count {
@@ -252,14 +235,15 @@ public final class GradientBackgroundNode: ASDisplayNode {
                 break
             }
             let pointCenter = CGPoint(x: size.width * positions[i].x, y: size.height * positions[i].y)
-            let pointSide = max(size.width, size.height) * 2.0
-            let pointSize = CGSize(width: pointSide, height: pointSide)
+            let pointSize = CGSize(width: size.width * 2.0, height: size.height * 2.0)
             transition.updateFrame(view: self.pointImages[i], frame: CGRect(origin: CGPoint(x: pointCenter.x - pointSize.width / 2.0, y: pointCenter.y - pointSize.height / 2.0), size: pointSize))
         }
+    }
 
-        /*self.imageView.frame = CGRect(origin: CGPoint(), size: size)
-        self.imageView.layer.magnificationFilter = .linear
-
-        self.imageView.image = generateGradient(with: size.fitted(CGSize(width: 64.0, height: 64.0)), gradPointArray: applyTransformerToPoints(step: 0, substep: 0))*/
+    public func animateEvent(transition: ContainedViewLayoutTransition) {
+        self.phase = (self.phase + 1) % 4
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: transition)
+        }
     }
 }
