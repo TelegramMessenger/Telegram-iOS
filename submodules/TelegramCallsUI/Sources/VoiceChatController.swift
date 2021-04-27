@@ -1963,6 +1963,16 @@ public final class VoiceChatController: ViewController {
                         })
                     }
                 }
+
+                var removeRequestedVideoSources: [UInt32] = []
+                for source in strongSelf.requestedVideoSources {
+                    if !validSources.contains(source) {
+                        removeRequestedVideoSources.append(source)
+                    }
+                }
+                for source in removeRequestedVideoSources {
+                    strongSelf.requestedVideoSources.remove(source)
+                }
                 
                 var updated = false
                 for i in (0 ..< strongSelf.videoNodes.count).reversed() {
