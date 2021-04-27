@@ -717,6 +717,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         return nil
     }
+
+    func animateContentFromMediaInput(snapshotView: UIView, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+    }
     
     override func didLoad() {
         super.didLoad()

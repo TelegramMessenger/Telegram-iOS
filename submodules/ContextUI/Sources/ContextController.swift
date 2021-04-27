@@ -718,6 +718,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func animateOut(result initialResult: ContextMenuActionResult, completion: @escaping () -> Void) {
+        self.isUserInteractionEnabled = false
+        
         self.beganAnimatingOut()
         
         var transitionDuration: Double = 0.2
