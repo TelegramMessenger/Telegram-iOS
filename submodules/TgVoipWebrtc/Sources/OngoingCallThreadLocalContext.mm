@@ -887,6 +887,10 @@ private:
             }
         }
         
+        std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
@@ -965,6 +969,7 @@ private:
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
             .videoContentType = _videoContentType,
+            .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
