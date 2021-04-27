@@ -265,6 +265,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if strongSelf.enableSynchronousImageApply {
                         strongSelf.removePlaceholder(animated: false)
                     } else {
+                        strongSelf.imageNode.alpha = 0.0
                         strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         strongSelf.removePlaceholder(animated: true)
                     }

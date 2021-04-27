@@ -176,7 +176,8 @@ final class GroupVideoNode: ASDisplayNode {
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
         
-        var videoSize = CGSize(width: 1203, height: 677)
+        var videoSize = rotatedVideoFrame.size
+//            CGSize(width: 1203, height: 677)
         
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
         transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
@@ -591,6 +592,12 @@ public final class VoiceChatController: ViewController {
                             state = .listening
                         }
                         
+                        let textIcon: VoiceChatParticipantItem.ParticipantText.Icon?
+                        if peerEntry.volume != nil {
+                            textIcon = .volume
+                        } else {
+                            textIcon = nil
+                        }
                         let yourText: String
                         if (peerEntry.about?.isEmpty ?? true) && peer.smallProfileImage == nil {
                             yourText = presentationData.strings.VoiceChat_TapToAddPhotoOrBio
@@ -604,13 +611,13 @@ public final class VoiceChatController: ViewController {
                         switch state {
                         case .listening:
                             if peerEntry.isMyPeer {
-                                text = .text(yourText, .accent)
+                                text = .text(yourText, textIcon, .accent)
                             } else if let muteState = peerEntry.muteState, muteState.mutedByYou {
-                                text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
+                                text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, textIcon, .destructive)
                             } else if let about = peerEntry.about, !about.isEmpty {
-                                text = .text(about, .generic)
+                                text = .text(about, textIcon, .generic)
                             } else {
-                                text = .text(presentationData.strings.VoiceChat_StatusListening, .generic)
+                                text = .text(presentationData.strings.VoiceChat_StatusListening, textIcon, .generic)
                             }
                             let microphoneColor: UIColor
                             if let muteState = peerEntry.muteState, !muteState.canUnmute || muteState.mutedByYou {
@@ -621,33 +628,33 @@ public final class VoiceChatController: ViewController {
                             icon = .microphone(peerEntry.muteState != nil, microphoneColor)
                         case .speaking:
                             if let muteState = peerEntry.muteState, muteState.mutedByYou {
-                                text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, .destructive)
+                                text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, textIcon, .destructive)
                                 icon = .microphone(true, UIColor(rgb: 0xff3b30))
                             } else {
                                 let volumeValue = peerEntry.volume.flatMap { $0 / 100 }
                                 if let volume = volumeValue, volume != 100 {
-                                    text = .text( presentationData.strings.VoiceChat_StatusSpeakingVolume("\(volume)%").0, .constructive)
+                                    text = .text( presentationData.strings.VoiceChat_StatusSpeakingVolume("\(volume)%").0, textIcon, .constructive)
                                 } else {
-                                    text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
+                                    text = .text(presentationData.strings.VoiceChat_StatusSpeaking, textIcon, .constructive)
                                 }
                                 icon = .microphone(false, UIColor(rgb: 0x34c759))
                             }
                         case .invited:
-                            text = .text(presentationData.strings.VoiceChat_StatusInvited, .generic)
+                            text = .text(presentationData.strings.VoiceChat_StatusInvited, textIcon, .generic)
                             icon = .invite(true)
                         case .raisedHand:
                             if peerEntry.isMyPeer && !peerEntry.displayRaisedHandStatus {
-                                text = .text(yourText, .accent)
+                                text = .text(yourText, textIcon, .accent)
                             } else if let about = peerEntry.about, !about.isEmpty && !peerEntry.displayRaisedHandStatus {
-                                text = .text(about, .generic)
+                                text = .text(about, textIcon, .generic)
                             } else {
-                                text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, .accent)
+                                text = .text(presentationData.strings.VoiceChat_StatusWantsToSpeak, textIcon, .accent)
                             }
                             icon = .wantsToSpeak
                         }
                         
                         if let about = peerEntry.about, !about.isEmpty {
-                            expandedText = .text(about, .generic)
+                            expandedText = .text(about, textIcon, .generic)
                         }
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
@@ -2158,6 +2165,7 @@ public final class VoiceChatController: ViewController {
                             completion()
                         }
                     } else if case .fullscreen = strongSelf.displayMode {
+                        strongSelf.animatingExpansion = true
                         strongSelf.updateIsFullscreen(strongSelf.isFullscreen, force: true)
                         
                         if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -3178,16 +3186,13 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func cameraPressed() {
-            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: {
-                
-            })
-            self.controller?.present(controller, in: .window(.root))
-            
-            return
             if self.call.isVideo {
                 self.call.disableVideo()
             } else {
-                self.call.requestVideo()
+                let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: { [weak self] in
+                    self?.call.requestVideo()
+                })
+                self.controller?.present(controller, in: .window(.root))
             }
         }
         
@@ -3331,7 +3336,7 @@ public final class VoiceChatController: ViewController {
                     let itemNode = self.mainParticipantNode
                     item.updateNode(async: { $0() }, node: {
                         return itemNode
-                    }, params: ListViewItemLayoutParams(width: mainParticipantNodeWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                    }, params: ListViewItemLayoutParams(width: mainParticipantNodeWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { (layout, apply) in
                         itemNode.contentSize = layout.contentSize
                         itemNode.insets = layout.insets
                         itemNode.isUserInteractionEnabled = false
