@@ -62,7 +62,9 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
         |> distinctUntilChanged*/
 
         let timeOffset: Signal<Double, NoError> = .single(0.0)
-        
+
+        Logger.shared.log("Autoremove", "starting isRemove: \(isRemove)")
+
         let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
