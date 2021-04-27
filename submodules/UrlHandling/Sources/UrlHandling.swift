@@ -265,7 +265,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
-                } else if let value = Int(pathComponents[1]) {
+                } else if let value = Int32(pathComponents[1]) {
                     var threadId: Int32?
                     var commentId: Int32?
                     if let queryItems = components.queryItems {
@@ -286,11 +286,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                     if let threadId = threadId {
-                        return .peerName(peerName, .replyThread(threadId, Int32(value)))
+                        return .peerName(peerName, .replyThread(threadId, value))
                     } else if let commentId = commentId {
-                        return .peerName(peerName, .replyThread(Int32(value), commentId))
+                        return .peerName(peerName, .replyThread(value, commentId))
                     } else {
-                        return .peerName(peerName, .channelMessage(Int32(value)))
+                        return .peerName(peerName, .channelMessage(value))
                     }
                 } else {
                     return nil

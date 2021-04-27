@@ -905,7 +905,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 titleColor = UIColor(rgb: 0xffffff, alpha: 0.65)
             } else if case .tile = item.style {
                 switch item.text {
-                    case let .text(_, textColor):
+                    case let .text(_, _, textColor):
                         switch textColor {
                             case .generic:
                                 titleColor = item.presentationData.theme.list.itemPrimaryTextColor
@@ -977,7 +977,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.LastSeen_Offline, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     }
-                case let .text(text, textColor):
+                case let .text(text, textIcon, textColor):
                     var textColorValue: UIColor
                     switch textColor {
                     case .generic:
@@ -999,7 +999,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     break
             }
             
-            if let expandedText = item.expandedText, case let .text(text, textColor) = expandedText {
+            if let expandedText = item.expandedText, case let .text(text, _, textColor) = expandedText {
                 let textColorValue: UIColor
                 switch textColor {
                 case .generic:
@@ -1086,9 +1086,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             var animateStatusTransitionFromUp: Bool?
             if let currentItem = currentItem {
-                if case .presence = currentItem.text, case let .text(_, newColor) = item.text {
+                if case .presence = currentItem.text, case let .text(_, _, newColor) = item.text {
                     animateStatusTransitionFromUp = newColor == .constructive
-                } else if case let .text(_, currentColor) = currentItem.text, case let .text(_, newColor) = item.text, currentColor != newColor {
+                } else if case let .text(_, _, currentColor) = currentItem.text, case let .text(_, _, newColor) = item.text, currentColor != newColor {
                     animateStatusTransitionFromUp = newColor == .constructive
                 } else if case .text = currentItem.text, case .presence = item.text {
                     animateStatusTransitionFromUp = false

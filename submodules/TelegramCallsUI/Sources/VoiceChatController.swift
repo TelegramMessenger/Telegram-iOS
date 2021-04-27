@@ -953,6 +953,8 @@ public final class VoiceChatController: ViewController {
             self.actionButton = VoiceChatActionButton()
             
             if self.isScheduling {
+                self.cameraButton.alpha = 0.0
+                self.cameraButton.isUserInteractionEnabled = false
                 self.audioButton.alpha = 0.0
                 self.audioButton.isUserInteractionEnabled = false
                 self.leaveButton.alpha = 0.0
@@ -2111,7 +2113,7 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
                         }
-                        if false, let (peerId, _) = minimalVisiblePeerid {
+                        if let (peerId, _) = minimalVisiblePeerid {
                             var index = 0
                             for item in strongSelf.currentEntries {
                                 if case let .peer(entry) = item, entry.peer.id == peerId {
@@ -2159,7 +2161,7 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
                         }
-                        if false, let (peerId, _) = minimalVisiblePeerid {
+                        if let (peerId, _) = minimalVisiblePeerid {
                             var index = 0
                             for item in strongSelf.currentEntries {
                                 if case let .peer(entry) = item, entry.peer.id == peerId {
@@ -2249,7 +2251,6 @@ public final class VoiceChatController: ViewController {
             }
 
             let avatarSize = CGSize(width: 28.0, height: 28.0)
-
             return combineLatest(self.displayAsPeersPromise.get(), self.context.account.postbox.loadedPeerWithId(self.call.peerId), self.inviteLinksPromise.get())
             |> take(1)
             |> deliverOnMainQueue
@@ -2411,8 +2412,6 @@ public final class VoiceChatController: ViewController {
                         strongSelf.controller?.present(alertController, in: .window(.root))
                     })))
                 }
-
-
                 return items
             }
         }
@@ -2601,18 +2600,15 @@ public final class VoiceChatController: ViewController {
             let minute = components.minute ?? 0
             components.minute = 0
             let roundedToHourDate = calendar.date(from: components)!
-            
             components.hour = 0
+        
             let roundedToMidnightDate = calendar.date(from: components)!
-            
             let nextTwoHourDate = calendar.date(byAdding: .hour, value: minute > 30 ? 4 : 3, to: roundedToHourDate)
-           
             let maxDate = calendar.date(byAdding: .day, value: 8, to: roundedToMidnightDate)
-            
+        
             if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
                 self.pickerView?.maximumDate = date
             }
-            
             if let next1MinDate = next1MinDate, let nextTwoHourDate = nextTwoHourDate {
                 self.pickerView?.minimumDate = next1MinDate
                 self.pickerView?.maximumDate = maxDate
@@ -3140,8 +3136,7 @@ public final class VoiceChatController: ViewController {
             guard availableOutputs.count >= 2 else {
                 return
             }
-            let hasMute = false
-            
+
             if availableOutputs.count == 2 {
                 for output in availableOutputs {
                     if output != currentOutput {
@@ -3153,9 +3148,6 @@ public final class VoiceChatController: ViewController {
                 let actionSheet = ActionSheetController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme))
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
-                    if hasMute, case .builtin = output {
-                        continue
-                    }
                     let title: String
                     var icon: UIImage?
                     switch output {
@@ -3171,7 +3163,9 @@ public final class VoiceChatController: ViewController {
                             if port.type == .bluetooth {
                                 var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
                                 let portName = port.name.lowercased()
-                                if portName.contains("airpods pro") {
+                                if portName.contains("airpods max") {
+                                    image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
+                                } else if portName.contains("airpods pro") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
                                 } else if portName.contains("airpods") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsButton")
@@ -3204,18 +3198,6 @@ public final class VoiceChatController: ViewController {
                 })
                 self.controller?.present(controller, in: .window(.root))
             }
-            return;
-            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.call.isVideo {
-                    strongSelf.call.disableVideo()
-                } else {
-                    strongSelf.call.requestVideo()
-                }
-            })
-            self.controller?.present(controller, in: .window(.root))
         }
         
         @objc private func switchCameraPressed() {
@@ -3682,6 +3664,8 @@ public final class VoiceChatController: ViewController {
                 size.width = floor(min(size.width, size.height) * 0.5)
             }
             
+            let isScheduled = self.isScheduling || self.callState?.scheduleTimestamp != nil
+            
             var previousIsLandscape = false
             if let previousLayout = previousLayout, case .compact = previousLayout.metrics.widthClass, previousLayout.size.width > previousLayout.size.height {
                 previousIsLandscape = true
@@ -3855,7 +3839,7 @@ public final class VoiceChatController: ViewController {
             let forthButtonFrame: CGRect
             
             let leftButtonFrame: CGRect
-            if self.mainVideoContainerNode == nil {
+            if self.mainVideoContainerNode == nil || isScheduled {
                 leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize)
             } else {
                 leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height - upperButtonDistance - cameraButtonSize.height) / 2.0) + upperButtonDistance + cameraButtonSize.height), size: sideButtonSize)
@@ -4106,6 +4090,8 @@ public final class VoiceChatController: ViewController {
             if let callState = self.callState {
                 if callState.scheduleTimestamp != nil && self.listNode.alpha > 0.0 {
                     self.timerNode.isHidden = false
+                    self.cameraButton.alpha = 0.0
+                    self.cameraButton.isUserInteractionEnabled = false
                     self.listNode.alpha = 0.0
                     self.listNode.isUserInteractionEnabled = false
                     self.backgroundNode.backgroundColor = panelBackgroundColor

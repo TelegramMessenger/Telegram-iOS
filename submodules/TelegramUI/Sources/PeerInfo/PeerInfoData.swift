@@ -876,7 +876,9 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     } else if member.id != accountPeerId {
         if let channel = peer as? TelegramChannel {
             if channel.flags.contains(.isCreator) {
-                result.insert(.restrict)
+                if !channel.flags.contains(.isGigagroup) {
+                    result.insert(.restrict)
+                }
                 result.insert(.promote)
             } else {
                 switch member {
@@ -887,13 +889,15 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                     case let .member(member):
                         if let adminInfo = member.adminInfo {
                             if adminInfo.promotedBy == accountPeerId {
-                                result.insert(.restrict)
+                                if !channel.flags.contains(.isGigagroup) {
+                                    result.insert(.restrict)
+                                }
                                 if channel.hasPermission(.addAdmins) {
                                     result.insert(.promote)
                                 }
                             }
                         } else {
-                            if channel.hasPermission(.banMembers) {
+                            if channel.hasPermission(.banMembers) && !channel.flags.contains(.isGigagroup) {
                                 result.insert(.restrict)
                             }
                             if channel.hasPermission(.addAdmins) {
