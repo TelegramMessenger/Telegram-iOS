@@ -3178,17 +3178,23 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func cameraPressed() {
-            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: {
-                
-            })
-            self.controller?.present(controller, in: .window(.root))
-            
-            return
             if self.call.isVideo {
                 self.call.disableVideo()
             } else {
                 self.call.requestVideo()
             }
+            return;
+            let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.call.isVideo {
+                    strongSelf.call.disableVideo()
+                } else {
+                    strongSelf.call.requestVideo()
+                }
+            })
+            self.controller?.present(controller, in: .window(.root))
         }
         
         @objc private func switchCameraPressed() {

@@ -869,12 +869,22 @@ private:
         
         tgcalls::VideoContentType _videoContentType;
         switch (videoContentType) {
-        case OngoingGroupCallVideoContentTypeGeneric:
+            case OngoingGroupCallVideoContentTypeGeneric: {
                 _videoContentType = tgcalls::VideoContentType::Generic;
-        case OngoingGroupCallVideoContentTypeScreencast:
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeScreencast: {
                 _videoContentType = tgcalls::VideoContentType::Screencast;
-        case OngoingGroupCallVideoContentTypeNone:
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeNone: {
                 _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
+            default: {
+                _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
         }
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
