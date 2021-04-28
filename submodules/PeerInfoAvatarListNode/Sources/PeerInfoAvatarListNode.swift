@@ -358,6 +358,9 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             representations = []
             videoRepresentations = []
             immediateThumbnailData = nil
+            if !synchronous {
+                self.addSubnode(node)
+            }
         case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
@@ -953,7 +956,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     private var additionalEntryProgress: Signal<Float?, NoError>? = nil
-    public func update(size: CGSize, peer: Peer?, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, peer: Peer?, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let previousExpanded = self.isExpanded
         self.isExpanded = isExpanded
@@ -1009,6 +1012,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var items: [PeerInfoAvatarListItem] = []
+                if let customNode = customNode {
+                    items.append(.custom(customNode))
+                }
                 for entry in entries {
                     items.append(PeerInfoAvatarListItem(entry: entry))
                 }

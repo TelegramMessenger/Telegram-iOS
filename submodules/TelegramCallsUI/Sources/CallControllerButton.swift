@@ -37,6 +37,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case speaker
             case airpods
             case airpodsPro
+            case airpodsMax
             case headphones
             case accept
             case end
@@ -232,6 +233,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsButton"), color: imageColor)
                 case .airpodsPro:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsProButton"), color: imageColor)
+                case .airpodsMax:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsMaxButton"), color: imageColor)
                 case .headphones:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallHeadphonesButton"), color: imageColor)
                 case .accept:

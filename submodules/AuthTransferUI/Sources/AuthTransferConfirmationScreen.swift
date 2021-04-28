@@ -118,7 +118,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let buttonText: String
         
-        let badgeFont = Font.with(size: 13.0, design: .round, traits: [.bold])
+        let badgeFont = Font.with(size: 13.0, design: .round, weight: .bold)
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         
