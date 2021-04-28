@@ -19,7 +19,7 @@ private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIc
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
-    return Font.with(size: size, design: .round, traits: [.bold])
+    return Font.with(size: size, design: .round, weight: .bold)
 }
 
 public enum AvatarNodeClipStyle {
