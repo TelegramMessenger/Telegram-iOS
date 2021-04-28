@@ -159,9 +159,10 @@ typedef struct {
 @interface OngoingGroupCallParticipantDescription : NSObject
 
 @property (nonatomic, readonly) uint32_t audioSsrc;
-@property (nonatomic, strong, readonly) NSString * _Nullable jsonParams;
+@property (nonatomic, strong, readonly) NSString * _Nullable videoJsonDescription;
+@property (nonatomic, strong, readonly) NSString * _Nullable screencastJsonDescription;
 
-- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc jsonParams:(NSString * _Nullable)jsonParams;
+- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc videoJsonDescription:(NSString * _Nullable)videoJsonDescription screencastJsonDescription:(NSString * _Nullable)screencastJsonDescription;
 
 @end
 
@@ -209,7 +210,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallVideoContentType) {
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
-- (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
 - (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)removeIncomingVideoSource:(uint32_t)ssrc;
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;

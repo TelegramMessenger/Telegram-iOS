@@ -433,7 +433,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath =  std::string(logPath.length == 0 ? "" : logPath.UTF8String),
+            .logPath = std::string(logPath.length == 0 ? "" : logPath.UTF8String),
             .statsLogPath = std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .enableHighBitrateVideo = true,
@@ -983,102 +983,6 @@ private:
     }
 }
 
-static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonnull completion)(NSString * _Nonnull, uint32_t)) {
-    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-    
-    int32_t signedSsrc = *(int32_t *)&payload.ssrc;
-    
-    dict[@"ssrc"] = @(signedSsrc);
-    dict[@"ufrag"] = [NSString stringWithUTF8String:payload.ufrag.c_str()];
-    dict[@"pwd"] = [NSString stringWithUTF8String:payload.pwd.c_str()];
-    
-    NSMutableArray *fingerprints = [[NSMutableArray alloc] init];
-    for (auto &fingerprint : payload.fingerprints) {
-        [fingerprints addObject:@{
-            @"hash": [NSString stringWithUTF8String:fingerprint.hash.c_str()],
-            @"fingerprint": [NSString stringWithUTF8String:fingerprint.fingerprint.c_str()],
-            @"setup": [NSString stringWithUTF8String:fingerprint.setup.c_str()]
-        }];
-    }
-    
-    dict[@"fingerprints"] = fingerprints;
-    
-    NSMutableArray *parsedVideoSsrcGroups = [[NSMutableArray alloc] init];
-    NSMutableArray *parsedVideoSources = [[NSMutableArray alloc] init];
-    for (auto &group : payload.videoSourceGroups) {
-        NSMutableDictionary *parsedGroup = [[NSMutableDictionary alloc] init];
-        parsedGroup[@"semantics"] = [NSString stringWithUTF8String:group.semantics.c_str()];
-        NSMutableArray *sources = [[NSMutableArray alloc] init];
-        for (auto &source : group.ssrcs) {
-            [sources addObject:@(source)];
-            if (![parsedVideoSources containsObject:@(source)]) {
-                [parsedVideoSources addObject:@(source)];
-            }
-        }
-        parsedGroup[@"sources"] = sources;
-        [parsedVideoSsrcGroups addObject:parsedGroup];
-    }
-    if (parsedVideoSsrcGroups.count != 0) {
-        dict[@"ssrc-groups"] = parsedVideoSsrcGroups;
-    }
-    
-    NSMutableArray *videoPayloadTypes = [[NSMutableArray alloc] init];
-    for (auto &payloadType : payload.videoPayloadTypes) {
-        NSMutableDictionary *parsedType = [[NSMutableDictionary alloc] init];
-        parsedType[@"id"] = @(payloadType.id);
-        NSString *name = [NSString stringWithUTF8String:payloadType.name.c_str()];
-        parsedType[@"name"] = name;
-        parsedType[@"clockrate"] = @(payloadType.clockrate);
-        if (![name isEqualToString:@"rtx"]) {
-            parsedType[@"channels"] = @(payloadType.channels);
-        }
-        
-        NSMutableDictionary *parsedParameters = [[NSMutableDictionary alloc] init];
-        for (auto &it : payloadType.parameters) {
-            NSString *key = [NSString stringWithUTF8String:it.first.c_str()];
-            NSString *value = [NSString stringWithUTF8String:it.second.c_str()];
-            parsedParameters[key] = value;
-        }
-        if (parsedParameters.count != 0) {
-            parsedType[@"parameters"] = parsedParameters;
-        }
-        
-        if (![name isEqualToString:@"rtx"]) {
-            NSMutableArray *parsedFbs = [[NSMutableArray alloc] init];
-            for (auto &it : payloadType.feedbackTypes) {
-                NSMutableDictionary *parsedFb = [[NSMutableDictionary alloc] init];
-                parsedFb[@"type"] = [NSString stringWithUTF8String:it.type.c_str()];
-                if (it.subtype.size() != 0) {
-                    parsedFb[@"subtype"] = [NSString stringWithUTF8String:it.subtype.c_str()];
-                }
-                [parsedFbs addObject:parsedFb];
-            }
-            parsedType[@"rtcp-fbs"] = parsedFbs;
-        }
-        
-        [videoPayloadTypes addObject:parsedType];
-    }
-    if (videoPayloadTypes.count != 0) {
-        dict[@"payload-types"] = videoPayloadTypes;
-    }
-    
-    NSMutableArray *parsedExtensions = [[NSMutableArray alloc] init];
-    for (auto &it : payload.videoExtensionMap) {
-        NSMutableDictionary *parsedExtension = [[NSMutableDictionary alloc] init];
-        parsedExtension[@"id"] = @(it.first);
-        parsedExtension[@"uri"] = [NSString stringWithUTF8String:it.second.c_str()];
-        [parsedExtensions addObject:parsedExtension];
-    }
-    if (parsedExtensions.count != 0) {
-        dict[@"rtp-hdrexts"] = parsedExtensions;
-    }
-    
-    NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
-    NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    
-    completion(string, payload.ssrc);
-}
-
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
     if (_instance) {
         tgcalls::GroupConnectionMode mappedConnectionMode;
@@ -1106,184 +1010,15 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload payload) {
-            processJoinPayload(payload, completion);
+        _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload const &payload) {
+            completion([NSString stringWithUTF8String:payload.json.c_str()], payload.audioSsrc);
         });
     }
 }
 
-- (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants {
-    tgcalls::GroupJoinResponsePayload result;
-    
-    NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
-    if (payloadData == nil) {
-        return;
-    }
-    
-    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:payloadData options:0 error:nil];
-    if (![dict isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSDictionary *transport = dict[@"transport"];
-    if (![transport isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSString *pwd = transport[@"pwd"];
-    if (![pwd isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    NSString *ufrag = transport[@"ufrag"];
-    if (![ufrag isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    result.pwd = [pwd UTF8String];
-    result.ufrag = [ufrag UTF8String];
-    
-    NSArray *fingerprintsValue = transport[@"fingerprints"];
-    if (![fingerprintsValue isKindOfClass:[NSArray class]]) {
-        //return;
-    }
-    
-    for (NSDictionary *fingerprintValue in fingerprintsValue) {
-        if (![fingerprintValue isKindOfClass:[NSDictionary class]]) {
-            continue;
-        }
-        NSString *hashValue = fingerprintValue[@"hash"];
-        if (![hashValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *fingerprint = fingerprintValue[@"fingerprint"];
-        if (![fingerprint isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *setup = fingerprintValue[@"setup"];
-        if (![setup isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        tgcalls::GroupJoinPayloadFingerprint parsed;
-        parsed.fingerprint = [fingerprint UTF8String];
-        parsed.setup = [setup UTF8String];
-        parsed.hash = [hashValue UTF8String];
-        result.fingerprints.push_back(parsed);
-    }
-    
-    NSArray *candidatesValue = transport[@"candidates"];
-    if (![candidatesValue isKindOfClass:[NSArray class]]) {
-        return;
-    }
-    
-    for (NSDictionary *candidateValue in candidatesValue) {
-        if (![candidateValue isKindOfClass:[NSDictionary class]]) {
-            continue;
-        }
-        
-        NSString *portValue = candidateValue[@"port"];
-        if (![portValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *protocolValue = candidateValue[@"protocol"];
-        if (![protocolValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *networkValue = candidateValue[@"network"];
-        if (![networkValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *generationValue = candidateValue[@"generation"];
-        if (![generationValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *idValue = candidateValue[@"id"];
-        if (![idValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *componentValue = candidateValue[@"component"];
-        if (![componentValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *foundationValue = candidateValue[@"foundation"];
-        if (![foundationValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *priorityValue = candidateValue[@"priority"];
-        if (![priorityValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *ipValue = candidateValue[@"ip"];
-        if (![ipValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *typeValue = candidateValue[@"type"];
-        if (![typeValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        
-        NSString *tcpTypeValue = candidateValue[@"tcptype"];
-        if (![tcpTypeValue isKindOfClass:[NSString class]]) {
-            tcpTypeValue = @"";
-        }
-        NSString *relAddrValue = candidateValue[@"rel-addr"];
-        if (![relAddrValue isKindOfClass:[NSString class]]) {
-            relAddrValue = @"";
-        }
-        NSString *relPortValue = candidateValue[@"rel-port"];
-        if (![relPortValue isKindOfClass:[NSString class]]) {
-            relPortValue = @"";
-        }
-        
-        tgcalls::GroupJoinResponseCandidate candidate;
-        
-        candidate.port = [portValue UTF8String];
-        candidate.protocol = [protocolValue UTF8String];
-        candidate.network = [networkValue UTF8String];
-        candidate.generation = [generationValue UTF8String];
-        candidate.id = [idValue UTF8String];
-        candidate.component = [componentValue UTF8String];
-        candidate.foundation = [foundationValue UTF8String];
-        candidate.priority = [priorityValue UTF8String];
-        candidate.ip = [ipValue UTF8String];
-        candidate.type = [typeValue UTF8String];
-        
-        candidate.tcpType = [tcpTypeValue UTF8String];
-        candidate.relAddr = [relAddrValue UTF8String];
-        candidate.relPort = [relPortValue UTF8String];
-        
-        result.candidates.push_back(candidate);
-    }
-    
-    std::vector<tgcalls::GroupParticipantDescription> parsedParticipants;
-    for (OngoingGroupCallParticipantDescription *participant in participants) {
-        tgcalls::GroupParticipantDescription parsedParticipant;
-        parsedParticipant.audioSsrc = participant.audioSsrc;
-        
-        if (participant.jsonParams.length != 0) {
-            [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
-        }
-        parsedParticipants.push_back(parsedParticipant);
-    }
-
-    NSDictionary *video = dict[@"video"];
-    if ([video isKindOfClass:[NSDictionary class]]) {
-        NSArray *serverSources = video[@"server_sources"];
-        if ([serverSources isKindOfClass:[NSArray class]]) {
-            for (NSNumber *sourceNumber in serverSources) {
-                if ([sourceNumber isKindOfClass:[NSNumber class]]) {
-                    int32_t signedSource = [sourceNumber intValue];
-                    result.serverVideoBandwidthProbingSsrc = *(int32_t *)&signedSource;
-                } else if ([sourceNumber isKindOfClass:[NSString class]]) {
-                    uint32_t source = (uint32_t)[sourceNumber longLongValue];
-                    result.serverVideoBandwidthProbingSsrc = source;
-                }
-            }
-        }
-    }
-    
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload {
     if (_instance) {
-        _instance->setJoinResponsePayload(result, std::move(parsedParticipants));
+        _instance->setJoinResponsePayload(payload.UTF8String);
     }
 }
 
@@ -1303,139 +1038,6 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
-- (void)parseJsonIntoParticipant:(NSString *)payload participant:(tgcalls::GroupParticipantDescription &)participant {
-    NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
-    if (payloadData == nil) {
-        return;
-    }
-    
-    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:payloadData options:0 error:nil];
-    if (![dict isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSString *endpointId = dict[@"endpoint"];
-    if (![endpointId isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    participant.endpointId = [endpointId UTF8String];
-    
-    NSArray *ssrcGroups = dict[@"ssrc-groups"];
-    if ([ssrcGroups isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *group in ssrcGroups) {
-            if (![group isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSString *semantics = group[@"semantics"];
-            if (![semantics isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            NSArray *sources = group[@"sources"];
-            if (![sources isKindOfClass:[NSArray class]]) {
-                continue;
-            }
-            tgcalls::GroupJoinPayloadVideoSourceGroup groupDesc;
-            for (NSNumber *nSsrc in sources) {
-                if ([nSsrc isKindOfClass:[NSNumber class]]) {
-                    groupDesc.ssrcs.push_back([nSsrc unsignedIntValue]);
-                }
-            }
-            groupDesc.semantics = [semantics UTF8String];
-            participant.videoSourceGroups.push_back(groupDesc);
-        }
-    }
-    
-    NSArray *hdrExts = dict[@"rtp-hdrexts"];
-    if ([hdrExts isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *extDict in hdrExts) {
-            if (![extDict isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSNumber *nId = extDict[@"id"];
-            if (![nId isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSString *uri = extDict[@"uri"];
-            if (![uri isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            participant.videoExtensionMap.push_back(std::make_pair((uint32_t)[nId unsignedIntValue], (std::string)[uri UTF8String]));
-        }
-    }
-    
-    NSArray *payloadTypes = dict[@"payload-types"];
-    if ([payloadTypes isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *payloadDict in payloadTypes) {
-            if (![payloadDict isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSNumber *nId = payloadDict[@"id"];
-            if (![nId isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSNumber *nClockrate = payloadDict[@"clockrate"];
-            if (nClockrate != nil && ![nClockrate isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSNumber *nChannels = payloadDict[@"channels"];
-            if (nChannels != nil && ![nChannels isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSString *name = payloadDict[@"name"];
-            if (![name isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            
-            tgcalls::GroupJoinPayloadVideoPayloadType parsedPayload;
-            parsedPayload.id = [nId unsignedIntValue];
-            parsedPayload.clockrate = [nClockrate unsignedIntValue];
-            parsedPayload.channels = [nChannels unsignedIntValue];
-            parsedPayload.name = [name UTF8String];
-            
-            NSArray *fbs = payloadDict[@"rtcp-fbs"];
-            if ([fbs isKindOfClass:[NSArray class]]) {
-                for (NSDictionary *fbDict in fbs) {
-                    if (![fbDict isKindOfClass:[NSDictionary class]]) {
-                        continue;
-                    }
-                    NSString *type = fbDict[@"type"];
-                    if (![type isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    
-                    NSString *subtype = fbDict[@"subtype"];
-                    if (subtype != nil && ![subtype isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    
-                    tgcalls::GroupJoinPayloadVideoPayloadFeedbackType parsedFeedback;
-                    parsedFeedback.type = [type UTF8String];
-                    if (subtype != nil) {
-                        parsedFeedback.subtype = [subtype UTF8String];
-                    }
-                    parsedPayload.feedbackTypes.push_back(parsedFeedback);
-                }
-            }
-            
-            NSDictionary *parameters = payloadDict[@"parameters"];
-            if ([parameters isKindOfClass:[NSDictionary class]]) {
-                for (NSString *nKey in parameters) {
-                    if (![nKey isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    NSString *value = parameters[nKey];
-                    if (![value isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    parsedPayload.parameters.push_back(std::make_pair((std::string)[nKey UTF8String], (std::string)[value UTF8String]));
-                }
-            }
-            participant.videoPayloadTypes.push_back(parsedPayload);
-        }
-    }
-}
-
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants {
     if (_instance) {
         std::vector<tgcalls::GroupParticipantDescription> parsedParticipants;
@@ -1443,9 +1045,13 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
             tgcalls::GroupParticipantDescription parsedParticipant;
             parsedParticipant.audioSsrc = participant.audioSsrc;
             
-            if (participant.jsonParams.length != 0) {
-                [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
+            if (participant.videoJsonDescription.length != 0) {
+                parsedParticipant.videoInformation = participant.videoJsonDescription.UTF8String;
             }
+            if (participant.screencastJsonDescription.length != 0) {
+                parsedParticipant.screencastInformation = participant.screencastJsonDescription.UTF8String;
+            }
+            
             parsedParticipants.push_back(parsedParticipant);
         }
         _instance->addParticipants(std::move(parsedParticipants));
@@ -1466,17 +1072,13 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->setVideoCapture([videoCapturer getInterface], [completion](auto payload){
-            processJoinPayload(payload, completion);
-        });
+        _instance->setVideoCapture([videoCapturer getInterface]);
     }
 }
 
 - (void)disableVideo:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->setVideoCapture(nullptr, [completion](auto payload){
-            processJoinPayload(payload, completion);
-        });
+        _instance->setVideoCapture(nullptr);
     }
 }
 
@@ -1548,11 +1150,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 @implementation OngoingGroupCallParticipantDescription
 
-- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc jsonParams:(NSString * _Nullable)jsonParams {
+- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc videoJsonDescription:(NSString * _Nullable)videoJsonDescription screencastJsonDescription:(NSString * _Nullable)screencastJsonDescription {
     self = [super init];
     if (self != nil) {
         _audioSsrc = audioSsrc;
-        _jsonParams = jsonParams;
+        _videoJsonDescription = videoJsonDescription;
+        _screencastJsonDescription = screencastJsonDescription;
     }
     return self;
 }

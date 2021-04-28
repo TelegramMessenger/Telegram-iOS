@@ -287,10 +287,8 @@ public final class OngoingGroupCallContext {
         deinit {
         }
         
-        func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
-            self.context.setJoinResponsePayload(payload, participants: participants.map { participant -> OngoingGroupCallParticipantDescription in
-                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
-            })
+        func setJoinResponse(payload: String) {
+            self.context.setJoinResponsePayload(payload)
         }
         
         func addSsrcs(ssrcs: [UInt32]) {
@@ -317,12 +315,12 @@ public final class OngoingGroupCallContext {
             self.context.setFullSizeVideoSsrc(ssrc ?? 0)
         }
         
-        func addParticipants(participants: [(UInt32, String?)]) {
+        func addParticipants(participants: [(UInt32, String?, String?)]) {
             if participants.isEmpty {
                 return
             }
             self.context.addParticipants(participants.map { participant -> OngoingGroupCallParticipantDescription in
-                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
+                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, videoJsonDescription: participant.1, screencastJsonDescription: participant.2)
             })
         }
         
@@ -596,9 +594,9 @@ public final class OngoingGroupCallContext {
             impl.switchAudioOutput(deviceId)
         }
     }
-    public func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
+    public func setJoinResponse(payload: String) {
         self.impl.with { impl in
-            impl.setJoinResponse(payload: payload, participants: participants)
+            impl.setJoinResponse(payload: payload)
         }
     }
     
@@ -632,7 +630,7 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func addParticipants(participants: [(UInt32, String?)]) {
+    public func addParticipants(participants: [(UInt32, String?, String?)]) {
         self.impl.with { impl in
             impl.addParticipants(participants: participants)
         }
