@@ -1563,7 +1563,6 @@ plist_fragment(
         <string>ucbrowser</string>
         <string>dolphin</string>
         <string>instagram-stories</string>
-		<string>dgis</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>
