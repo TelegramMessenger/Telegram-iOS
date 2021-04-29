@@ -79,7 +79,8 @@ COMMIT_ID="$(git rev-parse HEAD)"
 COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
 if [ -z "$2" ]; then
 	COMMIT_COUNT=$(git rev-list --count HEAD)
-	COMMIT_COUNT="$(($COMMIT_COUNT+2000))"
+	BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+	COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
 	BUILD_NUMBER="$COMMIT_COUNT"
 else
 	BUILD_NUMBER="$2"

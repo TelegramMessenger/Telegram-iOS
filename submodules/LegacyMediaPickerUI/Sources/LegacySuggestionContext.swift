@@ -19,7 +19,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                     for peer in peers {
                         if let peer = peer as? TelegramUser {
                             let user = TGUser()
-                            user.uid = peer.id.id
+                            user.uid = peer.id.id._internalGetInt32Value()
                             user.firstName = peer.firstName
                             user.lastName = peer.lastName
                             user.userName = peer.addressName

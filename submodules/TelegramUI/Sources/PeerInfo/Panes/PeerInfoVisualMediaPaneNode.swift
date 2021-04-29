@@ -872,6 +872,21 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.animationTimer?.invalidate()
     }
     
+    func ensureMessageIsVisible(id: MessageId) {
+        let activeRect = self.scrollNode.bounds
+        for item in self.mediaItems {
+            if item.message.id == id {
+                if let itemNode = self.visibleMediaItems[item.message.stableId] {
+                    if !activeRect.contains(itemNode.frame) {
+                        let targetContentOffset = CGPoint(x: 0.0, y: max(-self.scrollNode.view.contentInset.top, itemNode.frame.minY - (self.scrollNode.frame.height - itemNode.frame.height) / 2.0))
+                        self.scrollNode.view.setContentOffset(targetContentOffset, animated: false)
+                    }
+                }
+                break
+            }
+        }
+    }
+    
     private func requestHistoryAroundVisiblePosition() {
         if self.isRequestingView {
             return

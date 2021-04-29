@@ -126,6 +126,7 @@ public class ImageNode: ASDisplayNode {
     private let hasImage: ValuePromise<Bool>?
     private var first = true
     private let enableEmpty: Bool
+    private let enableAnimatedTransition: Bool
     
     private let _contentReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -141,13 +142,14 @@ public class ImageNode: ASDisplayNode {
         }
     }
     
-    public init(enableHasImage: Bool = false, enableEmpty: Bool = false) {
+    public init(enableHasImage: Bool = false, enableEmpty: Bool = false, enableAnimatedTransition: Bool = false) {
         if enableHasImage {
             self.hasImage = ValuePromise(false, ignoreRepeated: true)
         } else {
             self.hasImage = nil
         }
         self.enableEmpty = enableEmpty
+        self.enableAnimatedTransition = enableAnimatedTransition
         super.init()
     }
     
@@ -160,16 +162,32 @@ public class ImageNode: ASDisplayNode {
         self.disposable.set((signal |> deliverOnMainQueue).start(next: {[weak self] next in
             dispatcher.dispatch {
                 if let strongSelf = self {
-                    if let image = next?.cgImage {
-                        strongSelf.contents = image
-                    } else if strongSelf.enableEmpty {
-                        strongSelf.contents = nil
-                    }
+                    var animate = strongSelf.enableAnimatedTransition
                     if strongSelf.first && next != nil {
                         strongSelf.first = false
+                        animate = false
                         if strongSelf.isNodeLoaded {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
                         }
+                    }
+                    if let image = next?.cgImage {
+                        if animate, let previousContents = strongSelf.contents {
+                            strongSelf.contents = image
+                            let tempLayer = CALayer()
+                            tempLayer.contents = previousContents
+                            tempLayer.frame = strongSelf.layer.bounds
+                            strongSelf.layer.addSublayer(tempLayer)
+                            tempLayer.opacity = 0.0
+                            tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: true, completion: { [weak tempLayer] _ in
+                                tempLayer?.removeFromSuperlayer()
+                            })
+
+                            //strongSelf.layer.animate(from: previousContents as! CGImage, to: image, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        } else {
+                            strongSelf.contents = image
+                        }
+                    } else if strongSelf.enableEmpty {
+                        strongSelf.contents = nil
                     }
                     if !reportedHasImage {
                         if let hasImage = strongSelf.hasImage {

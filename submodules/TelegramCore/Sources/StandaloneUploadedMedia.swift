@@ -87,7 +87,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
             case let .inputSecretFile(file, _, key):
                 return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)
+                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
                     }
                     return nil
                 }
@@ -102,7 +102,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     |> mapToSignal { result -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                         switch result {
                             case let .encryptedFile(id, accessHash, size, dcId, _):
-                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: Int32(data.count), datacenterId: Int(dcId), key: key), progressiveSizes: [])], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
+                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: Int32(data.count), datacenterId: Int(dcId), key: key), progressiveSizes: [], immediateThumbnailData: nil)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
                             case .encryptedFileEmpty:
                                 return .fail(.generic)
                         }
@@ -181,7 +181,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                             case let .inputSecretFile(file, _, key):
                                 return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
                                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)
+                                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
                                     }
                                     return nil
                                 }

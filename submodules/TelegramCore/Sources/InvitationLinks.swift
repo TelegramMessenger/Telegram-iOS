@@ -658,7 +658,7 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         for index in stride(from: 0, to: datesArray.endIndex, by: 2) {
             let userId = datesArray[index]
             let date = datesArray[index + 1]
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
             dates[peerId] = date
         }
         self.dates = dates
@@ -671,7 +671,7 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         
         var dates: [Int32] = []
         for (peerId, date) in self.dates {
-            dates.append(peerId.id)
+            dates.append(peerId.id._internalGetInt32Value())
             dates.append(date)
         }
         encoder.encodeInt32Array(dates, forKey: "dates")
@@ -791,7 +791,7 @@ private final class PeerInvitationImportersContextImpl {
                                 let date: Int32
                                 switch importer {
                                     case let .chatInviteImporter(userId, dateValue):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                         date = dateValue
                                 }
                                 if let peer = transaction.getPeer(peerId) {
@@ -911,7 +911,7 @@ public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) ->
                             for admin in admins {
                                 switch admin {
                                 case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
-                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId)
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(adminId))
                                     if let peer = peersMap[peerId], peerId != account.peerId {
                                         creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
                                     }

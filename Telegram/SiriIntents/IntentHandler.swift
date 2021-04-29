@@ -793,7 +793,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.username, !username.isEmpty {
@@ -962,7 +962,7 @@ private final class WidgetIntentHandler {
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.username, !username.isEmpty {
@@ -1045,7 +1045,7 @@ private final class WidgetIntentHandler {
                 if !isActive {
                     continue
                 }
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [Friend] in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [Friend] in
                     var peers: [Peer] = []
                     
                     for id in getRecentPeers(transaction: transaction) {

@@ -10,7 +10,7 @@ public enum NotificationTokenType {
     case voip
 }
 
-public func unregisterNotificationToken(account: Account, token: Data, type: NotificationTokenType, otherAccountUserIds: [Int32]) -> Signal<Never, NoError> {
+public func unregisterNotificationToken(account: Account, token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {
     let mappedType: Int32
     switch type {
         case .aps:
@@ -18,12 +18,12 @@ public func unregisterNotificationToken(account: Account, token: Data, type: Not
         case .voip:
             mappedType = 9
     }
-    return account.network.request(Api.functions.account.unregisterDevice(tokenType: mappedType, token: hexString(token), otherUids: otherAccountUserIds))
+    return account.network.request(Api.functions.account.unregisterDevice(tokenType: mappedType, token: hexString(token), otherUids: otherAccountUserIds.map({ $0._internalGetInt32Value() })))
     |> retryRequest
     |> ignoreValues
 }
 
-public func registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [Int32], excludeMutedChats: Bool) -> Signal<Never, NoError> {
+public func registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
     return masterNotificationsKey(account: account, ignoreDisabled: false)
     |> mapToSignal { masterKey -> Signal<Never, NoError> in
         let mappedType: Int32
@@ -42,7 +42,7 @@ public func registerNotificationToken(account: Account, token: Data, type: Notif
         if excludeMutedChats {
             flags |= 1 << 0
         }
-        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds))
+        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt32Value() })))
         |> retryRequest
         |> ignoreValues
     }

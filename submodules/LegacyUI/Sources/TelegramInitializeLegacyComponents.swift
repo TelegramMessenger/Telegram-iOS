@@ -279,6 +279,22 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
     }
     
+    func darkMenuSheetPallete() -> TGMenuSheetPallete! {
+        let theme: PresentationTheme
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
+            if presentationData.theme.overallDarkAppearance {
+                theme = presentationData.theme
+            } else {
+                theme = defaultDarkColorPresentationTheme
+            }
+        } else {
+            theme = defaultDarkColorPresentationTheme
+        }
+        let sheetTheme = theme.actionSheet
+        return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
+    }
+    
     func mediaAssetsPallete() -> TGMediaAssetsPallete! {
         let presentationTheme: PresentationTheme
         if let legacyContext = legacyContext {

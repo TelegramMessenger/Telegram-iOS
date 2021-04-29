@@ -1065,7 +1065,7 @@ extension GroupStatsTopPoster {
     init(apiStatsGroupTopPoster: Api.StatsGroupTopPoster) {
         switch apiStatsGroupTopPoster {
             case let .statsGroupTopPoster(userId, messages, avgChars):
-                self = GroupStatsTopPoster(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), messageCount: messages, averageChars: avgChars)
+                self = GroupStatsTopPoster(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), messageCount: messages, averageChars: avgChars)
         }
     }
 }
@@ -1074,7 +1074,7 @@ extension GroupStatsTopAdmin {
     init(apiStatsGroupTopAdmin: Api.StatsGroupTopAdmin) {
         switch apiStatsGroupTopAdmin {
             case let .statsGroupTopAdmin(userId, deleted, kicked, banned):
-                self = GroupStatsTopAdmin(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), deletedCount: deleted, kickedCount: kicked, bannedCount: banned)
+                self = GroupStatsTopAdmin(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), deletedCount: deleted, kickedCount: kicked, bannedCount: banned)
         }
     }
 }
@@ -1083,7 +1083,7 @@ extension GroupStatsTopInviter {
     init(apiStatsGroupTopInviter: Api.StatsGroupTopInviter) {
         switch apiStatsGroupTopInviter {
             case let .statsGroupTopInviter(userId, invitations):
-                self = GroupStatsTopInviter(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), inviteCount: invitations)
+                self = GroupStatsTopInviter(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), inviteCount: invitations)
         }
     }
 }

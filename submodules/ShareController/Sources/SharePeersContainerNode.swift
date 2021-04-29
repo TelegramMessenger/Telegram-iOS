@@ -81,6 +81,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
     private let switchToAnotherAccount: () -> Void
+    private let debugAction: () -> Void
     private let extendedInitialReveal: Bool
     
     let accountPeer: Peer
@@ -113,7 +114,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
@@ -122,6 +123,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.controllerInteraction = controllerInteraction
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
+        self.debugAction = debugAction
         self.extendedInitialReveal = extendedInitialReveal
         self.segmentedValues = segmentedValues
         
@@ -240,6 +242,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.segmentedNode.selectedIndexChanged = { [weak self] index in
             self?.segmentedSelectedIndexUpdated?(index)
         }
+
+        self.contentTitleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTapGesture(_:))))
     }
     
     deinit {
@@ -463,5 +467,28 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     @objc private func accountTapGesture(_ recognizer: UITapGestureRecognizer) {
         self.switchToAnotherAccount()
+    }
+
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+
+    @objc private func debugTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CACurrentMediaTime()
+            if self.debugTapCounter.0 < timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 = 0
+            }
+
+            if self.debugTapCounter.0 >= timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 += 1
+            }
+
+            if self.debugTapCounter.1 >= 10 {
+                self.debugTapCounter.1 = 0
+
+                self.debugAction()
+            }
+        }
     }
 }

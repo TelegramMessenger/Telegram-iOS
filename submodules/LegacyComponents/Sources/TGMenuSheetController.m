@@ -95,7 +95,9 @@ typedef enum
         _permittedArrowDirections = UIPopoverArrowDirectionDown;
         _requiuresDimView = true;
         
-        if (!dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
+        if (dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(darkMenuSheetPallete)])
+            self.pallete = [[LegacyComponentsGlobals provider] darkMenuSheetPallete];
+        else if (!dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
             self.pallete = [[LegacyComponentsGlobals provider] menuSheetPallete];
         
         self.wantsFullScreenLayout = true;

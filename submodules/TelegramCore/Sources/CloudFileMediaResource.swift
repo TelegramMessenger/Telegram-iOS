@@ -34,7 +34,7 @@ extension CloudDocumentSizeMediaResource: TelegramCloudMediaResource, TelegramMu
     }
 }
 
-extension CloudPeerPhotoSizeMediaResource:  TelegramMultipartFetchableResource {
+extension CloudPeerPhotoSizeMediaResource: TelegramMultipartFetchableResource {
     func apiInputLocation(peerReference: PeerReference) -> Api.InputFileLocation? {
         let flags: Int32
         switch self.sizeSpec {
@@ -43,13 +43,21 @@ extension CloudPeerPhotoSizeMediaResource:  TelegramMultipartFetchableResource {
             case .fullSize:
                 flags = 1 << 0
         }
-        return Api.InputFileLocation.inputPeerPhotoFileLocation(flags: flags, peer: peerReference.inputPeer, volumeId: self.volumeId, localId: self.localId)
+        if let photoId = self.photoId {
+            return Api.InputFileLocation.inputPeerPhotoFileLocation(flags: flags, peer: peerReference.inputPeer, photoId: photoId)
+        } else {
+            return nil
+        }
     }
 }
 
-extension CloudStickerPackThumbnailMediaResource:  TelegramMultipartFetchableResource {
+extension CloudStickerPackThumbnailMediaResource: TelegramMultipartFetchableResource {
     func apiInputLocation(packReference: StickerPackReference) -> Api.InputFileLocation? {
-        return Api.InputFileLocation.inputStickerSetThumb(stickerset: packReference.apiInputStickerSet, volumeId: self.volumeId, localId: self.localId)
+        if let thumbVersion = self.thumbVersion {
+            return Api.InputFileLocation.inputStickerSetThumb(stickerset: packReference.apiInputStickerSet, thumbVersion: thumbVersion)
+        } else {
+            return nil
+        }
     }
 }
 

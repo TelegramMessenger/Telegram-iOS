@@ -22,11 +22,11 @@ final class ContactTable: Table {
     }
     
     private func lowerBound() -> ValueBoxKey {
-        return self.key(PeerId(namespace: 0, id: 0))
+        return self.key(PeerId(0))
     }
     
     private func upperBound() -> ValueBoxKey {
-        return self.key(PeerId(namespace: Int32.max, id: Int32.max))
+        return self.key(PeerId.max)
     }
     
     func isContact(peerId: PeerId) -> Bool {
@@ -81,7 +81,7 @@ final class ContactTable: Table {
                 let removedPeerIds = peerIdsBeforeModification.subtracting(peerIds)
                 let addedPeerIds = peerIds.subtracting(peerIdsBeforeModification)
                 
-                let sharedKey = self.key(PeerId(namespace: 0, id: 0))
+                let sharedKey = self.key(PeerId(0))
                 
                 for peerId in removedPeerIds {
                     self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: sharedKey), secure: false)

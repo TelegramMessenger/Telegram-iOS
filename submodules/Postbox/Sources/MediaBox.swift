@@ -104,9 +104,10 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
     static func ==(lhs: CachedMediaResourceRepresentationKey, rhs: CachedMediaResourceRepresentationKey) -> Bool {
         return lhs.resourceId.isEqual(to: rhs.resourceId) && lhs.representation.isEqual(to: rhs.representation)
     }
-    
-    var hashValue: Int {
-        return self.resourceId.hashValue
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.resourceId.hashValue)
+        hasher.combine(self.representation.uniqueId)
     }
 }
 

@@ -166,6 +166,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 let _ = (gallery
                 |> deliverOnMainQueue).start(next: { gallery in
+                    gallery.centralItemUpdated = { messageId in
+                        params.centralItemUpdated?(messageId)
+                    }
                     params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
                         let selectedTransitionNode = params.transitionNode(messageId, media)
                         if let selectedTransitionNode = selectedTransitionNode {

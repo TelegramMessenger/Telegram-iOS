@@ -15,6 +15,7 @@ import PhotoResources
 import TelegramStringFormatting
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
+    let dateTimeFormat: PresentationDateTimeFormat
     let messageId: MessageId
     
     let closeButton: ASButtonNode
@@ -67,12 +68,13 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     var strings: PresentationStrings
     var nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.context = context
         self.messageId = messageId
         self.theme = theme
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
+        self.dateTimeFormat = dateTimeFormat
         
         self.closeButton = ASButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
@@ -159,7 +161,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, accountPeerId: self.context.account.peerId)
+            (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
         }
         
         var updatedMediaReference: AnyMediaReference?
@@ -231,7 +233,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            switch messageContentKind(contentSettings: self.context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: self.context.account.peerId) {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            switch messageContentKind(contentSettings: self.context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: self.context.account.peerId) {
                 case .text:
                     isMedia = false
                 default:

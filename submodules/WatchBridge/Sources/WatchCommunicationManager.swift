@@ -89,7 +89,7 @@ public final class WatchCommunicationManager {
             }
             if let context = appContext {
                 strongSelf.accountContext.set(.single(context.context))
-                strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id)
+                strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id._internalGetInt32Value())
                 strongSelf.server.setMicAccessAllowed(false)
                 strongSelf.server.pushContext()
                 strongSelf.server.setMicAccessAllowed(true)
