@@ -314,7 +314,8 @@ public protocol PresentationGroupCall: class {
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
     
-    var isVideo: Bool { get }
+    var hasVideo: Bool { get }
+    var hasScreencast: Bool { get }
     
     var schedulePending: Bool { get }
     
@@ -347,10 +348,12 @@ public protocol PresentationGroupCall: class {
     func lowerHand()
     func requestVideo()
     func disableVideo()
+    func requestScreencast()
+    func disableScreencast()
     func switchVideoCamera()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
-    func setFullSizeVideo(peerId: PeerId?)
+    func setFullSizeVideo(endpointId: String?)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
 
     func playTone(_ tone: PresentationGroupCallTone)
@@ -366,9 +369,9 @@ public protocol PresentationGroupCall: class {
     
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
     
-    var incomingVideoSources: Signal<[PeerId: UInt32], NoError> { get }
+    var incomingVideoSources: Signal<Set<String>, NoError> { get }
     
-    func makeIncomingVideoView(source: UInt32, completion: @escaping (PresentationCallVideoView?) -> Void)
+    func makeIncomingVideoView(endpointId: String, completion: @escaping (PresentationCallVideoView?) -> Void)
     
     func loadMoreMembers(token: String)
 }

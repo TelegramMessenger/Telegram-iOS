@@ -555,6 +555,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
         if preferMuted {
             flags |= (1 << 0)
         }
+        //flags |= (1 << 2)
         if let _ = inviteHash {
             flags |= (1 << 1)
         }
@@ -778,7 +779,57 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
             }
         }
     }
-    
+}
+
+public struct JoinGroupCallAsScreencastResult {
+    public var jsonParams: String
+}
+
+public func joinGroupCallAsScreencast(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
+    return account.network.request(Api.functions.phone.joinGroupCallPresentation(call: .inputGroupCall(id: callId, accessHash: accessHash), params: .dataJSON(data: joinPayload)))
+    |> mapError { _ -> JoinGroupCallError in
+        return .generic
+    }
+    |> mapToSignal { updates -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> in
+        account.stateManager.addUpdates(updates)
+
+        var maybeParsedClientParams: String?
+        loop: for update in updates.allUpdates {
+            switch update {
+            case let .updateGroupCallConnection(_, params):
+                switch params {
+                case let .dataJSON(data):
+                    maybeParsedClientParams = data
+                }
+            default:
+                break
+            }
+        }
+
+        guard let parsedClientParams = maybeParsedClientParams else {
+            return .fail(.generic)
+        }
+
+        return .single(JoinGroupCallAsScreencastResult(
+            jsonParams: parsedClientParams
+        ))
+    }
+}
+
+public enum LeaveGroupCallAsScreencastError {
+    case generic
+}
+
+public func leaveGroupCallAsScreencast(account: Account, callId: Int64, accessHash: Int64) -> Signal<Never, LeaveGroupCallAsScreencastError> {
+    return account.network.request(Api.functions.phone.leaveGroupCallPresentation(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    |> mapError { _ -> LeaveGroupCallAsScreencastError in
+        return .generic
+    }
+    |> mapToSignal { updates -> Signal<Never, LeaveGroupCallAsScreencastError> in
+        account.stateManager.addUpdates(updates)
+
+        return .complete()
+    }
 }
 
 public enum LeaveGroupCallError {

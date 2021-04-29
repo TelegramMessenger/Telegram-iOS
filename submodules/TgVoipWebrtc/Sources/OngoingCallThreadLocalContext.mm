@@ -859,7 +859,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit videoContentType:(OngoingGroupCallVideoContentType)videoContentType enableNoiseSuppression:(bool)enableNoiseSuppression {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit videoContentType:(OngoingGroupCallVideoContentType)videoContentType enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -918,10 +918,10 @@ private:
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
-            .incomingVideoSourcesUpdated = [incomingVideoSourcesUpdated](std::vector<uint32_t> const &ssrcs) {
-                NSMutableArray<NSNumber *> *mappedSources = [[NSMutableArray alloc] init];
-                for (auto it : ssrcs) {
-                    [mappedSources addObject:@(it)];
+            .incomingVideoSourcesUpdated = [incomingVideoSourcesUpdated](std::vector<std::string> const &sources) {
+                NSMutableArray<NSString *> *mappedSources = [[NSMutableArray alloc] init];
+                for (auto it : sources) {
+                    [mappedSources addObject:[NSString stringWithUTF8String:it.c_str()]];
                 }
                 incomingVideoSourcesUpdated(mappedSources);
             },
@@ -1088,9 +1088,9 @@ private:
     }
 }
 
-- (void)setFullSizeVideoSsrc:(uint32_t)ssrc {
+- (void)setFullSizeVideoEndpointId:(NSString * _Nullable)endpointId {
     if (_instance) {
-        _instance->setFullSizeVideoSsrc(ssrc);
+        _instance->setFullSizeVideoEndpointId(endpointId.UTF8String ?: "");
     }
 }
 
@@ -1105,7 +1105,7 @@ private:
     }
 }
 
-- (void)makeIncomingVideoViewWithSsrc:(uint32_t)ssrc completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+- (void)makeIncomingVideoViewWithEndpointId:(NSString *)endpointId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
     if (_instance) {
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
@@ -1123,7 +1123,7 @@ private:
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
                     }
                 }];
                 
@@ -1136,7 +1136,7 @@ private:
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
                     }
                 }];
                 

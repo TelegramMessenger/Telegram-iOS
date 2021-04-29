@@ -182,7 +182,7 @@ public final class OngoingGroupCallContext {
         let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
-        let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
+        let videoSources = ValuePromise<Set<String>>(Set(), ignoreRepeated: true)
         
         private var broadcastPartsSource: BroadcastPartSource?
         
@@ -221,8 +221,8 @@ public final class OngoingGroupCallContext {
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId,
                 videoCapturer: video?.impl,
-                incomingVideoSourcesUpdated: { ssrcs in
-                    videoSources.set(Set(ssrcs.map { $0.uint32Value }))
+                incomingVideoSourcesUpdated: { endpointIds in
+                    videoSources.set(Set(endpointIds))
                 },
                 participantDescriptionsRequired: { ssrcs in
                     participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
@@ -311,8 +311,8 @@ public final class OngoingGroupCallContext {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
         }
         
-        func setFullSizeVideoSsrc(ssrc: UInt32?) {
-            self.context.setFullSizeVideoSsrc(ssrc ?? 0)
+        func setFullSizeVideo(endpointId: String?) {
+            self.context.setFullSizeVideoEndpointId(endpointId)
         }
         
         func addParticipants(participants: [(UInt32, String?, String?)]) {
@@ -397,8 +397,8 @@ public final class OngoingGroupCallContext {
             self.context.switchAudioOutput(deviceId)
         }
         
-        func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-            self.context.makeIncomingVideoView(withSsrc: source, completion: { view in
+        func makeIncomingVideoView(endpointId: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withEndpointId: endpointId, completion: { view in
                 if let view = view {
                     #if os(iOS)
                     completion(OngoingCallContextPresentationCallVideoView(
@@ -535,7 +535,7 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public var videoSources: Signal<Set<UInt32>, NoError> {
+    public var videoSources: Signal<Set<String>, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
@@ -624,9 +624,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func setFullSizeVideoSsrc(ssrc: UInt32?) {
+    public func setFullSizeVideo(endpointId: String?) {
         self.impl.with { impl in
-            impl.setFullSizeVideoSsrc(ssrc: ssrc)
+            impl.setFullSizeVideo(endpointId: endpointId)
         }
     }
     
@@ -642,9 +642,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+    public func makeIncomingVideoView(endpointId: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.with { impl in
-            impl.makeIncomingVideoView(source: source, completion: completion)
+            impl.makeIncomingVideoView(endpointId: endpointId, completion: completion)
         }
     }
 }
