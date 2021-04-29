@@ -555,7 +555,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
         if preferMuted {
             flags |= (1 << 0)
         }
-        //flags |= (1 << 2)
+        flags |= (1 << 2)
         if let _ = inviteHash {
             flags |= (1 << 1)
         }
