@@ -151,8 +151,8 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
-            let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 2)
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1))
+            let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(2))
             var items: [ListViewItem] = []
             for messageItem in item.messageItems.reversed() {
                 var peers = SimpleDictionary<PeerId, Peer>()

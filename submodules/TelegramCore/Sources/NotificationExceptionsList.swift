@@ -49,11 +49,11 @@ public func notificationExceptionsList(postbox: Postbox, network: Network) -> Si
                             let peerId: PeerId
                             switch notifyPeer {
                             case let .peerUser(userId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                             case let .peerChat(chatId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                             case let .peerChannel(channelId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                             }
                             settings[peerId] = TelegramPeerNotificationSettings(apiSettings: notifySettings)
                         default:

@@ -104,7 +104,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                             |> mapToSignal { wallpaper -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                                 if let wallpaper = wallpaper, case let .file(_, _, _, _, _, _, slug, file, _) = wallpaper {
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.resource, progressiveSizes: []), reference: .wallpaper(wallpaper: .slug(slug), resource: file.resource)))
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(slug), resource: file.resource)))
                                     return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                     |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {

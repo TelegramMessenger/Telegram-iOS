@@ -301,7 +301,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 
                 let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
                     if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
-                        controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
+                        controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme, forceDark: false)
                     }
                 })
                 legacyController.disposables.add(presentationDisposable)
@@ -378,9 +378,14 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
     return controller
 }
 
-public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallete {
-    let sheetTheme = theme.actionSheet
-    return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
+public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme, forceDark: Bool) -> TGMenuSheetPallete {
+    let sheetTheme: PresentationThemeActionSheet
+    if forceDark && !theme.overallDarkAppearance {
+        sheetTheme = defaultDarkColorPresentationTheme.actionSheet
+    } else {
+        sheetTheme = theme.actionSheet
+    }
+    return TGMenuSheetPallete(dark: forceDark || theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
 public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, presentationData: PresentationData, images: [UIImage], presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
@@ -441,7 +446,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
     
     let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
         if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
-            controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
+            controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme, forceDark: false)
         }
     })
     legacyController.disposables.add(presentationDisposable)

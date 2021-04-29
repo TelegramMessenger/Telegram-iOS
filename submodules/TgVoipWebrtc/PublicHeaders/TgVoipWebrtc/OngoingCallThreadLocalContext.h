@@ -196,7 +196,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
 
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression;
 
 - (void)stop;
 
@@ -207,6 +207,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
 - (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)setIsMuted:(bool)isMuted;
+- (void)setIsNoiseSuppressionEnabled:(bool)isNoiseSuppressionEnabled;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)disableVideo:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 

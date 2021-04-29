@@ -745,6 +745,33 @@ extension PresentationInputFieldTheme: Codable {
     }
 }
 
+extension PresentationThemeList.PaymentOption: Codable {
+    enum CodingKeys: String, CodingKey {
+        case inactiveFill
+        case inactiveForeground
+        case activeFill
+        case activeForeground
+    }
+
+    public convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            inactiveFillColor: try decodeColor(values, .inactiveFill),
+            inactiveForegroundColor: try decodeColor(values, .inactiveForeground),
+            activeFillColor: try decodeColor(values, .activeFill),
+            activeForegroundColor: try decodeColor(values, .activeForeground)
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try encodeColor(&values, self.activeFillColor, .inactiveFill)
+        try encodeColor(&values, self.activeForegroundColor, .inactiveForeground)
+        try encodeColor(&values, self.activeFillColor, .activeFill)
+        try encodeColor(&values, self.activeForegroundColor, .activeForeground)
+    }
+}
+
 extension PresentationThemeList: Codable {
     enum CodingKeys: String, CodingKey {
         case blocksBg
@@ -778,6 +805,7 @@ extension PresentationThemeList: Codable {
         case inputClearButton
         case itemBarChart
         case itemInputField
+        case paymentOption
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -789,6 +817,8 @@ extension PresentationThemeList: Codable {
         } else {
             freePlainInputField = try values.decode(PresentationInputFieldTheme.self, forKey: .freeInputField)
         }
+
+        let freeTextSuccessColor = try decodeColor(values, .freeTextSuccess)
         
         self.init(
             blocksBackgroundColor: try decodeColor(values, .blocksBg),
@@ -808,7 +838,7 @@ extension PresentationThemeList: Codable {
             sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
             freeTextColor: try decodeColor(values, .freeText),
             freeTextErrorColor: try decodeColor(values, .freeTextError),
-            freeTextSuccessColor: try decodeColor(values, .freeTextSuccess),
+            freeTextSuccessColor: freeTextSuccessColor,
             freeMonoIconColor: try decodeColor(values, .freeMonoIcon),
             itemSwitchColors: try values.decode(PresentationThemeSwitch.self, forKey: .switch),
             itemDisclosureActions: try values.decode(PresentationThemeItemDisclosureActions.self, forKey: .disclosureActions),
@@ -821,7 +851,13 @@ extension PresentationThemeList: Codable {
             pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
             inputClearButtonColor: try decodeColor(values, .inputClearButton),
             itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart),
-            itemInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .itemInputField)
+            itemInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .itemInputField),
+            paymentOption: (try? values.decode(PresentationThemeList.PaymentOption.self, forKey: .paymentOption)) ?? PresentationThemeList.PaymentOption(
+                inactiveFillColor: freeTextSuccessColor.withMultipliedAlpha(0.3),
+                inactiveForegroundColor: freeTextSuccessColor,
+                activeFillColor: freeTextSuccessColor,
+                activeForegroundColor: UIColor(rgb: 0xffffff)
+            )
         )
     }
     

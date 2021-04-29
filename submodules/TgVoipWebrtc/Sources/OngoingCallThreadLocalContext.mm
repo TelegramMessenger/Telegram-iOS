@@ -6,7 +6,7 @@
 
 #import "Instance.h"
 #import "InstanceImpl.h"
-#import "reference/InstanceImplReference.h"
+#import "v2/InstanceV2Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -332,8 +332,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)__unused includeReference {
-    return @[@"2.7.7", @"3.0.0"];
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
+    [list addObject:@"2.7.7"];
+    [list addObject:@"3.0.0"];
+    if (includeReference) {
+        [list addObject:@"4.0.0"];
+    }
+    return list;
 }
 
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
@@ -444,9 +450,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceV2Impl>();
         });
-        
-        
         
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
@@ -854,7 +859,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -939,7 +944,8 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
-            .enableVideo = enableVideo
+            .enableVideo = enableVideo,
+            .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
     return self;
@@ -1418,6 +1424,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)setIsNoiseSuppressionEnabled:(bool)isNoiseSuppressionEnabled {
+    if (_instance) {
+        _instance->setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled);
     }
 }
 

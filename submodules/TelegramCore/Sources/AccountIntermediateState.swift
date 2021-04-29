@@ -417,7 +417,7 @@ struct AccountMutableState {
             switch user {
                 case let .user(_, id, _, _, _, _, _, _, status, _, _, _, _):
                     if let status = status {
-                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] = status
+                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))] = status
                     }
                     break
                 case .userEmpty:

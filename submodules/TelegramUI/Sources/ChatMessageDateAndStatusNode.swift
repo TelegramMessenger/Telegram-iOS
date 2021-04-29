@@ -236,7 +236,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             var repliesImage: UIImage?
-            var selfExpiringImage: UIImage?
+            let selfExpiringImage: UIImage? = nil
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             

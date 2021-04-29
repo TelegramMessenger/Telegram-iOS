@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ShimmerEffect
 
 public enum ItemListDisclosureItemTitleColor {
     case primary
@@ -38,8 +39,9 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     let clearHighlightAutomatically: Bool
     public let tag: ItemListItemTag?
+    public let shimmeringIndex: Int?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
@@ -53,6 +55,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.action = action
         self.clearHighlightAutomatically = clearHighlightAutomatically
         self.tag = tag
+        self.shimmeringIndex = shimmeringIndex
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -131,6 +134,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     public var tag: ItemListItemTag? {
         return self.item?.tag
     }
+
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     public init() {
         self.backgroundNode = ASDisplayNode()
@@ -178,6 +184,15 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.arrowNode)
         
         self.addSubnode(self.activateArea)
+    }
+
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
     
     public func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -479,6 +494,38 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel))
+
+                    if let shimmeringIndex = item.shimmeringIndex {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.placeholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.placeholderNode = shimmerNode
+                            if strongSelf.backgroundNode.supernode != nil {
+                                strongSelf.insertSubnode(shimmerNode, aboveSubnode: strongSelf.backgroundNode)
+                            } else {
+                                strongSelf.addSubnode(shimmerNode)
+                            }
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+
+                        var shapes: [ShimmerEffectNode.Shape] = []
+
+                        let titleLineWidth: CGFloat = (shimmeringIndex % 2 == 0) ? 120.0 : 80.0
+                        let lineDiameter: CGFloat = 8.0
+
+                        let titleFrame = strongSelf.titleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: contentSize)
+                    } else if let shimmerNode = strongSelf.placeholderNode {
+                        strongSelf.placeholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
         }

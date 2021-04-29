@@ -6,7 +6,7 @@ import SyncCore
 
 func addSynchronizeSavedGifsOperation(transaction: Transaction, operation: SynchronizeSavedGifsOperationContent) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedGifs
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     var topOperation: (SynchronizeSavedGifsOperation, Int32)?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in

@@ -7,19 +7,15 @@ import SyncCore
 func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-        case let .chatPhoto(flags, photoSmall, photoBig, dcId):
+        case let .chatPhoto(_, photoId, strippedThumb, dcId):
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
-            switch photoSmall {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .small, volumeId: volumeId, localId: localId)
-            }
-            switch photoBig {
-                case let .fileLocationToBeDeprecated(volumeId, localId):
-                    fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .fullSize, volumeId: volumeId, localId: localId)
-            }
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: []))
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: []))
+
+            smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: photoId, sizeSpec: .small, volumeId: nil, localId: nil)
+            fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: photoId, sizeSpec: .fullSize, volumeId: nil, localId: nil)
+
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData()))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData()))
         case .chatPhotoEmpty:
             break
     }
@@ -34,7 +30,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if let migratedTo = migratedTo {
             switch migratedTo {
             case let .inputChannel(channelId, accessHash):
-                migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), accessHash: accessHash)
+                migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)), accessHash: accessHash)
             case .inputChannelEmpty:
                 break
             case .inputChannelFromMessage:
@@ -57,11 +53,11 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 24)) != 0 {
             groupFlags.insert(.hasActiveVoiceChat)
         }
-        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
+        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id)), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
     case let .chatEmpty(id):
-        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id)), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     case let .chatForbidden(id, title):
-        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+        return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id)), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, defaultBannedRights, _):
         let isMin = (flags & (1 << 12)) != 0
         
@@ -133,7 +129,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             }
         }
         
-        return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHashValue, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChatAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChatBannedRights.init), defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init))
+        return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id)), accessHash: accessHashValue, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChatAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChatBannedRights.init), defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init))
     case let .channelForbidden(flags, id, accessHash, title, untilDate):
         let info: TelegramChannelInfo
         if (flags & Int32(1 << 8)) != 0 {
@@ -142,7 +138,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             info = .broadcast(TelegramChannelBroadcastInfo(flags: []))
         }
         
-        return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: .personal(accessHash), title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max), defaultBannedRights: nil)
+        return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id)), accessHash: .personal(accessHash), title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max), defaultBannedRights: nil)
     }
 }
 

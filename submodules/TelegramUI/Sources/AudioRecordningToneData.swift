@@ -11,7 +11,7 @@ private func loadAudioRecordingToneData() -> Data? {
         AVLinearPCMIsBigEndianKey: false as NSNumber
     ]
     
-    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
+    guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "mp3") else {
         return nil
     }
     

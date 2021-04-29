@@ -569,12 +569,15 @@ final class ContextActionsContainerNode: ASDisplayNode {
     }
     
     func animateOut(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        guard let additionalActionsNode = self.additionalActionsNode else {
+        guard let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode else {
             return
         }
         
         transition.animatePosition(node: additionalActionsNode, to: CGPoint(x: 0.0, y: offset / 2.0), additive: true)
+        transition.animatePosition(node: additionalShadowNode, to: CGPoint(x: 0.0, y: offset / 2.0), additive: true)
         additionalActionsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        additionalShadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
         additionalActionsNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.15, removeOnCompletion: false)
+        additionalShadowNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.15, removeOnCompletion: false)
     }
 }

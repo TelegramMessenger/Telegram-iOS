@@ -410,7 +410,7 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
     
     for message in sorted {
         if withChannelIds {
-            acc = (acc &* 20261) &+ UInt32(message.id.peerId.id)
+            acc = (acc &* 20261) &+ UInt32(message.id.peerId.id._internalGetInt32Value())
         }
         
         acc = (acc &* 20261) &+ UInt32(message.id.id)
@@ -435,7 +435,7 @@ private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -
     for message in messages {
         if case let .Id(id) = message.id {
             if withChannelIds {
-                acc = (acc &* 20261) &+ UInt32(id.peerId.id)
+                acc = (acc &* 20261) &+ UInt32(id.peerId.id._internalGetInt32Value())
             }
             acc = (acc &* 20261) &+ UInt32(id.id)
             var timestamp = message.timestamp

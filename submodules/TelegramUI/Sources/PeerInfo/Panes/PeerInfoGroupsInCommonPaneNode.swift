@@ -124,6 +124,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.disposable?.dispose()
     }
     
+    func ensureMessageIsVisible(id: MessageId) {    
+    }
+    
     func scrollToTop() -> Bool {
         if !self.listNode.scrollToOffsetFromTop(0.0) {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

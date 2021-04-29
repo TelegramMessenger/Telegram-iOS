@@ -241,7 +241,7 @@ public func isServicePeer(_ peer: Peer) -> Bool {
         if peer.id.isReplies {
             return true
         }
-        return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000))
+        return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt32Value() == 777000 || peer.id.id._internalGetInt32Value() == 333000))
     }
     return false
 }
@@ -249,7 +249,7 @@ public func isServicePeer(_ peer: Peer) -> Bool {
 public extension PeerId {
     var isReplies: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
-            if self.id == 708513 || self.id == 1271266957 {
+            if self.id._internalGetInt32Value() == 708513 || self.id._internalGetInt32Value() == 1271266957 {
                 return true
             }
         }
@@ -268,7 +268,7 @@ public extension PeerId {
     
     var isImport: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
-            if self.id == 225079 {
+            if self.id._internalGetInt32Value() == 225079 {
                 return true
             }
         }

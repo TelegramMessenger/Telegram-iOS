@@ -32,7 +32,7 @@ public func webSessions(network: Network) -> Signal<([WebAuthorization], [PeerId
                 for authorization in authorizations {
                     switch authorization {
                     case let .webAuthorization(hash, botId, domain, browser, platform, dateCreated, dateActive, ip, region):
-                        sessions.append(WebAuthorization(hash: hash, botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), domain: domain, browser: browser, platform: platform, dateCreated: dateCreated, dateActive: dateActive, ip: ip, region: region))
+                        sessions.append(WebAuthorization(hash: hash, botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), domain: domain, browser: browser, platform: platform, dateCreated: dateCreated, dateActive: dateActive, ip: ip, region: region))
                         
                     }
                 }

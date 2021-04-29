@@ -9,6 +9,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import Stripe
 import CountrySelectionUI
+import PresentationDataUtils
+import AccountContext
 
 private final class BotCheckoutNativeCardEntryScrollerNodeView: UIScrollView {
     var ignoreUpdateBounds = false
@@ -42,7 +44,8 @@ private final class BotCheckoutNativeCardEntryScrollerNode: ASDisplayNode {
 }
 
 final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let publishableKey: String
+    private let context: AccountContext
+    private let provider: BotCheckoutNativeCardEntryController.Provider
     
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
@@ -70,9 +73,12 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     
     private var currentCardData: BotPaymentCardInputData?
     private var currentCountryIso2: String?
+
+    private var dataTask: URLSessionDataTask?
     
-    init(additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
-        self.publishableKey = publishableKey
+    init(context: AccountContext, provider: BotCheckoutNativeCardEntryController.Provider, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+        self.context = context
+        self.provider = provider
         
         self.present = present
         self.dismiss = dismiss
@@ -95,46 +101,53 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             cardUpdatedImpl?(data)
         }
         itemNodes.append([BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_PaymentCard), self.cardItem])
-        
-        if additionalFields.contains(.cardholderName) {
-            var sectionItems: [BotPaymentItemNode] = []
-            
-            sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_CardholderNameTitle))
-            
-            let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder, contentType: .name)
-            self.cardholderItem = cardholderItem
-            sectionItems.append(cardholderItem)
-            
-            itemNodes.append(sectionItems)
-        } else {
-            self.cardholderItem = nil
-        }
-        
-        if additionalFields.contains(.country) || additionalFields.contains(.zipCode) {
-            var sectionItems: [BotPaymentItemNode] = []
-            
-            sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_PostcodeTitle))
-            
-            if additionalFields.contains(.country) {
-                let countryItem = BotPaymentDisclosureItemNode(title: "", placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
-                countryItem.action = {
-                    openCountrySelectionImpl?()
+
+        switch provider {
+        case let .stripe(additionalFields, _):
+            if additionalFields.contains(.cardholderName) {
+                var sectionItems: [BotPaymentItemNode] = []
+
+                sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_CardholderNameTitle))
+
+                let cardholderItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_CardholderNamePlaceholder, contentType: .name)
+                self.cardholderItem = cardholderItem
+                sectionItems.append(cardholderItem)
+
+                itemNodes.append(sectionItems)
+            } else {
+                self.cardholderItem = nil
+            }
+
+            if additionalFields.contains(.country) || additionalFields.contains(.zipCode) {
+                var sectionItems: [BotPaymentItemNode] = []
+
+                sectionItems.append(BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_PostcodeTitle))
+
+                if additionalFields.contains(.country) {
+                    let countryItem = BotPaymentDisclosureItemNode(title: "", placeholder: strings.CheckoutInfo_ShippingInfoCountryPlaceholder, text: "")
+                    countryItem.action = {
+                        openCountrySelectionImpl?()
+                    }
+                    self.countryItem = countryItem
+                    sectionItems.append(countryItem)
+                } else {
+                    self.countryItem = nil
                 }
-                self.countryItem = countryItem
-                sectionItems.append(countryItem)
+                if additionalFields.contains(.zipCode) {
+                    let zipCodeItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_PostcodePlaceholder, contentType: .address)
+                    self.zipCodeItem = zipCodeItem
+                    sectionItems.append(zipCodeItem)
+                } else {
+                    self.zipCodeItem = nil
+                }
+
+                itemNodes.append(sectionItems)
             } else {
                 self.countryItem = nil
-            }
-            if additionalFields.contains(.zipCode) {
-                let zipCodeItem = BotPaymentFieldItemNode(title: "", placeholder: strings.Checkout_NewCard_PostcodePlaceholder, contentType: .address)
-                self.zipCodeItem = zipCodeItem
-                sectionItems.append(zipCodeItem)
-            } else {
                 self.zipCodeItem = nil
             }
-            
-            itemNodes.append(sectionItems)
-        } else {
+        case .smartglobal:
+            self.cardholderItem = nil
             self.countryItem = nil
             self.zipCodeItem = nil
         }
@@ -214,6 +227,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     
     deinit {
         self.verifyDisposable.dispose()
+        self.dataTask?.cancel()
     }
     
     func updateCountry(_ iso2: String) {
@@ -232,53 +246,163 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         guard let cardData = self.currentCardData else {
             return
         }
-        
-        let configuration = STPPaymentConfiguration.shared().copy() as! STPPaymentConfiguration
-        configuration.smsAutofillDisabled = true
-        configuration.publishableKey = self.publishableKey
-        configuration.appleMerchantIdentifier = "merchant.ph.telegra.Telegraph"
-        
-        let apiClient = STPAPIClient(configuration: configuration)
-        
-        let card = STPCardParams()
-        card.number = cardData.number
-        card.cvc = cardData.code
-        card.expYear = cardData.year
-        card.expMonth = cardData.month
-        card.name = self.cardholderItem?.text
-        card.addressCountry = self.currentCountryIso2
-        card.addressZip = self.zipCodeItem?.text
-        
-        let createToken: Signal<STPToken, Error> = Signal { subscriber in
-            apiClient.createToken(withCard: card, completion: { token, error in
-                if let error = error {
-                    subscriber.putError(error)
-                } else if let token = token {
-                    subscriber.putNext(token)
-                    subscriber.putCompletion()
+
+        switch self.provider {
+        case let .stripe(_, publishableKey):
+            let configuration = STPPaymentConfiguration.shared().copy() as! STPPaymentConfiguration
+            configuration.smsAutofillDisabled = true
+            configuration.publishableKey = publishableKey
+            configuration.appleMerchantIdentifier = "merchant.ph.telegra.Telegraph"
+
+            let apiClient = STPAPIClient(configuration: configuration)
+
+            let card = STPCardParams()
+            card.number = cardData.number
+            card.cvc = cardData.code
+            card.expYear = cardData.year
+            card.expMonth = cardData.month
+            card.name = self.cardholderItem?.text
+            card.addressCountry = self.currentCountryIso2
+            card.addressZip = self.zipCodeItem?.text
+
+            let createToken: Signal<STPToken, Error> = Signal { subscriber in
+                apiClient.createToken(withCard: card, completion: { token, error in
+                    if let error = error {
+                        subscriber.putError(error)
+                    } else if let token = token {
+                        subscriber.putNext(token)
+                        subscriber.putCompletion()
+                    }
+                })
+
+                return ActionDisposable {
+                    let _ = apiClient.publishableKey
+                }
+            }
+
+            self.isVerifying = true
+            self.verifyDisposable.set((createToken |> deliverOnMainQueue).start(next: { [weak self] token in
+                if let strongSelf = self, let card = token.card {
+                    let last4 = card.last4()
+                    let brand = STPAPIClient.string(with: card.brand)
+                    strongSelf.completion(.webToken(BotCheckoutPaymentWebToken(title: "\(brand)*\(last4)", data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: strongSelf.saveInfoItem.isOn)))
+                }
+            }, error: { [weak self] error in
+                if let strongSelf = self {
+                    strongSelf.isVerifying = false
+                    strongSelf.updateDone()
+                }
+            }))
+
+            self.updateDone()
+        case let .smartglobal(isTesting, publicToken):
+            let url: String
+            if isTesting {
+                url = "https://tgb-playground.smart-glocal.com/cds/v1/tokenize/card"
+            } else {
+                url = "https://tgb.smart-glocal.com/cds/v1/tokenize/card"
+            }
+
+            let jsonPayload: [String: Any] = [
+                "card": [
+                    "number": cardData.number,
+                    "expiration_month": String(format: "%02d", cardData.month),
+                    "expiration_year": String(format: "%02d", cardData.year),
+                    "security_code": "\(cardData.code)"
+                ] as [String: Any]
+            ]
+
+            guard let parsedUrl = URL(string: url) else {
+                return
+            }
+
+            var request = URLRequest(url: parsedUrl)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(publicToken, forHTTPHeaderField: "X-PUBLIC-TOKEN")
+            guard let requestBody = try? JSONSerialization.data(withJSONObject: jsonPayload, options: []) else {
+                return
+            }
+            request.httpBody = requestBody
+
+            let session = URLSession.shared
+            let dataTask = session.dataTask(with: request, completionHandler: { [weak self] data, response, error in
+                Queue.mainQueue().async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    enum ReponseError: Error {
+                        case generic
+                    }
+
+                    do {
+                        guard let data = data else {
+                            throw ReponseError.generic
+                        }
+
+                        let jsonRaw = try JSONSerialization.jsonObject(with: data, options: [])
+                        guard let json = jsonRaw as? [String: Any] else {
+                            throw ReponseError.generic
+                        }
+                        guard let resultData = json["data"] as? [String: Any] else {
+                            throw ReponseError.generic
+                        }
+                        guard let resultInfo = resultData["info"] as? [String: Any] else {
+                            throw ReponseError.generic
+                        }
+                        guard let token = resultData["token"] as? String else {
+                            throw ReponseError.generic
+                        }
+                        guard let maskedCardNumber = resultInfo["masked_card_number"] as? String else {
+                            throw ReponseError.generic
+                        }
+                        guard let cardType = resultInfo["card_type"] as? String else {
+                            throw ReponseError.generic
+                        }
+
+                        var last4 = maskedCardNumber
+                        if last4.count > 4 {
+                            let lastDigits = String(maskedCardNumber[maskedCardNumber.index(maskedCardNumber.endIndex, offsetBy: -4)...])
+                            if lastDigits.allSatisfy(\.isNumber) {
+                                last4 = "\(cardType) *\(lastDigits)"
+                            }
+                        }
+
+                        let responseJson: [String: Any] = [
+                            "type": "card",
+                            "token": "\(token)"
+                        ]
+
+                        let serializedResponseJson = try JSONSerialization.data(withJSONObject: responseJson, options: [])
+
+                        guard let serializedResponseString = String(data: serializedResponseJson, encoding: .utf8) else {
+                            throw ReponseError.generic
+                        }
+
+                        strongSelf.completion(.webToken(BotCheckoutPaymentWebToken(
+                            title: last4,
+                            data: serializedResponseString,
+                            saveOnServer: strongSelf.saveInfoItem.isOn
+                        )))
+                    } catch {
+                        strongSelf.isVerifying = false
+                        strongSelf.updateDone()
+
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {
+                        })]), nil)
+                    }
                 }
             })
-            
-            return ActionDisposable {
-                let _ = apiClient.publishableKey
-            }
+            self.dataTask = dataTask
+
+            self.isVerifying = true
+            self.updateDone()
+
+            dataTask.resume()
+
+            break
         }
-        
-        self.isVerifying = true
-        self.verifyDisposable.set((createToken |> deliverOnMainQueue).start(next: { [weak self] token in
-            if let strongSelf = self, let card = token.card {
-                let last4 = card.last4()
-                let brand = STPAPIClient.string(with: card.brand)
-                strongSelf.completion(.webToken(BotCheckoutPaymentWebToken(title: "\(brand)*\(last4)", data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: strongSelf.saveInfoItem.isOn)))
-            }
-        }, error: { [weak self] error in
-            if let strongSelf = self {
-                strongSelf.isVerifying = false
-                strongSelf.updateDone()
-            }
-        }))
-        
-        self.updateDone()
     }
     
     private func updateDone() {

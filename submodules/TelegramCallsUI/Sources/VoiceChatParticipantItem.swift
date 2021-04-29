@@ -70,6 +70,7 @@ final class VoiceChatParticipantItem: ListViewItem {
     let expandedText: ParticipantText?
     let icon: Icon
     let enabled: Bool
+    let transparent: Bool
     public let selectable: Bool
     let getAudioLevel: (() -> Signal<Float, NoError>)?
     let getVideo: () -> GroupVideoNode?
@@ -79,8 +80,9 @@ final class VoiceChatParticipantItem: ListViewItem {
     let action: ((ASDisplayNode) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let getIsExpanded: () -> Bool
+    let getUpdatingAvatar: () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, ssrc: UInt32?, presence: PeerPresence?, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, enabled: Bool, transparent: Bool, selectable: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: ((ASDisplayNode) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -92,6 +94,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.expandedText = expandedText
         self.icon = icon
         self.enabled = enabled
+        self.transparent = transparent
         self.selectable = selectable
         self.getAudioLevel = getAudioLevel
         self.getVideo = getVideo
@@ -101,6 +104,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         self.action = action
         self.contextAction = contextAction
         self.getIsExpanded = getIsExpanded
+        self.getUpdatingAvatar = getUpdatingAvatar
     }
         
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -199,6 +203,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     var item: VoiceChatParticipantItem? {
         return self.layoutParams?.0
     }
+    
+    private var currentTitle: String?
     
     init() {
         self.topStripeNode = ASDisplayNode()
@@ -408,7 +414,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             avatarListContainerNode.addSubnode(avatarListNode.controlsClippingOffsetNode)
                             avatarListWrapperNode.addSubnode(avatarListContainerNode)
                             
-                            avatarListNode.update(size: targetRect.size, peer: item.peer, isExpanded: true, transition: .immediate)
+                            avatarListNode.update(size: targetRect.size, peer: item.peer, additionalEntry: item.getUpdatingAvatar(), isExpanded: true, transition: .immediate)
                             strongSelf.offsetContainerNode.supernode?.addSubnode(avatarListWrapperNode)
 
                             strongSelf.audioLevelView?.alpha = 0.0
@@ -544,9 +550,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         let currentItem = self.layoutParams?.0
+        let currentTitle = self.currentTitle
         
         return { item, params, first, last in
             var updatedTheme: PresentationTheme?
+            var updatedName = false
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
             }
@@ -563,6 +571,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             let currentBoldFont: UIFont = titleFont
             
+            var updatedTitle = false
             if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
@@ -588,6 +597,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: group.title, font: currentBoldFont, textColor: titleColor)
             } else if let channel = item.peer as? TelegramChannel {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
+            }
+            if let currentTitle = currentTitle, currentTitle != titleAttributedString?.string {
+                updatedTitle = true
             }
             
             var wavesColor = UIColor(rgb: 0x34c759)
@@ -737,6 +749,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, first, last)
+                    strongSelf.currentTitle = titleAttributedString?.string
                     strongSelf.wavesColor = wavesColor
                     
                     let nonExtractedRect = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: layout.contentSize.width - 32.0, height: layout.contentSize.height))
@@ -810,6 +823,16 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             disabledOverlayNode?.removeFromSupernode()
                         })
                         strongSelf.disabledOverlayNode = nil
+                    }
+                    
+                    if updatedTitle, let snapshotView = strongSelf.titleNode.view.snapshotContentTree() {
+                        strongSelf.titleNode.view.superview?.insertSubview(snapshotView, aboveSubview: strongSelf.titleNode.view)
+
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        
+                        strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
                     if let animateStatusTransitionFromUp = animateStatusTransitionFromUp, !strongSelf.contextSourceNode.isExtractedToContextPreview {

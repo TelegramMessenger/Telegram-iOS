@@ -80,7 +80,6 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -109,7 +108,8 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
+
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.imageNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
@@ -209,9 +209,9 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     }
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: contentInsets.left, y: contentInsets.top), size: imageSize)
                     
-                    if strongSelf.backgroundNode.supernode != nil {
+                    /*if strongSelf.backgroundNode.supernode != nil {
                         strongSelf.backgroundNode.removeFromSupernode()
-                    }
+                    }*/
                     if strongSelf.topStripeNode.supernode != nil {
                         strongSelf.topStripeNode.removeFromSupernode()
                     }
@@ -231,7 +231,8 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     strongSelf.textNode.frame = textFrame
                     
                     strongSelf.botNameNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + textBotNameSpacing), size: botNameLayout.size)
-                    
+
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: params.width, height: contentSize.height + 1000.0))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }
             })

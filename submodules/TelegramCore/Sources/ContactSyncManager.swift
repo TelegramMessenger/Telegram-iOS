@@ -345,7 +345,7 @@ private func pushDeviceContactData(postbox: Postbox, network: Network, contacts:
                                 for item in imported {
                                     switch item {
                                         case let .importedContact(userId, _):
-                                            addedContactPeerIds.insert(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                                            addedContactPeerIds.insert(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
                                     }
                                 }
                                 for item in retryContacts {
@@ -399,7 +399,7 @@ private func updateContactPresences(postbox: Postbox, network: Network, accountP
             for status in statuses {
                 switch status {
                     case let .contactStatus(userId, status):
-                        peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)] = TelegramUserPresence(apiStatus: status)
+                        peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))] = TelegramUserPresence(apiStatus: status)
                 }
             }
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)

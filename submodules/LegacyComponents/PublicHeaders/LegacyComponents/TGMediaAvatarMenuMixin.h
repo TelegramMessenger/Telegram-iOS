@@ -13,6 +13,8 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 
 @interface TGMediaAvatarMenuMixin : NSObject
 
+@property (nonatomic, assign) bool forceDark;
+
 @property (nonatomic, copy) void (^didFinishWithImage)(UIImage *image);
 @property (nonatomic, copy) void (^didFinishWithVideo)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 @property (nonatomic, copy) void (^didFinishWithDelete)(void);
