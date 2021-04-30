@@ -260,12 +260,10 @@ private class VoiceChatParticipantStatusNode: ASDisplayNode {
                 default:
                     break
             }
-            
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
+                        
             let iconSize = CGSize(width: 16.0, height: 16.0)
             let spacing: CGFloat = 3.0
-            var contentSize = textLayout.size
+            
             var icons: [UIImage] = []
             if hasVolume, let image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusVolume"), color: color) {
                 icons.append(image)
@@ -276,6 +274,9 @@ private class VoiceChatParticipantStatusNode: ASDisplayNode {
             if hasScreen, let image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusScreen"), color: color) {
                 icons.append(image)
             }
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width - (iconSize.width + spacing) * CGFloat(icons.count), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var contentSize = textLayout.size
             contentSize.width += (iconSize.width + spacing) * CGFloat(icons.count)
             
             return (contentSize, { [weak self] in
@@ -1162,6 +1163,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
+                    var hadItem = strongSelf.layoutParams?.0 != nil
                     strongSelf.layoutParams = (item, params, first, last)
                     strongSelf.currentTitle = titleAttributedString?.string
                     strongSelf.wavesColor = wavesColor
@@ -1262,8 +1264,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     }
                                         
                     let transition: ContainedViewLayoutTransition
-                    if animated {
-                        transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    if animated && hadItem {
+                        transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
                     } else {
                         transition = .immediate
                     }

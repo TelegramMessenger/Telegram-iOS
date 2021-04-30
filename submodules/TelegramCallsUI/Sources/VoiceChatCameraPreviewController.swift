@@ -21,14 +21,16 @@ final class VoiceChatCameraPreviewController: ViewController {
     
     private var animatedIn = false
 
-    private let shareCamera: () -> Void
+    private let cameraNode: GroupVideoNode
+    private let shareCamera: (ASDisplayNode) -> Void
     private let switchCamera: () -> Void
     private let shareScreen: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, shareCamera: @escaping () -> Void, switchCamera: @escaping () -> Void,  shareScreen: @escaping () -> Void) {
+    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode) -> Void, switchCamera: @escaping () -> Void, shareScreen: @escaping () -> Void) {
         self.context = context
+        self.cameraNode = cameraNode
         self.shareCamera = shareCamera
         self.switchCamera = switchCamera
         self.shareScreen = shareScreen
@@ -58,10 +60,12 @@ final class VoiceChatCameraPreviewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = VoiceChatCameraPreviewControllerNode(context: self.context)
+        self.displayNode = VoiceChatCameraPreviewControllerNode(context: self.context, cameraNode: self.cameraNode)
         self.controllerNode.shareCamera = { [weak self] in
-            self?.shareCamera()
-            self?.dismiss()
+            if let strongSelf = self {
+                strongSelf.shareCamera(strongSelf.cameraNode)
+                strongSelf.dismiss()
+            }
         }
         self.controllerNode.switchCamera = { [weak self] in
             self?.switchCamera()
@@ -106,6 +110,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let context: AccountContext
     private var presentationData: PresentationData
     
+    private let cameraNode: GroupVideoNode
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
@@ -130,9 +135,11 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext) {
+    init(context: AccountContext, cameraNode: GroupVideoNode) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.cameraNode = cameraNode
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -201,7 +208,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
-        
+                
         self.wrappingScrollNode.addSubnode(self.backgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         
@@ -214,6 +221,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.contentContainerNode.addSubnode(self.previewContainerNode)
         
+        self.previewContainerNode.addSubnode(self.cameraNode)
         self.previewContainerNode.addSubnode(self.switchCameraButton)
         self.switchCameraButton.view.addSubview(self.switchCameraEffectView)
         self.switchCameraButton.addSubnode(self.switchCameraIconNode)
@@ -367,6 +375,9 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         let previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset)
         transition.updateFrame(node: self.previewContainerNode, frame: CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize))
+        
+        self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
+        self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
         
         let switchCameraFrame = CGRect(x: previewSize.width - 48.0 - 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.switchCameraButton, frame: switchCameraFrame)

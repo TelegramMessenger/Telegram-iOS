@@ -372,6 +372,7 @@ public protocol PresentationGroupCall: class {
     var incomingVideoSources: Signal<Set<String>, NoError> { get }
     
     func makeIncomingVideoView(endpointId: String, completion: @escaping (PresentationCallVideoView?) -> Void)
+    func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
     
     func loadMoreMembers(token: String)
 }
