@@ -319,6 +319,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
 
 public func makeDefaultDayPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, serviceBackgroundColor: UIColor?, day: Bool, preview: Bool) -> PresentationTheme {
     var serviceBackgroundColor = serviceBackgroundColor ?? defaultServiceBackgroundColor
+
+    if !day {
+        serviceBackgroundColor = UIColor(white: 0.0, alpha: 0.2)
+    }
     
     let intro = PresentationThemeIntro(
         statusBarStyle: .black,

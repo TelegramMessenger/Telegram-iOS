@@ -864,6 +864,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.clipsToBounds = true
                 containerNode.cornerRadius = 15.0
                 containerNode.addSubnode(self.backgroundNode)
+                if let gradientBackgroundNode = self.gradientBackgroundNode {
+                    containerNode.addSubnode(gradientBackgroundNode)
+                }
                 containerNode.addSubnode(self.historyNodeContainer)
                 if let restrictedNode = self.restrictedNode {
                     containerNode.addSubnode(restrictedNode)
@@ -900,6 +903,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.containerNode = nil
                 containerNode.removeFromSupernode()
                 self.insertSubnode(self.backgroundNode, at: 0)
+                if let gradientBackgroundNode = self.gradientBackgroundNode {
+                    self.insertSubnode(gradientBackgroundNode, at: 1)
+                }
                 self.insertSubnode(self.historyNodeContainer, aboveSubnode: self.backgroundNode)
                 if let restrictedNode = self.restrictedNode {
                     self.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)

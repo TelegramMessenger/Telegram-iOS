@@ -2859,6 +2859,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }
                         self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                     }
+                } else {
+                    self.didScrollWithOffset?(-completeOffset, .immediate, nil)
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size

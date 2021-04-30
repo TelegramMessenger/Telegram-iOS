@@ -23,7 +23,7 @@ private func generateGradientComponent(size: CGSize, color: UIColor) -> UIImage?
 
     c?.setBlendMode(.normal)
 
-    var gradLocs: [CGFloat] = [0.0, 0.1, 1.0]
+    var gradLocs: [CGFloat] = [0.0, 0.05, 1.0]
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let radius = min(size.width / 2.0, size.height / 2.0)
 
@@ -59,8 +59,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
         }
 
         func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
-            for imageView in stack {
-                transition.updateFrame(view: imageView, frame: frame)
+            let nextFrame = frame
+            for i in 0 ..< self.stack.count {
+                transition.updateFrame(view: self.stack[i], frame: nextFrame)
+                //nextFrame = nextFrame.insetBy(dx: nextFrame.width / 4.0, dy: nextFrame.height / 4.0)
             }
         }
     }
@@ -70,6 +72,8 @@ public final class GradientBackgroundNode: ASDisplayNode {
     private var phase: Int = 0
 
     private var validLayout: CGSize?
+
+    private var testTimer: Timer?
 
     override public init() {
         self.dimView = UIView()
@@ -89,10 +93,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
             UIColor(rgb: 0xFBE37D)
         ]
 
-        let layerCount = 2
+        let layerCount = 1
 
         for i in 0 ..< colors.count {
-            let image = generateGradientComponent(size: CGSize(width: 300.0, height: 300.0), color: colors[i].withMultiplied(hue: 1.0, saturation: 1.1, brightness: 1.0))!
+            let image = generateGradientComponent(size: CGSize(width: 300.0, height: 300.0), color: colors[i].withMultiplied(hue: 1.0, saturation: 1.0, brightness: 1.0))!
 
             let pointImage = PointImage(image: image, count: layerCount)
 
@@ -106,6 +110,36 @@ public final class GradientBackgroundNode: ASDisplayNode {
         }
 
         self.view.addSubview(self.dimView)
+
+        let defaultAlpha = self.pointImages[0].stack[0].alpha
+        var alphaPhase = 0
+
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            let testTimer = Timer(timeInterval: 1.5, repeats: true, block: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                return;
+                alphaPhase += 1
+                for image in strongSelf.pointImages {
+                    for i in 0 ..< image.stack.count {
+                        if alphaPhase % 2 == 0 {
+                            //image.stack[i].alpha = defaultAlpha
+                            image.stack[i].layer.compositingFilter = "screenBlendMode"
+                        } else {
+                            //image.stack[i].alpha = i == 0 ? 1.0 : 0.0
+                            image.stack[i].layer.compositingFilter = nil
+                        }
+                    }
+                }
+            })
+            self.testTimer = testTimer
+            RunLoop.main.add(testTimer, forMode: .common)
+        }
+    }
+
+    deinit {
+        self.testTimer?.invalidate()
     }
 
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -147,7 +181,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
             }
             let position = positions[i * 2]
             let pointCenter = CGPoint(x: size.width * position.x, y: size.height * position.y)
-            let pointSize = CGSize(width: size.width * 1.8, height: size.height * 1.5)
+            let pointSize = CGSize(width: size.width * 1.9, height: size.height * 1.9)
             self.pointImages[i].updateFrame(frame: CGRect(origin: CGPoint(x: pointCenter.x - pointSize.width / 2.0, y: pointCenter.y - pointSize.height / 2.0), size: pointSize), transition: transition)
         }
     }
