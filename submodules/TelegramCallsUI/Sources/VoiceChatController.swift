@@ -429,7 +429,8 @@ public final class VoiceChatController: ViewController {
             var isMyPeer: Bool
             var ssrc: UInt32?
             var effectiveVideoEndpointId: String?
-            var presence: TelegramUserPresence?
+            var hasVideo: Bool
+            var hasScreencast: Bool
             var activityTimestamp: Int32
             var state: State
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
@@ -447,7 +448,8 @@ public final class VoiceChatController: ViewController {
                 isMyPeer: Bool,
                 ssrc: UInt32?,
                 effectiveVideoEndpointId: String?,
-                presence: TelegramUserPresence?,
+                hasVideo: Bool,
+                hasScreencast: Bool,
                 activityTimestamp: Int32,
                 state: State,
                 muteState: GroupCallParticipantsContext.Participant.MuteState?,
@@ -464,7 +466,8 @@ public final class VoiceChatController: ViewController {
                 self.isMyPeer = isMyPeer
                 self.ssrc = ssrc
                 self.effectiveVideoEndpointId = effectiveVideoEndpointId
-                self.presence = presence
+                self.hasVideo = hasVideo
+                self.hasScreencast = hasScreencast
                 self.activityTimestamp = activityTimestamp
                 self.state = state
                 self.muteState = muteState
@@ -495,9 +498,6 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.effectiveVideoEndpointId != rhs.effectiveVideoEndpointId {
-                    return false
-                }
-                if lhs.presence != rhs.presence {
                     return false
                 }
                 if lhs.activityTimestamp != rhs.activityTimestamp {
@@ -622,7 +622,7 @@ public final class VoiceChatController: ViewController {
                         })
                     case let .peer(peerEntry):
                         let peer = peerEntry.peer
-                        
+                            
                         var text: VoiceChatParticipantItem.ParticipantText
                         var expandedText: VoiceChatParticipantItem.ParticipantText?
                         let icon: VoiceChatParticipantItem.Icon
@@ -632,11 +632,16 @@ public final class VoiceChatController: ViewController {
                             state = .listening
                         }
                         
-                        let textIcon: VoiceChatParticipantItem.ParticipantText.Icon?
+                        var textIcon = VoiceChatParticipantItem.ParticipantText.TextIcon()
+                        if peerEntry.hasVideo {
+                            textIcon.insert(.video)
+                        }
+                        if peerEntry.hasScreencast {
+                            textIcon.insert(.screen)
+                        }
                         if peerEntry.volume != nil {
-                            textIcon = .volume
+                            textIcon.insert(.volume)
                         } else {
-                            textIcon = nil
                         }
                         let yourText: String
                         if (peerEntry.about?.isEmpty ?? true) && peer.smallProfileImage == nil {
@@ -699,7 +704,7 @@ public final class VoiceChatController: ViewController {
                                                 
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: peerEntry.presence, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: nil, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
                                 return interaction.getPeerVideo(endpointId, peerEntry.style != .list)
                             } else {
@@ -3235,14 +3240,12 @@ public final class VoiceChatController: ViewController {
                 self.call.disableVideo()
                 self.call.disableScreencast()
             } else {
-                #if DEBUG
-                //self.call.requestScreencast()
-                self.call.requestVideo()
-                return;
-                #endif
-
-                let controller = voiceChatCameraPreviewController(sharedContext: self.context.sharedContext, account: self.context.account, forceTheme: self.darkTheme, title: self.presentationData.strings.VoiceChat_VideoPreviewTitle, text: self.presentationData.strings.VoiceChat_VideoPreviewDescription, apply: { [weak self] in
+                let controller = VoiceChatCameraPreviewController(context: self.context, shareCamera: { [weak self] in
                     self?.call.requestVideo()
+                }, switchCamera: { [weak self] in
+                    self?.call.switchVideoCamera()
+                }, shareScreen: { [weak self] in
+                    self?.call.requestScreencast()
                 })
                 self.controller?.present(controller, in: .window(.root))
             }
@@ -3879,13 +3882,14 @@ public final class VoiceChatController: ViewController {
 //                transition.updateAlpha(node: self.optionsButton, alpha: self.optionsButton.isUserInteractionEnabled ? 1.0 : 0.0)
 //                transition.updateAlpha(node: self.titleNode, alpha: 1.0)
             }
+            transition.updateAlpha(node: self.optionsButton, alpha: self.optionsButton.isUserInteractionEnabled ? 1.0 : 0.0)
             transition.updateFrame(node: self.bottomPanelCoverNode, frame: bottomPanelCoverFrame)
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
             if let pickerView = self.pickerView {
                 transition.updateFrame(view: pickerView, frame: CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0))
             }
-            
+             
             let timerFrame = CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0)
             transition.updateFrame(node: self.timerNode, frame: timerFrame)
             self.timerNode.update(size: timerFrame.size, scheduleTime: self.callState?.scheduleTimestamp, transition: .immediate)
@@ -4362,7 +4366,8 @@ public final class VoiceChatController: ViewController {
                     isMyPeer: self.callState?.myPeerId == member.peer.id,
                     ssrc: member.ssrc,
                     effectiveVideoEndpointId: member.presentationEndpointId ?? member.videoEndpointId,
-                    presence: nil,
+                    hasVideo: member.videoEndpointId != nil,
+                    hasScreencast: member.presentationEndpointId != nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
                     muteState: memberMuteState,
@@ -4382,7 +4387,8 @@ public final class VoiceChatController: ViewController {
                     isMyPeer: self.callState?.myPeerId == member.peer.id,
                     ssrc: member.ssrc,
                     effectiveVideoEndpointId: member.presentationEndpointId ?? member.videoEndpointId,
-                    presence: nil,
+                    hasVideo: member.videoEndpointId != nil,
+                    hasScreencast: member.presentationEndpointId != nil,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
                     muteState: memberMuteState,
@@ -4400,11 +4406,12 @@ public final class VoiceChatController: ViewController {
                 if memberPeer.id == self.effectiveSpeakerWithVideo?.0 {
                     pinnedEntry = .peer(PeerEntry(
                         peer: memberPeer,
-                        about: member.about,
+                        about: nil,
                         isMyPeer: self.callState?.myPeerId == member.peer.id,
                         ssrc: member.ssrc,
                         effectiveVideoEndpointId: member.presentationEndpointId ?? member.videoEndpointId,
-                        presence: nil,
+                        hasVideo: false,
+                        hasScreencast: false,
                         activityTimestamp: Int32.max - 1 - index,
                         state: memberState,
                         muteState: memberMuteState,
@@ -4431,7 +4438,8 @@ public final class VoiceChatController: ViewController {
                     isMyPeer: false,
                     ssrc: nil,
                     effectiveVideoEndpointId: nil,
-                    presence: nil,
+                    hasVideo: false,
+                    hasScreencast: false,
                     activityTimestamp: Int32.max - 1 - index,
                     state: .invited,
                     muteState: nil,

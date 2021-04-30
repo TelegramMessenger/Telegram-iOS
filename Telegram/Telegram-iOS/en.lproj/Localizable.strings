@@ -6463,5 +6463,6 @@ Sorry for the inconvenience.";
 "Calls.StartNewCall" = "Start New Call";
 
 "VoiceChat.VideoPreviewTitle" = "Video Preview";
-"VoiceChat.VideoPreviewDescription" = "Place your face in the area above for better experience.";
-"VoiceChat.VideoPreviewShare" = "Share Video";
+"VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
+"VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
+"VoiceChat.VideoPreviewShareScreen" = "Share Screen";
