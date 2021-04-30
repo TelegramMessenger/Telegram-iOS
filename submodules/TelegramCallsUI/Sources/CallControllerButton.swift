@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import AppBundle
 import SemanticStatusNode
+import AnimationUI
 
 private let labelFont = Font.regular(13.0)
 
@@ -30,6 +31,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         }
         
         enum Image {
+            case cameraOff
+            case cameraOn
             case camera
             case mute
             case flipCamera
@@ -63,6 +66,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     private let effectView: UIVisualEffectView
     private let contentBackgroundNode: ASImageNode
     private let contentNode: ASImageNode
+    private var animationNode: AnimationNode?
     private let overlayHighlightNode: ASImageNode
     private var statusNode: SemanticStatusNode?
     let textNode: ImmediateTextNode
@@ -179,6 +183,33 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             
             let contentBackgroundImage: UIImage? = nil
             
+            var animationName: String?
+            switch content.image {
+                case .cameraOff:
+                    animationName = "anim_cameraoff"
+                case .cameraOn:
+                    animationName = "anim_cameraon"
+                default:
+                    break
+            }
+            
+            if let animationName = animationName {
+                let animationFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
+                if self.animationNode == nil {
+                    let animationNode = AnimationNode(animation: animationName, colors: nil, scale: 1.0)
+                    self.animationNode = animationNode
+                    self.contentContainer.insertSubnode(animationNode, aboveSubnode: self.contentNode)
+                }
+                if let animationNode = self.animationNode {
+                    animationNode.frame = animationFrame
+                    if previousContent == nil {
+                        animationNode.seekToEnd()
+                    } else if previousContent?.image != content.image {
+                        animationNode.play()
+                    }
+                }
+            }
+            
             let contentImage = generateImage(CGSize(width: self.largeButtonSize, height: self.largeButtonSize), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
@@ -219,6 +250,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 var image: UIImage?
                 
                 switch content.image {
+                case .cameraOff, .cameraOn:
+                    image = nil
                 case .camera:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCameraButton"), color: imageColor)
                 case .mute:

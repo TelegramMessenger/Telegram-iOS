@@ -112,7 +112,7 @@ public final class AccountContextImpl: AccountContext {
     public let engine: TelegramEngine
     
     public let fetchManager: FetchManager
-    private let prefetchManager: PrefetchManager?
+    public let prefetchManager: PrefetchManager?
     
     public var keyShortcutsController: KeyShortcutsController?
     
@@ -172,7 +172,7 @@ public final class AccountContextImpl: AccountContext {
         }
         self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         if sharedContext.applicationBindings.isMainApp && !temp {
-            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
+            self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
         } else {

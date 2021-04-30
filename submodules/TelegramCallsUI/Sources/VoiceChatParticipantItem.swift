@@ -25,10 +25,21 @@ final class VoiceChatParticipantItem: ListViewItem {
         case tile(isLandscape: Bool)
     }
     
-    enum ParticipantText {
-        public enum Icon {
-            case volume
-            case video
+    enum ParticipantText: Equatable {
+        public struct TextIcon: OptionSet {
+            public var rawValue: Int32
+            
+            public init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            public init() {
+                self.rawValue = 0
+            }
+            
+            public static let volume = TextIcon(rawValue: 1 << 0)
+            public static let video = TextIcon(rawValue: 1 << 1)
+            public static let screen = TextIcon(rawValue: 1 << 2)
         }
         
         public enum TextColor {
@@ -39,7 +50,7 @@ final class VoiceChatParticipantItem: ListViewItem {
         }
         
         case presence
-        case text(String, Icon?, TextColor)
+        case text(String, TextIcon, TextColor)
         case none
     }
     
@@ -179,7 +190,7 @@ private let borderImage = generateImage(CGSize(width: tileSize.width, height: ti
     context.clear(bounds)
     
     context.setLineWidth(borderLineWidth)
-    context.setStrokeColor(accentColor.cgColor)
+    context.setStrokeColor(constructiveColor.cgColor)
     
     context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: (borderLineWidth - UIScreenPixel) / 2.0, dy: (borderLineWidth - UIScreenPixel) / 2.0), cornerRadius: backgroundCornerRadius - UIScreenPixel).cgPath)
     context.strokePath()
@@ -196,23 +207,109 @@ private let fadeImage = generateImage(CGSize(width: 1.0, height: 30.0), rotatedC
 })
 
 private class VoiceChatParticipantStatusNode: ASDisplayNode {
-    private let iconNode: ASImageNode
+    private var iconNodes: [ASImageNode]
     private let textNode: TextNode
     
+    private var currentParams: (CGSize, VoiceChatParticipantItem.ParticipantText)?
+    
     override init() {
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        
+        self.iconNodes = []
         self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.contentMode = .left
+        self.textNode.contentsScale = UIScreen.main.scale
         
         super.init()
         
-        self.addSubnode(self.iconNode)
         self.addSubnode(self.textNode)
     }
     
-    func update() {
+    func asyncLayout() -> (_ size: CGSize, _ text: VoiceChatParticipantItem.ParticipantText, _ transparent: Bool) -> (CGSize, () -> Void) {
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
+        return { size, text,  transparent in
+            let statusFont = Font.regular(14.0)
+            
+            var attributedString: NSAttributedString?
+            var color: UIColor = .white
+            var hasVolume = false
+            var hasVideo = false
+            var hasScreen = false
+            switch text {
+                case let .text(text, textIcon, textColor):
+                    hasVolume = textIcon.contains(.volume)
+                    hasVideo = textIcon.contains(.video)
+                    hasScreen = textIcon.contains(.screen)
+                    
+                    var textColorValue: UIColor
+                    switch textColor {
+                    case .generic:
+                        textColorValue = UIColor(rgb: 0x98989e)
+                    case .accent:
+                        textColorValue = accentColor
+                    case .constructive:
+                        textColorValue = constructiveColor
+                    case .destructive:
+                        textColorValue = destructiveColor
+                    }
+                    if transparent {
+                        textColorValue = UIColor(rgb: 0xffffff, alpha: 0.65)
+                    }
+                    color = textColorValue
+                    attributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
+                default:
+                    break
+            }
+                        
+            let iconSize = CGSize(width: 16.0, height: 16.0)
+            let spacing: CGFloat = 3.0
+            
+            var icons: [UIImage] = []
+            if hasVolume, let image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusVolume"), color: color) {
+                icons.append(image)
+            }
+            if hasVideo, let image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusVideo"), color: color) {
+                icons.append(image)
+            }
+            if hasScreen, let image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusScreen"), color: color) {
+                icons.append(image)
+            }
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width - (iconSize.width + spacing) * CGFloat(icons.count), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var contentSize = textLayout.size
+            contentSize.width += (iconSize.width + spacing) * CGFloat(icons.count)
+            
+            return (contentSize, { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.currentParams = (size, text)
+                
+                for i in 0 ..< icons.count {
+                    let iconNode: ASImageNode
+                    if strongSelf.iconNodes.count >= i + 1 {
+                        iconNode = strongSelf.iconNodes[i]
+                    } else {
+                        iconNode = ASImageNode()
+                        strongSelf.addSubnode(iconNode)
+                        strongSelf.iconNodes.append(iconNode)
+                    }
+                    iconNode.frame = CGRect(origin: CGPoint(x: (iconSize.width + spacing) * CGFloat(i), y: 0.0), size: iconSize)
+                    
+                    iconNode.image = icons[i]
+                }
+                if strongSelf.iconNodes.count > icons.count {
+                    for i in icons.count ..< strongSelf.iconNodes.count {
+                        strongSelf.iconNodes[i].image = nil
+                    }
+                }
+                
+                
+                let _ = textApply()
+                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: (iconSize.width + spacing) * CGFloat(icons.count), y: 0.0), size: textLayout.size)
+            })
+        }
     }
 }
 
@@ -237,9 +334,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let pinIconNode: ASImageNode
     private let contentWrapperNode: ASDisplayNode
     private let titleNode: TextNode
-    private let statusIconNode: ASImageNode
-    private let statusNode: TextNode
-    private let expandedStatusNode: TextNode
+    private let statusNode: VoiceChatParticipantStatusNode
+    private let expandedStatusNode: VoiceChatParticipantStatusNode
     private var credibilityIconNode: ASImageNode?
     
     private var avatarTransitionNode: ASImageNode?
@@ -332,18 +428,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.statusIconNode = ASImageNode()
-        self.statusIconNode.displaysAsynchronously = false
-        
-        self.statusNode = TextNode()
+        self.statusNode = VoiceChatParticipantStatusNode()
         self.statusNode.isUserInteractionEnabled = false
-        self.statusNode.contentMode = .left
-        self.statusNode.contentsScale = UIScreen.main.scale
         
-        self.expandedStatusNode = TextNode()
+        self.expandedStatusNode = VoiceChatParticipantStatusNode()
         self.expandedStatusNode.isUserInteractionEnabled = false
-        self.expandedStatusNode.contentMode = .left
-        self.expandedStatusNode.contentsScale = UIScreen.main.scale
         self.expandedStatusNode.alpha = 0.0
         
         self.actionContainerNode = ASDisplayNode()
@@ -366,7 +455,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.offsetContainerNode.addSubnode(self.videoContainerNode)
         self.offsetContainerNode.addSubnode(self.contentWrapperNode)
         self.contentWrapperNode.addSubnode(self.titleNode)
-        self.contentWrapperNode.addSubnode(self.statusIconNode)
         self.contentWrapperNode.addSubnode(self.statusNode)
         self.contentWrapperNode.addSubnode(self.expandedStatusNode)
         self.contentWrapperNode.addSubnode(self.actionContainerNode)
@@ -877,8 +965,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         
     func asyncLayout() -> (_ item: VoiceChatParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
-        let makeExpandedStatusLayout = TextNode.asyncLayout(self.expandedStatusNode)
+        let makeStatusLayout = self.statusNode.asyncLayout()
+        let makeExpandedStatusLayout = self.expandedStatusNode.asyncLayout()
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         let currentItem = self.layoutParams?.0
@@ -891,11 +979,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             }
                         
             var titleFont = item.style == .list ? Font.regular(17.0) : Font.regular(12.0)
-            let statusFont = Font.regular(14.0)
             
             var titleAttributedString: NSAttributedString?
-            var statusAttributedString: NSAttributedString?
-            var expandedStatusAttributedString: NSAttributedString?
             
             let rightInset: CGFloat = params.rightInset
         
@@ -960,60 +1045,15 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             }
             
             var wavesColor = UIColor(rgb: 0x34c759)
-            switch item.text {
-                case .presence:
-                    if let user = item.peer as? TelegramUser, let botInfo = user.botInfo {
-                        let botStatus: String
-                        if botInfo.flags.contains(.hasAccessToChatHistory) {
-                            botStatus = item.presentationData.strings.Bot_GroupStatusReadsHistory
-                        } else {
-                            botStatus = item.presentationData.strings.Bot_GroupStatusDoesNotReadHistory
-                        }
-                        statusAttributedString = NSAttributedString(string: botStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    } else if let presence = item.presence as? TelegramUserPresence {
-                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, _) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
-                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    } else {
-                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.LastSeen_Offline, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    }
-                case let .text(text, textIcon, textColor):
-                    var textColorValue: UIColor
-                    switch textColor {
-                    case .generic:
-                        textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
-                    case .accent:
-                        textColorValue = item.presentationData.theme.list.itemAccentColor
-                        wavesColor = textColorValue
-                    case .constructive:
-                        textColorValue = constructiveColor
-                    case .destructive:
-                        textColorValue = destructiveColor
-                        wavesColor = textColorValue
-                    }
-                    if item.transparent && item.style == .list {
-                        textColorValue = UIColor(rgb: 0xffffff, alpha: 0.65)
-                    }
-                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
-                case .none:
-                    break
-            }
-            
-            if let expandedText = item.expandedText, case let .text(text, _, textColor) = expandedText {
-                let textColorValue: UIColor
+            if case let .text(_, _, textColor) = item.text {
                 switch textColor {
-                case .generic:
-                    textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
-                case .accent:
-                    textColorValue = item.presentationData.theme.list.itemAccentColor
-                case .constructive:
-                    textColorValue = constructiveColor
-                case .destructive:
-                    textColorValue = destructiveColor
+                    case .accent:
+                        wavesColor = accentColor
+                    case .destructive:
+                        wavesColor = destructiveColor
+                    default:
+                        break
                 }
-                expandedStatusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
-            } else {
-                expandedStatusAttributedString = statusAttributedString
             }
 
             let leftInset: CGFloat = 58.0 + params.leftInset
@@ -1051,13 +1091,14 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     constrainedWidth = params.width - 24.0 - 10.0
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(TextNodeLayoutArguments(attributedString: expandedStatusAttributedString, backgroundColor: nil, maximumNumberOfLines: 6, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let titleSpacing: CGFloat = statusLayout.size.height == 0.0 ? 0.0 : 1.0
+            let (statusLayout, statusApply) = makeStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), item.text, item.transparent && item.style == .list)
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), item.expandedText ?? item.text, false)
+            
+            let titleSpacing: CGFloat = statusLayout.height == 0.0 ? 0.0 : 1.0
             
             let minHeight: CGFloat = titleLayout.size.height + verticalInset * 2.0
-            let rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.size.height
+            let rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.height
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -1122,6 +1163,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
+                    var hadItem = strongSelf.layoutParams?.0 != nil
                     strongSelf.layoutParams = (item, params, first, last)
                     strongSelf.currentTitle = titleAttributedString?.string
                     strongSelf.wavesColor = wavesColor
@@ -1167,7 +1209,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     }
                                     
                     var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
-                    var extractedHeight = extractedRect.height + expandedStatusLayout.size.height - statusLayout.size.height
+                    var extractedHeight = extractedRect.height + expandedStatusLayout.height - statusLayout.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.peer.smallProfileImage != nil || strongSelf.videoNode != nil {
                         extractedVerticalOffset = extractedRect.width
@@ -1209,9 +1251,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
                     var combinedValueString = ""
-                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
-                        combinedValueString.append(statusString)
-                    }
+//                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
+//                        combinedValueString.append(statusString)
+//                    }
                     
                     strongSelf.accessibilityValue = combinedValueString
                     
@@ -1222,8 +1264,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     }
                                         
                     let transition: ContainedViewLayoutTransition
-                    if animated {
-                        transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    if animated && hadItem {
+                        transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
                     } else {
                         transition = .immediate
                     }
@@ -1293,8 +1335,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height + -separatorHeight), size: CGSize(width: layoutSize.width - leftInset, height: separatorHeight)))
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
-                    transition.updateFrame(node: strongSelf.expandedStatusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: expandedStatusLayout.size))
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout))
+                    transition.updateFrame(node: strongSelf.expandedStatusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: expandedStatusLayout))
                     
                     if let currentCredibilityIconImage = currentCredibilityIconImage {
                         let iconNode: ASImageNode

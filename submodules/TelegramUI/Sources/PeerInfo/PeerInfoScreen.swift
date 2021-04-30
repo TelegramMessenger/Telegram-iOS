@@ -1532,9 +1532,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var groupMembersSearchContext: GroupMembersSearchContext?
     
-    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
-    private let preloadStickerDisposable = MetaDisposable()
-    
     private let displayAsPeersPromise = Promise<[FoundPeer]>([])
     
     fileprivate let accountsAndPeers = Promise<[(Account, Peer, Int32)]>()
@@ -2838,24 +2835,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if let _ = nearbyPeerDistance {
             self.preloadHistoryDisposable.set(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerId))
             
-            self.preloadedSticker.set(.single(nil)
-            |> then(context.engine.stickers.randomGreetingSticker()
-            |> map { item in
-                return item?.file
-            }))
-            
-            self.preloadStickerDisposable.set((self.preloadedSticker.get()
-            |> mapToSignal { sticker -> Signal<Void, NoError> in
-                if let sticker = sticker {
-                    let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
-                    return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-                } else {
-                    return .complete()
-                }
-            }).start())
+            self.context.prefetchManager?.prepareNextGreetingSticker()
         }
     }
     
@@ -2870,7 +2850,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
-        self.preloadStickerDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
@@ -3356,24 +3335,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         switch key {
         case .message:
             if let navigationController = controller.navigationController as? NavigationController {
-                let _ = (self.preloadedSticker.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] sticker in
-                    if let strongSelf = self {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
-                            if strongSelf.nearbyPeerDistance != nil {
-                                var viewControllers = navigationController.viewControllers
-                                viewControllers = viewControllers.filter { controller in
-                                    if controller is PeerInfoScreen {
-                                        return false
-                                    }
-                                    return true
-                                }
-                                navigationController.setViewControllers(viewControllers, animated: false)
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
+                    if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
+                        var viewControllers = navigationController.viewControllers
+                        viewControllers = viewControllers.filter { controller in
+                            if controller is PeerInfoScreen {
+                                return false
                             }
-                        }))
+                            return true
+                        }
+                        navigationController.setViewControllers(viewControllers, animated: false)
                     }
-                })
+                }))
             }
         case .discussion:
             if let cachedData = self.data?.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
@@ -3773,24 +3746,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChatWithMessageSearch() {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
-            let _ = (self.preloadedSticker.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] sticker in
-                if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
-                        if strongSelf.nearbyPeerDistance != nil {
-                            var viewControllers = navigationController.viewControllers
-                            viewControllers = viewControllers.filter { controller in
-                                if controller is PeerInfoScreen {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(viewControllers, animated: false)
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: self.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
+                if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { controller in
+                        if controller is PeerInfoScreen {
+                            return false
                         }
-                    }))
+                        return true
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
                 }
-            })
+            }))
         }
     }
     
@@ -4233,24 +4200,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChat() {
         if let navigationController = self.controller?.navigationController as? NavigationController {
-            let _ = (self.preloadedSticker.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] sticker in
-                if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), greetingData: strongSelf.nearbyPeerDistance != nil ? sticker.flatMap({ ChatGreetingData(sticker: $0) }) : nil, completion: { _ in
-                        if strongSelf.nearbyPeerDistance != nil {
-                            var viewControllers = navigationController.viewControllers
-                            viewControllers = viewControllers.filter { controller in
-                                if controller is PeerInfoScreen {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(viewControllers, animated: false)
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
+                if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { controller in
+                        if controller is PeerInfoScreen {
+                            return false
                         }
-                    }))
+                        return true
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
                 }
-            })
+            }))
         }
     }
     

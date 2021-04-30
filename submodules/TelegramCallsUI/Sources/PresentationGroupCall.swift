@@ -2384,6 +2384,76 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContext?.lowerHand()
     }
     
+    public func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
+        if self.videoCapturer == nil {
+            let videoCapturer = OngoingCallVideoCapturer()
+            self.videoCapturer = videoCapturer
+        }
+        
+        self.videoCapturer?.makeOutgoingVideoView(completion: { view in
+            if let view = view {
+                let setOnFirstFrameReceived = view.setOnFirstFrameReceived
+                let setOnOrientationUpdated = view.setOnOrientationUpdated
+                let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                completion(PresentationCallVideoView(
+                    holder: view,
+                    view: view.view,
+                    setOnFirstFrameReceived: { f in
+                        setOnFirstFrameReceived(f)
+                    },
+                    getOrientation: { [weak view] in
+                        if let view = view {
+                            let mappedValue: PresentationCallVideoView.Orientation
+                            switch view.getOrientation() {
+                            case .rotation0:
+                                mappedValue = .rotation0
+                            case .rotation90:
+                                mappedValue = .rotation90
+                            case .rotation180:
+                                mappedValue = .rotation180
+                            case .rotation270:
+                                mappedValue = .rotation270
+                            }
+                            return mappedValue
+                        } else {
+                            return .rotation0
+                        }
+                    },
+                    getAspect: { [weak view] in
+                        if let view = view {
+                            return view.getAspect()
+                        } else {
+                            return 0.0
+                        }
+                    },
+                    setOnOrientationUpdated: { f in
+                        setOnOrientationUpdated { value, aspect in
+                            let mappedValue: PresentationCallVideoView.Orientation
+                            switch value {
+                            case .rotation0:
+                                mappedValue = .rotation0
+                            case .rotation90:
+                                mappedValue = .rotation90
+                            case .rotation180:
+                                mappedValue = .rotation180
+                            case .rotation270:
+                                mappedValue = .rotation270
+                            }
+                            f?(mappedValue, aspect)
+                        }
+                    },
+                    setOnIsMirroredUpdated: { f in
+                        setOnIsMirroredUpdated { value in
+                            f?(value)
+                        }
+                    }
+                ))
+            } else {
+                completion(nil)
+            }
+        })
+    }
+    
     public func requestVideo() {
         if self.videoCapturer == nil {
             let videoCapturer = OngoingCallVideoCapturer()
