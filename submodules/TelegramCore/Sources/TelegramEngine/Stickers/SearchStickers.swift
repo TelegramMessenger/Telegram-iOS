@@ -59,14 +59,24 @@ public struct SearchStickersScope: OptionSet {
 }
 
 func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?, NoError> {
-    return account.postbox.transaction { transaction -> FoundStickerItem? in
-        var stickerItems: [FoundStickerItem] = []
-        for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudGreetingStickers) {
-            if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
-                stickerItems.append(FoundStickerItem(file: file, stringRepresentations: []))
-            }
+    let key: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudGreetingStickers)
+    return account.postbox.combinedView(keys: [key])
+    |> map { views -> [OrderedItemListEntry]? in
+        if let view = views.views[key] as? OrderedItemListView, !view.items.isEmpty {
+            return view.items
+        } else {
+            return nil
         }
-        return stickerItems.randomElement()
+    }
+    |> filter { items in
+        return items != nil
+    }
+    |> take(1)
+    |> map { items -> FoundStickerItem? in
+        if let randomItem = items?.randomElement(), let item = randomItem.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+            return FoundStickerItem(file: file, stringRepresentations: [])
+        }
+        return nil
     }
 }
 
