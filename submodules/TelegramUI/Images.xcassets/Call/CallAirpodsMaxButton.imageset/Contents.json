@@ -1,17 +1,8 @@
 {
   "images" : [
     {
-      "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "filename" : "airpods-b515@3x.png",
-      "idiom" : "universal",
-      "scale" : "3x"
+      "filename" : "ic_call_airpodsmax.pdf",
+      "idiom" : "universal"
     }
   ],
   "info" : {

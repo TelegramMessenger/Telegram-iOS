@@ -749,7 +749,6 @@ public final class VoiceChatController: ViewController {
         
         private var enqueuedTransitions: [ListTransition] = []
         private var enqueuedTileTransitions: [ListTransition] = []
-        private var floatingHeaderOffset: CGFloat?
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         private var didSetContentsReady: Bool = false
@@ -1054,7 +1053,7 @@ public final class VoiceChatController: ViewController {
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                         }
-                        strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                        strongSelf.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                             strongSelf.animatingExpansion = false
                         })
                     }
@@ -1663,8 +1662,6 @@ public final class VoiceChatController: ViewController {
             self.topPanelNode.addSubnode(self.closeButton)
             self.topPanelNode.addSubnode(self.topCornersNode)
             
-            self.bottomPanelNode.addSubnode(self.bottomCornersNode)
-            self.bottomPanelNode.addSubnode(self.bottomPanelBackgroundNode)
             self.bottomPanelNode.addSubnode(self.audioButton)
             if let _ = self.mainVideoContainerNode {
                 self.bottomPanelNode.addSubnode(self.cameraButton)
@@ -1689,6 +1686,8 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.leftBorderNode)
             self.contentContainer.addSubnode(self.rightBorderNode)
             self.contentContainer.addSubnode(self.bottomPanelCoverNode)
+            self.contentContainer.addSubnode(self.bottomCornersNode)
+            self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
             self.contentContainer.addSubnode(self.timerNode)
             self.contentContainer.addSubnode(self.scheduleTextNode)
@@ -1895,7 +1894,7 @@ public final class VoiceChatController: ViewController {
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
                     if !strongSelf.animatingExpansion && !strongSelf.animatingInsertion && strongSelf.panGestureArguments == nil && !strongSelf.animatingAppearance {
-                        strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
+                        strongSelf.updateDecorationsLayout(transition: transition)
                     }
                 }
             }
@@ -2028,7 +2027,7 @@ public final class VoiceChatController: ViewController {
             }))
             
             self.titleNode.tapped = { [weak self] in
-                if let strongSelf = self {
+                if let strongSelf = self, !strongSelf.isScheduling {
                     if strongSelf.callState?.canManageCall ?? false {
                         strongSelf.openTitleEditing()
                     } else if !strongSelf.titleNode.recordingIconNode.isHidden {
@@ -2110,7 +2109,7 @@ public final class VoiceChatController: ViewController {
                             
                             if let (layout, navigationHeight) = strongSelf.validLayout {
                                 strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                                strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                strongSelf.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
                         }
                         if let (peerId, _) = minimalVisiblePeerid {
@@ -2158,7 +2157,7 @@ public final class VoiceChatController: ViewController {
                             
                             if let (layout, navigationHeight) = strongSelf.validLayout {
                                 strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                                strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                strongSelf.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
                         }
                         if let (peerId, _) = minimalVisiblePeerid {
@@ -2182,7 +2181,7 @@ public final class VoiceChatController: ViewController {
                         
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                            strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            strongSelf.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                         }
                     }
                 }
@@ -3222,20 +3221,11 @@ public final class VoiceChatController: ViewController {
         }
                 
         private var bringVideoToBackOnCompletion = false
-        private func updateFloatingHeaderOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
+        private func updateDecorationsLayout(transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
             guard let (layout, _) = self.validLayout else {
                 return
             }
-
-            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
-            let listTopInset = layoutTopInset + topPanelHeight
-            let bottomPanelHeight = self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom
-            
-            var size = layout.size
-            if case .regular = layout.metrics.widthClass {
-                size.width = floor(min(size.width, size.height) * 0.5)
-            }
-            
+           
             var isLandscape = false
             var effectiveDisplayMode = self.displayMode
             if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
@@ -3246,7 +3236,24 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
+            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+            let listTopInset = isLandscape ? topPanelHeight : layoutTopInset + topPanelHeight
+            let bottomPanelHeight = isLandscape ? layout.intrinsicInsets.bottom : self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom
+            
+            var size = layout.size
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+            }
+            
+            let contentWidth: CGFloat
+            if case .regular = layout.metrics.widthClass {
+                size.width = floor(min(size.width, size.height) * 0.5)
+                contentWidth = size.width
+            } else {
+                contentWidth = isLandscape ? min(530.0, size.width - 210.0) : size.width
+            }
+            
+            let listSize = CGSize(width: contentWidth, height: layout.size.height - listTopInset - bottomPanelHeight)
             let topInset: CGFloat
             if let (panInitialTopInset, panOffset) = self.panGestureArguments {
                 if self.isExpanded {
@@ -3270,9 +3277,8 @@ public final class VoiceChatController: ViewController {
                 }
             }
 
-            
-            let offset = (bottomEdge.isZero ? 0.0 : offset) + topInset
-            self.floatingHeaderOffset = offset
+            let currentContentOffset = self.currentContentOffset ?? 0.0
+            let offset = (bottomEdge.isZero ? 0.0 : currentContentOffset) + topInset
              
             if bottomEdge.isZero {
                 bottomEdge = self.listNode.frame.minY + 46.0 + 56.0
@@ -3282,7 +3288,7 @@ public final class VoiceChatController: ViewController {
             let panelOffset = max(layoutTopInset, rawPanelOffset)
             let topPanelFrame: CGRect
             if isLandscape {
-                topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: 0.0))
+                topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: topPanelHeight))
             } else {
                 topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelOffset), size: CGSize(width: size.width, height: topPanelHeight))
             }
@@ -3374,8 +3380,8 @@ public final class VoiceChatController: ViewController {
             let leftBorderFrame: CGRect
             let rightBorderFrame: CGRect
             if isLandscape {
-                leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.safeInsets.left, height: layout.size.height))
-                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - layout.safeInsets.right, y: 0.0), size: CGSize(width: layout.safeInsets.right, height: layout.size.height))
+                leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY - 16.0), size: CGSize(width: (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
+                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - (size.width - contentWidth) / 2.0 - sideInset, y: topPanelFrame.maxY - 16.0), size: CGSize(width: layout.safeInsets.right + (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
             } else {
                 leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY - 16.0), size: CGSize(width: sideInset, height: layout.size.height))
                 rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset, y: topPanelFrame.maxY - 16.0), size: CGSize(width: sideInset, height: layout.size.height))
@@ -3409,10 +3415,15 @@ public final class VoiceChatController: ViewController {
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: min(topPanelFrame.height, 24.0))
             
             let listMaxY = listTopInset + listSize.height
-            let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
+            var bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY)
             let bottomDelta = self.effectiveBottomAreaHeight - bottomAreaHeight
             
-            let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset, y: -50.0 + bottomOffset + bottomDelta), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0))
+            bottomOffset += layout.size.height - bottomPanelHeight
+            
+            var bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: -50.0 + bottomOffset + bottomDelta), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0))
+            
+            
+            
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
                 self.bottomCornersNode.frame = bottomCornersFrame
@@ -3451,8 +3462,10 @@ public final class VoiceChatController: ViewController {
                 topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight)
             }
             
+            var isLandscape = false
             var effectiveDisplayMode = self.displayMode
             if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+                isLandscape = true
                 if case .fullscreen = effectiveDisplayMode {
                 } else {
                     effectiveDisplayMode = .fullscreen(controlsHidden: false)
@@ -3461,7 +3474,11 @@ public final class VoiceChatController: ViewController {
             
             let backgroundColor: UIColor
             if case .fullscreen = effectiveDisplayMode {
-                backgroundColor = fullscreenBackgroundColor
+                if isLandscape {
+                    backgroundColor = isFullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor
+                } else {
+                    backgroundColor = fullscreenBackgroundColor
+                }
             } else if self.isScheduling || self.callState?.scheduleTimestamp != nil {
                 backgroundColor = panelBackgroundColor
             } else {
@@ -3507,7 +3524,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private func updateTitle(slide: Bool = false, transition: ContainedViewLayoutTransition) {
-            guard let (layout, _) = self.validLayout else {
+            guard let _ = self.validLayout else {
                 return
             }
             var title = self.currentTitle
@@ -3534,12 +3551,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            var size = layout.size
-            if case .regular = layout.metrics.widthClass {
-                size.width = floor(min(size.width, size.height) * 0.5)
-            }
-            
-            self.titleNode.update(size: CGSize(width: size.width, height: 44.0), title: title, subtitle: subtitle, slide: slide, transition: transition)
+            self.titleNode.update(size: CGSize(width: self.titleNode.bounds.width, height: 44.0), title: title, subtitle: subtitle, slide: slide, transition: transition)
         }
         
         private func updateButtons(animated: Bool) {
@@ -3660,8 +3672,12 @@ public final class VoiceChatController: ViewController {
             self.validLayout = (layout, navigationHeight)
 
             var size = layout.size
+            let contentWidth: CGFloat
             if case .regular = layout.metrics.widthClass {
                 size.width = floor(min(size.width, size.height) * 0.5)
+                contentWidth = size.width
+            } else {
+                contentWidth = isLandscape ? min(530.0, size.width - 210.0) : size.width
             }
             
             let isScheduled = self.isScheduling || self.callState?.scheduleTimestamp != nil
@@ -3679,7 +3695,7 @@ public final class VoiceChatController: ViewController {
                 if !self.isFullscreen {
                     self.isExpanded = true
                     self.updateIsFullscreen(true)
-                    self.tileListNode.isHidden = false
+//                    self.tileListNode.isHidden = false
                 }
                 if case .fullscreen = effectiveDisplayMode {
                 } else {
@@ -3703,34 +3719,37 @@ public final class VoiceChatController: ViewController {
                         }
                 }
             }
-                        
+        
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentWidth) / 2.0), y: 10.0), size: CGSize(width: contentWidth, height: 44.0)))
             self.updateTitle(transition: transition)
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: size.width, height: 44.0)))
-            transition.updateFrame(node: self.optionsButton, frame: CGRect(origin: CGPoint(x: 20.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
-            transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: size.width - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
+            
+            transition.updateFrame(node: self.optionsButton, frame: CGRect(origin: CGPoint(x: 20.0 + floorToScreenPixels((size.width - contentWidth) / 2.0), y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
+            transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: size.width - floorToScreenPixels((size.width - contentWidth) / 2.0) - 20.0 - 28.0, y: 18.0), size: CGSize(width: 28.0, height: 28.0)))
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: 0.0), size: size))
             
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             let sideInset: CGFloat = 16.0
+            
             var insets = UIEdgeInsets()
-            insets.left = layout.safeInsets.left + sideInset
-            insets.right = layout.safeInsets.right + sideInset
+            insets.left = sideInset + (isLandscape ? 0.0 : layout.safeInsets.left)
+            insets.right = sideInset + (isLandscape ? 0.0 : layout.safeInsets.right)
+            
+            let topEdgeOffset: CGFloat
+            if let statusBarHeight = layout.statusBarHeight {
+                topEdgeOffset = statusBarHeight
+            } else {
+                topEdgeOffset = 44.0
+            }
             
             if isLandscape {
-                transition.updateFrame(node: self.topPanelEdgeNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: 0.0))
+                transition.updateFrame(node: self.topPanelEdgeNode, frame: CGRect(x: 0.0, y: -topEdgeOffset, width: size.width, height: topPanelHeight + topEdgeOffset))
             } else if let _ = self.panGestureArguments {
             } else {
                 let topEdgeFrame: CGRect
                 if self.isFullscreen {
-                    let offset: CGFloat
-                    if let statusBarHeight = layout.statusBarHeight {
-                        offset = statusBarHeight
-                    } else {
-                        offset = 44.0
-                    }
-                    topEdgeFrame = CGRect(x: 0.0, y: -offset, width: size.width, height: topPanelHeight + offset)
+                    topEdgeFrame = CGRect(x: 0.0, y: -topEdgeOffset, width: size.width, height: topPanelHeight + topEdgeOffset)
                 } else {
                     topEdgeFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight)
                 }
@@ -3741,15 +3760,15 @@ public final class VoiceChatController: ViewController {
             var listTopInset = layoutTopInset + topPanelHeight
             var topCornersY = topPanelHeight
             if isLandscape {
-                listTopInset = 0.0
-                topCornersY = -50.0
+                listTopInset = topPanelHeight
+//                topCornersY = -50.0
             } else if self.mainVideoContainerNode != nil && self.isFullscreen {
                 let videoContainerHeight = min(mainVideoHeight, layout.size.width)
                 listTopInset += videoContainerHeight
                 topCornersY += videoContainerHeight
             }
-            let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
-                 
+            
+            let listSize = CGSize(width: contentWidth, height: layout.size.height - listTopInset - (isLandscape ? layout.intrinsicInsets.bottom : bottomPanelHeight))
             let topInset: CGFloat
             if let (panInitialTopInset, panOffset) = self.panGestureArguments {
                 if self.isExpanded {
@@ -3763,7 +3782,7 @@ public final class VoiceChatController: ViewController {
                 topInset = listSize.height - 46.0 - floor(56.0 * 3.5)
             }
             
-            transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset + topInset), size: listSize))
+            transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentWidth) / 2.0), y: listTopInset + topInset), size: listSize))
             
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: listSize, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -3796,20 +3815,20 @@ public final class VoiceChatController: ViewController {
             self.tileListNode.transform = tileListTransform
             self.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: tileListUpdateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
-            transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topCornersY), size: CGSize(width: size.width - sideInset * 2.0, height: 50.0)))
+            transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: topCornersY), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0)))
             
             var bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight))
             let bottomPanelCoverHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let bottomPanelCoverFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomPanelCoverHeight))
             if isLandscape {
-                transition.updateAlpha(node: self.closeButton, alpha: 0.0)
-                transition.updateAlpha(node: self.optionsButton, alpha: 0.0)
-                transition.updateAlpha(node: self.titleNode, alpha: 0.0)
+//                transition.updateAlpha(node: self.closeButton, alpha: 0.0)
+//                transition.updateAlpha(node: self.optionsButton, alpha: 0.0)
+//                transition.updateAlpha(node: self.titleNode, alpha: 0.0)
                 bottomPanelFrame = CGRect(origin: CGPoint(x: layout.size.width - fullscreenBottomAreaHeight - layout.safeInsets.right, y: 0.0), size: CGSize(width: fullscreenBottomAreaHeight + layout.safeInsets.right, height: layout.size.height))
             } else {
-                transition.updateAlpha(node: self.closeButton, alpha: 1.0)
-                transition.updateAlpha(node: self.optionsButton, alpha: self.optionsButton.isUserInteractionEnabled ? 1.0 : 0.0)
-                transition.updateAlpha(node: self.titleNode, alpha: 1.0)
+//                transition.updateAlpha(node: self.closeButton, alpha: 1.0)
+//                transition.updateAlpha(node: self.optionsButton, alpha: self.optionsButton.isUserInteractionEnabled ? 1.0 : 0.0)
+//                transition.updateAlpha(node: self.titleNode, alpha: 1.0)
             }
             transition.updateFrame(node: self.bottomPanelCoverNode, frame: bottomPanelCoverFrame)
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
@@ -3856,16 +3875,26 @@ public final class VoiceChatController: ViewController {
                     forthButtonFrame = rightButtonFrame
                 case let .fullscreen(controlsHidden):
                     smallButtons = true
-                    let sideInset: CGFloat = 26.0
+                    
                     if isLandscape {
-                        let spacing = floor((layout.size.height - sideInset * 2.0 - sideButtonSize.height * 4.0) / 3.0)
+                        let sideInset: CGFloat
+                        let buttonsCount: Int
+                        if self.mainVideoContainerNode == nil {
+                            sideInset = 42.0
+                            buttonsCount = 3
+                        } else {
+                            sideInset = 26.0
+                            buttonsCount = 4
+                        }
+                        let spacing = floor((layout.size.height - sideInset * 2.0 - sideButtonSize.height * CGFloat(buttonsCount)) / (CGFloat(buttonsCount - 1)))
                         let x = controlsHidden ? fullscreenBottomAreaHeight + layout.safeInsets.right + 30.0: floor((fullscreenBottomAreaHeight - sideButtonSize.width) / 2.0)
                         forthButtonFrame = CGRect(origin: CGPoint(x: x, y: sideInset), size: sideButtonSize)
                         let thirdButtonPreFrame = CGRect(origin: CGPoint(x: x, y: sideInset + sideButtonSize.height + spacing), size: sideButtonSize)
                         thirdButtonFrame = CGRect(origin: CGPoint(x: floor(thirdButtonPreFrame.midX - centralButtonSize.width / 2.0), y: floor(thirdButtonPreFrame.midY - centralButtonSize.height / 2.0)), size: centralButtonSize)
-                        secondButtonFrame = CGRect(origin: CGPoint(x: x, y: layout.size.height - sideInset - sideButtonSize.height - spacing - sideButtonSize.height), size: sideButtonSize)
+                        secondButtonFrame = CGRect(origin: CGPoint(x: x, y: thirdButtonPreFrame.maxY + spacing), size: sideButtonSize)
                         firstButtonFrame = CGRect(origin: CGPoint(x: x, y: layout.size.height - sideInset - sideButtonSize.height), size: sideButtonSize)
                     } else {
+                        let sideInset: CGFloat = 26.0
                         let spacing = floor((layout.size.width - sideInset * 2.0 - sideButtonSize.width * 4.0) / 3.0)
                         let y = controlsHidden ? self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom + 30.0: floor((self.effectiveBottomAreaHeight - sideButtonSize.height) / 2.0)
                         firstButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: y), size: sideButtonSize)
@@ -3998,7 +4027,7 @@ public final class VoiceChatController: ViewController {
             guard let (layout, navigationHeight) = self.validLayout else {
                 return
             }
-            self.updateFloatingHeaderOffset(offset: 0.0, transition: .immediate)
+            self.updateDecorationsLayout(transition: .immediate)
             
             self.animatingAppearance = true
             
@@ -4123,9 +4152,7 @@ public final class VoiceChatController: ViewController {
                 itemsCount -= 1
             }
             itemsHeight += CGFloat(itemsCount) * 56.0
-           
-            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
-            
+                       
             let sideInset: CGFloat = 16.0
             var insets = UIEdgeInsets()
             insets.left = layout.safeInsets.left + sideInset
@@ -4136,7 +4163,8 @@ public final class VoiceChatController: ViewController {
                 size.width = floor(min(size.width, size.height) * 0.5)
             }
             
-            let bottomPanelHeight = self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom
+            let bottomPanelHeight = self.isLandscape ? layout.intrinsicInsets.bottom : self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom
+            let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             let listTopInset = layoutTopInset + topPanelHeight
             let listSize = CGSize(width: size.width, height: layout.size.height - listTopInset - bottomPanelHeight)
             
@@ -4158,9 +4186,9 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if isFirstTime {
-                    strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .immediate)
+                    strongSelf.updateDecorationsLayout(transition: .immediate)
                 } else if strongSelf.animatingInsertion {
-                    strongSelf.updateFloatingHeaderOffset(offset: strongSelf.currentContentOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    strongSelf.updateDecorationsLayout(transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
                 strongSelf.animatingInsertion = false
                 if !strongSelf.didSetContentsReady {
@@ -4226,12 +4254,7 @@ public final class VoiceChatController: ViewController {
                 entries.append(.invite(self.presentationData.theme, self.presentationData.strings, inviteIsLink ? self.presentationData.strings.VoiceChat_Share : self.presentationData.strings.VoiceChat_InviteMember, inviteIsLink))
             }
             
-            if let _ = self.effectiveSpeakerWithVideo {
-                index += 1
-            }
-            
             var pinnedEntry: ListEntry?
-            
             for member in callMembers.0 {
                 if processedPeerIds.contains(member.peer.id) {
                     continue
@@ -4520,7 +4543,7 @@ public final class VoiceChatController: ViewController {
                     
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                        self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .immediate)
+                        self.updateDecorationsLayout(transition: .immediate)
                     }
                     
                     if !self.isExpanded {
@@ -4568,7 +4591,7 @@ public final class VoiceChatController: ViewController {
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
-                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
                         } else {
@@ -4578,7 +4601,7 @@ public final class VoiceChatController: ViewController {
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
-                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
                         }
@@ -4606,7 +4629,7 @@ public final class VoiceChatController: ViewController {
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
-                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
                         } else if !isScheduling {
@@ -4617,7 +4640,7 @@ public final class VoiceChatController: ViewController {
                             if let (layout, navigationHeight) = self.validLayout {
                                 self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                             }
-                            self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                                 self.animatingExpansion = false
                             })
                         }
@@ -4641,7 +4664,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                     }
-                    self.updateFloatingHeaderOffset(offset: self.currentContentOffset ?? 0.0, transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                    self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                         self.animatingExpansion = false
                     })
                 default:
