@@ -2991,13 +2991,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         })
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, _, title, _, recordStartDate, scheduleDate, _):
+                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
+                            let isVideoEnabled = (flags & (1 << 9)) != 0
                             let defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
                             updatedGroupCallParticipants.append((
                                 info.id,
-                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted, title: title, recordingStartTimestamp: recordStartDate, scheduleTimestamp: scheduleDate)
+                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted, title: title, recordingStartTimestamp: recordStartDate, scheduleTimestamp: scheduleDate, isVideoEnabled: isVideoEnabled)
                             ))
                         default:
                             break
@@ -3006,7 +3007,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 case let .groupCallDiscarded(callId, _, _):
                     updatedGroupCallParticipants.append((
                         callId,
-                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil, scheduleTimestamp: nil)
+                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil, scheduleTimestamp: nil, isVideoEnabled: false)
                     ))
                     
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
