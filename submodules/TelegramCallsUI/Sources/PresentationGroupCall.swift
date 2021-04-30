@@ -52,6 +52,42 @@ private extension GroupCallParticipantsContext.Participant {
         }
         return participantSsrcs
     }
+
+    var videoSsrcs: Set<UInt32> {
+        var participantSsrcs = Set<UInt32>()
+        if let jsonParams = self.videoJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let groups = json["ssrc-groups"] as? [Any] {
+                for group in groups {
+                    if let group = group as? [String: Any] {
+                        if let groupSources = group["sources"] as? [UInt32] {
+                            for source in groupSources {
+                                participantSsrcs.insert(source)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return participantSsrcs
+    }
+
+    var presentationSsrcs: Set<UInt32> {
+        var participantSsrcs = Set<UInt32>()
+        if let jsonParams = self.presentationJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let groups = json["ssrc-groups"] as? [Any] {
+                for group in groups {
+                    if let group = group as? [String: Any] {
+                        if let groupSources = group["sources"] as? [UInt32] {
+                            for source in groupSources {
+                                participantSsrcs.insert(source)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return participantSsrcs
+    }
 }
 
 extension GroupCallParticipantsContext.Participant {
@@ -590,10 +626,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public var incomingVideoSources: Signal<Set<String>, NoError> {
         return self.incomingVideoSourcePromise.get()
     }
-    
-    private var missingSsrcs = Set<UInt32>()
-    private let missingSsrcsDisposable = MetaDisposable()
-    private var isRequestingMissingSsrcs: Bool = false
 
     private var peerUpdatesSubscription: Disposable?
     
@@ -884,7 +916,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContextStateDisposable.dispose()
         self.myAudioLevelDisposable.dispose()
         self.memberEventsPipeDisposable.dispose()
-        self.missingSsrcsDisposable.dispose()
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
@@ -1331,13 +1362,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 let enableNoiseSuppression = accountContext.sharedContext.immediateExperimentalUISettings.enableNoiseSuppression
 
-                genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, participantDescriptionsRequired: { [weak self] ssrcs in
+                genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
+                    let disposable = MetaDisposable()
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.maybeRequestParticipants(ssrcs: ssrcs)
+                        disposable.set(strongSelf.requestMediaChannelDescriptions(ssrcs: ssrcs, completion: completion))
                     }
+                    return disposable
                 }, audioStreamData: OngoingGroupCallContext.AudioStreamData(account: self.accountContext.account, callId: callInfo.id, accessHash: callInfo.accessHash), rejoinNeeded: { [weak self] in
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
@@ -1976,75 +2009,67 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    private func maybeRequestParticipants(ssrcs: Set<UInt32>) {
-        var addedMissingSsrcs = ssrcs
+    private func requestMediaChannelDescriptions(ssrcs: Set<UInt32>, completion: @escaping ([OngoingGroupCallContext.MediaChannelDescription]) -> Void) -> Disposable {
+        func extractMediaChannelDescriptions(remainingSsrcs: inout Set<UInt32>, participants: [GroupCallParticipantsContext.Participant], into result: inout [OngoingGroupCallContext.MediaChannelDescription]) {
+            for participant in participants {
+                guard let audioSsrc = participant.ssrc else {
+                    continue
+                }
 
-        var addedParticipants: [(UInt32, String?, String?)] = []
-        
-        if let membersValue = self.membersValue {
-            for participant in membersValue.participants {
-                let participantSsrcs = participant.allSsrcs
-                
-                if !addedMissingSsrcs.intersection(participantSsrcs).isEmpty {
-                    addedMissingSsrcs.subtract(participantSsrcs)
-                    
-                    if let ssrc = participant.ssrc {
-                        addedParticipants.append((ssrc, participant.videoJsonDescription, participant.presentationJsonDescription))
+                if remainingSsrcs.contains(audioSsrc) {
+                    remainingSsrcs.remove(audioSsrc)
+
+                    result.append(OngoingGroupCallContext.MediaChannelDescription(
+                        kind: .audio,
+                        audioSsrc: audioSsrc,
+                        videoDescription: nil
+                    ))
+                }
+
+                if let videoDescription = participant.videoJsonDescription, !videoDescription.isEmpty {
+                    let videoSsrcs = participant.videoSsrcs
+                    if !videoSsrcs.intersection(remainingSsrcs).isEmpty {
+                        remainingSsrcs.subtract(videoSsrcs)
+
+                        result.append(OngoingGroupCallContext.MediaChannelDescription(
+                            kind: .video,
+                            audioSsrc: audioSsrc,
+                            videoDescription: videoDescription
+                        ))
+                    }
+                }
+                if let videoDescription = participant.presentationJsonDescription, !videoDescription.isEmpty {
+                    let videoSsrcs = participant.presentationSsrcs
+                    if !videoSsrcs.intersection(remainingSsrcs).isEmpty {
+                        remainingSsrcs.subtract(videoSsrcs)
+
+                        result.append(OngoingGroupCallContext.MediaChannelDescription(
+                            kind: .video,
+                            audioSsrc: audioSsrc,
+                            videoDescription: videoDescription
+                        ))
                     }
                 }
             }
         }
-        
-        if !addedParticipants.isEmpty {
-            self.genericCallContext?.addParticipants(participants: addedParticipants)
+
+        var remainingSsrcs = ssrcs
+        var result: [OngoingGroupCallContext.MediaChannelDescription] = []
+
+        if let membersValue = self.membersValue {
+            extractMediaChannelDescriptions(remainingSsrcs: &remainingSsrcs, participants: membersValue.participants, into: &result)
         }
-        
-        if !addedMissingSsrcs.isEmpty {
-            self.missingSsrcs.formUnion(addedMissingSsrcs)
-            self.maybeRequestMissingSsrcs()
-        }
-    }
-    
-    private func maybeRequestMissingSsrcs() {
-        if self.isRequestingMissingSsrcs {
-            return
-        }
-        if self.missingSsrcs.isEmpty {
-            return
-        }
-        if case let .established(callInfo, _, _, _, _) = self.internalState {
-            self.isRequestingMissingSsrcs = true
-            
-            let requestedSsrcs = self.missingSsrcs
-            self.missingSsrcsDisposable.set((getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(requestedSsrcs), limit: 100, sortAscending: callInfo.sortAscending)
-            |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.isRequestingMissingSsrcs = false
-                strongSelf.missingSsrcs.subtract(requestedSsrcs)
-                
-                var addedParticipants: [(UInt32, Int32?, String?, String?)] = []
-                
-                for participant in state.participants {
-                    if let ssrc = participant.ssrc {
-                        addedParticipants.append((ssrc, participant.volume, participant.videoJsonDescription, participant.presentationJsonDescription))
-                    }
-                }
-                
-                if !addedParticipants.isEmpty {
-                    for (ssrc, volume, _, _) in addedParticipants {
-                        if let volume = volume {
-                            strongSelf.genericCallContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
-                        }
-                    }
-                    strongSelf.genericCallContext?.addParticipants(participants: addedParticipants.map { ssrc, _, videoParams, presentationParams in
-                        return (ssrc, videoParams, presentationParams)
-                    })
-                }
-                
-                strongSelf.maybeRequestMissingSsrcs()
-            }))
+
+        if !remainingSsrcs.isEmpty, let callInfo = self.internalState.callInfo {
+            return (getGroupCallParticipants(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(remainingSsrcs), limit: 100, sortAscending: callInfo.sortAscending)
+            |> deliverOnMainQueue).start(next: { state in
+                extractMediaChannelDescriptions(remainingSsrcs: &remainingSsrcs, participants: state.participants, into: &result)
+
+                completion(result)
+            })
+        } else {
+            completion(result)
+            return EmptyDisposable
         }
     }
     
@@ -2405,7 +2430,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
         let screencastCallContext = OngoingGroupCallContext(
             video: self.screenCapturer,
-            participantDescriptionsRequired: { _ in },
+            requestMediaChannelDescriptions: { _, completion in
+                completion([])
+                return EmptyDisposable
+            },
             audioStreamData: nil,
             rejoinNeeded: {},
             outgoingAudioBitrateKbit: nil,
@@ -2446,6 +2474,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
                 screencastCallContext.setJoinResponse(payload: clientParams)
+
+                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
             }, error: { error in
                 guard let _ = self else {
                     return
@@ -2611,9 +2641,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func requestCall(movingFromBroadcastToRtc: Bool) {
         self.currentConnectionMode = .none
         self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc)
-        
-        self.missingSsrcsDisposable.set(nil)
-        self.missingSsrcs.removeAll()
         
         self.internalState = .requesting
         self.internalStatePromise.set(.single(.requesting))

@@ -844,6 +844,23 @@ private:
     id<OngoingGroupCallBroadcastPartTask> _task;
 };
 
+class RequestMediaChannelDescriptionTaskImpl : public tgcalls::RequestMediaChannelDescriptionTask {
+public:
+    RequestMediaChannelDescriptionTaskImpl(id<OngoingGroupCallMediaChannelDescriptionTask> task) {
+        _task = task;
+    }
+
+    virtual ~RequestMediaChannelDescriptionTaskImpl() {
+    }
+
+    virtual void cancel() override {
+        [_task cancel];
+    }
+
+private:
+    id<OngoingGroupCallMediaChannelDescriptionTask> _task;
+};
+
 }
 
 @interface GroupCallThreadLocalContext () {
@@ -859,7 +876,7 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit videoContentType:(OngoingGroupCallVideoContentType)videoContentType enableNoiseSuppression:(bool)enableNoiseSuppression {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoSourcesUpdated requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit videoContentType:(OngoingGroupCallVideoContentType)videoContentType enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -925,13 +942,6 @@ private:
                 }
                 incomingVideoSourcesUpdated(mappedSources);
             },
-            .participantDescriptionsRequired = [participantDescriptionsRequired](std::vector<uint32_t> const &ssrcs) {
-                NSMutableArray<NSNumber *> *mappedSources = [[NSMutableArray alloc] init];
-                for (auto it : ssrcs) {
-                    [mappedSources addObject:@(it)];
-                }
-                participantDescriptionsRequired(mappedSources);
-            },
             .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
                 id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
@@ -970,7 +980,39 @@ private:
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
             .videoContentType = _videoContentType,
             .videoCodecPreferences = videoCodecPreferences,
-            .initialEnableNoiseSuppression = enableNoiseSuppression
+            .initialEnableNoiseSuppression = enableNoiseSuppression,
+            .requestMediaChannelDescriptions = [requestMediaChannelDescriptions](std::vector<uint32_t> const &ssrcs, std::function<void(std::vector<tgcalls::MediaChannelDescription> &&)> completion) -> std::shared_ptr<tgcalls::RequestMediaChannelDescriptionTask> {
+                NSMutableArray<NSNumber *> *mappedSsrcs = [[NSMutableArray alloc] init];
+                for (auto ssrc : ssrcs) {
+                    [mappedSsrcs addObject:[NSNumber numberWithUnsignedInt:ssrc]];
+                }
+                id<OngoingGroupCallMediaChannelDescriptionTask> task = requestMediaChannelDescriptions(mappedSsrcs, ^(NSArray<OngoingGroupCallMediaChannelDescription *> *channels) {
+                    std::vector<tgcalls::MediaChannelDescription> mappedChannels;
+                    for (OngoingGroupCallMediaChannelDescription *channel in channels) {
+                        tgcalls::MediaChannelDescription mappedChannel;
+                        switch (channel.type) {
+                            case OngoingGroupCallMediaChannelTypeAudio: {
+                                mappedChannel.type = tgcalls::MediaChannelDescription::Type::Audio;
+                                break;
+                            }
+                            case OngoingGroupCallMediaChannelTypeVideo: {
+                                mappedChannel.type = tgcalls::MediaChannelDescription::Type::Video;
+                                break;
+                            }
+                            default: {
+                                continue;
+                            }
+                        }
+                        mappedChannel.audioSsrc = channel.audioSsrc;
+                        mappedChannel.videoInformation = channel.videoDescription.UTF8String ?: "";
+                        mappedChannels.push_back(std::move(mappedChannel));
+                    }
+
+                    completion(std::move(mappedChannels));
+                });
+
+                return std::make_shared<RequestMediaChannelDescriptionTaskImpl>(task);
+            }
         }));
     }
     return self;
@@ -1038,26 +1080,6 @@ private:
     }
 }
 
-- (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants {
-    if (_instance) {
-        std::vector<tgcalls::GroupParticipantDescription> parsedParticipants;
-        for (OngoingGroupCallParticipantDescription *participant in participants) {
-            tgcalls::GroupParticipantDescription parsedParticipant;
-            parsedParticipant.audioSsrc = participant.audioSsrc;
-            
-            if (participant.videoJsonDescription.length != 0) {
-                parsedParticipant.videoInformation = participant.videoJsonDescription.UTF8String;
-            }
-            if (participant.screencastJsonDescription.length != 0) {
-                parsedParticipant.screencastInformation = participant.screencastJsonDescription.UTF8String;
-            }
-            
-            parsedParticipants.push_back(parsedParticipant);
-        }
-        _instance->addParticipants(std::move(parsedParticipants));
-    }
-}
-
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
@@ -1091,6 +1113,16 @@ private:
 - (void)setFullSizeVideoEndpointId:(NSString * _Nullable)endpointId {
     if (_instance) {
         _instance->setFullSizeVideoEndpointId(endpointId.UTF8String ?: "");
+    }
+}
+
+- (void)setIgnoreVideoEndpointIds:(NSArray<NSString *> * _Nonnull)ignoreVideoEndpointIds {
+    if (_instance) {
+        std::vector<std::string> mappedEndpointIds;
+        for (NSString *value in ignoreVideoEndpointIds) {
+            mappedEndpointIds.push_back(value.UTF8String);
+        }
+        _instance->setIgnoreVideoEndpointIds(mappedEndpointIds);
     }
 }
 
@@ -1148,14 +1180,16 @@ private:
 
 @end
 
-@implementation OngoingGroupCallParticipantDescription
+@implementation OngoingGroupCallMediaChannelDescription
 
-- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc videoJsonDescription:(NSString * _Nullable)videoJsonDescription screencastJsonDescription:(NSString * _Nullable)screencastJsonDescription {
+- (instancetype _Nonnull)initWithType:(OngoingGroupCallMediaChannelType)type
+    audioSsrc:(uint32_t)audioSsrc
+    videoDescription:(NSString * _Nullable)videoDescription {
     self = [super init];
     if (self != nil) {
+        _type = type;
         _audioSsrc = audioSsrc;
-        _videoJsonDescription = videoJsonDescription;
-        _screencastJsonDescription = screencastJsonDescription;
+        _videoDescription = videoDescription;
     }
     return self;
 }

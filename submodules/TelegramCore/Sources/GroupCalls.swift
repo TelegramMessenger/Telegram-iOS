@@ -783,6 +783,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
 
 public struct JoinGroupCallAsScreencastResult {
     public var jsonParams: String
+    public var endpointId: String
 }
 
 public func joinGroupCallAsScreencast(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
@@ -810,8 +811,21 @@ public func joinGroupCallAsScreencast(account: Account, peerId: PeerId, callId: 
             return .fail(.generic)
         }
 
+        var maybeEndpointId: String?
+
+        if let jsonData = parsedClientParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let videoSection = json["video"] as? [String: Any] {
+                maybeEndpointId = videoSection["endpoint"] as? String
+            }
+        }
+
+        guard let endpointId = maybeEndpointId else {
+            return .fail(.generic)
+        }
+
         return .single(JoinGroupCallAsScreencastResult(
-            jsonParams: parsedClientParams
+            jsonParams: parsedClientParams,
+            endpointId: endpointId
         ))
     }
 }
