@@ -19,12 +19,14 @@ public struct ItemListStickerPackItemEditing: Equatable {
     public var editing: Bool
     public var revealed: Bool
     public var reorderable: Bool
+    public var selectable: Bool
     
-    public init(editable: Bool, editing: Bool, revealed: Bool, reorderable: Bool) {
+    public init(editable: Bool, editing: Bool, revealed: Bool, reorderable: Bool, selectable: Bool) {
         self.editable = editable
         self.editing = editing
         self.revealed = revealed
         self.reorderable = reorderable
+        self.selectable = selectable
     }
 }
 
@@ -51,8 +53,9 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
     let addPack: () -> Void
     let removePack: () -> Void
+    let toggleSelected: () -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
         self.presentationData = presentationData
         self.account = account
         self.packInfo = packInfo
@@ -68,6 +71,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
         self.addPack = addPack
         self.removePack = removePack
+        self.toggleSelected = toggleSelected
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -160,6 +164,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     
     private var layoutParams: (ItemListStickerPackItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
+    private var selectableControlNode: ItemListSelectableControlNode?
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
     
@@ -168,7 +173,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private let fetchDisposable = MetaDisposable()
     
     override var canBeSelected: Bool {
-        if self.editableControlNode != nil || self.disabledOverlayNode != nil {
+        if self.selectableControlNode != nil || self.editableControlNode != nil || self.disabledOverlayNode != nil {
             return false
         }
         if let item = self.layoutParams?.0, item.action != nil {
@@ -309,12 +314,20 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override func tapped() {
+        guard let item = self.layoutParams?.0, item.editing.editing && item.editing.selectable else {
+            return
+        }
+        item.toggleSelected()
+    }
+    
     func asyncLayout() -> (_ item: ItemListStickerPackItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
+        let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         
         let previousThumbnailItem = self.currentThumbnailItem
         var currentDisabledOverlayNode = self.disabledOverlayNode
@@ -358,8 +371,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 case .selection:
                     rightInset += 16.0
                     checkImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
-                case .check:
-                    rightInset += 16.0
+                default:
+                    break
             }
             
             var unreadImage: UIImage?
@@ -380,14 +393,25 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
+            var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             
             var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
             
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
-                editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0
+                if item.editing.selectable {
+                    var selected = false
+                    if case let .check(checked) = item.control {
+                        selected = checked
+                    }
+                    let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, selected, true)
+                    selectableControlSizeAndApply = sizeAndApply
+                    editingOffset = sizeAndApply.0
+                } else {
+                    let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
+                    editableControlSizeAndApply = sizeAndApply
+                    editingOffset = sizeAndApply.0
+                }
                 
                 if item.editing.reorderable {
                     let sizeAndApply = reorderControlLayout(item.presentationData.theme)
@@ -427,7 +451,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     thumbnailItem = .animated(item.file.resource)
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                 } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: []))
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
                 }
             }
@@ -544,6 +568,31 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: editableControlNode, alpha: 0.0)
                         transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
                             editableControlNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if let selectableControlSizeAndApply = selectableControlSizeAndApply {
+                        let selectableControlSize = CGSize(width: selectableControlSizeAndApply.0, height: layout.contentSize.height)
+                        let selectableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: selectableControlSize)
+                        if strongSelf.selectableControlNode == nil {
+                            let selectableControlNode = selectableControlSizeAndApply.1(selectableControlSize, false)
+                            strongSelf.selectableControlNode = selectableControlNode
+                            strongSelf.addSubnode(selectableControlNode)
+                            selectableControlNode.frame = selectableControlFrame
+                            transition.animatePosition(node: selectableControlNode, from: CGPoint(x: -selectableControlFrame.size.width / 2.0, y: selectableControlFrame.midY))
+                            selectableControlNode.alpha = 0.0
+                            transition.updateAlpha(node: selectableControlNode, alpha: 1.0)
+                        } else if let selectableControlNode = strongSelf.selectableControlNode {
+                            transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame)
+                            let _ = selectableControlSizeAndApply.1(selectableControlSize, transition.isAnimated)
+                        }
+                    } else if let selectableControlNode = strongSelf.selectableControlNode {
+                        var selectableControlFrame = selectableControlNode.frame
+                        selectableControlFrame.origin.x = -selectableControlFrame.size.width
+                        strongSelf.selectableControlNode = nil
+                        transition.updateAlpha(node: selectableControlNode, alpha: 0.0)
+                        transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame, completion: { [weak selectableControlNode] _ in
+                            selectableControlNode?.removeFromSupernode()
                         })
                     }
                     

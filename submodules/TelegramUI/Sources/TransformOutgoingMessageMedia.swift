@@ -75,7 +75,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                             }
                                         }
                                         attributes.append(.ImageSize(size: PixelDimensions(imageDimensions)))
-                                        let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource, progressiveSizes: [])]).withUpdatedAttributes(attributes)
+                                        let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)]).withUpdatedAttributes(attributes)
                                         subscriber.putNext(.standalone(media: updatedFile))
                                         subscriber.putCompletion()
                                     } else {
@@ -104,7 +104,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                             
                                 let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
                             
-                                let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource, progressiveSizes: [])])
+                                let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)])
                                 subscriber.putNext(.standalone(media: updatedFile))
                                 subscriber.putCompletion()
                             } else {
@@ -160,7 +160,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                 
                                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(smallestSize), resource: thumbnailResource, progressiveSizes: []))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(smallestSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
                                 let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])
                                 return .single(.standalone(media: updatedImage))
                             }

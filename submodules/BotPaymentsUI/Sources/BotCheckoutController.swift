@@ -10,6 +10,64 @@ import TelegramPresentationData
 import AccountContext
 
 public final class BotCheckoutController: ViewController {
+    public final class InputData {
+        public enum FetchError {
+            case generic
+        }
+
+        let form: BotPaymentForm
+        let validatedFormInfo: BotPaymentValidatedFormInfo?
+
+        private init(
+            form: BotPaymentForm,
+            validatedFormInfo: BotPaymentValidatedFormInfo?
+        ) {
+            self.form = form
+            self.validatedFormInfo = validatedFormInfo
+        }
+
+        public static func fetch(context: AccountContext, messageId: MessageId) -> Signal<InputData, FetchError> {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let themeParams: [String: Any] = [
+                "bg_color": Int32(bitPattern: presentationData.theme.list.plainBackgroundColor.argb),
+                "text_color": Int32(bitPattern: presentationData.theme.list.itemPrimaryTextColor.argb),
+                "link_color": Int32(bitPattern: presentationData.theme.list.itemAccentColor.argb),
+                "button_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.fillColor.argb),
+                "button_text_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.foregroundColor.argb)
+            ]
+
+            return fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId, themeParams: themeParams)
+            |> mapError { _ -> FetchError in
+                return .generic
+            }
+            |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
+                if let current = paymentForm.savedInfo {
+                    return validateBotPaymentForm(account: context.account, saveInfo: true, messageId: messageId, formInfo: current)
+                    |> mapError { _ -> FetchError in
+                        return .generic
+                    }
+                    |> map { result -> InputData in
+                        return InputData(
+                            form: paymentForm,
+                            validatedFormInfo: result
+                        )
+                    }
+                    |> `catch` { _ -> Signal<InputData, FetchError> in
+                        return .single(InputData(
+                            form: paymentForm,
+                            validatedFormInfo: nil
+                        ))
+                    }
+                } else {
+                    return .single(InputData(
+                        form: paymentForm,
+                        validatedFormInfo: nil
+                    ))
+                }
+            }
+        }
+    }
+
     private var controllerNode: BotCheckoutControllerNode {
         return self.displayNode as! BotCheckoutControllerNode
     }
@@ -22,15 +80,20 @@ public final class BotCheckoutController: ViewController {
     private let context: AccountContext
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
+    private let completed: (String, MessageId?) -> Void
     
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
+
+    private let inputData: Promise<BotCheckoutController.InputData?>
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, MessageId?) -> Void) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
+        self.inputData = inputData
+        self.completed = completed
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -52,15 +115,15 @@ public final class BotCheckoutController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let displayNode = BotCheckoutControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = BotCheckoutControllerNode(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
-        }, context: self.context, invoice: self.invoice, messageId: self.messageId, present: { [weak self] c, a in
+        }, context: self.context, invoice: self.invoice, messageId: self.messageId, inputData: self.inputData, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissAnimated: { [weak self] in
             self?.dismiss()
-        })
+        }, completed: self.completed)
         
         //displayNode.enableInteractiveDismiss = true
         

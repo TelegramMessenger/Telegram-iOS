@@ -151,10 +151,10 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 @end
 
-typedef NS_ENUM(int32_t, GroupCallNetworkState) {
-    GroupCallNetworkStateConnecting,
-    GroupCallNetworkStateConnected
-};
+typedef struct {
+    bool isConnected;
+    bool isTransitioningFromBroadcastToRtc;
+} GroupCallNetworkState;
 
 @interface OngoingGroupCallParticipantDescription : NSObject
 
@@ -165,17 +165,49 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @end
 
+@protocol OngoingGroupCallBroadcastPartTask <NSObject>
+
+- (void)cancel;
+
+@end
+
+typedef NS_ENUM(int32_t, OngoingCallConnectionMode) {
+    OngoingCallConnectionModeNone,
+    OngoingCallConnectionModeRtc,
+    OngoingCallConnectionModeBroadcast
+};
+
+typedef NS_ENUM(int32_t, OngoingGroupCallBroadcastPartStatus) {
+    OngoingGroupCallBroadcastPartStatusSuccess,
+    OngoingGroupCallBroadcastPartStatusNotReady,
+    OngoingGroupCallBroadcastPartStatusResyncNeeded
+};
+
+@interface OngoingGroupCallBroadcastPart : NSObject
+
+@property (nonatomic, readonly) int64_t timestampMilliseconds;
+@property (nonatomic, readonly) double responseTimestamp;
+@property (nonatomic, readonly) OngoingGroupCallBroadcastPartStatus status;
+@property (nonatomic, strong, readonly) NSData * _Nonnull oggData;
+
+- (instancetype _Nonnull)initWithTimestampMilliseconds:(int64_t)timestampMilliseconds responseTimestamp:(double)responseTimestamp status:(OngoingGroupCallBroadcastPartStatus)status oggData:(NSData * _Nonnull)oggData;
+
+@end
+
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression;
 
 - (void)stop;
+
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants;
 - (void)setIsMuted:(bool)isMuted;
+- (void)setIsNoiseSuppressionEnabled:(bool)isNoiseSuppressionEnabled;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)disableVideo:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 

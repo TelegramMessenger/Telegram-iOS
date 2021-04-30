@@ -325,7 +325,57 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?)) -> Signal<Any, MTRpcError> {
+    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false) -> Signal<(T, Double), (MTRpcError, Double)> {
+        return Signal { subscriber in
+            let request = MTRequest()
+            
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
+                if let result = data.2.parse(Buffer(data: response)) {
+                    return BoxedMessage(result)
+                }
+                return nil
+            })
+            
+            request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
+                if errorContext.internalServerErrorCount > 0 && failOnServerErrors {
+                    return false
+                }
+                return true
+            }
+            
+            request.completed = { (boxedResponse, timestamp, error) -> () in
+                if let error = error {
+                    subscriber.putError((error, timestamp))
+                } else {
+                    if let result = (boxedResponse as! BoxedMessage).body as? T {
+                        subscriber.putNext((result, timestamp))
+                        subscriber.putCompletion()
+                    }
+                    else {
+                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), timestamp))
+                    }
+                }
+            }
+            
+            let internalId: Any! = request.internalId
+            
+            self.requestService.add(request)
+            
+            return ActionDisposable {
+                self.requestService.removeRequest(byInternalId: internalId)
+            }
+        }
+    }
+    
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false) -> Signal<(Any, Double), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -340,14 +390,23 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.dependsOnPasswordEntry = false
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
+                if errorContext.internalServerErrorCount > 0 && failOnServerErrors {
+                    return false
+                }
                 return true
             }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
-                    subscriber.putError(error)
+                    subscriber.putError((error, timestamp))
                 } else {
-                    subscriber.putNext((boxedResponse as! BoxedMessage).body)
+                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, timestamp))
                     subscriber.putCompletion()
                 }
             }

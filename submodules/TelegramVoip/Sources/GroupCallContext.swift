@@ -1,6 +1,8 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
+import Postbox
+import TelegramCore
 
 private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
@@ -26,10 +28,135 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     }
 }
 
+private protocol BroadcastPartSource: class {
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
+}
+
+private final class NetworkBroadcastPartSource: BroadcastPartSource {
+    private let queue: Queue
+    private let account: Account
+    private let callId: Int64
+    private let accessHash: Int64
+    private var dataSource: AudioBroadcastDataSource?
+
+    #if DEBUG
+    private let debugDumpDirectory: TempBoxDirectory?
+    #endif
+    
+    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64) {
+        self.queue = queue
+        self.account = account
+        self.callId = callId
+        self.accessHash = accessHash
+
+        #if DEBUG
+        self.debugDumpDirectory = nil
+        /*let debugDumpDirectory = TempBox.shared.tempDirectory()
+        self.debugDumpDirectory = debugDumpDirectory
+        print("Debug streaming dump path: \(debugDumpDirectory.path)")*/
+        #endif
+    }
+    
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
+        let timestampIdMilliseconds: Int64
+        if timestampMilliseconds != 0 {
+            timestampIdMilliseconds = timestampMilliseconds
+        } else {
+            timestampIdMilliseconds = (Int64(Date().timeIntervalSince1970 * 1000.0) / durationMilliseconds) * durationMilliseconds
+        }
+        
+        let dataSource: Signal<AudioBroadcastDataSource?, NoError>
+        if let dataSourceValue = self.dataSource {
+            dataSource = .single(dataSourceValue)
+        } else {
+            dataSource = getAudioBroadcastDataSource(account: self.account, callId: self.callId, accessHash: self.accessHash)
+        }
+
+        let callId = self.callId
+        let accessHash = self.accessHash
+        
+        let queue = self.queue
+        let signal = dataSource
+        |> deliverOn(self.queue)
+        |> mapToSignal { [weak self] dataSource -> Signal<GetAudioBroadcastPartResult?, NoError> in
+            if let dataSource = dataSource {
+                self?.dataSource = dataSource
+                return getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                |> map(Optional.init)
+            } else {
+                return .single(nil)
+                |> delay(2.0, queue: queue)
+            }
+        }
+        |> deliverOn(self.queue)
+
+        #if DEBUG
+        let debugDumpDirectory = self.debugDumpDirectory
+        #endif
+            
+        return signal.start(next: { result in
+            guard let result = result else {
+                completion(OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: Double(timestampIdMilliseconds), status: .notReady, oggData: Data()))
+                return
+            }
+            let part: OngoingGroupCallBroadcastPart
+            switch result.status {
+            case let .data(dataValue):
+                #if DEBUG
+                if let debugDumpDirectory = debugDumpDirectory {
+                    let _ = try? dataValue.write(to: URL(fileURLWithPath: debugDumpDirectory.path + "/" + "\(timestampIdMilliseconds).ogg"))
+                }
+                #endif
+
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
+            case .notReady:
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
+            case .resyncNeeded:
+                part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .resyncNeeded, oggData: Data())
+            case .rejoinNeeded:
+                rejoinNeeded()
+                return
+            }
+            
+            completion(part)
+        })
+    }
+}
+
+private final class OngoingGroupCallBroadcastPartTaskImpl : NSObject, OngoingGroupCallBroadcastPartTask {
+    private let disposable: Disposable?
+    
+    init(disposable: Disposable?) {
+        self.disposable = disposable
+    }
+    
+    func cancel() {
+        self.disposable?.dispose()
+    }
+}
+
 public final class OngoingGroupCallContext {
-    public enum NetworkState {
-        case connecting
-        case connected
+    public struct AudioStreamData {
+        public var account: Account
+        public var callId: Int64
+        public var accessHash: Int64
+        
+        public init(account: Account, callId: Int64, accessHash: Int64) {
+            self.account = account
+            self.callId = callId
+            self.accessHash = accessHash
+        }
+    }
+    
+    public enum ConnectionMode {
+        case none
+        case rtc
+        case broadcast
+    }
+    
+    public struct NetworkState: Equatable {
+        public var isConnected: Bool
+        public var isTransitioningFromBroadcastToRtc: Bool
     }
     
     public enum AudioLevelKey: Hashable {
@@ -44,18 +171,27 @@ public final class OngoingGroupCallContext {
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
         let joinPayload = Promise<(String, UInt32)>()
-        let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
+        let networkState = ValuePromise<NetworkState>(NetworkState(isConnected: false, isTransitioningFromBroadcastToRtc: false), ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
+        let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
         
         let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
+        private var broadcastPartsSource: BroadcastPartSource?
+        
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
-            var participantDescriptionsRequiredImpl: (([NSNumber]) -> Void)?
+            
+            if let audioStreamData = audioStreamData {
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
+                self.broadcastPartsSource = broadcastPartsSource
+            }
+            
+            let broadcastPartsSource = self.broadcastPartsSource
             
             let videoSources = self.videoSources
             self.context = GroupCallThreadLocalContext(
@@ -74,7 +210,21 @@ public final class OngoingGroupCallContext {
                 },
                 participantDescriptionsRequired: { ssrcs in
                     participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
-                }
+                },
+                requestBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
+                    let disposable = MetaDisposable()
+                    
+                    queue.async {
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, completion: completion, rejoinNeeded: {
+                            rejoinNeeded()
+                        }))
+                    }
+                    
+                    return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
+                },
+                outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
+                enableVideo: enableVideo,
+                enableNoiseSuppression: enableNoiseSuppression
             )
             
             let queue = self.queue
@@ -84,16 +234,7 @@ public final class OngoingGroupCallContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    let mappedState: NetworkState
-                    switch state {
-                    case .connecting:
-                        mappedState = .connecting
-                    case .connected:
-                        mappedState = .connected
-                    @unknown default:
-                        mappedState = .connecting
-                    }
-                    strongSelf.networkState.set(mappedState)
+                    strongSelf.networkState.set(NetworkState(isConnected: state.isConnected, isTransitioningFromBroadcastToRtc: state.isTransitioningFromBroadcastToRtc))
                 }
             }
             
@@ -125,6 +266,9 @@ public final class OngoingGroupCallContext {
                     strongSelf.joinPayload.set(.single((payload, ssrc)))
                 }
             })
+        }
+        
+        deinit {
         }
         
         func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
@@ -166,9 +310,41 @@ public final class OngoingGroupCallContext {
             self.context.stop()
         }
         
+        func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
+            let mappedConnectionMode: OngoingCallConnectionMode
+            switch connectionMode {
+            case .none:
+                mappedConnectionMode = .none
+            case .rtc:
+                mappedConnectionMode = .rtc
+            case .broadcast:
+                mappedConnectionMode = .broadcast
+            }
+            self.context.setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
+            
+            if (mappedConnectionMode != .rtc) {
+                self.joinPayload.set(.never())
+                
+                let queue = self.queue
+                self.context.emitJoinPayload({ [weak self] payload, ssrc in
+                    queue.async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.joinPayload.set(.single((payload, ssrc)))
+                    }
+                })
+            }
+        }
+        
         func setIsMuted(_ isMuted: Bool) {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
+        }
+
+        func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+            self.isNoiseSuppressionEnabled.set(isNoiseSuppressionEnabled)
+            self.context.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
         }
         
         func requestVideo(_ capturer: OngoingCallVideoCapturer?) {
@@ -328,6 +504,18 @@ public final class OngoingGroupCallContext {
             return disposable
         }
     }
+
+    public var isNoiseSuppressionEnabled: Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.isNoiseSuppressionEnabled.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
     
     public var videoSources: Signal<Set<UInt32>, NoError> {
         return Signal { subscriber in
@@ -341,16 +529,28 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: enableVideo, enableNoiseSuppression: enableNoiseSuppression)
         })
+    }
+    
+    public func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
+        self.impl.with { impl in
+            impl.setConnectionMode(connectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
+        }
     }
     
     public func setIsMuted(_ isMuted: Bool) {
         self.impl.with { impl in
             impl.setIsMuted(isMuted)
+        }
+    }
+
+    public func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+        self.impl.with { impl in
+            impl.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
         }
     }
     

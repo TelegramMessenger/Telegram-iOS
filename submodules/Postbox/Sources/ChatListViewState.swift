@@ -242,11 +242,13 @@ private final class ChatListViewSpaceState {
             let allIndices = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex }
             let allEntityIds = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entityId }
             if Set(allIndices).count != allIndices.count {
+                var debugRepeatedIndices = Set<MutableChatListEntryIndex>()
                 var existingIndices = Set<MutableChatListEntryIndex>()
                 for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
                     if !existingIndices.contains(lowerOrAtAnchorMessages[i].entryIndex) {
                         existingIndices.insert(lowerOrAtAnchorMessages[i].entryIndex)
                     } else {
+                        debugRepeatedIndices.insert(lowerOrAtAnchorMessages[i].entryIndex)
                         lowerOrAtAnchorMessages.remove(at: i)
                     }
                 }
@@ -254,10 +256,11 @@ private final class ChatListViewSpaceState {
                     if !existingIndices.contains(higherThanAnchorMessages[i].entryIndex) {
                         existingIndices.insert(higherThanAnchorMessages[i].entryIndex)
                     } else {
+                        debugRepeatedIndices.insert(higherThanAnchorMessages[i].entryIndex)
                         higherThanAnchorMessages.remove(at: i)
                     }
                 }
-                postboxLog("allIndices not unique: \(allIndices)")
+                postboxLog("allIndices not unique, repeated: \(debugRepeatedIndices)")
                 
                 assert(false)
                 //preconditionFailure()
@@ -865,7 +868,7 @@ private final class ChatListViewSpaceState {
                 
                 let loadedEntries = postbox.chatListTable.entries(groupId: .root, from: (allEntries[0].index.predecessor, true), to: (allEntries[allEntries.count - 1].index.successor, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1000, predicate: nil).map(mapEntry)
                 
-                assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
+                //assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
             }
         }
         #endif

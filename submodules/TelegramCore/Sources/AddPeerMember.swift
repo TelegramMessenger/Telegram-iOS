@@ -18,7 +18,7 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
     return account.postbox.transaction { transaction -> Signal<Void, AddGroupMemberError> in
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id, userId: inputUser, fwdLimit: 100))
+                return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, fwdLimit: 100))
                 |> mapError { error -> AddGroupMemberError in
                     switch error.errorDescription {
                     case "USERS_TOO_MUCH":
@@ -57,7 +57,7 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
                             })
                         }
                     }
-                    |> mapError { _ -> AddGroupMemberError in return .generic }
+                    |> mapError { _ -> AddGroupMemberError in }
                 }
             } else {
                 return .fail(.generic)
@@ -65,7 +65,7 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> AddGroupMemberError in return .generic } |> switchToLatest
+    } |> mapError { _ -> AddGroupMemberError in } |> switchToLatest
 }
 
 public enum AddChannelMemberError {
@@ -82,7 +82,6 @@ public enum AddChannelMemberError {
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
     |> mapError { error -> AddChannelMemberError in
-        return .generic
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
@@ -158,7 +157,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                             if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                                 presences[memberPeer.id] = presence
                             }
-                            if case let .member(_, _, maybeAdminInfo, maybeBannedInfo, _) = updatedParticipant {
+                            if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant {
                                 if let adminInfo = maybeAdminInfo {
                                     if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                         peers[peer.id] = peer
@@ -167,7 +166,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                             }
                             return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences))
                         }
-                        |> mapError { _ -> AddChannelMemberError in return .generic }
+                        |> mapError { _ -> AddChannelMemberError in }
                     }
                 } else {
                     return .fail(.generic)
@@ -176,7 +175,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                 return .fail(.generic)
             }
         }
-        |> mapError { _ -> AddChannelMemberError in return .generic }
+        |> mapError { _ -> AddChannelMemberError in }
         |> switchToLatest
     }
 }

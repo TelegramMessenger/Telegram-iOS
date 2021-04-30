@@ -127,7 +127,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
             if let strongSelf = self {
                 let storedPassword = context.getStoredSecureIdPassword()
                 if data.currentPasswordDerivation != nil, let storedPassword = storedPassword {
-                    strongSelf.authenthicateDisposable.set((accessSecureId(network: strongSelf.context.account.network, password: storedPassword)
+                    strongSelf.authenthicateDisposable.set((strongSelf.context.engine.secureId.accessSecureId(password: storedPassword)
                     |> deliverOnMainQueue).start(next: { context in
                         guard let strongSelf = self, strongSelf.state.verificationState == nil else {
                             return
@@ -441,7 +441,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 state.verificationState = .passwordChallenge(hint: hint, state: .checking, hasRecoveryEmail: hasRecoveryEmail)
                 return state
             })
-            self.challengeDisposable.set((accessSecureId(network: self.context.account.network, password: password)
+            self.challengeDisposable.set((self.context.engine.secureId.accessSecureId(password: password)
             |> deliverOnMainQueue).start(next: { [weak self] context in
                 guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState else {
                     return

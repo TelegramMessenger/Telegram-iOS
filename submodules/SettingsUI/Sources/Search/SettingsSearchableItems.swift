@@ -883,7 +883,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
-            let _ = (supportPeerId(account: context.account)
+            let _ = (context.engine.peerNames.supportPeerId()
             |> deliverOnMainQueue).start(next: { peerId in
                 if let peerId = peerId {
                     present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
@@ -897,7 +897,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             let _ = (cachedFaqInstantPage(context: context)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
-                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, present: { controller, arguments in
+                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     present(.push, controller)
                 }, dismissInput: {}, contentContext: nil)
             })

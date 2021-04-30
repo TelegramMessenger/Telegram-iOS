@@ -13,6 +13,7 @@ import AvatarNode
 import AccountContext
 import PeerPresenceStatusManager
 import AppBundle
+import SegmentedControlNode
 
 private let subtitleFont = Font.regular(12.0)
 
@@ -80,8 +81,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
     private let switchToAnotherAccount: () -> Void
+    private let debugAction: () -> Void
     private let extendedInitialReveal: Bool
-    private let statsCount: Int?
     
     let accountPeer: Peer
     private let foundPeers = Promise<[RenderedPeer]>([])
@@ -97,13 +98,15 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let contentSeparatorNode: ASDisplayNode
     private let searchButtonNode: HighlightableButtonNode
     private let shareButtonNode: HighlightableButtonNode
-    private let statsButtonNode: HighlightableButtonNode
+    private let segmentedNode: SegmentedControlNode
+    
+    private let segmentedValues: [ShareControllerSegmentedValue]?
     
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var openSearch: (() -> Void)?
     var openShare: (() -> Void)?
-    var openStats: (() -> Void)?
+    var segmentedSelectedIndexUpdated: ((Int) -> Void)?
     
     private var ensurePeerVisibleOnLayout: PeerId?
     private var validLayout: (CGSize, CGFloat)?
@@ -111,7 +114,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, extendedInitialReveal: Bool, statsCount: Int?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
@@ -120,8 +123,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.controllerInteraction = controllerInteraction
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
+        self.debugAction = debugAction
         self.extendedInitialReveal = extendedInitialReveal
-        self.statsCount = statsCount
+        self.segmentedValues = segmentedValues
         
         self.peersValue.set(.single(peers))
         
@@ -131,14 +135,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             var existingPeerIds: Set<PeerId> = Set()
-            
             entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
+            existingPeerIds.insert(accountPeer.id)
             index += 1
             
             for peer in foundPeers.reversed() {
-                entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, theme: theme, strings: strings))
-                existingPeerIds.insert(peer.peerId)
-                index += 1
+                if !existingPeerIds.contains(peer.peerId) {
+                    entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, theme: theme, strings: strings))
+                    existingPeerIds.insert(peer.peerId)
+                    index += 1
+                }
             }
             
             for (peer, presence) in initialPeers {
@@ -177,13 +183,18 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.shareButtonNode = HighlightableButtonNode()
         self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
+                 
+        let segmentedItems: [SegmentedControlItem]
+        if let segmentedValues = segmentedValues {
+            segmentedItems = segmentedValues.map { SegmentedControlItem(title: $0.title) }
+        } else {
+            segmentedItems = []
+        }
+        self.segmentedNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: segmentedItems, selectedIndex: 0)
+        self.segmentedNode.isHidden = segmentedValues == nil
         
-        self.statsButtonNode = HighlightableButtonNode()
-        self.statsButtonNode.setAttributedTitle(NSAttributedString(string: "\(statsCount ?? 0) Shares", font: Font.regular(17.0), textColor: self.theme.actionSheet.controlAccentColor), for: .normal)
-        self.statsButtonNode.isHidden = statsCount == nil
-         
-        self.contentTitleNode.isHidden = !self.statsButtonNode.isHidden
-        self.contentSubtitleNode.isHidden = !self.statsButtonNode.isHidden
+        self.contentTitleNode.isHidden = self.segmentedValues != nil
+        self.contentSubtitleNode.isHidden = self.segmentedValues != nil
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
@@ -201,10 +212,11 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.addSubnode(self.contentTitleNode)
         self.addSubnode(self.contentSubtitleNode)
         self.addSubnode(self.contentTitleAccountNode)
+        self.addSubnode(self.segmentedNode)
         self.addSubnode(self.searchButtonNode)
         self.addSubnode(self.shareButtonNode)
-        self.addSubnode(self.statsButtonNode)
         self.addSubnode(self.contentSeparatorNode)
+        
         
         let previousItems = Atomic<[SharePeerEntry]?>(value: [])
         self.disposable.set((items
@@ -225,8 +237,13 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.searchButtonNode.addTarget(self, action: #selector(self.searchPressed), forControlEvents: .touchUpInside)
         self.shareButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
-        self.statsButtonNode.addTarget(self, action: #selector(self.statsPressed), forControlEvents: .touchUpInside)
         self.contentTitleAccountNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.accountTapGesture(_:))))
+        
+        self.segmentedNode.selectedIndexChanged = { [weak self] index in
+            self?.segmentedSelectedIndexUpdated?(index)
+        }
+
+        self.contentTitleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTapGesture(_:))))
     }
     
     deinit {
@@ -353,16 +370,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         originalSubtitleFrame.size = subtitleFrame.size
         self.contentSubtitleNode.frame = originalSubtitleFrame
         transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
-        
-        let statsSize = self.statsButtonNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: titleAreaHeight))
-        transition.updateFrame(node: self.statsButtonNode, frame: CGRect(origin: CGPoint(x: floor((size.width - statsSize.width) / 2.0), y: titleOffset + 22.0), size: statsSize))
-        
+          
         let titleButtonSize = CGSize(width: 44.0, height: 44.0)
         let searchButtonFrame = CGRect(origin: CGPoint(x: 12.0, y: titleOffset + 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.searchButtonNode, frame: searchButtonFrame)
         
         let shareButtonFrame = CGRect(origin: CGPoint(x: size.width - titleButtonSize.width - 12.0, y: titleOffset + 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.shareButtonNode, frame: shareButtonFrame)
+        
+        let segmentedSize = self.segmentedNode.updateLayout(.sizeToFit(maximumWidth: size.width - titleButtonSize.width * 2.0, minimumWidth: 160.0, height: 32.0), transition: transition)
+        transition.updateFrame(node: self.segmentedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - segmentedSize.width) / 2.0), y: titleOffset + 18.0), size: segmentedSize))
         
         let avatarButtonSize = CGSize(width: 36.0, height: 36.0)
         let avatarButtonFrame = CGRect(origin: CGPoint(x: size.width - avatarButtonSize.width - 20.0, y: titleOffset + 15.0), size: avatarButtonSize)
@@ -392,12 +409,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     func updateSelectedPeers() {
-        if let _ = self.openStats, self.controllerInteraction.selectedPeers.isEmpty {
-            self.statsButtonNode.isHidden = false
+        if self.segmentedValues != nil {
             self.contentTitleNode.isHidden = true
             self.contentSubtitleNode.isHidden = true
         } else {
-            self.statsButtonNode.isHidden = true
             self.contentTitleNode.isHidden = false
             self.contentSubtitleNode.isHidden = false
             
@@ -435,10 +450,6 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.openShare?()
     }
     
-    @objc func statsPressed() {
-        self.openStats?()
-    }
-    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let nodes: [ASDisplayNode] = [self.searchButtonNode, self.shareButtonNode, self.contentTitleAccountNode]
         for node in nodes {
@@ -456,5 +467,28 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     @objc private func accountTapGesture(_ recognizer: UITapGestureRecognizer) {
         self.switchToAnotherAccount()
+    }
+
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+
+    @objc private func debugTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CACurrentMediaTime()
+            if self.debugTapCounter.0 < timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 = 0
+            }
+
+            if self.debugTapCounter.0 >= timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 += 1
+            }
+
+            if self.debugTapCounter.1 >= 10 {
+                self.debugTapCounter.1 = 0
+
+                self.debugAction()
+            }
+        }
     }
 }

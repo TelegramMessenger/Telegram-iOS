@@ -841,9 +841,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
-
             let foundLocalPeers: Signal<(peers: [RenderedPeer], unread: [PeerId: (Int32, Bool)]), NoError>
-
             if let query = query {
                 foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
                 |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
@@ -965,7 +963,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let resolvedMessage = .single(nil)
-            |> then(context.sharedContext.resolveUrl(account: context.account, url: finalQuery)
+            |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
                 if case let .channelMessage(_, messageId) = resolvedUrl {
                     return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
@@ -1279,7 +1277,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }, openUrl: { url in
                 interaction.openUrl(url)
             }, openPeer: { peer, navigation in
-//                interaction.openPeer(peer.id, navigation)
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .custom(messages: foundMessages, at: message.id, loadMore: {
@@ -2327,7 +2324,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
-            let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let timestamp1: Int32 = 100000
             var peers = SimpleDictionary<PeerId, Peer>()
             peers[peer1.id] = peer1

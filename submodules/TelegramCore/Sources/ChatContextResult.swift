@@ -19,6 +19,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
+    case invoice(media: TelegramMediaInvoice, replyMarkup: ReplyMarkupMessageAttribute?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
@@ -30,6 +31,8 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
                 self = .mapLocation(media: decoder.decodeObjectForKey("l") as! TelegramMediaMap, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             case 3:
                 self = .contact(media: decoder.decodeObjectForKey("c") as! TelegramMediaContact, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+            case 4:
+                self = .invoice(media: decoder.decodeObjectForKey("i") as! TelegramMediaInvoice, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
             default:
                 self = .auto(caption: "", entities: nil, replyMarkup: nil)
         }
@@ -75,6 +78,14 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
             case let .contact(media, replyMarkup):
                 encoder.encodeInt32(3, forKey: "_v")
                 encoder.encodeObject(media, forKey: "c")
+                if let replyMarkup = replyMarkup {
+                    encoder.encodeObject(replyMarkup, forKey: "m")
+                } else {
+                    encoder.encodeNil(forKey: "m")
+                }
+            case let .invoice(media: media, replyMarkup):
+                encoder.encodeInt32(4, forKey: "_v")
+                encoder.encodeObject(media, forKey: "i")
                 if let replyMarkup = replyMarkup {
                     encoder.encodeObject(replyMarkup, forKey: "m")
                 } else {
@@ -147,6 +158,18 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
                 }
             case let .contact(lhsMedia, lhsReplyMarkup):
                 if case let .contact(rhsMedia, rhsReplyMarkup) = rhs {
+                    if !lhsMedia.isEqual(to: rhsMedia) {
+                        return false
+                    }
+                    if lhsReplyMarkup != rhsReplyMarkup {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .invoice(lhsMedia, lhsReplyMarkup):
+                if case let .invoice(rhsMedia, rhsReplyMarkup) = rhs {
                     if !lhsMedia.isEqual(to: rhsMedia) {
                         return false
                     }
@@ -444,6 +467,19 @@ extension ChatContextResultMessage {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .contact(media: media, replyMarkup: parsedReplyMarkup)
+            case let .botInlineMessageMediaInvoice(flags, title, description, photo, currency, totalAmount, replyMarkup):
+                var parsedFlags = TelegramMediaInvoiceFlags()
+                if (flags & (1 << 3)) != 0 {
+                    parsedFlags.insert(.isTest)
+                }
+                if (flags & (1 << 1)) != 0 {
+                    parsedFlags.insert(.shippingAddressRequested)
+                }
+                var parsedReplyMarkup: ReplyMarkupMessageAttribute?
+                if let replyMarkup = replyMarkup {
+                    parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
+                }
+                self = .invoice(media: TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: currency, totalAmount: totalAmount, startParam: "", flags: parsedFlags), replyMarkup: parsedReplyMarkup)
         }
     }
 }

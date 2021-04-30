@@ -67,8 +67,22 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
         let location = touches.first!.location(in: self.view)
         let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
         
-        if self.recognized == nil {
-            if (abs(translation.y) >= selectionGestureActivationThreshold) {
+        let touchesArray = Array(touches)
+        if self.recognized == nil, touchesArray.count == 2 {
+            if let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
+                let firstLocation = firstTouch.location(in: self.view)
+                let secondLocation = secondTouch.location(in: self.view)
+                
+                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
+                    let dx = v1.x - v2.x
+                    let dy = v1.y - v2.y
+                    return sqrt(dx * dx + dy * dy)
+                }
+                if distance(firstLocation, secondLocation) > 200.0 {
+                    self.state = .failed
+                }
+            }
+            if self.state != .failed && (abs(translation.y) >= selectionGestureActivationThreshold) {
                 self.recognized = true
             }
         }
@@ -497,6 +511,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     let canReadHistory = Promise<Bool>()
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
+
+    private var messageIdsScheduledForMarkAsSeen = Set<MessageId>()
     
     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
         didSet {
@@ -654,12 +670,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
-                let _ = (strongSelf.canReadHistory.get()
-                |> take(1)).start(next: { [weak context] canReadHistory in
-                    if canReadHistory {
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
-                    }
-                })
+                if strongSelf.canReadHistoryValue {
+                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                } else {
+                    strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds)
+                }
             }
         }
         
@@ -1058,11 +1073,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.readHistoryDisposable.set(readHistory.start())
         
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self, weak context] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
                     strongSelf.updateReadHistoryActions()
+
+                    if strongSelf.canReadHistoryValue && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
+                        let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
+                        strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
+                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                    }
                 }
             }
         })
@@ -1760,13 +1781,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if historyView.filteredEntries.isEmpty {
                         if let firstEntry = historyView.originalView.entries.first {
                             var isPeerJoined = false
+                            var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
                             for media in firstEntry.message.media {
-                                if let action = media as? TelegramMediaAction, action.action == .peerJoined {
-                                    isPeerJoined = true
-                                    break
+                                if let action = media as? TelegramMediaAction {
+                                    if action.action == .peerJoined {
+                                        emptyType = .joined
+                                        break
+                                    } else if action.action == .historyCleared {
+                                        emptyType = .clearedHistory
+                                        break
+                                    }
                                 }
                             }
-                            loadState = .empty(isPeerJoined ? .joined : .generic)
+                            loadState = .empty(emptyType)
                         } else {
                             loadState = .empty(.generic)
                         }

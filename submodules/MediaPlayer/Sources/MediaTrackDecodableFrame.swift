@@ -23,4 +23,8 @@ public final class MediaTrackDecodableFrame {
         
         self.packet = packet
     }
+    
+    public func copyPacketData() -> Data {
+        return Data(bytes: self.packet.data, count: Int(self.packet.size))
+    }
 }

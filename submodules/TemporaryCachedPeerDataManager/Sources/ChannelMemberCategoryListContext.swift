@@ -315,7 +315,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 
                 for i in 0 ..< min(strongSelf.listStateValue.list.count, Int(initialBatchSize)) {
                     let peerId = strongSelf.listStateValue.list[i].peer.id
-                    hash = (hash &* 20261) &+ UInt32(peerId.id)
+                    hash = (hash &* 20261) &+ UInt32(bitPattern: peerId.id._internalGetInt32Value())
                 }
                 hash = hash % 0x7FFFFFFF
                 strongSelf.headUpdateDisposable.set((strongSelf.loadSignal(offset: 0, count: initialBatchSize, hash: Int32(bitPattern: hash))

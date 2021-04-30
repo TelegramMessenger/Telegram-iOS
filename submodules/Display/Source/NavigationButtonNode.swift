@@ -32,6 +32,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
                         self?.isEnabled = value
                     }
                     self.accessibilityHint = item.accessibilityHint
+                    self.accessibilityLabel = item.accessibilityLabel
                 }
             }
         }
@@ -194,6 +195,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
         
+        self.verticalAlignment = .middle
+        
         self.accessibilityTraits = .button
     }
     
@@ -213,7 +216,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     }
     
     override func updateLayout(_ constrainedSize: CGSize) -> CGSize {
-        let superSize = super.updateLayout(constrainedSize)
+        var superSize = super.updateLayout(constrainedSize)
         
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)
@@ -222,11 +225,13 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             return size
         } else if let imageNode = self.imageNode {
             let nodeSize = imageNode.image?.size ?? CGSize()
-            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(44.0, max(nodeSize.height, superSize.height)))
             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
             imageNode.frame = imageFrame
             self.imageRippleNode.frame = imageFrame
             return size
+        } else {
+            superSize.height = max(44.0, superSize.height)
         }
         return superSize
     }

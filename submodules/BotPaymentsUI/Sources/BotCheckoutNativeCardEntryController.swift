@@ -30,13 +30,17 @@ struct BotCheckoutNativeCardEntryAdditionalFields: OptionSet {
 }
 
 final class BotCheckoutNativeCardEntryController: ViewController {
+    enum Provider {
+        case stripe(additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String)
+        case smartglobal(isTesting: Bool, publicToken: String)
+    }
+
     private var controllerNode: BotCheckoutNativeCardEntryControllerNode {
         return super.displayNode as! BotCheckoutNativeCardEntryControllerNode
     }
     
     private let context: AccountContext
-    private let additionalFields: BotCheckoutNativeCardEntryAdditionalFields
-    private let publishableKey: String
+    private let provider: Provider
     private let completion: (BotCheckoutPaymentMethod) -> Void
     
     private var presentationData: PresentationData
@@ -46,10 +50,9 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     private var doneItem: UIBarButtonItem?
     private var activityItem: UIBarButtonItem?
     
-    public init(context: AccountContext, additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+    public init(context: AccountContext, provider: Provider, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
         self.context = context
-        self.additionalFields = additionalFields
-        self.publishableKey = publishableKey
+        self.provider = provider
         self.completion = completion
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -71,7 +74,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = BotCheckoutNativeCardEntryControllerNode(additionalFields: self.additionalFields, publishableKey: self.publishableKey, theme: self.presentationData.theme, strings: self.presentationData.strings, present: { [weak self] c, a in
+        self.displayNode = BotCheckoutNativeCardEntryControllerNode(context: self.context, provider: self.provider, theme: self.presentationData.theme, strings: self.presentationData.strings, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

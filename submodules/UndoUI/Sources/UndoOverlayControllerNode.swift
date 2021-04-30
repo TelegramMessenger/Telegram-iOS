@@ -268,6 +268,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .paymentSent(currencyValue, itemTitle):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_payment", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+
+                let (rawString, attributes) = presentationData.strings.Checkout_SuccessfulTooltip(currencyValue, itemTitle)
+
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
+                for (_, range) in attributes {
+                    string.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                }
+
+                self.textNode.attributedText = string
+                displayUndo = false
+                self.originalRemainingSeconds = 5
             case let .messagesUnpinned(title, text, undo, isHidden):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -344,7 +361,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         thumbnailItem = .animated(item.file.resource)
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                     } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: []))
+                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
                     }
                 }
@@ -551,6 +568,165 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            case let .voiceChatRecording(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_vcrecord", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            case let .voiceChatFlag(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_vcflag", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            case let .voiceChatCanSpeak(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_vcspeak", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            case let .sticker(account, file, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                
+                let stillStickerNode = TransformImageNode()
+                
+                self.stillStickerNode = stillStickerNode
+                
+                enum StickerThumbnailItem {
+                    case still(TelegramMediaImageRepresentation)
+                    case animated(MediaResource)
+                }
+                
+                var thumbnailItem: StickerThumbnailItem?
+                var resourceReference: MediaResourceReference?
+                
+                if file.isAnimatedSticker {
+                    thumbnailItem = .animated(file.resource)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)
+                } else if let dimensions = file.dimensions, let resource = chatMessageStickerResource(file: file, small: true) as? TelegramMediaResource {
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: resource)
+                }
+                
+                var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
+                
+                let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
+                
+                if let thumbnailItem = thumbnailItem {
+                    switch thumbnailItem {
+                    case let .still(representation):
+                        let stillImageSize = representation.dimensions.cgSize.aspectFitted(imageBoundingSize)
+                        self.stickerImageSize = stillImageSize
+                        
+                        updatedImageSignal = chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource)
+                    case let .animated(resource):
+                        self.stickerImageSize = imageBoundingSize
+                        
+                        updatedImageSignal = chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true)
+                    }
+                    if let resourceReference = resourceReference {
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference)
+                    }
+                } else {
+                    updatedImageSignal = .single({ _ in return nil })
+                    updatedFetchSignal = .complete()
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            
+                if let updatedFetchSignal = updatedFetchSignal {
+                    self.fetchResourceDisposable = updatedFetchSignal.start()
+                }
+            
+                if let updatedImageSignal = updatedImageSignal {
+                    stillStickerNode.setSignal(updatedImageSignal)
+                }
+            
+                if let thumbnailItem = thumbnailItem {
+                    switch thumbnailItem {
+                    case .still:
+                        break
+                    case let .animated(resource):
+                        let animatedStickerNode = AnimatedStickerNode()
+                        self.animatedStickerNode = animatedStickerNode
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
+                    }
+                }
+            case let .copy(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_copy", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            case let .mediaSaved(text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                
+                let animatedStickerNode = AnimatedStickerNode()
+                self.animatedStickerNode = animatedStickerNode
+                if let path = getAppBundle().path(forResource: "anim_savemedia", ofType: "tgs") {
+                    animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                    animatedStickerNode.visibility = true
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -579,7 +755,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent:
                 break
             case .dice:
                 self.panelWrapperNode.clipsToBounds = true
@@ -705,6 +881,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let factor: CGFloat = 0.07
                 verticalOffset = -3.0
                 preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else if case .paymentSent = self.content {
+                let factor: CGFloat = 0.08
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
             } else {
                 preferredSize = iconSize
             }
@@ -819,7 +998,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: slotMachineNode, frame: iconFrame)
         }
-                
+   
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
 

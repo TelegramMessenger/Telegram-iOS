@@ -3,6 +3,9 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import RLottieBinding
+import GZip
+import AppBundle
 
 public enum SemanticStatusNodeState: Equatable {
     public struct ProgressAppearance: Equatable {
@@ -87,7 +90,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
     final class DrawingState: NSObject, SemanticStatusNodeStateDrawingState {
         let transitionFraction: CGFloat
         let icon: SemanticStatusNodeIcon
-        
+                
         init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon) {
             self.transitionFraction = transitionFraction
             self.icon = icon

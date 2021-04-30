@@ -109,6 +109,7 @@ public final class AccountContextImpl: AccountContext {
         return self.sharedContextImpl
     }
     public let account: Account
+    public let engine: TelegramEngine
     
     public let fetchManager: FetchManager
     private let prefetchManager: PrefetchManager?
@@ -160,6 +161,7 @@ public final class AccountContextImpl: AccountContext {
     {
         self.sharedContextImpl = sharedContext
         self.account = account
+        self.engine = TelegramEngine(account: account)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -180,7 +182,7 @@ public final class AccountContextImpl: AccountContext {
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {
-            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
+            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, engine: self.engine, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.peersNearbyManager = nil
         }
@@ -236,7 +238,7 @@ public final class AccountContextImpl: AccountContext {
             })
         }
         
-        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: false).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
+        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: sharedContext.immediateExperimentalUISettings.experimentalCompatibility).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
     }
@@ -300,8 +302,12 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func joinGroupCall(peerId: PeerId, activeCall: CachedChannelData.ActiveCall) {
-        let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, initialCall: activeCall, endCurrentIfAny: false)
+    public func scheduleGroupCall(peerId: PeerId) {
+        let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
+    }
+    
+    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: CachedChannelData.ActiveCall) {
+        let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peerId {
                 self.sharedContext.navigateToCurrentCall()
@@ -323,14 +329,14 @@ public final class AccountContextImpl: AccountContext {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true)
+                                let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: true)
                             })]), on: .root)
                         } else {
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressVoiceChatMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true)
+                                let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: true)
                             })]), on: .root)
                         }
                     } else {

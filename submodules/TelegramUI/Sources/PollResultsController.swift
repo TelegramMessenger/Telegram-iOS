@@ -11,7 +11,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private let collapsedResultCount: Int = 10
-private let collapsedInitialLimit: Int = 14
+private let collapsedInitialLimit: Int = 10
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
@@ -188,7 +188,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
@@ -252,7 +252,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     displayCount = Int(voterCount)
                 }
                 for peerIndex in 0 ..< displayCount {
-                    let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                    let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                     let peer = RenderedPeer(peer: fakeUser)
                     entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
@@ -269,7 +269,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                 let count = optionState.count
                 
                 let displayCount: Int
-                if peers.count > collapsedInitialLimit + 1 {
+                if peers.count > collapsedInitialLimit {
                     if optionExpandedAtCount != nil {
                         displayCount = peers.count
                     } else {
@@ -277,7 +277,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     }
                 } else {
                     if let optionExpandedAtCount = optionExpandedAtCount {
-                        if optionExpandedAtCount == collapsedInitialLimit + 1 && optionState.canLoadMore {
+                        if optionExpandedAtCount == collapsedInitialLimit && optionState.canLoadMore {
                             displayCount = collapsedResultCount
                         } else {
                             displayCount = peers.count

@@ -15,11 +15,23 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
+private let latePurple = UIColor(rgb: 0xaa56a6)
+private let latePink = UIColor(rgb: 0xef476f)
 
 private class CallStatusBarBackgroundNode: ASDisplayNode {
+    enum State {
+        case connecting
+        case cantSpeak
+        case late
+        case active
+        case speaking
+    }
     private let foregroundView: UIView
     private let foregroundGradientLayer: CAGradientLayer
     private let maskCurveView: VoiceCurveView
+    private let initialTimestamp = CACurrentMediaTime()
     
     var audioLevel: Float = 0.0  {
         didSet {
@@ -35,9 +47,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
     }
     
-    var speaking: Bool? = nil {
+    var state: State = .connecting {
         didSet {
-            if self.speaking != oldValue {
+            if self.state != oldValue {
                 self.updateGradientColors()
             }
         }
@@ -46,13 +58,28 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     private func updateGradientColors() {
         let initialColors = self.foregroundGradientLayer.colors
         let targetColors: [CGColor]
-        if let speaking = self.speaking {
-            targetColors = speaking ? [green.cgColor, activeBlue.cgColor] : [blue.cgColor, lightBlue.cgColor]
-        } else {
-            targetColors = [connectingColor.cgColor, connectingColor.cgColor]
+        switch self.state {
+            case .connecting:
+                targetColors = [connectingColor.cgColor, connectingColor.cgColor]
+            case .active:
+                targetColors = [blue.cgColor, lightBlue.cgColor]
+            case .speaking:
+                targetColors = [green.cgColor, activeBlue.cgColor]
+            case .cantSpeak:
+                targetColors = [purple.cgColor, pink.cgColor]
+            case .late:
+                targetColors = [latePurple.cgColor, latePink.cgColor]
         }
-        self.foregroundGradientLayer.colors = targetColors
-        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+
+        if CACurrentMediaTime() - self.initialTimestamp > 0.1 {
+            self.foregroundGradientLayer.colors = targetColors
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.foregroundGradientLayer.colors = targetColors
+            CATransaction.commit()
+        }
     }
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
@@ -177,6 +204,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentCallState: PresentationCallState?
     private var currentGroupCallState: PresentationGroupCallSummaryState?
     private var currentIsMuted = true
+    private var currentCantSpeak = false
+    private var currentScheduleTimestamp: Int32?
     private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
     
@@ -277,17 +306,26 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.currentPeer = view.peers[view.peerId]
                             strongSelf.currentGroupCallState = state
                             strongSelf.currentMembers = members
-                            
+                                
                             var isMuted = isMuted
+                            var cantSpeak = false
                             if let state = state, let muteState = state.callState.muteState {
                                 if !muteState.canUnmute {
                                     isMuted = true
+                                    cantSpeak = true
                                 }
                             }
+                            if state?.callState.scheduleTimestamp != nil {
+                                cantSpeak = true
+                            }
                             strongSelf.currentIsMuted = isMuted
+                            strongSelf.currentCantSpeak = cantSpeak
+                            strongSelf.currentScheduleTimestamp = state?.callState.scheduleTimestamp
                             
                             let currentIsConnected: Bool
                             if let state = state, case .connected = state.callState.networkState {
+                                currentIsConnected = true
+                            } else if state?.callState.scheduleTimestamp != nil {
                                 currentIsConnected = true
                             } else {
                                 currentIsConnected = false
@@ -316,12 +354,16 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         var title: String = ""
         var speakerSubtitle: String = ""
         
-        let textFont = Font.regular(13.0)
+        let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
+        var displaySpeakerSubtitle = false
+        var isLate = false
         
         if let presentationData = self.presentationData {
-            if let currentPeer = self.currentPeer {
+            if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
+                title = voiceChatTitle
+            } else if let currentPeer = self.currentPeer {
                 title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             var membersCount: Int32?
@@ -345,8 +387,25 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let speakingPeer = speakingPeer {
                 speakerSubtitle = speakingPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
+            displaySpeakerSubtitle = speakerSubtitle != title && !speakerSubtitle.isEmpty
             
-            if let membersCount = membersCount {
+            var requiresTimer = false
+            if let scheduleTime = self.currentGroupCallState?.info?.scheduleTimestamp {
+                requiresTimer = true
+                
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                let elapsedTime = scheduleTime - currentTime
+                let timerText: String
+                if elapsedTime >= 86400 {
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).0
+                } else if elapsedTime < 0 {
+                    isLate = true
+                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
+                } else {
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).0
+                }
+                segments.append(.text(0, NSAttributedString(string: timerText, font: textFont, textColor: textColor)))
+            } else if let membersCount = membersCount {
                 var membersPart = presentationData.strings.VoiceChat_Status_Members(membersCount)
                 if membersPart.contains("[") && membersPart.contains("]") {
                     if let startIndex = membersPart.firstIndex(of: "["), let endIndex = membersPart.firstIndex(of: "]") {
@@ -398,19 +457,32 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             
             self.backgroundNode.connectingColor = color
+            
+            if requiresTimer {
+                if self.currentCallTimer == nil {
+                    let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                        self?.update()
+                    }, queue: Queue.mainQueue())
+                    timer.start()
+                    self.currentCallTimer = timer
+                }
+            } else if let currentCallTimer = self.currentCallTimer {
+                self.currentCallTimer = nil
+                currentCallTimer.invalidate()
+            }
         }
         
-        if self.subtitleNode.segments != segments && speakerSubtitle.isEmpty {
+        if self.subtitleNode.segments != segments && !displaySpeakerSubtitle {
             self.subtitleNode.segments = segments
         }
         
         let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-        alphaTransition.updateAlpha(node: self.subtitleNode, alpha: !speakerSubtitle.isEmpty ? 0.0 : 1.0)
-        alphaTransition.updateAlpha(node: self.speakerNode, alpha: !speakerSubtitle.isEmpty ? 1.0 : 0.0)
+        alphaTransition.updateAlpha(node: self.subtitleNode, alpha: displaySpeakerSubtitle ? 0.0 : 1.0)
+        alphaTransition.updateAlpha(node: self.speakerNode, alpha: displaySpeakerSubtitle ? 1.0 : 0.0)
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white)
         
-        if !speakerSubtitle.isEmpty {
+        if displaySpeakerSubtitle {
             self.speakerNode.attributedText = NSAttributedString(string: speakerSubtitle, font: Font.regular(13.0), textColor: .white)
         }
         
@@ -425,15 +497,29 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         let contentHeight: CGFloat = 24.0
         let verticalOrigin: CGFloat = size.height - contentHeight
         
-        let transition: ContainedViewLayoutTransition = wasEmpty ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
+        let sizeChanged = self.titleNode.frame.size.width != titleSize.width
+        
+        let transition: ContainedViewLayoutTransition = wasEmpty || sizeChanged ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize))
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize))
         
-        if !speakerSubtitle.isEmpty {
+        if displaySpeakerSubtitle {
             self.speakerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - speakerSize.height) / 2.0)), size: speakerSize)
         }
         
-        self.backgroundNode.speaking = self.currentIsConnected ? !self.currentIsMuted : nil
+        let state: CallStatusBarBackgroundNode.State
+        if self.currentIsConnected {
+            if self.currentCantSpeak {
+                state = isLate ? .late : .cantSpeak
+            } else if self.currentIsMuted {
+                state = .active
+            } else {
+                state = .speaking
+            }
+        } else {
+            state = .connecting
+        }
+        self.backgroundNode.state = state
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 18.0))
     }
 }

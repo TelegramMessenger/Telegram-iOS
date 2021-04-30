@@ -13,7 +13,7 @@ public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedC
                 |> retryRequest
                 |> mapToSignal { result -> Signal<[RenderedChannelParticipant], NoError> in
                     switch result {
-                        case let .channelParticipants(count, participants, users):
+                        case let .channelParticipants(count, participants, chats, users):
                             var items: [RenderedChannelParticipant] = []
                             
                             var peers: [PeerId: Peer] = [:]
@@ -58,14 +58,14 @@ public func channelAdminIds(postbox: Postbox, network: Network, peerId: PeerId, 
             let api = Api.functions.channels.getParticipants(channel: apiChannel, filter: .channelParticipantsAdmins, offset: 0, limit: 100, hash: hash)
             return network.request(api) |> retryRequest |> mapToSignal { result in
                 switch result {
-                case let .channelParticipants(_, participants, users):
+                case let .channelParticipants(_, participants, _, users):
                     let users = users.filter({ user in
                         return participants.contains(where: { participant in
                             switch participant {
                             case let .channelParticipantAdmin(_, userId, _, _, _, _, _):
-                                return user.peerId.id == userId
+                                return user.peerId.id._internalGetInt32Value() == userId
                             case let .channelParticipantCreator(_, userId, _, _):
-                                return user.peerId.id == userId
+                                return user.peerId.id._internalGetInt32Value() == userId
                             default:
                                 return false
                             }

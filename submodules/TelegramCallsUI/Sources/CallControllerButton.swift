@@ -40,6 +40,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case headphones
             case accept
             case end
+            case cancel
+            case share
         }
         
         var appearance: Appearance
@@ -55,6 +57,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         }
     }
     
+    private let wrapperNode: ASDisplayNode
     private let contentContainer: ASDisplayNode
     private let effectView: UIVisualEffectView
     private let contentBackgroundNode: ASImageNode
@@ -69,6 +72,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     private(set) var currentText: String = ""
     
     init() {
+        self.wrapperNode = ASDisplayNode()
         self.contentContainer = ASDisplayNode()
         
         self.effectView = UIVisualEffectView()
@@ -93,10 +97,11 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: nil)
         
-        self.addSubnode(self.contentContainer)
+        self.addSubnode(self.wrapperNode)
+        self.wrapperNode.addSubnode(self.contentContainer)
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
-        self.addSubnode(self.textNode)
+        self.wrapperNode.addSubnode(self.textNode)
         
         self.contentContainer.view.addSubview(self.effectView)
         self.contentContainer.addSubnode(self.contentBackgroundNode)
@@ -118,6 +123,11 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 transition.updateSublayerTransformScale(node: strongSelf, scale: 1.0)
             }
         }
+    }
+    
+    override func layout() {
+        super.layout()
+        self.wrapperNode.frame = self.bounds
     }
     
     func update(size: CGSize, content: Content, text: String, transition: ContainedViewLayoutTransition) {
@@ -163,8 +173,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 self.effectView.isHidden = true
             }
             
-            transition.updateAlpha(node: self, alpha: content.isEnabled ? 1.0 : 0.4)
-            self.isUserInteractionEnabled = content.isEnabled
+            transition.updateAlpha(node: self.wrapperNode, alpha: content.isEnabled ? 1.0 : 0.4)
+            self.wrapperNode.isUserInteractionEnabled = content.isEnabled
             
             let contentBackgroundImage: UIImage? = nil
             
@@ -228,6 +238,25 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallDeclineButton"), color: imageColor)
+                case .cancel:
+                    image = generateImage(CGSize(width: 28.0, height: 28.0), opaque: false, rotatedContext: { size, context in
+                        let bounds = CGRect(origin: CGPoint(), size: size)
+                        context.clear(bounds)
+                        
+                        context.setLineWidth(4.0 - UIScreenPixel)
+                        context.setLineCap(.round)
+                        context.setStrokeColor(imageColor.cgColor)
+                        
+                        context.move(to: CGPoint(x: 2.0 + UIScreenPixel, y: 2.0 + UIScreenPixel))
+                        context.addLine(to: CGPoint(x: 26.0 - UIScreenPixel, y: 26.0 - UIScreenPixel))
+                        context.strokePath()
+                        
+                        context.move(to: CGPoint(x: 26.0 - UIScreenPixel, y: 2.0 + UIScreenPixel))
+                        context.addLine(to: CGPoint(x: 2.0 + UIScreenPixel, y: 26.0 - UIScreenPixel))
+                        context.strokePath()
+                    })
+                case .share:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: imageColor)
                 }
             
                 if let image = image {

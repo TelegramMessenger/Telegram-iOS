@@ -7,6 +7,7 @@ import TelegramUIPreferences
 import AccountContext
 import PhotoResources
 import Emoji
+import UniversalMediaPlayer
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
@@ -202,7 +203,7 @@ private final class PrefetchManagerImpl {
                         context = PrefetchMediaContext()
                         self.contexts[id] = context
                         
-                        let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: HistoryPreloadIndex(index: nil, hasUnread: false, isMuted: false, isPriority: true), localOrder: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: order), timestamp: 0))
+                        let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: HistoryPreloadIndex(index: nil, hasUnread: false, isMuted: false, isPriority: true), localOrder: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: order), timestamp: 0))
                         
                         if case .full = automaticDownload {
                             let fetchSignal = freeMediaFileInteractiveFetched(fetchManager: self.fetchManager, fileReference: .standalone(media: media), priority: priority)

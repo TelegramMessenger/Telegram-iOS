@@ -757,6 +757,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
+    override func accessibilityActivate() -> Bool {
+        self.progressPressed()
+        return true
+    }
+    
     func videoContentNode(at point: CGPoint) -> ASDisplayNode? {
         if let videoFrame = self.videoFrame {
             if videoFrame.contains(point) {

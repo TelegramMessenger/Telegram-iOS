@@ -15,6 +15,7 @@ import TelegramUniversalVideoContent
 import WebsiteType
 import OpenInExternalAppUI
 import ScreenCaptureDetection
+import UndoUI
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -383,6 +384,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
     
     private var screenCaptureEventsDisposable: Disposable?
     
+    public var centralItemUpdated: ((MessageId) -> Void)?
+    
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
@@ -664,6 +667,10 @@ public class GalleryController: ViewController, StandalonePresentableController 
         
         openActionOptionsImpl = { [weak self] action in
             if let strongSelf = self {
+                var presentationData = strongSelf.presentationData
+                if !presentationData.theme.overallDarkAppearance {
+                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                }
                 switch action {
                     case let .url(url, _):
                         var cleanUrl = url
@@ -671,20 +678,25 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
                         let telString = "tel:"
-                        var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        var openText = presentationData.strings.Conversation_LinkDialogOpen
                         var phoneNumber: String?
+                        
+                        var isEmail = false
+                        var isPhoneNumber = false
                         if cleanUrl.hasPrefix(mailtoString) {
                             canAddToReadingList = false
                             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                            isEmail = true
                         } else if cleanUrl.hasPrefix(telString) {
                             canAddToReadingList = false
                             phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
                             cleanUrl = phoneNumber!
-                            openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
+                            openText = presentationData.strings.UserInfo_PhoneCall
+                            isPhoneNumber = true
                         } else if canOpenIn {
-                            openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
+                            openText = presentationData.strings.Conversation_FileOpenIn
                         }
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: cleanUrl))
@@ -700,7 +712,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }
                         }))
                         if let phoneNumber = phoneNumber {
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
                                     strongSelf.dismiss(forceAway: false)
@@ -708,12 +720,24 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 }
                             }))
                         }
-                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? presentationData.strings.ShareMenu_CopyShareLink : presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet, weak self] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = cleanUrl
+                            
+                            let content: UndoOverlayContent
+                            if isPhoneNumber {
+                                content = .copy(text: presentationData.strings.Conversation_PhoneCopied)
+                            } else if isEmail {
+                                content = .copy(text: presentationData.strings.Conversation_EmailCopied)
+                            } else if canAddToReadingList {
+                                content = .linkCopied(text: presentationData.strings.Conversation_LinkCopied)
+                            } else {
+                                content = .copy(text: presentationData.strings.Conversation_TextCopied)
+                            }
+                            self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         }))
                         if canAddToReadingList {
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let link = URL(string: url) {
                                     let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
@@ -721,13 +745,13 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .peerMention(peerId, mention):
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         var items: [ActionSheetItem] = []
                         if !mention.isEmpty {
                             items.append(ActionSheetTextItem(title: mention))
@@ -740,9 +764,12 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }
                         }))
                         if !mention.isEmpty {
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_UsernameCopied)
+                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -752,7 +779,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .textMention(mention):
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: mention),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -762,9 +789,12 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     strongSelf.actionInteraction?.openPeerMention(mention)
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = mention
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         ]), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -773,12 +803,15 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .botCommand(command):
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: command))
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = command
+                            
+                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                            self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         }))
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -787,7 +820,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .hashtag(peerName, hashtag):
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: hashtag),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -797,9 +830,12 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = hashtag
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_HashtagCopied)
+                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -809,7 +845,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .timecode(timecode, text):
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: text),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -819,9 +855,12 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     strongSelf.galleryNode.pager.centralItemNode()?.processAction(.timecode(timecode))
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 UIPasteboard.general.string = text
+                                
+                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -1155,6 +1194,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 }
                 if strongSelf.didSetReady {
                     strongSelf._hiddenMedia.set(.single(hiddenItem))
+                    if let hiddenItem = hiddenItem {
+                        strongSelf.centralItemUpdated?(hiddenItem.0)
+                    }
                 }
             }
         }

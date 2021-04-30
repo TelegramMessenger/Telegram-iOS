@@ -18,6 +18,7 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/LocationResources:LocationResources",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

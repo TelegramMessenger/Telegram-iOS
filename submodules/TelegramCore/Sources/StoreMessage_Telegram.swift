@@ -157,14 +157,14 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             if let viaBotId = viaBotId {
-                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId))
+                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(viaBotId)))
             }
             
             if let media = media {
                 switch media {
                     case let .messageMediaContact(_, _, _, _, userId):
                         if userId != 0 {
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
                         }
                     default:
                         break
@@ -175,7 +175,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                 for entity in entities {
                     switch entity {
                         case let .messageEntityMentionName(_, _, userId):
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
                         default:
                             break
                     }
@@ -196,30 +196,30 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL:
+                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId)))
                 case let .messageActionChatAddUser(users):
                     for id in users {
-                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: id))
+                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id)))
                     }
                 case let .messageActionChatCreate(_, users):
                     for id in users {
-                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: id))
+                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id)))
                     }
                 case let .messageActionChatDeleteUser(userId):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
                 case let .messageActionChatJoinedByLink(inviterId):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId))
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId)))
                 case let .messageActionChatMigrateTo(channelId):
-                    result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)))
                 case let .messageActionGeoProximityReached(fromId, toId, _):
                     result.append(fromId.peerId)
                     result.append(toId.peerId)
                 case let .messageActionInviteToGroupCall(_, userIds):
                     for id in userIds {
-                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: id))
+                        result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id)))
                     }
             }
         
@@ -263,7 +263,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 return (TelegramMediaExpiredContent(data: .image), nil)
             }
         case let .messageMediaContact(phoneNumber, firstName, lastName, vcard, userId):
-            let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+            let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
             let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId, vCardData: vcard.isEmpty ? nil : vcard)
             return (mediaContact, nil)
         case let .messageMediaGeo(geo):
@@ -354,7 +354,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
             case let .messageEntityTextUrl(offset, length, url):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
             case let .messageEntityMentionName(offset, length, userId):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextMention(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))))
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextMention(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))))
             case let .messageEntityPhone(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .PhoneNumber))
             case let .messageEntityCashtag(offset, length):
@@ -385,10 +385,10 @@ extension StoreMessage {
                         peerId = chatPeerId.peerId
                         authorId = resolvedFromId
                     case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         authorId = resolvedFromId
                     case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         authorId = resolvedFromId
                 }
                 
@@ -444,15 +444,7 @@ extension StoreMessage {
                             }
                             
                             if let savedFromPeer = savedFromPeer, let savedFromMsgId = savedFromMsgId {
-                                let peerId: PeerId
-                                switch savedFromPeer {
-                                    case let .peerChannel(channelId):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                                    case let .peerChat(chatId):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                                    case let .peerUser(userId):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                                }
+                                let peerId: PeerId = savedFromPeer.peerId
                                 let messageId: MessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: savedFromMsgId)
                                 attributes.append(SourceReferenceMessageAttribute(messageId: messageId))
                             }
@@ -510,7 +502,7 @@ extension StoreMessage {
                 }
                 
                 if let viaBotId = viaBotId {
-                    attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId), title: nil))
+                    attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(viaBotId)), title: nil))
                 }
                 
                 if namespace != Namespaces.Message.ScheduledCloud {
@@ -569,7 +561,7 @@ extension StoreMessage {
                             recentRepliersPeerIds = nil
                         }
                         
-                        let commentsPeerId = channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) }
+                        let commentsPeerId = channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value($0)) }
                         
                         attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsPeerId, maxMessageId: maxId, maxReadMessageId: readMaxId))
                     }

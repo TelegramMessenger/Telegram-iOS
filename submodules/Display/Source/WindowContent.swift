@@ -270,8 +270,42 @@ public class Window1 {
     private var shouldNotAnimateLikelyKeyboardAutocorrectionSwitch: Bool = false
     
     public private(set) var forceInCallStatusBarText: String? = nil
-    public var inCallNavigate: (() -> Void)? {
+    public var inCallNavigate: (() -> Void)?
+
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+    private var debugTapRecognizer: UITapGestureRecognizer?
+    public var debugAction: (() -> Void)? {
         didSet {
+            if self.debugAction != nil {
+                if self.debugTapRecognizer == nil {
+                    let debugTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.debugTapGesture(_:)))
+                    self.debugTapRecognizer = debugTapRecognizer
+                    self.hostView.containerView.addGestureRecognizer(debugTapRecognizer)
+                }
+            } else if let debugTapRecognizer = self.debugTapRecognizer {
+                self.debugTapRecognizer = nil
+                self.hostView.containerView.removeGestureRecognizer(debugTapRecognizer)
+            }
+        }
+    }
+    @objc private func debugTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CACurrentMediaTime()
+            if self.debugTapCounter.0 < timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 = 0
+            }
+
+            if self.debugTapCounter.0 >= timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 += 1
+            }
+
+            if self.debugTapCounter.1 >= 10 {
+                self.debugTapCounter.1 = 0
+
+                self.debugAction?()
+            }
         }
     }
     

@@ -238,7 +238,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
-                            signal = settingsBuiltinWallpaperImage(account: context.account)
+                            signal = settingsBuiltinWallpaperImage(account: self.context.account)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -273,7 +273,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             for representation in file.file.previewRepresentations {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message)))
                             }
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: []), reference: reference(for: file.file.resource, media: file.file, message: message)))
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: message)))
                             
                             if wallpaper.isPattern {
                                 var patternColors: [UIColor] = []
@@ -316,8 +316,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.colorPreview = self.arguments.colorPreview
                                 
-                                signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
+                                signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
                             } else {
@@ -341,7 +341,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 }
                             }
                             if let fileSize = file.file.size {
-                                subtitleSignal = .single(dataSizeString(fileSize))
+                                subtitleSignal = .single(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))
                             } else {
                                 subtitleSignal = .single(nil)
                             }
@@ -374,7 +374,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     }
                                 }
                                 if let fileSize = largestSize.resource.size {
-                                    subtitleSignal = .single(dataSizeString(fileSize))
+                                    subtitleSignal = .single(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))
                                 } else {
                                     subtitleSignal = .single(nil)
                                 }
@@ -448,9 +448,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         
                         var representations: [TelegramMediaImageRepresentation] = []
                         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: []))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
                         }
-                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: []))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         
                         signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
@@ -800,7 +800,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         var items: [ListViewItem] = []
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1))
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()

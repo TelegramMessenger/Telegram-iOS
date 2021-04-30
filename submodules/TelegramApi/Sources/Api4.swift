@@ -1610,22 +1610,25 @@ public struct photos {
 }
 public extension Api {
 public struct phone {
-    public enum GroupCall: TypeConstructorDescription {
-        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, users: [Api.User])
+    public enum JoinAsPeers: TypeConstructorDescription {
+        case joinAsPeers(peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let users):
+                case .joinAsPeers(let peers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(1722485756)
+                        buffer.appendInt32(-1343921601)
                     }
-                    call.serialize(buffer, true)
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(participants.count))
-                    for item in participants {
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
                         item.serialize(buffer, true)
                     }
-                    serializeString(participantsNextOffset, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -1637,8 +1640,70 @@ public struct phone {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let users):
-                return ("groupCall", [("call", call), ("participants", participants), ("participantsNextOffset", participantsNextOffset), ("users", users)])
+                case .joinAsPeers(let peers, let chats, let users):
+                return ("joinAsPeers", [("peers", peers), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_joinAsPeers(_ reader: BufferReader) -> JoinAsPeers? {
+            var _1: [Api.Peer]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+            }
+            var _2: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.phone.JoinAsPeers.joinAsPeers(peers: _1!, chats: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum GroupCall: TypeConstructorDescription {
+        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1636664659)
+                    }
+                    call.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(participants.count))
+                    for item in participants {
+                        item.serialize(buffer, true)
+                    }
+                    serializeString(participantsNextOffset, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
+                return ("groupCall", [("call", call), ("participants", participants), ("participantsNextOffset", participantsNextOffset), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1653,16 +1718,21 @@ public struct phone {
             }
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, users: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil
@@ -1671,13 +1741,13 @@ public struct phone {
     
     }
     public enum GroupParticipants: TypeConstructorDescription {
-        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], nextOffset: String, users: [Api.User], version: Int32)
+        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], nextOffset: String, chats: [Api.Chat], users: [Api.User], version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupParticipants(let count, let participants, let nextOffset, let users, let version):
+                case .groupParticipants(let count, let participants, let nextOffset, let chats, let users, let version):
                     if boxed {
-                        buffer.appendInt32(-1661028051)
+                        buffer.appendInt32(-193506890)
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -1686,6 +1756,11 @@ public struct phone {
                         item.serialize(buffer, true)
                     }
                     serializeString(nextOffset, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -1698,8 +1773,8 @@ public struct phone {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupParticipants(let count, let participants, let nextOffset, let users, let version):
-                return ("groupParticipants", [("count", count), ("participants", participants), ("nextOffset", nextOffset), ("users", users), ("version", version)])
+                case .groupParticipants(let count, let participants, let nextOffset, let chats, let users, let version):
+                return ("groupParticipants", [("count", count), ("participants", participants), ("nextOffset", nextOffset), ("chats", chats), ("users", users), ("version", version)])
     }
     }
     
@@ -1712,19 +1787,58 @@ public struct phone {
             }
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: Int32?
-            _5 = reader.readInt32()
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: Int32?
+            _6 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, users: _4!, version: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, chats: _4!, users: _5!, version: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum ExportedGroupCallInvite: TypeConstructorDescription {
+        case exportedGroupCallInvite(link: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedGroupCallInvite(let link):
+                    if boxed {
+                        buffer.appendInt32(541839704)
+                    }
+                    serializeString(link, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedGroupCallInvite(let link):
+                return ("exportedGroupCallInvite", [("link", link)])
+    }
+    }
+    
+        public static func parse_exportedGroupCallInvite(_ reader: BufferReader) -> ExportedGroupCallInvite? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(link: _1!)
             }
             else {
                 return nil
@@ -3617,13 +3731,15 @@ public extension Api {
                     })
                 }
             
-                public static func requestUrlAuth(peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                public static func requestUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-482388461)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                    buffer.appendInt32(428848198)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(buttonId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId), ("url", url)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.UrlAuthResult?
                         if let signature = reader.readInt32() {
@@ -3633,14 +3749,15 @@ public extension Api {
                     })
                 }
             
-                public static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                public static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-148247912)
+                    buffer.appendInt32(-1322487515)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                    if Int(flags) & Int(1 << 1) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(buttonId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId), ("url", url)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.UrlAuthResult?
                         if let signature = reader.readInt32() {
@@ -4028,6 +4145,21 @@ public extension Api {
                     })
                 }
             
+                public static func getExportedChatInvite(peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1937010524)
+                    peer.serialize(buffer, true)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getExportedChatInvite", parameters: [("peer", peer), ("link", link)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ExportedChatInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.ExportedChatInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.ExportedChatInvite
+                        }
+                        return result
+                    })
+                }
+            
                 public static func editExportedChatInvite(flags: Int32, peer: Api.InputPeer, link: String, expireDate: Int32?, usageLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ExportedChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(48562110)
@@ -4244,12 +4376,12 @@ public extension Api {
                     })
                 }
             
-                public static func getParticipant(channel: Api.InputChannel, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipant>) {
+                public static func getParticipant(channel: Api.InputChannel, participant: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.ChannelParticipant>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1416484774)
+                    buffer.appendInt32(-1599378234)
                     channel.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.getParticipant", parameters: [("channel", channel), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.ChannelParticipant? in
+                    participant.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.getParticipant", parameters: [("channel", channel), ("participant", participant)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.ChannelParticipant? in
                         let reader = BufferReader(buffer)
                         var result: Api.channels.ChannelParticipant?
                         if let signature = reader.readInt32() {
@@ -4492,13 +4624,13 @@ public extension Api {
                     })
                 }
             
-                public static func editBanned(channel: Api.InputChannel, userId: Api.InputUser, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func editBanned(channel: Api.InputChannel, participant: Api.InputPeer, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1920559378)
+                    buffer.appendInt32(-1763259007)
                     channel.serialize(buffer, true)
-                    userId.serialize(buffer, true)
+                    participant.serialize(buffer, true)
                     bannedRights.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.editBanned", parameters: [("channel", channel), ("userId", userId), ("bannedRights", bannedRights)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "channels.editBanned", parameters: [("channel", channel), ("participant", participant), ("bannedRights", bannedRights)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -4716,11 +4848,14 @@ public extension Api {
                 }
             }
             public struct payments {
-                public static func getPaymentForm(msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentForm>) {
+                public static func getPaymentForm(flags: Int32, peer: Api.InputPeer, msgId: Int32, themeParams: Api.DataJSON?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentForm>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1712285883)
+                    buffer.appendInt32(-1976353651)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.getPaymentForm", parameters: [("msgId", msgId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentForm? in
+                    if Int(flags) & Int(1 << 0) != 0 {themeParams!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "payments.getPaymentForm", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("themeParams", themeParams)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentForm? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.PaymentForm?
                         if let signature = reader.readInt32() {
@@ -4730,11 +4865,12 @@ public extension Api {
                     })
                 }
             
-                public static func getPaymentReceipt(msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentReceipt>) {
+                public static func getPaymentReceipt(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentReceipt>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1601001088)
+                    buffer.appendInt32(611897804)
+                    peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.getPaymentReceipt", parameters: [("msgId", msgId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentReceipt? in
+                    return (FunctionDescription(name: "payments.getPaymentReceipt", parameters: [("peer", peer), ("msgId", msgId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentReceipt? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.PaymentReceipt?
                         if let signature = reader.readInt32() {
@@ -4744,13 +4880,14 @@ public extension Api {
                     })
                 }
             
-                public static func validateRequestedInfo(flags: Int32, msgId: Int32, info: Api.PaymentRequestedInfo) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ValidatedRequestedInfo>) {
+                public static func validateRequestedInfo(flags: Int32, peer: Api.InputPeer, msgId: Int32, info: Api.PaymentRequestedInfo) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ValidatedRequestedInfo>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1997180532)
+                    buffer.appendInt32(-619695760)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     info.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.validateRequestedInfo", parameters: [("flags", flags), ("msgId", msgId), ("info", info)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.ValidatedRequestedInfo? in
+                    return (FunctionDescription(name: "payments.validateRequestedInfo", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("info", info)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.ValidatedRequestedInfo? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.ValidatedRequestedInfo?
                         if let signature = reader.readInt32() {
@@ -4760,15 +4897,18 @@ public extension Api {
                     })
                 }
             
-                public static func sendPaymentForm(flags: Int32, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
+                public static func sendPaymentForm(flags: Int32, formId: Int64, peer: Api.InputPeer, msgId: Int32, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials, tipAmount: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(730364339)
+                    buffer.appendInt32(818134173)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(formId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(requestedInfoId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
                     credentials.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.sendPaymentForm", parameters: [("flags", flags), ("msgId", msgId), ("requestedInfoId", requestedInfoId), ("shippingOptionId", shippingOptionId), ("credentials", credentials)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentResult? in
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt64(tipAmount!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "payments.sendPaymentForm", parameters: [("flags", flags), ("formId", formId), ("peer", peer), ("msgId", msgId), ("requestedInfoId", requestedInfoId), ("shippingOptionId", shippingOptionId), ("credentials", credentials), ("tipAmount", tipAmount)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.PaymentResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.payments.PaymentResult?
                         if let signature = reader.readInt32() {
@@ -7557,12 +7697,15 @@ public extension Api {
                     })
                 }
             
-                public static func createGroupCall(peer: Api.InputPeer, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func createGroupCall(flags: Int32, peer: Api.InputPeer, randomId: Int32, title: String?, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1120031776)
+                    buffer.appendInt32(1221445336)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("peer", peer), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("flags", flags), ("peer", peer), ("randomId", randomId), ("title", title), ("scheduleDate", scheduleDate)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7572,13 +7715,15 @@ public extension Api {
                     })
                 }
             
-                public static func joinGroupCall(flags: Int32, call: Api.InputGroupCall, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func joinGroupCall(flags: Int32, call: Api.InputGroupCall, joinAs: Api.InputPeer, inviteHash: String?, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1604095586)
+                    buffer.appendInt32(-1322057861)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
+                    joinAs.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(inviteHash!, buffer: buffer, boxed: false)}
                     params.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.joinGroupCall", parameters: [("flags", flags), ("call", call), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "phone.joinGroupCall", parameters: [("flags", flags), ("call", call), ("joinAs", joinAs), ("inviteHash", inviteHash), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7594,23 +7739,6 @@ public extension Api {
                     call.serialize(buffer, true)
                     serializeInt32(source, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "phone.leaveGroupCall", parameters: [("call", call), ("source", source)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func editGroupCallMember(flags: Int32, call: Api.InputGroupCall, userId: Api.InputUser, volume: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1511559976)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    call.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "phone.editGroupCallMember", parameters: [("flags", flags), ("call", call), ("userId", userId), ("volume", volume)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7683,14 +7811,14 @@ public extension Api {
                     })
                 }
             
-                public static func getGroupParticipants(call: Api.InputGroupCall, ids: [Int32], sources: [Int32], offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupParticipants>) {
+                public static func getGroupParticipants(call: Api.InputGroupCall, ids: [Api.InputPeer], sources: [Int32], offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupParticipants>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-906898811)
+                    buffer.appendInt32(-984033109)
                     call.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(ids.count))
                     for item in ids {
-                        serializeInt32(item, buffer: buffer, boxed: false)
+                        item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sources.count))
@@ -7715,6 +7843,128 @@ public extension Api {
                     call.serialize(buffer, true)
                     serializeInt32(source, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "phone.checkGroupCall", parameters: [("call", call), ("source", source)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func toggleGroupCallRecord(flags: Int32, call: Api.InputGroupCall, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1070962985)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("flags", flags), ("call", call), ("title", title)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, volume: Int32?, raiseHand: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-646583424)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    participant.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {raiseHand!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "phone.editGroupCallParticipant", parameters: [("flags", flags), ("call", call), ("participant", participant), ("volume", volume), ("raiseHand", raiseHand)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editGroupCallTitle(call: Api.InputGroupCall, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(480685066)
+                    call.serialize(buffer, true)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.editGroupCallTitle", parameters: [("call", call), ("title", title)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGroupCallJoinAs(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.JoinAsPeers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-277077702)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.getGroupCallJoinAs", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.JoinAsPeers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.JoinAsPeers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.JoinAsPeers
+                        }
+                        return result
+                    })
+                }
+            
+                public static func exportGroupCallInvite(flags: Int32, call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.ExportedGroupCallInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-425040769)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.exportGroupCallInvite", parameters: [("flags", flags), ("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.ExportedGroupCallInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.ExportedGroupCallInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.ExportedGroupCallInvite
+                        }
+                        return result
+                    })
+                }
+            
+                public static func toggleGroupCallStartSubscription(call: Api.InputGroupCall, subscribed: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(563885286)
+                    call.serialize(buffer, true)
+                    subscribed.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.toggleGroupCallStartSubscription", parameters: [("call", call), ("subscribed", subscribed)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func startScheduledGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1451287362)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.startScheduledGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func saveDefaultGroupCallJoinAs(peer: Api.InputPeer, joinAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1465786252)
+                    peer.serialize(buffer, true)
+                    joinAs.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.saveDefaultGroupCallJoinAs", parameters: [("peer", peer), ("joinAs", joinAs)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

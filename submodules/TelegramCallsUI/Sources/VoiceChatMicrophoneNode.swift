@@ -5,11 +5,13 @@ import Display
 
 private final class VoiceChatMicrophoneNodeDrawingState: NSObject {
     let color: UIColor
+    let filled: Bool
     let transition: CGFloat
     let reverse: Bool
     
-    init(color: UIColor, transition: CGFloat, reverse: Bool) {
+    init(color: UIColor, filled: Bool, transition: CGFloat, reverse: Bool) {
         self.color = color
+        self.filled = filled
         self.transition = transition
         self.reverse = reverse
         
@@ -21,9 +23,11 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     class State: Equatable {
         let muted: Bool
         let color: UIColor
+        let filled: Bool
         
-        init(muted: Bool, color: UIColor) {
+        init(muted: Bool, filled: Bool, color: UIColor) {
             self.muted = muted
+            self.filled = filled
             self.color = color
         }
         
@@ -32,6 +36,9 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
                 return false
             }
             if lhs.color.argb != rhs.color.argb {
+                return false
+            }
+            if lhs.filled != rhs.filled {
                 return false
             }
             return true
@@ -53,7 +60,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     private var animator: ConstantDisplayLinkAnimator?
     
     private var hasState = false
-    private var state: State = State(muted: false, color: .black)
+    private var state: State = State(muted: false, filled: false, color: .black)
     private var transitionContext: TransitionContext?
     
     override init() {
@@ -133,7 +140,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             }
         }
         
-        return VoiceChatMicrophoneNodeDrawingState(color: color, transition: transitionFraction, reverse: reverse)
+        return VoiceChatMicrophoneNodeDrawingState(color: color, filled: self.state.filled, transition: transitionFraction, reverse: reverse)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -151,12 +158,12 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
 
         context.setFillColor(parameters.color.cgColor)
         
-        var clearLineWidth: CGFloat = 4.0
+        var clearLineWidth: CGFloat = 2.0
         var lineWidth: CGFloat = 1.0 + UIScreenPixel
         if bounds.size.width > 36.0 {
-            context.scaleBy(x: 2.5, y: 2.5)
+            context.scaleBy(x: 2.0, y: 2.0)
         } else if bounds.size.width < 30.0 {
-            clearLineWidth = 3.0
+            clearLineWidth = 2.0
             lineWidth = 1.0
         }
         
@@ -164,10 +171,10 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             context.translateBy(x: 4.0, y: 3.0)
             let _ = try? drawSvgPath(context, path: "M14,8.335 C14.36727,8.335 14.665,8.632731 14.665,9 C14.665,11.903515 12.48064,14.296846 9.665603,14.626311 L9.665,16 C9.665,16.367269 9.367269,16.665 9,16.665 C8.666119,16.665 8.389708,16.418942 8.34221,16.098269 L8.335,16 L8.3354,14.626428 C5.519879,14.297415 3.335,11.90386 3.335,9 C3.335,8.632731 3.632731,8.335 4,8.335 C4.367269,8.335 4.665,8.632731 4.665,9 C4.665,11.394154 6.605846,13.335 9,13.335 C11.39415,13.335 13.335,11.394154 13.335,9 C13.335,8.632731 13.63273,8.335 14,8.335 Z ")
         } else {
-            context.translateBy(x: 18.0, y: 18.0)
+            context.translateBy(x: 17.0, y: 18.0)
             let _ = try? drawSvgPath(context, path: "M-0.004000000189989805,-9.86400032043457 C2.2960000038146973,-9.86400032043457 4.165999889373779,-8.053999900817871 4.25600004196167,-5.77400016784668 C4.25600004196167,-5.77400016784668 4.265999794006348,-5.604000091552734 4.265999794006348,-5.604000091552734 C4.265999794006348,-5.604000091552734 4.265999794006348,-0.8040000200271606 4.265999794006348,-0.8040000200271606 C4.265999794006348,1.555999994277954 2.3559999465942383,3.4660000801086426 -0.004000000189989805,3.4660000801086426 C-2.2939999103546143,3.4660000801086426 -4.164000034332275,1.6460000276565552 -4.263999938964844,-0.6240000128746033 C-4.263999938964844,-0.6240000128746033 -4.263999938964844,-0.8040000200271606 -4.263999938964844,-0.8040000200271606 C-4.263999938964844,-0.8040000200271606 -4.263999938964844,-5.604000091552734 -4.263999938964844,-5.604000091552734 C-4.263999938964844,-7.953999996185303 -2.3540000915527344,-9.86400032043457 -0.004000000189989805,-9.86400032043457 Z ")
         }
-        if bounds.width > 30.0 {
+        if bounds.width > 30.0 && !parameters.filled {
             context.setBlendMode(.clear)
         
             let _ = try? drawSvgPath(context, path: "M0.004000000189989805,-8.53600025177002 C-1.565999984741211,-8.53600025177002 -2.8459999561309814,-7.306000232696533 -2.936000108718872,-5.75600004196167 C-2.936000108718872,-5.75600004196167 -2.936000108718872,-5.5960001945495605 -2.936000108718872,-5.5960001945495605 C-2.936000108718872,-5.5960001945495605 -2.936000108718872,-0.7960000038146973 -2.936000108718872,-0.7960000038146973 C-2.936000108718872,0.8240000009536743 -1.6260000467300415,2.134000062942505 0.004000000189989805,2.134000062942505 C1.5740000009536743,2.134000062942505 2.8540000915527344,0.9039999842643738 2.934000015258789,-0.6460000276565552 C2.934000015258789,-0.6460000276565552 2.934000015258789,-0.7960000038146973 2.934000015258789,-0.7960000038146973 C2.934000015258789,-0.7960000038146973 2.934000015258789,-5.5960001945495605 2.934000015258789,-5.5960001945495605 C2.934000015258789,-7.22599983215332 1.6239999532699585,-8.53600025177002 0.004000000189989805,-8.53600025177002 Z ")
@@ -200,18 +207,19 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             }
             
             if parameters.reverse {
-                startPoint = CGPoint(x: origin.x + length * (1.0 - parameters.transition), y: origin.y + length * (1.0 - parameters.transition))
-                endPoint = CGPoint(x: origin.x + length, y: origin.y + length)
+                startPoint = CGPoint(x: origin.x + length * (1.0 - parameters.transition), y: origin.y + length * (1.0 - parameters.transition)).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
+                endPoint = CGPoint(x: origin.x + length, y: origin.y + length).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
             } else {
-                startPoint = origin
-                endPoint = CGPoint(x: origin.x + length * parameters.transition, y: origin.y + length * parameters.transition)
+                startPoint = origin.offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
+                endPoint = CGPoint(x: origin.x + length * parameters.transition, y: origin.y + length * parameters.transition).offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel)
             }
+            
         
             context.setBlendMode(.clear)
             context.setLineWidth(clearLineWidth)
             
-            context.move(to: startPoint)
-            context.addLine(to: endPoint)
+            context.move(to: startPoint.offsetBy(dx: 0.0, dy: 1.0 + UIScreenPixel))
+            context.addLine(to: endPoint.offsetBy(dx: 0.0, dy: 1.0 + UIScreenPixel))
             context.strokePath()
         
             context.setBlendMode(.normal)

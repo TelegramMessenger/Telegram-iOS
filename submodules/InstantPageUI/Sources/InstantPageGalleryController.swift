@@ -118,7 +118,7 @@ public struct InstantPageGalleryEntry: Equatable {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)
                 if let dimensions = file.dimensions {
-                    representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource, progressiveSizes: []))
+                    representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil))
                 }
                 let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 return InstantImageGalleryItem(context: context, presentationData: presentationData, itemId: self.index, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
@@ -282,9 +282,14 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
         
         openLinkOptionsImpl = { [weak self] url in
             if let strongSelf = self {
+                var presentationData = strongSelf.presentationData
+                if !presentationData.theme.overallDarkAppearance {
+                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                }
+                
                 let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url.url)).count > 1
                 let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url.url),
                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in

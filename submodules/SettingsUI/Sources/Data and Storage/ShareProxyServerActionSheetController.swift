@@ -140,7 +140,7 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         self.addSubnode(self.imageNode)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let imageInset: CGFloat = 44.0
         let side = constrainedSize.width - imageInset * 2.0
         var imageSize = CGSize(width: side, height: side)
@@ -162,18 +162,10 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         if !self.cachedHasLabel {
             labelSize = CGSize()
         }
-        return CGSize(width: constrainedSize.width, height: 14.0 + (labelSize.height > 0.0 ? labelSize.height + 14.0 : 0.0) + (imageSize.height > 0.0 ? imageSize.height + 14.0 : 8.0))
-    }
-    
-    override func layout() {
-        super.layout()
+        let size = CGSize(width: constrainedSize.width, height: 14.0 + (labelSize.height > 0.0 ? labelSize.height + 14.0 : 0.0) + (imageSize.height > 0.0 ? imageSize.height + 14.0 : 8.0))
         
-        let size = self.bounds.size
         let inset: CGFloat = 32.0
-        let imageInset: CGFloat = 44.0
         let spacing: CGFloat = 18.0
-        
-        let labelSize: CGSize
         if self.cachedHasLabel {
             labelSize = self.label.measure(CGSize(width: max(1.0, size.width - inset * 2.0), height: size.height))
             self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: spacing), size: labelSize)
@@ -181,13 +173,15 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
             labelSize = CGSize()
         }
         
-        let imageOrigin = CGPoint(x: imageInset, y: self.label.frame.maxY + spacing - 4.0)
-        var imageSize: CGSize
         if !self.cachedHasImage {
             imageSize = CGSize()
         } else {
             imageSize =  CGSize(width: size.width - imageInset * 2.0, height: size.width - imageInset * 2.0)
         }
+        let imageOrigin = CGPoint(x: imageInset, y: self.label.frame.maxY + spacing - 4.0)
         self.imageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
+
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
 }

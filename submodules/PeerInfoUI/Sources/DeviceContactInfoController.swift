@@ -21,6 +21,7 @@ import Geocoding
 import ItemListAddressItem
 import LocalizedPeerData
 import PhoneNumberFormat
+import UndoUI
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -395,31 +396,31 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
-            case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
+            case let .info(_, _, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
-            case let .sendMessage(_, theme, title):
+            case let .sendMessage(_, _, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.sendMessage)
                 })
-            case let .invite(_, theme, title):
+            case let .invite(_, _, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.invite)
                 })
-            case let .createContact(_, theme, title):
+            case let .createContact(_, _, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.createContact)
                 })
-            case let .addToExisting(_, theme, title):
+            case let .addToExisting(_, _, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.addToExisting)
                 })
-            case let .company(_, theme, title, value, selected):
+            case let .company(_, _, title, value, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                 }, tag: nil)
-            case let .phoneNumber(_, index, theme, title, label, value, selected, isInteractionEnabled):
+            case let .phoneNumber(_, index, _, title, label, value, selected, isInteractionEnabled):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
                     if selected != nil {
                         arguments.toggleSelection(.phoneNumber(label, value))
@@ -431,15 +432,15 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), value)
                     }
                 } : nil, tag: DeviceContactInfoEntryTag.info(index))
-            case let .phoneNumberSharingInfo(_, theme, text):
+            case let .phoneNumberSharingInfo(_, _, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .phoneNumberShareViaException(_, theme, text, value):
+            case let .phoneNumberShareViaException(_, _, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, updated: { value in
                     arguments.updateShareViaException(value)
                 })
-            case let .phoneNumberShareViaExceptionInfo(_, theme, text):
+            case let .phoneNumberShareViaExceptionInfo(_, _, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .editingPhoneNumber(_, theme, strings, id, title, label, value, hasActiveRevealControls):
+            case let .editingPhoneNumber(_, _, strings, id, title, label, value, hasActiveRevealControls):
                 return UserInfoEditingPhoneItem(presentationData: presentationData, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
@@ -449,11 +450,11 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 }, delete: {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
-            case let .addPhoneNumber(_, theme, title):
+            case let .addPhoneNumber(_, _, title):
                 return UserInfoEditingPhoneActionItem(presentationData: presentationData, title: title, sectionId: self.section, action: {
                     arguments.addPhoneNumber()
                 })
-            case let .email(_, index, theme, title, label, value, selected):
+            case let .email(_, index, _, title, label, value, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.email(label, value))
@@ -465,7 +466,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), value)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
-            case let .url(_, index, theme, title, label, value, selected):
+            case let .url(_, index, _, title, label, value, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.url(label, value))
@@ -504,7 +505,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), string)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
-            case let .birthday(_, theme, title, value, text, selected):
+            case let .birthday(_, _, title, value, text, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.birthday)
@@ -533,7 +534,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.birthday, text)
                     }
                 }, tag: DeviceContactInfoEntryTag.birthday)
-            case let .socialProfile(_, index, theme, title, value, text, selected):
+            case let .socialProfile(_, index, _, title, value, text, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.socialProfile(value))
@@ -545,7 +546,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), text)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
-            case let .instantMessenger(_, index, theme, title, value, text, selected):
+            case let .instantMessenger(_, index, _, title, value, text, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.instantMessenger(value))
@@ -555,7 +556,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), text)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
-            case let .note(_, theme, title, text, selected):
+            case let .note(_, _, title, text, selected):
                 return ItemListTextWithLabelItem(presentationData: presentationData, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.note)
@@ -647,7 +648,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     
     let isOrganization = personName.0.isEmpty && personName.1.isEmpty && !contactData.organization.isEmpty
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
     
     if !selecting {
         if let _ = peer {
@@ -1298,6 +1299,9 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             if let resultItemNode = resultItemNode {
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
                     UIPasteboard.general.string = value
+                    
+                    let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 })])
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let strongController = controller, let resultItemNode = resultItemNode {
@@ -1306,7 +1310,6 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         return nil
                     }
                 }))
-                
             }
         }
     }
@@ -1319,8 +1322,8 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
     contactsController.navigationPresentation = .modal
     (parentController.navigationController as? NavigationController)?.pushViewController(contactsController)
     let _ = (contactsController.result
-    |> deliverOnMainQueue).start(next: { peer in
-        if let (peer, _) = peer {
+    |> deliverOnMainQueue).start(next: { result in
+        if let (peers, _) = result, let peer = peers.first {
             let dataSignal: Signal<(Peer?, DeviceContactStableId?), NoError>
             switch peer {
                 case let .peer(contact, _, _):

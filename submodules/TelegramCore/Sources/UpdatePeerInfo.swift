@@ -27,10 +27,10 @@ public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> 
                                     return updated
                                 })
                             }
-                        } |> mapError { _ -> UpdatePeerTitleError in return .generic }
+                        } |> mapError { _ -> UpdatePeerTitleError in }
                     }
             } else if let peer = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.editChatTitle(chatId: peer.id.id, title: title))
+                return account.network.request(Api.functions.messages.editChatTitle(chatId: peer.id.id._internalGetInt32Value(), title: title))
                     |> mapError { _ -> UpdatePeerTitleError in
                         return .generic
                     }

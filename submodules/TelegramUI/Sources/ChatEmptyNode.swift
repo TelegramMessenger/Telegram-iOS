@@ -837,11 +837,13 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .group
             } else if let _ = interfaceState.peerNearbyData {
                 contentType = .peerNearby
-            } else if let _ = peer as? TelegramUser {
-                if case .joined = emptyType, !peer.isDeleted {
-                    contentType = .greeting
-                } else {
+            } else if let peer = peer as? TelegramUser {
+                if peer.isDeleted || peer.botInfo != nil || peer.flags.contains(.isSupport) || peer.isScam || interfaceState.peerIsBlocked {
                     contentType = .regular
+                } else if case .clearedHistory = emptyType {
+                    contentType = .regular
+                } else {
+                    contentType = .greeting
                 }
             } else {
                 contentType = .regular
@@ -852,8 +854,12 @@ final class ChatEmptyNode: ASDisplayNode {
         
         var contentTransition = transition
         if self.content?.0 != contentType {
+            var animateContentIn = false
             if let node = self.content?.1 {
                 node.removeFromSupernode()
+                if self.content?.0 != nil && contentType == .greeting && transition.isAnimated {
+                    animateContentIn = true
+                }
             }
             let node: ASDisplayNode & ChatEmptyNodeContent
             switch contentType {
@@ -873,6 +879,11 @@ final class ChatEmptyNode: ASDisplayNode {
             self.content = (contentType, node)
             self.addSubnode(node)
             contentTransition = .immediate
+            
+            if animateContentIn, case let .animated(duration, curve) = transition {
+                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+                node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
+            }
         }
         self.isUserInteractionEnabled = [.peerNearby, .greeting].contains(contentType)
         

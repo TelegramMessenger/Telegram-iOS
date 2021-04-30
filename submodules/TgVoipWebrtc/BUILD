@@ -20,6 +20,7 @@ objc_library(
         "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
         "tgcalls/tgcalls/platform/darwin/GLVideoViewMac.*",
         "tgcalls/tgcalls/platform/darwin/ScreenCapturer.*",
+        "tgcalls/tgcalls/desktop_capturer/**",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -51,6 +52,10 @@ objc_library(
         "//submodules/MtProtoKit:MtProtoKit",
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
+        "//third-party/ogg:ogg",
+        "//third-party/opusfile:opusfile",
+        "//submodules/ffmpeg:ffmpeg",
+        "//third-party/rnnoise:rnnoise",
     ],
     sdk_frameworks = [
         "Foundation",

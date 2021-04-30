@@ -98,16 +98,11 @@ class BuildEnvironment:
             self,
             base_path,
             bazel_path,
-            bazel_x86_64_path,
             override_bazel_version,
             override_xcode_version
             ):
         self.base_path = os.path.expanduser(base_path)
         self.bazel_path = os.path.expanduser(bazel_path)
-        if bazel_x86_64_path is not None:
-            self.bazel_x86_64_path = os.path.expanduser(bazel_x86_64_path)
-        else:
-            self.bazel_x86_64_path = None
 
         configuration_path = os.path.join(self.base_path, 'versions.json')
         with open(configuration_path) as file:

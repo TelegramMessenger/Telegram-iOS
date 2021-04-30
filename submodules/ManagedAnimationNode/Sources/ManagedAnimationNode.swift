@@ -137,6 +137,20 @@ open class ManagedAnimationNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
+    public var customColor: UIColor? {
+        didSet {
+            if let customColor = self.customColor, oldValue?.rgb != customColor.rgb {
+                self.imageNode.image = generateTintedImage(image: self.imageNode.image, color: customColor)
+            }
+        }
+    }
+    
+    public var scale: CGFloat = 1.0 {
+        didSet {
+            self.imageNode.transform = CATransform3DMakeScale(self.scale, self.scale, 1.0)
+        }
+    }
+    
     public init(size: CGSize) {
         self.intrinsicSize = size
         
@@ -242,7 +256,11 @@ open class ManagedAnimationNode: ASDisplayNode {
         if state.frameIndex != frameIndex {
             state.frameIndex = frameIndex
             if let image = state.draw() {
-                self.imageNode.image = image
+                if let customColor = self.customColor {
+                    self.imageNode.image = generateTintedImage(image: image, color: customColor)
+                } else {
+                    self.imageNode.image = image
+                }
             }
             
             for (callbackFrame, callback) in state.item.callbacks {
@@ -273,5 +291,12 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.trackStack.append(item)
         self.didTryAdvancingState = false
         self.updateAnimation()
+    }
+    
+    open override func layout() {
+        super.layout()
+        
+        self.imageNode.bounds = self.bounds
+        self.imageNode.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
     }
 }

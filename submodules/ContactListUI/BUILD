@@ -31,6 +31,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/StickerResources:StickerResources",
     ],
     visibility = [
         "//visibility:public",

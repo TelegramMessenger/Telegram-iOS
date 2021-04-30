@@ -104,9 +104,8 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
-"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
-"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
-"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_FILES_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_FILES_any" = "%1$@|sent you %2$d files";
 
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
@@ -2552,7 +2551,6 @@ Unused sets are archived when you add more.";
 "Message.ForwardedMessageShort" = "Forwarded From\n%@";
 
 "Checkout.LiabilityAlertTitle" = "Warning";
-"Checkout.LiabilityAlert" = "Neither Telegram, nor %1$@ will have access to your credit card information. Credit card details will be handled only by the payment system, %2$@.\n\nPayments will go directly to the developer of %1$@. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of %1$@ or your bank.";
 
 "Settings.AppLanguage" = "Language";
 "Settings.AppLanguage.Unofficial" = "UNOFFICIAL";
@@ -4637,6 +4635,12 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.FileFrom" = "File, from: %@";
 "VoiceOver.Chat.File" = "File";
 "VoiceOver.Chat.YourFile" = "Your file";
+"VoiceOver.Chat.StickerFrom" = "Sticker, from: %@";
+"VoiceOver.Chat.Sticker" = "Sticker";
+"VoiceOver.Chat.YourSticker" = "Your sticker";
+"VoiceOver.Chat.AnimatedStickerFrom" = "Animated sticker, from: %@";
+"VoiceOver.Chat.AnimatedSticker" = "Animated sticker";
+"VoiceOver.Chat.YourAnimatedSticker" = "Your animated sticker";
 "VoiceOver.Chat.ContactFrom" = "Shared contact, from: %@";
 "VoiceOver.Chat.Contact" = "Shared contact";
 "VoiceOver.Chat.ContactPhoneNumberCount_1" = "%@ phone number";
@@ -4676,6 +4680,16 @@ Sorry for the inconvenience.";
 "VoiceOver.MessageContextSend" = "Send";
 "VoiceOver.MessageContextReply" = "Reply";
 "VoiceOver.MessageContextOpenMessageMenu" = "Open message menu";
+
+"VoiceOver.Keyboard" = "Keyboard";
+"VoiceOver.Stickers" = "Stickers";
+"VoiceOver.ScheduledMessages" = "Scheduled Messages";
+"VoiceOver.BotCommands" = "Bot Commands";
+"VoiceOver.BotKeyboard" = "Bot Keyboard";
+"VoiceOver.SilentPostOn" = "Silent Broadcast On";
+"VoiceOver.SilentPostOff" = "Silent Broadcast Off";
+"VoiceOver.SelfDestructTimerOn" = "Self-destruct Timer: %@";
+"VoiceOver.SelfDestructTimerOff" = "Self-destruct Timer Off";
 
 "ProxyServer.VoiceOver.Active" = "Active";
 
@@ -5681,6 +5695,7 @@ Sorry for the inconvenience.";
 "Media.LimitedAccessChangeSettings" = "Change Settings";
 
 "VoiceChat.StatusSpeaking" = "speaking";
+"VoiceChat.StatusSpeakingVolume" = "%@ speaking";
 "VoiceChat.StatusListening" = "listening";
 "VoiceChat.StatusInvited" = "invited";
 
@@ -5752,14 +5767,18 @@ Sorry for the inconvenience.";
 "VoiceChat.EndConfirmationEnd" = "End";
 
 "VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
+"VoiceChat.InviteMemberToChannelFirstText" = "%1$@ isn't a subscriber of \"%2$@\" yet. Add them to the channel?";
 "VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
 "VoiceChat.CreateNewVoiceChatStart" = "Start";
+"VoiceChat.CreateNewVoiceChatStartNow" = "Start Now";
+"VoiceChat.CreateNewVoiceChatSchedule" = "Schedule";
 
 "PUSH_CHAT_VOICECHAT_START" = "%2$@|%1$@ started a voice chat";
 "PUSH_CHAT_VOICECHAT_INVITE" = "%2$@|%1$@ invited %3$@ to the voice chat";
-"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$|@%1$@ invited you to the voice chat";
+"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$@|%1$@ invited you to the voice chat";
+"PUSH_CHAT_VOICECHAT_END" = "%2$@|%1$@ has ended the voice chat";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
 "Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
@@ -5793,8 +5812,6 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
 
-"VoiceChat.Rec" = "REC";
-
 "VoiceChat.StartRecording" = "Start Recording";
 "VoiceChat.StopRecording" = "Stop Recording";
 
@@ -5802,11 +5819,14 @@ Sorry for the inconvenience.";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
 
+"VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
 
-"VoiceChat.StartRecordingTitle" = "Stop Recording?";
-"VoiceChat.StartRecordingStop" = "Stop";
+"VoiceChat.StopRecordingTitle" = "Stop Recording?";
+"VoiceChat.StopRecordingStop" = "Stop";
+
+"VoiceChat.RecordingSaved" = "Audio saved to **Saved Messages**.";
 
 "VoiceChat.StatusMutedForYou" = "muted for you";
 "VoiceChat.StatusMutedYou" = "put you on mute";
@@ -6018,7 +6038,6 @@ Sorry for the inconvenience.";
 "Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
 "Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
 "Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
-
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
 
@@ -6158,3 +6177,271 @@ Sorry for the inconvenience.";
 
 "Message.ScamAccount" = "Scam";
 "Message.FakeAccount" = "Fake";
+
+"InstantPage.FontSanFrancisco" = "San Francisco";
+"InstantPage.FontNewYork" = "New York";
+"InstantPage.Search" = "Search";
+"InstantPage.OpenInBrowser" = "Open in %@";
+"InstantPage.VoiceOver.IncreaseFontSize" = "Increase Font Size";
+"InstantPage.VoiceOver.DecreaseFontSize" = "Decrease Font Size";
+"InstantPage.VoiceOver.ResetFontSize" = "Reset Font Size";
+
+"Contacts.VoiceOver.AddContact" = "Add Contact";
+
+"VoiceChat.SelectAccount" = "Select Account";
+"VoiceChat.DisplayAs" = "Display Me As...";
+"VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
+"VoiceChat.DisplayAsInfoGroup" = "Choose whether you want to be displayed as your personal account, this group, or one of your channels.";
+"VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
+"VoiceChat.PersonalAccount" = "personal account";
+"VoiceChat.EditTitle" = "Edit Voice Chat Title";
+"VoiceChat.EditPermissions" = "Edit Permissions";
+
+"VoiceChat.OpenChannel" = "Open Channel";
+
+"VoiceChat.EditTitleTitle" = "Voice Chat Title";
+"VoiceChat.EditTitleText" = "Edit a title of this voice chat.";
+"VoiceChat.EditTitleSuccess" = "Voice chat title changed to **%@**.";
+"VoiceChat.EditTitleRemoveSuccess" = "Voice chat title removed.";
+
+"VoiceChat.InviteLink.Speaker" = "Speaker";
+"VoiceChat.InviteLink.Listener" = "Listener";
+"VoiceChat.InviteLink.CopySpeakerLink" = "Copy Speaker Link";
+"VoiceChat.InviteLink.CopyListenerLink" = "Copy Listener Link";
+
+"VoiceChat.InviteLink.InviteSpeakers_0" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_1" = "[%@] Invite Speaker";
+"VoiceChat.InviteLink.InviteSpeakers_2" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_3_10" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_many" = "[%@] Invite Speakers";
+"VoiceChat.InviteLink.InviteSpeakers_any" = "[%@] Invite Speakers";
+
+"VoiceChat.InviteLink.InviteListeners_0" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_1" = "[%@] Invite Listener";
+"VoiceChat.InviteLink.InviteListeners_2" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_3_10" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_many" = "[%@] Invite Listeners";
+"VoiceChat.InviteLink.InviteListeners_any" = "[%@] Invite Listeners";
+
+"Conversation.JoinVoiceChat" = "JOIN VOICE CHAT";
+
+"Conversation.CancelForwardTitle" = "Cancel Forwarding";
+"Conversation.CancelForwardText" = "Do you want to cancel forwarding or send messages to a different chat?";
+"Conversation.CancelForwardCancelForward" = "Cancel Forwarding";
+"Conversation.CancelForwardSelectChat" = "Select Another Chat";
+
+"StickerPacks.ActionDelete" = "Delete";
+"StickerPacks.ActionArchive" = "Archive";
+"StickerPacks.ActionShare" = "Share";
+
+"StickerPacks.DeleteStickerPacksConfirmation_0" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_1" = "Delete %@ Sticker Set";
+"StickerPacks.DeleteStickerPacksConfirmation_2" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_3_10" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_many" = "Delete %@ Sticker Sets";
+"StickerPacks.DeleteStickerPacksConfirmation_any" = "Delete %@ Sticker Sets";
+
+"StickerPacks.ArchiveStickerPacksConfirmation_0" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_1" = "Archive %@ Sticker Set";
+"StickerPacks.ArchiveStickerPacksConfirmation_2" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_3_10" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_many" = "Archive %@ Sticker Sets";
+"StickerPacks.ArchiveStickerPacksConfirmation_any" = "Archive %@ Sticker Sets";
+
+"VoiceChat.StatusWantsToSpeak" = "wants to speak";
+
+"VoiceChat.AskedToSpeak" = "You Asked To Speak";
+"VoiceChat.AskedToSpeakHelp" = "We let the speakers know";
+
+"VoiceChat.YouCanNowSpeak" = "You can now speak";
+"VoiceChat.YouCanNowSpeakIn" = "You can now speak in **%@**";
+"VoiceChat.UserCanNowSpeak" = "**%@** can now speak";
+
+"VoiceChat.MutedByAdmin" = "Muted by Admin";
+"VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";
+"Invitation.JoinVoiceChatAsSpeaker" = "Join as Speaker";
+"Invitation.JoinVoiceChatAsListener" = "Join as Listener";
+
+"VoiceChat.CancelSpeakRequest" = "Cancel Request to Speak";
+
+"VoiceChat.RemovePeerConfirmationChannel" = "Are you sure you want to remove %@ from the channel?";
+"VoiceChat.RemoveAndBanPeerConfirmation" = "Do you want to remove %1$@ from the voice chat and ban them in %2$@?";
+
+"Notification.VoiceChatStartedChannel" = "Voice chat started";
+
+"Conversation.MessageCopied" = "Message copied to clipboard";
+"Conversation.LinkCopied" = "Link copied to clipboard";
+"Conversation.TextCopied" = "Text copied to clipboard";
+"Conversation.ImageCopied" = "Image copied to clipboard";
+"Conversation.HashtagCopied" = "Hashtag copied to clipboard";
+"Conversation.PhoneCopied" = "Phone copied to clipboard";
+"Conversation.EmailCopied" = "Email copied to clipboard";
+"Conversation.UsernameCopied" = "Username copied to clipboard";
+"Conversation.CardNumberCopied" = "Card number copied to clipboard";
+"Conversation.PrivateMessageLinkCopiedLong" = "Link copied to clipboard. This link will only work for members of this chat.";
+
+"Conversation.StickerAddedToFavorites" = "Sticker was added to Favorites";
+"Conversation.StickerRemovedFromFavorites" = "Sticker was removed from Favorites";
+
+"Conversation.DeletedFromContacts" = "**%@** deleted from your contacts";
+
+"Conversation.VoiceChat" = "Voice Chat";
+
+"Conversation.JoinVoiceChatAsSpeaker" = "JOIN AS SPEAKER";
+"Conversation.JoinVoiceChatAsListener" = "JOIN AS LISTENER";
+
+"VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
+"VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
+"VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+"VoiceChat.LeaveAndCancelVoiceChat" = "Abort Voice Chat";
+
+"VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
+"VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
+"VoiceChat.ForwardTooltip.ManyChats" = "Invite link forwarded to **%@** and %@ others";
+
+"GroupRemoved.ViewChannelInfo" = "View Channel";
+
+"UserInfo.ContactForwardTooltip.Chat.One" = "Contact forwarded to **%@**";
+"UserInfo.ContactForwardTooltip.TwoChats.One" = "Contact forwarded to **%@** and **%@**";
+"UserInfo.ContactForwardTooltip.ManyChats.One" = "Contact forwarded to **%@** and %@ others";
+"UserInfo.ContactForwardTooltip.SavedMessages.One" = "Contact forwarded to **Saved Messages**";
+
+"UserInfo.LinkForwardTooltip.Chat.One" = "Link forwarded to **%@**";
+"UserInfo.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
+"UserInfo.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
+"UserInfo.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
+
+"VoiceChat.You" = "this is you";
+"VoiceChat.ChangePhoto" = "Change Photo";
+"VoiceChat.EditBio" = "Edit Bio";
+"VoiceChat.EditBioTitle" = "Bio";
+"VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditBioPlaceholder" = "Bio";
+"VoiceChat.EditBioSave" = "Save";
+"VoiceChat.EditBioSuccess" = "Your bio is changed.";
+
+"VoiceChat.EditDescription" = "Edit Description";
+"VoiceChat.EditDescriptionTitle" = "Description";
+"VoiceChat.EditDescriptionText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditDescriptionPlaceholder" = "Description";
+"VoiceChat.EditDescriptionSave" = "Save";
+"VoiceChat.EditDescriptionSuccess" = "Description is changed.";
+
+"VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
+"VoiceChat.SendPublicLinkSend" = "Send";
+
+"VoiceChat.TapToAddPhotoOrBio" = "tap to add photo or bio";
+"VoiceChat.TapToAddPhoto" = "tap to add photo";
+"VoiceChat.TapToAddBio" = "tap to add bio";
+"VoiceChat.ImproveYourProfileText" = "You can improve your profile by adding missing information.";
+
+"VoiceChat.AddPhoto" = "Add Photo";
+"VoiceChat.AddBio" = "Add Bio";
+"VoiceChat.ChangeName" = "Change Name";
+"VoiceChat.ChangeNameTitle" = "Change Name";
+"VoiceChat.EditNameSuccess" = "Your name is changed.";
+
+"VoiceChat.Video" = "video";
+
+"VoiceChat.PinVideo" = "Pin Video";
+"VoiceChat.UnpinVideo" = "Unpin Video";
+
+"Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
+"Notification.VoiceChatScheduled" = "%1$@ scheduled a voice chat for %2$@";
+
+"Notification.VoiceChatScheduledTodayChannel" = "Voice chat scheduled for today at %@";
+"Notification.VoiceChatScheduledToday" = "%1$@ scheduled a voice chat for today at %2$@";
+
+"Notification.VoiceChatScheduledTomorrowChannel" = "Voice chat scheduled for tomorrow at %@";
+"Notification.VoiceChatScheduledTomorrow" = "%1$@ scheduled a voice chat for tomorrow at %2$@";
+
+"VoiceChat.StartsIn" = "Starts in";
+"VoiceChat.LateBy" = "Late by";
+
+"VoiceChat.StatusStartsIn" = "starts in %@";
+"VoiceChat.StatusLateBy" = "late by %@";
+
+"VoiceChat.Scheduled" = "Scheduled";
+
+"VoiceChat.StartNow" = "Start Now";
+"VoiceChat.SetReminder" = "Set Reminder";
+"VoiceChat.CancelReminder" = "Cancel Reminder";
+
+"VoiceChat.ShareShort" = "share";
+"VoiceChat.TapToEditTitle" = "Tap to edit title";
+
+"ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
+
+"ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
+"ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
+
+"ScheduleVoiceChat.ScheduleToday" = "Start today at %@";
+"ScheduleVoiceChat.ScheduleTomorrow" = "Start tomorrow at %@";
+"ScheduleVoiceChat.ScheduleOn" = "Start on %@ at %@";
+
+"Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
+
+"Conversation.ScheduledVoiceChatStartsOn" = "Voice chat starts on %@";
+"Conversation.ScheduledVoiceChatStartsOnShort" = "Starts on %@";
+"Conversation.ScheduledVoiceChatStartsToday" = "Voice chat starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTodayShort" = "Starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrow" = "Voice chat starts tomorrow at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrowShort" = "Starts tomorrow at %@";
+
+"VoiceChat.CancelVoiceChat" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationTitle" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationText" = "Do you want to abort the scheduled voice chat?";
+"VoiceChat.CancelConfirmationEnd" = "Abort";
+
+"ScheduledIn.Seconds_1" = "%@ second";
+"ScheduledIn.Seconds_2" = "%@ seconds";
+"ScheduledIn.Seconds_3_10" = "%@ seconds";
+"ScheduledIn.Seconds_any" = "%@ seconds";
+"ScheduledIn.Seconds_many" = "%@ seconds";
+"ScheduledIn.Seconds_0" = "%@ seconds";
+"ScheduledIn.Minutes_1" = "%@ minute";
+"ScheduledIn.Minutes_2" = "%@ minutes";
+"ScheduledIn.Minutes_3_10" = "%@ minutes";
+"ScheduledIn.Minutes_any" = "%@ minutes";
+"ScheduledIn.Minutes_many" = "%@ minutes";
+"ScheduledIn.Minutes_0" = "%@ minutes";
+"ScheduledIn.Hours_1" = "%@ hour";
+"ScheduledIn.Hours_2" = "%@ hours";
+"ScheduledIn.Hours_3_10" = "%@ hours";
+"ScheduledIn.Hours_any" = "%@ hours";
+"ScheduledIn.Hours_many" = "%@ hours";
+"ScheduledIn.Hours_0" = "%@ hours";
+"ScheduledIn.Days_1" = "%@ day";
+"ScheduledIn.Days_2" = "%@ days";
+"ScheduledIn.Days_3_10" = "%@ days";
+"ScheduledIn.Days_any" = "%@ days";
+"ScheduledIn.Days_many" = "%@ days";
+"ScheduledIn.Days_0" = "%@ days";
+"ScheduledIn.Weeks_1" = "%@ week";
+"ScheduledIn.Weeks_2" = "%@ weeks";
+"ScheduledIn.Weeks_3_10" = "%@ weeks";
+"ScheduledIn.Weeks_any" = "%@ weeks";
+"ScheduledIn.Weeks_many" = "%@ weeks";
+"ScheduledIn.Weeks_0" = "%@ weeks";
+"ScheduledIn.Months_1" = "%@ month";
+"ScheduledIn.Months_2" = "%@ months";
+"ScheduledIn.Months_3_10" = "%@ months";
+"ScheduledIn.Months_any" = "%@ months";
+"ScheduledIn.Months_many" = "%@ months";
+"ScheduledIn.Months_0" = "%@ months";
+"ScheduledIn.Years_1" = "%@ year";
+"ScheduledIn.Years_2" = "%@ years";
+"ScheduledIn.Years_3_10" = "%@ years";
+"ScheduledIn.Years_any" = "%@ years";
+"ScheduledIn.Months_many" = "%@ years";
+
+"Checkout.PaymentLiabilityAlert" = "Neither Telegram, nor {target} will have access to your credit card information. Credit card details will be handled only by the payment system, {payment_system}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
+
+"Checkout.OptionalTipItem" = "Tip (Optional)";
+"Checkout.TipItem" = "Tip";
+"Checkout.OptionalTipItemPlaceholder" = "Enter Custom";
+
+"VoiceChat.ReminderNotify" = "We will notify you when it starts.";
+
+"Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";

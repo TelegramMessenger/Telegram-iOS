@@ -19,6 +19,7 @@ import MusicAlbumArtResources
 import UniversalMediaPlayer
 import ContextUI
 import FileMediaResourceStatus
+import ManagedAnimationNode
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -184,7 +185,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let playbackStatusDisposable = MetaDisposable()
     private let playbackStatus = Promise<MediaPlayerStatus>()
     
-    private var downloadStatusIconNode: ASImageNode
+    private var downloadStatusIconNode: DownloadIconNode
     private var linearProgressNode: LinearProgressNode?
     
     private var context: AccountContext?
@@ -246,10 +247,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.iconStatusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
         self.iconStatusNode.isUserInteractionEnabled = false
         
-        self.downloadStatusIconNode = ASImageNode()
-        self.downloadStatusIconNode.isLayerBacked = true
-        self.downloadStatusIconNode.displaysAsynchronously = false
-        self.downloadStatusIconNode.displayWithoutProcessing = true
+        self.downloadStatusIconNode = DownloadIconNode()
         
         self.restrictionNode = ASDisplayNode()
         self.restrictionNode.isHidden = true
@@ -422,7 +420,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                     descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
                                 }
                             } else if let size = file.size {
-                                descriptionString = dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                                descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                             } else {
                                 descriptionString = ""
                             }
@@ -439,7 +437,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             
                             if !voice {
-                                iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                if file.fileName?.lowercased().hasSuffix(".ogg") == true {
+                                    iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: "", performer: "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: "", performer: "", isThumbnail: false)))
+                                } else {
+                                    iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                }
                             } else {
                                 titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                                 descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
@@ -510,9 +512,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         var descriptionString: String = ""
                         if let size = file.size {
                             if item.isGlobalSearchResult {
-                                descriptionString = (dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))
+                                descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                             } else {
-                                descriptionString = "\(dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) • \(dateString)"
+                                descriptionString = "\(dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) • \(dateString)"
                             }
                         } else {
                             if !item.isGlobalSearchResult {
@@ -573,6 +575,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated {
                     updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                    |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
+                        if case .Fetching = value.fetchStatus {
+                            return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
+                        } else {
+                            return .single(value)
+                        }
+                    }
                     
                     if isAudio || isInstantVideo {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -734,6 +743,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         strongSelf.linearProgressNode?.updateTheme(theme: item.presentationData.theme.theme)
                         
                         strongSelf.restrictionNode.backgroundColor = item.presentationData.theme.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
+                        
+                        strongSelf.downloadStatusIconNode.customColor = item.presentationData.theme.theme.list.itemAccentColor
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
@@ -845,7 +856,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }))
                     }
                     
-                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 12.0) / 2.0)), size: CGSize(width: 12.0, height: 12.0)))
+                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 18.0) / 2.0)), size: CGSize(width: 18.0, height: 18.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -869,7 +880,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     }
     
     private func updateStatus(transition: ContainedViewLayoutTransition) {
-        guard let item = self.item, let media = self.currentMedia, let fetchStatus = self.fetchStatus, let status = self.resourceStatus, let layoutParams = self.layoutParams, let contentSize = self.contentSizeValue else {
+        guard let item = self.item, let media = self.currentMedia, let _ = self.fetchStatus, let status = self.resourceStatus, let layoutParams = self.layoutParams, let contentSize = self.contentSizeValue else {
             return
         }
         
@@ -986,7 +997,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
-                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))"
+                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
                             }
                             descriptionOffset = 14.0
                         case .Remote:
@@ -1011,10 +1022,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     transition.updateFrame(node: linearProgressNode, frame: progressFrame)
                     linearProgressNode.updateProgress(value: CGFloat(progress), completion: {})
                     
+                    var animated = true
                     if self.downloadStatusIconNode.supernode == nil {
+                        animated = false
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadPauseIcon(item.presentationData.theme.theme)
+                    self.downloadStatusIconNode.enqueueState(.pause, animated: animated)
                 case .Local:
                     if let linearProgressNode = self.linearProgressNode {
                         self.linearProgressNode = nil
@@ -1027,7 +1040,6 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode != nil {
                         self.downloadStatusIconNode.removeFromSupernode()
                     }
-                    self.downloadStatusIconNode.image = nil
                 case .Remote:
                     if let linearProgressNode = self.linearProgressNode {
                         self.linearProgressNode = nil
@@ -1035,10 +1047,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             linearProgressNode?.removeFromSupernode()
                         })
                     }
+                    var animated = true
                     if self.downloadStatusIconNode.supernode == nil {
+                        animated = false
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(item.presentationData.theme.theme)
+                    self.downloadStatusIconNode.enqueueState(.download, animated: animated)
                 }
         } else {
             if let linearProgressNode = self.linearProgressNode {
@@ -1059,18 +1073,19 @@ public final class ListMessageFileItemNode: ListMessageNode {
             transition.updateFrame(node: self.descriptionNode, frame: descriptionFrame)
         }
         
+        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
         if downloadingString != nil {
-            self.descriptionProgressNode.isHidden = false
-            self.descriptionNode.isHidden = true
+            alphaTransition.updateAlpha(node: self.descriptionProgressNode, alpha: 1.0)
+            alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 0.0)
         } else {
-            self.descriptionProgressNode.isHidden = true
-            self.descriptionNode.isHidden = false
+            alphaTransition.updateAlpha(node: self.descriptionProgressNode, alpha: 0.0)
+            alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 1.0)
         }
-        let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
+        
+        let descriptionFont = Font.with(size: floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
         self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
         transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))
-        
     }
     
     func activateMedia() {
@@ -1263,5 +1278,55 @@ private final class LinearProgressNode: ASDisplayNode {
         let shimmerWidth: CGFloat = 160.0
         let shimmerOffset = self.shimmerPhase.remainder(dividingBy: self.bounds.width + shimmerWidth / 2.0)
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: shimmerOffset - shimmerWidth / 2.0, y: 0.0), size: CGSize(width: shimmerWidth, height: 3.0))
+    }
+}
+
+private enum DownloadIconNodeState: Equatable {
+    case download
+    case pause
+}
+
+private final class DownloadIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.3
+    private var iconState: DownloadIconNodeState = .download
+    
+    init() {
+        super.init(size: CGSize(width: 18.0, height: 18.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: DownloadIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .download:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 100, endFrame: 120), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .download:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_shareddownload"), frames: .range(startFrame: 60, endFrame: 60), duration: 0.01))
+                        }
+                    case .download:
+                        break
+                }
+        }
     }
 }

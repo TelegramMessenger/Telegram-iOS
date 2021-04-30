@@ -16,8 +16,13 @@ public final class AnimationNode : ASDisplayNode {
     
     private var colorCallbacks: [LOTColorValueCallback] = []
     
-    public var played = false
+    public var didPlay = false
     public var completion: (() -> Void)?
+    private var internalCompletion: (() -> Void)?
+    
+    public var isPlaying: Bool {
+        return self.animationView()?.isAnimationPlaying ?? false
+    }
     
     public init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
         self.scale = scale
@@ -75,13 +80,35 @@ public final class AnimationNode : ASDisplayNode {
         })
     }
     
-    public func setAnimation(name: String) {
+    public func seekToEnd() {
+        self.animationView()?.animationProgress = 1.0
+    }
+    
+    public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+            self.didPlay = false
+            self.animationView()?.sceneModel = composition
+            
+            if let colors = colors {
+                for (key, value) in colors {
+                    let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                    self.colorCallbacks.append(colorCallback)
+                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                }
+            }
+        }
+    }
+    
+    public func setAnimation(data: Data) {
+        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [AnyHashable: Any] {
+            let composition = LOTComposition(json: json)
+            self.didPlay = false
             self.animationView()?.sceneModel = composition
         }
     }
     
     public func setAnimation(json: [AnyHashable: Any]) {
+        self.didPlay = false
         self.animationView()?.setAnimation(json: json)
     }
     
@@ -90,24 +117,36 @@ public final class AnimationNode : ASDisplayNode {
     }
     
     public func play() {
-        if let animationView = animationView(), !animationView.isAnimationPlaying, !self.played {
-            self.played = true
+        if let animationView = self.animationView(), !animationView.isAnimationPlaying && !self.didPlay {
+            self.didPlay = true
             animationView.play { [weak self] _ in
                 self?.completion?()
             }
         }
     }
     
+    public func playOnce() {
+        if let animationView = self.animationView(), !animationView.isAnimationPlaying && !self.didPlay {
+            self.didPlay = true
+            self.internalCompletion = { [weak self] in
+                self?.didPlay = false
+            }
+            animationView.play { [weak self] _ in
+                self?.internalCompletion?()
+            }
+        }
+    }
+    
     public func loop() {
-        if let animationView = animationView() {
+        if let animationView = self.animationView() {
             animationView.loopAnimation = true
             animationView.play()
         }
     }
     
     public func reset() {
-        if self.played, let animationView = animationView() {
-            self.played = false
+        if self.didPlay, let animationView = animationView() {
+            self.didPlay = false
             animationView.stop()
         }
     }
@@ -118,5 +157,66 @@ public final class AnimationNode : ASDisplayNode {
         } else {
             return nil
         }
+    }
+}
+
+private let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\]")
+
+public func transformedWithColors(data: Data, colors: [(UIColor, UIColor)]) -> Data {
+    if var string = String(data: data, encoding: .utf8) {
+        let sourceColors: [UIColor] = colors.map { $0.0 }
+        let replacementColors: [UIColor] = colors.map { $0.1 }
+        
+        func colorToString(_ color: UIColor) -> String {
+            var r: CGFloat = 0.0
+            var g: CGFloat = 0.0
+            var b: CGFloat = 0.0
+            if color.getRed(&r, green: &g, blue: &b, alpha: nil) {
+                return "\"k\":[\(r),\(g),\(b),1]"
+            }
+            return ""
+        }
+        
+        func match(_ a: Double, _ b: Double, eps: Double) -> Bool {
+            return abs(a - b) < eps
+        }
+        
+        var replacements: [(NSTextCheckingResult, String)] = []
+        
+        if let colorKeyRegex = colorKeyRegex {
+            let results = colorKeyRegex.matches(in: string, range: NSRange(string.startIndex..., in: string))
+            for result in results.reversed()  {
+                if let range = Range(result.range, in: string) {
+                    let substring = String(string[range])
+                    let color = substring[substring.index(string.startIndex, offsetBy: "\"k\":[".count) ..< substring.index(before: substring.endIndex)]
+                    let components = color.split(separator: ",")
+                    if components.count == 4, let r = Double(components[0]), let g = Double(components[1]), let b = Double(components[2]), let a = Double(components[3]) {
+                        if match(a, 1.0, eps: 0.01) {
+                            for i in 0 ..< sourceColors.count {
+                                let color = sourceColors[i]
+                                var cr: CGFloat = 0.0
+                                var cg: CGFloat = 0.0
+                                var cb: CGFloat = 0.0
+                                if color.getRed(&cr, green: &cg, blue: &cb, alpha: nil) {
+                                    if match(r, Double(cr), eps: 0.01) && match(g, Double(cg), eps: 0.01) && match(b, Double(cb), eps: 0.01) {
+                                        replacements.append((result, colorToString(replacementColors[i])))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        for (result, text) in replacements {
+            if let range = Range(result.range, in: string) {
+                string = string.replacingCharacters(in: range, with: text)
+            }
+        }
+        
+        return string.data(using: .utf8) ?? data
+    } else {
+        return data
     }
 }

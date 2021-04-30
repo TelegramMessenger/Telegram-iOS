@@ -752,10 +752,9 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
                             if let location = resource.apiInputLocation(peerReference: peer) {
                                 return .location(location)
                             } else {
-                                return .none
+                                return .revalidate
                             }
                         case .messageAuthorAvatar:
-                            
                             return .revalidate
                         default:
                             return .none
@@ -769,7 +768,7 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
                             if let location = resource.apiInputLocation(packReference: stickerPack) {
                                 return .location(location)
                             } else {
-                                return .none
+                                return .revalidate
                             }
                         default:
                             return .none

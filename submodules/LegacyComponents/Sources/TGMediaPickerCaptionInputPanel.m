@@ -8,8 +8,10 @@
 #import "TGFont.h"
 #import "TGViewController.h"
 #import "TGHacks.h"
+#import "TGModernButton.h"
 
 #import "TGPhotoEditorInterfaceAssets.h"
+#import "TGMediaAssetsController.h"
 
 #import "HPTextViewInternal.h"
 
@@ -41,6 +43,9 @@ static void setViewFrame(UIView *view, CGRect frame)
     UIView *_inputFieldClippingContainer;
     HPGrowingTextView *_inputField;
     UILabel *_placeholderLabel;
+    
+    UIView *_doneButtonWrapper;
+    TGModernButton *_doneButton;
     
     UILabel *_inputFieldOnelineLabel;
     
@@ -148,6 +153,25 @@ static void setViewFrame(UIView *view, CGRect frame)
         _counterLabel.userInteractionEnabled = false;
         [_fieldBackground addSubview:_counterLabel];
         
+        _doneButtonWrapper = [[UIView alloc] init];
+        _doneButtonWrapper.alpha = 0.0f;
+        _doneButtonWrapper.userInteractionEnabled = false;
+        [_wrapperView addSubview:_doneButtonWrapper];
+        
+        CGSize buttonSize = CGSizeMake(49.0f, 49.0f);
+        _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
+        _doneButton.exclusiveTouch = true;
+        _doneButton.adjustsImageWhenHighlighted = false;
+        [_doneButton addTarget:self action:@selector(setButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_doneButtonWrapper addSubview:_doneButton];
+        
+        TGMediaAssetsPallete *pallete = nil;
+        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+            pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+        
+        UIImage *doneImage = pallete != nil ? pallete.doneIconImage : TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
+        [_doneButton setImage:doneImage forState:UIControlStateNormal];
+        
         [_wrapperView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleFieldBackgroundTap:)]];
     }
     return self;
@@ -175,7 +199,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _inputField.backgroundColor = nil;
     _inputField.opaque = false;
     _inputField.showPlaceholderWhenFocussed = true;
-    _inputField.internalTextView.returnKeyType = UIReturnKeyDone;
+    _inputField.internalTextView.returnKeyType = UIReturnKeyDefault;
     _inputField.internalTextView.backgroundColor = nil;
     _inputField.internalTextView.opaque = false;
     _inputField.internalTextView.contentMode = UIViewContentModeLeft;
@@ -544,11 +568,13 @@ static void setViewFrame(UIView *view, CGRect frame)
     [self updateCounterWithText:_caption];
     
     _inputField.alpha = 0.0f;
+    _doneButtonWrapper.userInteractionEnabled = true;
     [UIView animateWithDuration:0.2f animations:^
     {
         _inputField.alpha = 1.0f;
         _inputFieldOnelineLabel.alpha = 0.0f;
         _fieldBackground.alpha = 1.0f;
+        _doneButtonWrapper.alpha = 1.0;
     } completion:^(BOOL finished)
     {
         if (finished)
@@ -580,10 +606,12 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     [self updateCounterWithText:_caption];
     
+    _doneButtonWrapper.userInteractionEnabled = false;
     [UIView animateWithDuration:0.2f animations:^
     {
         _inputField.alpha = 0.0f;
         _inputFieldOnelineLabel.alpha = 1.0f;
+        _doneButtonWrapper.alpha = 0.0;
         
         if (_caption.length == 0)
             _fieldBackground.alpha = 0.0f;
@@ -733,17 +761,6 @@ static void setViewFrame(UIView *view, CGRect frame)
         [delegate inputPanelTextChanged:self text:text];
     
     [self updateCounterWithText:text];
-}
-
-- (BOOL)growingTextViewShouldReturn:(HPGrowingTextView *)__unused growingTextView
-{
-    [self setButtonPressed];
-    return false;
-}
-
-- (void)growingTextView:(HPGrowingTextView *)__unused growingTextView receivedReturnKeyCommandWithModifierFlags:(UIKeyModifierFlags)__unused flags
-{
-    [self setButtonPressed];
 }
 
 - (void)addNewLine
@@ -1011,9 +1028,19 @@ static void setViewFrame(UIView *view, CGRect frame)
             _associatedPanel.frame = associatedPanelFrame;
     }
     
-    UIEdgeInsets inputFieldInsets = [self _inputFieldInsets];
+    UIEdgeInsets visibleInputFieldInsets = [self _inputFieldInsets];
+    if (self.isFirstResponder) {
+        visibleInputFieldInsets.right += 41.0;
+    }
+    UIEdgeInsets actualInputFieldInsets = [self _inputFieldInsets];
+    actualInputFieldInsets.right += 41.0;
+    
     CGFloat inputContainerHeight = [self heightForInputFieldHeight:self.isFirstResponder ? _inputField.frame.size.height : 0];
-    setViewFrame(_fieldBackground, CGRectMake(inputFieldInsets.left, inputFieldInsets.top, frame.size.width - inputFieldInsets.left - inputFieldInsets.right, inputContainerHeight - inputFieldInsets.top - inputFieldInsets.bottom));
+    CGRect fieldBackgroundFrame = CGRectMake(visibleInputFieldInsets.left, visibleInputFieldInsets.top, frame.size.width - visibleInputFieldInsets.left - visibleInputFieldInsets.right, inputContainerHeight - visibleInputFieldInsets.top - visibleInputFieldInsets.bottom);
+    
+    CGRect actualFieldBackgroundFrame = CGRectMake(actualInputFieldInsets.left, actualInputFieldInsets.top, frame.size.width - actualInputFieldInsets.left - actualInputFieldInsets.right, inputContainerHeight - actualInputFieldInsets.top - actualInputFieldInsets.bottom);
+    
+    setViewFrame(_fieldBackground, fieldBackgroundFrame);
     
     UIEdgeInsets inputFieldInternalEdgeInsets = [self _inputFieldInternalEdgeInsets];
     CGRect onelineFrame = _fieldBackground.frame;
@@ -1028,7 +1055,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         placeholderFrame.origin.x = onelineFrame.origin.x;
     setViewFrame(_placeholderLabel, placeholderFrame);
     
-    CGRect inputFieldClippingFrame = _fieldBackground.frame;
+    CGRect inputFieldClippingFrame = actualFieldBackgroundFrame;
     setViewFrame(_inputFieldClippingContainer, inputFieldClippingFrame);
 
     CGFloat inputFieldWidth = _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 36;
@@ -1037,6 +1064,8 @@ static void setViewFrame(UIView *view, CGRect frame)
         CGRect inputFieldFrame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, inputFieldWidth, _inputFieldClippingContainer.frame.size.height);
         setViewFrame(_inputField, inputFieldFrame);
     }
+    
+    _doneButtonWrapper.frame = CGRectMake(self.frame.size.width - 47.0, CGRectGetMaxY(_fieldBackground.frame) - _doneButton.frame.size.height + (TGIsPad() ? 7.0 : 8.0), _doneButton.frame.size.width, _doneButton.frame.size.height);
 }
 
 @end

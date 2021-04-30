@@ -11,6 +11,7 @@ import TextSelectionNode
 import ReactionSelectionNode
 import ContextUI
 import ChatInterfaceState
+import UndoUI
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -52,6 +53,7 @@ public final class ChatControllerInteraction {
     let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
+    let activateMessagePinch: (PinchSourceContainerNode) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let navigateToMessageStandalone: (MessageId) -> Void
@@ -119,6 +121,7 @@ public final class ChatControllerInteraction {
     let openMessageStats: (MessageId) -> Void
     let editMessageMedia: (MessageId, Bool) -> Void
     let copyText: (String) -> Void
+    let displayUndo: (UndoOverlayContent) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -142,6 +145,7 @@ public final class ChatControllerInteraction {
         openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
+        activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,
         navigateToMessageStandalone: @escaping (MessageId) -> Void,
@@ -167,7 +171,7 @@ public final class ChatControllerInteraction {
         updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void,
         updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void,
         openMessageShareMenu: @escaping (MessageId) -> Void,
-        presentController: @escaping  (ViewController, Any?) -> Void,
+        presentController: @escaping (ViewController, Any?) -> Void,
         navigationController: @escaping () -> NavigationController?,
         chatControllerNode: @escaping () -> ASDisplayNode?,
         reactionContainerNode: @escaping () -> ReactionSelectionParentNode?,
@@ -209,6 +213,7 @@ public final class ChatControllerInteraction {
         openMessageStats: @escaping (MessageId) -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         copyText: @escaping (String) -> Void,
+        displayUndo: @escaping (UndoOverlayContent) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -219,6 +224,7 @@ public final class ChatControllerInteraction {
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
         self.openMessageContextMenu = openMessageContextMenu
+        self.activateMessagePinch = activateMessagePinch
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
         self.navigateToMessageStandalone = navigateToMessageStandalone
@@ -286,7 +292,7 @@ public final class ChatControllerInteraction {
         self.openMessageStats = openMessageStats
         self.editMessageMedia = editMessageMedia
         self.copyText = copyText
-        
+        self.displayUndo = displayUndo
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -298,7 +304,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -340,6 +346,7 @@ public final class ChatControllerInteraction {
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
+        }, displayUndo: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

@@ -4,8 +4,11 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import LegacyComponents
+import AnimationUI
+import AppBundle
+import ManagedAnimationNode
 
-private let titleFont = Font.regular(17.0)
+private let titleFont = Font.regular(15.0)
 private let subtitleFont = Font.regular(13.0)
 
 private let white = UIColor(rgb: 0xffffff)
@@ -15,11 +18,16 @@ private let blue = UIColor(rgb: 0x0078ff)
 private let lightBlue = UIColor(rgb: 0x59c7f8)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
-private let purple = UIColor(rgb: 0x6b81f0)
-private let pink = UIColor(rgb: 0xd75a76)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
 
-private let areaSize = CGSize(width: 440.0, height: 440.0)
-private let blobSize = CGSize(width: 244.0, height: 244.0)
+private let areaSize = CGSize(width: 300.0, height: 300.0)
+private let blobSize = CGSize(width: 190.0, height: 190.0)
+
+private let smallScale: CGFloat = 0.48
+private let smallIconScale: CGFloat = 0.69
+
+private let buttonHeight: CGFloat = 52.0
 
 final class VoiceChatActionButton: HighlightTrackingButtonNode {
     enum State: Equatable {
@@ -28,7 +36,15 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             case muted
             case on
         }
+        
+        enum ScheduledState: Equatable {
+            case start
+            case subscribe
+            case unsubscribe
+        }
 
+        case button(text: String)
+        case scheduled(state: ScheduledState)
         case connecting
         case active(state: ActiveState)
     }
@@ -44,9 +60,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     let bottomNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
-    private let iconNode: VoiceChatMicrophoneNode
-    private let titleLabel: ImmediateTextNode
+    private let iconNode: VoiceChatActionButtonIconNode
+    let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
+    private let buttonTitleLabel: ImmediateTextNode
     
     private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, dark: Bool, small: Bool, title: String, subtitle: String, snap: Bool)?
     
@@ -77,12 +94,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     var wasActiveWhenPressed = false
     var pressing: Bool = false {
         didSet {
-            guard let (_, _, state, _, _, _, _, snap) = self.currentParams, !self.isDisabled else {
+            guard let (_, _, state, _, small, _, _, snap) = self.currentParams, !self.isDisabled else {
                 return
             }
             if self.pressing {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
+                if small {
+                    transition.updateTransformScale(node: self.backgroundNode, scale: smallScale * 0.9)
+                    transition.updateTransformScale(node: self.iconNode, scale: smallIconScale * 0.9)
+                } else {
+                    transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 0.9)
+                }
                 
                 switch state {
                     case let .active(state):
@@ -92,12 +114,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                             default:
                                 break
                         }
-                    case .connecting:
+                    case .connecting, .button, .scheduled:
                         break
                 }
             } else {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                if small {
+                    transition.updateTransformScale(node: self.backgroundNode, scale: smallScale)
+                    transition.updateTransformScale(node: self.iconNode, scale: smallIconScale)
+                } else {
+                    transition.updateTransformScale(node: self.iconNode, scale: snap ? 0.5 : 1.0)
+                }
                 self.wasActiveWhenPressed = false
             }
         }
@@ -105,12 +132,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
     init() {
         self.bottomNode = ASDisplayNode()
+        self.bottomNode.isUserInteractionEnabled = false
         self.containerNode = ASDisplayNode()
+        self.containerNode.isUserInteractionEnabled = false
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
-        self.iconNode = VoiceChatMicrophoneNode()
+        self.iconNode = VoiceChatActionButtonIconNode(isColored: false)
         
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
+        self.buttonTitleLabel = ImmediateTextNode()
+        self.buttonTitleLabel.isUserInteractionEnabled = false
+        self.buttonTitleLabel.alpha = 0.0
         
         super.init()
     
@@ -122,17 +154,39 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
         
+        self.containerNode.addSubnode(self.buttonTitleLabel)
+        
         self.highligthedChanged = { [weak self] pressing in
             if let strongSelf = self {
-                guard let (_, _, _, _, _, _, _, snap) = strongSelf.currentParams, !strongSelf.isDisabled else {
+                guard let (_, _, state, _, small, _, _, snap) = strongSelf.currentParams else {
                     return
                 }
                 if pressing {
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
+                    if case .button = state {
+                        strongSelf.containerNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.containerNode.alpha = 0.4
+                    } else {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+                        if small {
+                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale * 0.9)
+                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale * 0.9)
+                        } else {
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
+                        }
+                    }
                 } else if !strongSelf.pressing {
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                    transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
+                    if case .button = state {
+                        strongSelf.containerNode.alpha = 1.0
+                        strongSelf.containerNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    } else {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+                        if small {
+                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale)
+                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale)
+                        } else {
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
+                        }
+                    }
                 }
             }
         }
@@ -188,7 +242,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor(size.height - totalHeight / 2.0) - 112.0), size: titleSize)
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
         self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -206,55 +260,75 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                     default:
                         break
                 }
-            case .connecting:
+            case .connecting, .button, .scheduled:
                 break
         }
         
-        
         if snap {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.75 : 0.5)
-            transition.updateTransformScale(node: self.iconNode, scale: 0.5)
+            transition.updateTransformScale(node: self.backgroundNode, scale: active ? 0.9 : 0.625)
+            transition.updateTransformScale(node: self.iconNode, scale: 0.625)
             transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            transition.updateTransformScale(node: self.backgroundNode, scale: small ? 0.85 : 1.0, delay: 0.05)
-            transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            
+            if small {
+                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.05)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.05)
+            } else {
+                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.05)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+            }
             transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
-        let iconSize = CGSize(width: 90.0, height: 90.0)
+        let iconSize = CGSize(width: 100.0, height: 100.0)
         self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconSize)
         self.iconNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
     
+    private var previousIcon: VoiceChatActionButtonIconAnimationState?
     private func applyIconParams() {
         guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
             return
         }
         
-        var iconMuted = true
-        var iconColor: UIColor = UIColor(rgb: 0xffffff)
+        let icon: VoiceChatActionButtonIconAnimationState
         switch state {
+            case .button:
+                icon = .empty
+            case let .scheduled(state):
+                switch state {
+                    case .start:
+                        icon = .start
+                    case .subscribe:
+                        icon = .subscribe
+                    case .unsubscribe:
+                        icon = .unsubscribe
+                }
             case let .active(state):
                 switch state {
                     case .on:
-                        iconMuted = false
+                        icon = .unmute
                     case .muted:
-                        break
+                        icon = .mute
                     case .cantSpeak:
-                        if !snap {
-                            iconColor = UIColor(rgb: 0xff3b30)
-                        }
+                        icon = .hand
                 }
             case .connecting:
-                break
+                if let previousIcon = previousIcon {
+                    icon = previousIcon
+                } else {
+                    icon = .mute
+                }
         }
-        self.iconNode.update(state: VoiceChatMicrophoneNode.State(muted: iconMuted, color: iconColor), animated: true)
+        self.previousIcon = icon
+        
+        self.iconNode.enqueueState(icon)
     }
     
     func update(snap: Bool, animated: Bool) {
@@ -276,8 +350,30 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
 
         self.statePromise.set(state)
         
+        if let previousState = previousState, case .button = previousState, case .scheduled = state {
+            self.buttonTitleLabel.alpha = 0.0
+            self.buttonTitleLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            self.buttonTitleLabel.layer.animateScale(from: 1.0, to: 0.001, duration: 0.24)
+            
+            self.iconNode.alpha = 1.0
+            self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.iconNode.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+        }
+        
         var backgroundState: VoiceChatActionButtonBackgroundNode.State
+        var animated = true
         switch state {
+            case let .button(text):
+                backgroundState = .button
+                self.buttonTitleLabel.alpha = 1.0
+                self.buttonTitleLabel.attributedText = NSAttributedString(string: text, font: Font.semibold(17.0), textColor: .white)
+                let titleSize = self.buttonTitleLabel.updateLayout(CGSize(width: size.width, height: 100.0))
+                self.buttonTitleLabel.frame = CGRect(origin: CGPoint(x: floor((self.bounds.width - titleSize.width) / 2.0), y: floor((self.bounds.height - titleSize.height) / 2.0)), size: titleSize)
+            case .scheduled:
+                backgroundState = .disabled
+                if previousState == .connecting {
+                    animated = false
+                }
             case let .active(state):
                 switch state {
                     case .on:
@@ -293,7 +389,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.applyIconParams()
         
         self.backgroundNode.isDark = dark
-        self.backgroundNode.update(state: backgroundState, animated: true)
+        self.backgroundNode.update(state: backgroundState, animated: animated)
         
         if case .active = state, let previousState = previousState, case .connecting = previousState, animated {
             self.activeDisposable.set((self.activePromise.get()
@@ -304,20 +400,28 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 }
             }))
         } else {
-            applyParams(animated: animated)
+            self.applyParams(animated: animated)
         }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         var hitRect = self.bounds
-        if let (_, buttonSize, _, _, _, _, _, _) = self.currentParams {
-            hitRect = self.bounds.insetBy(dx: (self.bounds.width - buttonSize.width) / 2.0, dy: (self.bounds.height - buttonSize.height) / 2.0)
+        if let (_, buttonSize, state, _, _, _, _, _) = self.currentParams {
+            if case .button = state {
+                hitRect = CGRect(x: 0.0, y: floor((self.bounds.height - buttonHeight) / 2.0), width: self.bounds.width, height: buttonHeight)
+            } else {
+                hitRect = self.bounds.insetBy(dx: (self.bounds.width - buttonSize.width) / 2.0, dy: (self.bounds.height - buttonSize.height) / 2.0)
+            }
         }
         let result = super.hitTest(point, with: event)
         if !hitRect.contains(point) {
             return nil
         }
         return result
+    }
+    
+    func playAnimation() {
+        self.iconNode.playRandomAnimation()
     }
 }
 
@@ -406,13 +510,14 @@ extension UIBezierPath {
 }
 
 private let progressLineWidth: CGFloat = 3.0 + UIScreenPixel
-private let buttonSize = CGSize(width: 144.0, height: 144.0)
+private let buttonSize = CGSize(width: 112.0, height: 112.0)
 private let radius = buttonSize.width / 2.0
 
 private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     enum State: Equatable {
         case connecting
         case disabled
+        case button
         case blob(Bool)
     }
     
@@ -506,9 +611,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskProgressLayer.lineCap = .round
         self.maskProgressLayer.path = path
         
-        let largerCirclePath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width + progressLineWidth, height: buttonSize.height + progressLineWidth))).cgPath
-        self.maskCircleLayer.fillColor = white.cgColor
+        let circleFrame = CGRect(origin: CGPoint(x: (areaSize.width - buttonSize.width) / 2.0, y: (areaSize.height - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+        let largerCirclePath = UIBezierPath(roundedRect: CGRect(x: circleFrame.minX, y: circleFrame.minY, width: circleFrame.width, height: circleFrame.height), cornerRadius: circleFrame.width / 2.0).cgPath
+        
         self.maskCircleLayer.path = largerCirclePath
+        self.maskCircleLayer.fillColor = white.cgColor
         self.maskCircleLayer.isHidden = true
         
         updateInHierarchy = { [weak self] value in
@@ -549,11 +656,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
             if self.maskBlobView.presentationAudioLevel > 0.22 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.1 ..< 0.35))
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.15 ..< 0.35))
             } else if self.maskBlobView.presentationAudioLevel > 0.01 {
-                newValue = CGPoint(x: CGFloat.random(in: 0.77 ..< 0.95), y: CGFloat.random(in: 0.1 ..< 0.35))
+                newValue = CGPoint(x: CGFloat.random(in: 0.57 ..< 0.85), y: CGFloat.random(in: 0.15 ..< 0.45))
             } else {
-                newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
+                newValue = CGPoint(x: CGFloat.random(in: 0.6 ..< 0.75), y: CGFloat.random(in: 0.25 ..< 0.45))
             }
             self.foregroundGradientLayer.startPoint = newValue
             
@@ -645,83 +752,79 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         }
     }
     
-    func updateGlowAndGradientAnimations(active: Bool?, previousActive: Bool? = nil) {
-        let effectivePreviousActive = previousActive ?? false
+    enum Gradient {
+        case speaking
+        case active
+        case connecting
+        case muted
+    }
+    
+    func updateGlowAndGradientAnimations(type: Gradient, previousType: Gradient? = nil, animated: Bool = true) {
+        let effectivePreviousTyoe = previousType ?? .active
         
-        let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (effectivePreviousActive ? 0.95 : 0.8))
+        let scale: CGFloat
+        if case .speaking = effectivePreviousTyoe {
+            scale = 0.95
+        } else {
+            scale = 0.8
+        }
+        
+        let initialScale: CGFloat = ((self.maskGradientLayer.value(forKeyPath: "presentationLayer.transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? (((self.maskGradientLayer.value(forKeyPath: "transform.scale.x") as? NSNumber)?.floatValue).flatMap({ CGFloat($0) }) ?? scale)
         let initialColors = self.foregroundGradientLayer.colors
         
         let outerColor: UIColor?
         let targetColors: [CGColor]
         let targetScale: CGFloat
-        if let active = active {
-            if active {
+        switch type {
+            case .speaking:
                 targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
                 outerColor = UIColor(rgb: 0x21674f)
-            } else {
+            case .active:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
                 outerColor = UIColor(rgb: 0x1d588d)
-            }
-        } else {
-            targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
-            targetScale = 0.3
-            outerColor = nil
+            case .connecting:
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+                targetScale = 0.3
+                outerColor = nil
+            case .muted:
+                targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
+                targetScale = 0.85
+                outerColor = UIColor(rgb: 0x3b3474)
         }
         self.updatedOuterColor?(outerColor)
         
         self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
-        if let _ = previousActive {
+        if let _ = previousType {
             self.maskGradientLayer.animateScale(from: initialScale, to: targetScale, duration: 0.3)
-        } else {
+        } else if animated {
             self.maskGradientLayer.animateSpring(from: initialScale as NSNumber, to: targetScale as NSNumber, keyPath: "transform.scale", duration: 0.45)
         }
         
         self.foregroundGradientLayer.colors = targetColors
-        self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        if animated {
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        }
     }
     
-    private func playConnectionDisappearanceAnimation() {
-        let initialRotation: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.transform.rotation.z") as? NSNumber)?.floatValue ?? 0.0)
-        let initialStrokeEnd: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.strokeEnd") as? NSNumber)?.floatValue ?? 1.0)
-        
-        self.maskProgressLayer.removeAnimation(forKey: "progressGrowth")
-        self.maskProgressLayer.removeAnimation(forKey: "progressRotation")
-        
-        let duration: Double = (1.0 - Double(initialStrokeEnd)) * 0.6
-        
-        let growthAnimation = CABasicAnimation(keyPath: "strokeEnd")
-        growthAnimation.fromValue = initialStrokeEnd
-        growthAnimation.toValue = 0.0
-        growthAnimation.duration = duration
-        growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
-        
-        let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-        rotateAnimation.fromValue = initialRotation
-        rotateAnimation.toValue = initialRotation + CGFloat.pi * 2
-        rotateAnimation.isAdditive = true
-        rotateAnimation.duration = duration
-        rotateAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
-        
-        let groupAnimation = CAAnimationGroup()
-        groupAnimation.animations = [growthAnimation, rotateAnimation]
-        groupAnimation.duration = duration
-        
-        CATransaction.setCompletionBlock {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.maskProgressLayer.isHidden = true
-            self.maskProgressLayer.removeAllAnimations()
-            CATransaction.commit()
-        }
-        
-        self.maskProgressLayer.add(groupAnimation, forKey: "progressDisappearance")
-        CATransaction.commit()
+    private func playMuteAnimation() {
+        self.maskBlobView.startAnimating()
+        self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.state != .connecting {
+                return
+            }
+            strongSelf.maskBlobView.isHidden = true
+            strongSelf.maskBlobView.stopAnimating()
+            strongSelf.maskBlobView.layer.removeAllAnimations()
+        })
     }
     
     var animatingDisappearance = false
-    private func playBlobsDisappearanceAnimation() {
+    private func playDeactivationAnimation() {
         if self.animatingDisappearance {
             return
         }
@@ -733,14 +836,14 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.disableGlowAnimations = true
         self.maskGradientLayer.removeAllAnimations()
-        self.updateGlowAndGradientAnimations(active: nil, previousActive: nil)
+        self.updateGlowAndGradientAnimations(type: .connecting, previousType: nil)
         
         self.maskBlobView.startAnimating()
         self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.state != .connecting && strongSelf.state != .disabled {
+            if strongSelf.state != .connecting {
                 return
             }
             strongSelf.maskBlobView.isHidden = true
@@ -755,18 +858,19 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         growthAnimation.duration = 0.15
         growthAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
         growthAnimation.isRemovedOnCompletion = false
+        growthAnimation.fillMode = .forwards
         
         CATransaction.setCompletionBlock {
             self.animatingDisappearance = false
-            if self.state != .connecting && self.state != .disabled {
+            self.growingForegroundCircleLayer.isHidden = true
+            self.disableGlowAnimations = false
+            if self.state != .connecting {
                 return
             }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.disableGlowAnimations = false
             self.maskGradientLayer.isHidden = true
             self.maskCircleLayer.isHidden = true
-            self.growingForegroundCircleLayer.isHidden = true
             self.growingForegroundCircleLayer.removeAllAnimations()
             CATransaction.commit()
         }
@@ -774,46 +878,24 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.growingForegroundCircleLayer.add(growthAnimation, forKey: "insideGrowth")
         CATransaction.commit()
     }
-        
-    private func playBlobsAppearanceAnimation(active: Bool) {
+            
+    private func playActivationAnimation(active: Bool) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.foregroundCircleLayer.isHidden = false
         self.maskCircleLayer.isHidden = false
         self.maskProgressLayer.isHidden = true
         self.maskGradientLayer.isHidden = false
         CATransaction.commit()
                 
-        self.disableGlowAnimations = true
         self.maskGradientLayer.removeAllAnimations()
-        self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+        self.updateGlowAndGradientAnimations(type: active ? .speaking : .active, previousType: nil)
         
         self.maskBlobView.isHidden = false
         self.maskBlobView.startAnimating()
         self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
-                
-        CATransaction.begin()
-        let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
-        shrinkAnimation.fromValue = 1.0
-        shrinkAnimation.toValue = 0.0
-        shrinkAnimation.duration = 0.15
-        shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
-        
-        CATransaction.setCompletionBlock {
-            if case .blob = self.state {
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                self.disableGlowAnimations = false
-                self.foregroundCircleLayer.isHidden = true
-                CATransaction.commit()
-            }
-        }
-        
-        self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
-        CATransaction.commit()
     }
-    
-    private func playConnectionAnimation(active: Bool, completion: @escaping () -> Void) {
+        
+    private func playConnectionAnimation(type: Gradient, completion: @escaping () -> Void) {
         CATransaction.begin()
         let initialRotation: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.transform.rotation.z") as? NSNumber)?.floatValue ?? 0.0)
         let initialStrokeEnd: CGFloat = CGFloat((self.maskProgressLayer.value(forKeyPath: "presentationLayer.strokeEnd") as? NSNumber)?.floatValue ?? 1.0)
@@ -841,10 +923,15 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         groupAnimation.duration = duration
         
         CATransaction.setCompletionBlock {
-            if case .blob = self.state {
+            var active = true
+            if case .connecting = self.state {
+                active = false
+            }
+            if active {
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
                 self.foregroundCircleLayer.isHidden = false
+                self.foregroundCircleLayer.transform = CATransform3DMakeScale(1.0, 1.0, 1.0)
                 self.maskCircleLayer.isHidden = false
                 self.maskProgressLayer.isHidden = true
                 self.maskGradientLayer.isHidden = false
@@ -852,28 +939,33 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 
                 completion()
                 
-                self.updateGlowAndGradientAnimations(active: active, previousActive: nil)
+                self.updateGlowAndGradientAnimations(type: type, previousType: nil)
                 
-                self.maskBlobView.isHidden = false
-                self.maskBlobView.startAnimating()
-                self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                if case .connecting = self.state {
+                } else {
+                    self.maskBlobView.isHidden = false
+                    self.maskBlobView.startAnimating()
+                    self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                }
                 
                 self.updatedActive?(true)
                 
                 CATransaction.begin()
                 let shrinkAnimation = CABasicAnimation(keyPath: "transform.scale")
                 shrinkAnimation.fromValue = 1.0
-                shrinkAnimation.toValue = 0.0
+                shrinkAnimation.toValue = 0.00001
                 shrinkAnimation.duration = 0.15
                 shrinkAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
+                shrinkAnimation.isRemovedOnCompletion = false
+                shrinkAnimation.fillMode = .forwards
                 
                 CATransaction.setCompletionBlock {
-                    if case .blob = self.state {
-                        CATransaction.begin()
-                        CATransaction.setDisableActions(true)
-                        self.foregroundCircleLayer.isHidden = true
-                        CATransaction.commit()
-                    }
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    self.foregroundCircleLayer.isHidden = true
+                    self.foregroundCircleLayer.transform = CATransform3DMakeScale(0.0, 0.0, 1.0)
+                    self.foregroundCircleLayer.removeAllAnimations()
+                    CATransaction.commit()
                 }
                 
                 self.foregroundCircleLayer.add(shrinkAnimation, forKey: "insideShrink")
@@ -885,10 +977,58 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         CATransaction.commit()
     }
     
+    private var maskIsCircle = true
+    private func setupButtonAnimation() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.backgroundCircleLayer.isHidden = true
+        self.foregroundCircleLayer.isHidden = true
+        self.maskCircleLayer.isHidden = false
+        self.maskProgressLayer.isHidden = true
+        self.maskGradientLayer.isHidden = true
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: floor((self.bounds.height - buttonHeight) / 2.0), width: self.bounds.width, height: buttonHeight), cornerRadius: 10.0).cgPath
+        self.maskCircleLayer.path = path
+        self.maskIsCircle = false
+        
+        CATransaction.commit()
+        
+        self.updateGlowAndGradientAnimations(type: .muted, previousType: nil)
+        
+        self.updatedActive?(true)
+    }
+    
+    private func playScheduledAnimation() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.maskGradientLayer.isHidden = false
+        CATransaction.commit()
+        
+        let circleFrame = CGRect(origin: CGPoint(x: (self.bounds.width - buttonSize.width) / 2.0, y: (self.bounds.height - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+        let largerCirclePath = UIBezierPath(roundedRect: CGRect(x: circleFrame.minX, y: circleFrame.minY, width: circleFrame.width, height: circleFrame.height), cornerRadius: circleFrame.width / 2.0).cgPath
+        
+        let previousPath = self.maskCircleLayer.path
+        self.maskCircleLayer.path = largerCirclePath
+        self.maskIsCircle = true
+        
+        self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.6, initialVelocity: 0.0, damping: 100.0)
+        
+        self.maskBlobView.isHidden = false
+        self.maskBlobView.startAnimating()
+        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
+        
+        self.disableGlowAnimations = true
+        self.maskGradientLayer.removeAllAnimations()
+        self.maskGradientLayer.animateSpring(from: 0.3 as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45, completion: { [weak self] _ in
+            self?.disableGlowAnimations = false
+        })
+    }
+    
     var isActive = false
     func updateAnimations() {
         if !self.isCurrentlyInHierarchy {
             self.foregroundGradientLayer.removeAllAnimations()
+            self.growingForegroundCircleLayer.removeAllAnimations()
             self.maskGradientLayer.removeAllAnimations()
             self.maskProgressLayer.removeAllAnimations()
             self.maskBlobView.stopAnimating()
@@ -902,7 +1042,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 if let transition = self.transition {
                     self.updateGlowScale(nil)
                     if case .blob = transition {
-                        playBlobsDisappearanceAnimation()
+                        self.playDeactivationAnimation()
+                    } else if case .disabled = transition {
+                        self.playDeactivationAnimation()
                     }
                     self.transition = nil
                 }
@@ -910,17 +1052,18 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 self.isActive = false
             case let .blob(newActive):
                 if let transition = self.transition {
+                    let type: Gradient = newActive ? .speaking : .active
                     if transition == .connecting {
-                        self.playConnectionAnimation(active: newActive) { [weak self] in
+                        self.playConnectionAnimation(type: type) { [weak self] in
                             self?.isActive = newActive
                         }
                     } else if transition == .disabled {
-                        self.playBlobsAppearanceAnimation(active: newActive)
+                        self.playActivationAnimation(active: newActive)
                         self.transition = nil
                         self.isActive = newActive
                         self.updatedActive?(true)
                     } else if case let .blob(previousActive) = transition {
-                        updateGlowAndGradientAnimations(active: newActive, previousActive: previousActive)
+                        self.updateGlowAndGradientAnimations(type: type, previousType: previousActive ? .speaking : .active)
                         self.transition = nil
                         self.isActive = newActive
                     }
@@ -931,17 +1074,34 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             case .disabled:
                 self.updatedActive?(true)
                 self.isActive = false
-                self.updateGlowScale(nil)
                 
                 if let transition = self.transition {
-                    if case .connecting = transition {
-                        playConnectionDisappearanceAnimation()
-                    } else if case .blob = transition {
-                        playBlobsDisappearanceAnimation()
+                    if case .button = transition {
+                        self.playScheduledAnimation()
+                    } else if case .connecting = transition {
+                        self.playConnectionAnimation(type: .muted) { [weak self] in
+                            self?.isActive = false
+                        }
+                    } else if case let .blob(previousActive) = transition {
+                        self.updateGlowAndGradientAnimations(type: .muted, previousType: previousActive ? .speaking : .active)
+                        self.playMuteAnimation()
                     }
                     self.transition = nil
+                } else {
+                    if self.maskBlobView.isHidden {
+                        self.updateGlowAndGradientAnimations(type: .muted, previousType: nil, animated: false)
+                        self.maskCircleLayer.isHidden = false
+                        self.maskProgressLayer.isHidden = true
+                        self.maskGradientLayer.isHidden = false
+                        self.maskBlobView.isHidden = false
+                        self.maskBlobView.startAnimating()
+                        self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    }
                 }
-                break
+            case .button:
+                self.updatedActive?(true)
+                self.isActive = false
+                self.setupButtonAnimation()
         }
     }
     
@@ -1006,23 +1166,41 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.updateAnimations()
     }
     
+    var previousSize: CGSize?
     override func layout() {
         super.layout()
         
-        let center = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+        let sizeUpdated = self.previousSize != self.bounds.size
+        self.previousSize = self.bounds.size
         
-        let circleFrame = CGRect(origin: CGPoint(x: (self.bounds.width - buttonSize.width) / 2.0, y: (self.bounds.height - buttonSize.height) / 2.0), size: buttonSize)
+        let bounds = CGRect(x: (self.bounds.width - areaSize.width) / 2.0, y: (self.bounds.height - areaSize.height) / 2.0, width: areaSize.width, height: areaSize.height)
+        let center = bounds.center
+        
+        self.maskBlobView.frame = CGRect(origin: CGPoint(x: bounds.minX + (bounds.width - blobSize.width) / 2.0, y: bounds.minY + (bounds.height - blobSize.height) / 2.0), size: blobSize)
+        
+        let circleFrame = CGRect(origin: CGPoint(x: bounds.minX + (bounds.width - buttonSize.width) / 2.0, y: bounds.minY + (bounds.height - buttonSize.height) / 2.0), size: buttonSize)
         self.backgroundCircleLayer.frame = circleFrame
         self.foregroundCircleLayer.position = center
         self.foregroundCircleLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: circleFrame.width - progressLineWidth, height: circleFrame.height - progressLineWidth))
         self.growingForegroundCircleLayer.position = center
         self.growingForegroundCircleLayer.bounds = self.foregroundCircleLayer.bounds
-        self.maskCircleLayer.frame = circleFrame.insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+        self.maskCircleLayer.frame = self.bounds
+
+        if sizeUpdated && self.maskIsCircle {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let circleFrame = CGRect(origin: CGPoint(x: (self.bounds.width - buttonSize.width) / 2.0, y: (self.bounds.height - buttonSize.height) / 2.0), size: buttonSize).insetBy(dx: -progressLineWidth / 2.0, dy: -progressLineWidth / 2.0)
+            let largerCirclePath = UIBezierPath(roundedRect: CGRect(x: circleFrame.minX, y: circleFrame.minY, width: circleFrame.width, height: circleFrame.height), cornerRadius: circleFrame.width / 2.0).cgPath
+            
+            self.maskCircleLayer.path = largerCirclePath
+            CATransaction.commit()
+        }
+        
         self.maskProgressLayer.frame = circleFrame.insetBy(dx: -3.0, dy: -3.0)
         self.foregroundView.frame = self.bounds
         self.foregroundGradientLayer.frame = self.bounds
         self.maskGradientLayer.position = center
-        self.maskGradientLayer.bounds = self.bounds
+        self.maskGradientLayer.bounds = bounds
         self.maskView.frame = self.bounds
     }
 }
@@ -1354,5 +1532,191 @@ final class BlobView: UIView {
         CATransaction.setDisableActions(true)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         CATransaction.commit()
+    }
+}
+
+enum VoiceChatActionButtonIconAnimationState: Equatable {
+    case empty
+    case start
+    case subscribe
+    case unsubscribe
+    case unmute
+    case mute
+    case hand
+}
+
+final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
+    private let isColored: Bool
+    private var iconState: VoiceChatActionButtonIconAnimationState = .mute
+    
+    init(isColored: Bool) {
+        self.isColored = isColored
+        super.init(size: CGSize(width: 100.0, height: 100.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
+    }
+    
+    func enqueueState(_ state: VoiceChatActionButtonIconAnimationState) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        if state != .empty {
+            self.alpha = 1.0
+        }
+        switch previousState {
+            case .empty:
+                switch state {
+                    case .start:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+                    default:
+                        break
+                }
+            case .subscribe:
+                switch state {
+                    case .unsubscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminder")))
+                    case .mute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToMute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToRaiseHand")))
+                    default:
+                        break
+                }
+            case .unsubscribe:
+                switch state {
+                    case .subscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminder")))
+                    case .mute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToMute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToRaiseHand")))
+                    default:
+                        break
+                }
+            case .start:
+                switch state {
+                    case .mute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart")))
+                    default:
+                        break
+                }
+            case .unmute:
+                switch state {
+                    case .mute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceMute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmuteToRaiseHand")))
+                    default:
+                        break
+                }
+            case .mute:
+                switch state {
+                    case .start:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceStart"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+                    case .unmute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute")))
+                    case .hand:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceMuteToRaiseHand")))
+                    case .subscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceSetReminderToRaiseHand"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+                    case .unsubscribe:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceCancelReminderToRaiseHand"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+                    case .empty:
+                        self.alpha = 0.0
+                    default:
+                        break
+                }
+            case .hand:
+                switch state {
+                    case .mute, .unmute:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("VoiceRaiseHandToMute")))
+                    default:
+                        break
+                }
+        }
+    }
+    
+    func playRandomAnimation() {
+        if case .hand = self.iconState {
+            if let next = self.trackStack.first, case let .local(name) = next.source, name.hasPrefix("VoiceHand_") {
+                return
+            }
+            
+            var useTiredAnimation = false
+            var useAngryAnimation = false
+            let val = Float.random(in: 0.0..<1.0)
+            if val <= 0.01 {
+                useTiredAnimation = true
+            } else if val <= 0.05 {
+                useAngryAnimation = true
+            }
+            
+            let normalAnimations = ["VoiceHand_1", "VoiceHand_2", "VoiceHand_3", "VoiceHand_4", "VoiceHand_7", "VoiceHand_8"]
+            let tiredAnimations = ["VoiceHand_5", "VoiceHand_6"]
+            let angryAnimations = ["VoiceHand_9", "VoiceHand_10"]
+            let animations: [String]
+            if useTiredAnimation {
+                animations = tiredAnimations
+            } else if useAngryAnimation {
+                animations = angryAnimations
+            } else {
+                animations = normalAnimations
+            }
+            if let animationName = animations.randomElement() {
+                self.trackTo(item: ManagedAnimationItem(source: .local(animationName)))
+            }
+        }
+    }
+}
+
+
+final class VoiceChatRaiseHandNode: ASDisplayNode {
+    private let animationNode: AnimationNode
+    private let color: UIColor?
+    private var playedOnce = false
+    
+    init(color: UIColor?) {
+        self.color = color
+        if let color = color, let url = getAppBundle().url(forResource: "anim_hand1", withExtension: "json"), let data = try? Data(contentsOf: url) {
+            self.animationNode = AnimationNode(animationData: transformedWithColors(data: data, colors: [(UIColor(rgb: 0xffffff), color)]))
+        } else {
+            self.animationNode = AnimationNode(animation: "anim_hand1", colors: nil, scale: 0.5)
+        }
+        super.init()
+        self.addSubnode(self.animationNode)
+    }
+    
+    func playRandomAnimation() {
+        guard self.playedOnce else {
+            self.playedOnce = true
+            self.animationNode.play()
+            return
+        }
+        
+        guard !self.animationNode.isPlaying else {
+            self.animationNode.completion = { [weak self] in
+                self?.playRandomAnimation()
+            }
+            return
+        }
+        
+        self.animationNode.completion = nil
+        if let animationName = ["anim_hand1", "anim_hand2", "anim_hand3", "anim_hand4"].randomElement() {
+            if let color = color, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let data = try? Data(contentsOf: url) {
+                self.animationNode.setAnimation(data: transformedWithColors(data: data, colors: [(UIColor(rgb: 0xffffff), color)]))
+            } else {
+                self.animationNode.setAnimation(name: animationName)
+            }
+            self.animationNode.play()
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        self.animationNode.frame = self.bounds
     }
 }

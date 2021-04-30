@@ -50,7 +50,10 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         switch contentType {
             case .generic:
                 break
-            case .name, .address:
+            case .name:
+                self.textField.textField.autocorrectionType = .no
+                self.textField.textField.keyboardType = .asciiCapable
+            case .address:
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
                 self.textField.textField.keyboardType = .phonePad
@@ -114,7 +117,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         
         textInset = max(measuredInset, textInset)
         
-        transition.updateFrame(node: self.textField, frame: CGRect(origin: CGPoint(x: textInset, y: 3.0), size: CGSize(width: max(1.0, width - textInset - 8.0), height: 40.0)))
+        transition.updateFrame(node: self.textField, frame: CGRect(origin: CGPoint(x: textInset, y: 0.0), size: CGSize(width: max(1.0, width - textInset - 8.0), height: 40.0)))
         
         return 44.0
     }

@@ -72,6 +72,11 @@ public func stickerPackFileReference(_ file: TelegramMediaFile) -> FileMediaRefe
 private func findMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
     if let image = media as? TelegramMediaImage {
         for representation in image.representations {
+            if let updatedResource = representation.resource as? CloudPhotoSizeMediaResource, let previousResource = resource as? CloudPhotoSizeMediaResource {
+                if updatedResource.photoId == previousResource.photoId && updatedResource.sizeSpec == previousResource.sizeSpec {
+                    return representation.resource
+                }
+            }
             if representation.resource.id.isEqual(to: resource.id) {
                 return representation.resource
             }
@@ -81,15 +86,6 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                 return representation.resource
             }
         }
-        if let legacyResource = resource as? CloudFileMediaResource {
-            for representation in image.representations {
-                if let updatedResource = representation.resource as? CloudPhotoSizeMediaResource {
-                    if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
-                        return representation.resource
-                    }
-                }
-            }
-        }
     } else if let file = media as? TelegramMediaFile {
         if file.resource.id.isEqual(to: resource.id) {
             return file.resource
@@ -97,15 +93,6 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
             for representation in file.previewRepresentations {
                 if representation.resource.id.isEqual(to: resource.id) {
                     return representation.resource
-                }
-            }
-            if let legacyResource = resource as? CloudFileMediaResource {
-                for representation in file.previewRepresentations {
-                    if let updatedResource = representation.resource as? CloudDocumentSizeMediaResource {
-                        if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
-                            return representation.resource
-                        }
-                    }
                 }
             }
         }
@@ -618,17 +605,13 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             return revalidationContext.peer(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
             |> mapToSignal { updatedPeer -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for representation in updatedPeer.profileImageRepresentations {
+                    if let updatedResource = representation.resource as? CloudPeerPhotoSizeMediaResource, let previousResource = resource as? CloudPeerPhotoSizeMediaResource {
+                        if updatedResource.sizeSpec == previousResource.sizeSpec {
+                            return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: nil))
+                        }
+                    }
                     if representation.resource.id.isEqual(to: resource.id) {
                         return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: nil))
-                    }
-                }
-                if let legacyResource = resource as? CloudFileMediaResource {
-                    for representation in updatedPeer.profileImageRepresentations {
-                        if let updatedResource = representation.resource as? CloudPeerPhotoSizeMediaResource {
-                            if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
-                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
-                            }
-                        }
                     }
                 }
                 return .fail(.generic)
@@ -693,12 +676,8 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                     if thumbnail.resource.id.isEqual(to: resource.id) {
                         return .single(RevalidatedMediaResource(updatedResource: thumbnail.resource, updatedReference: nil))
                     }
-                    if let legacyResource = resource as? CloudFileMediaResource {
-                        if let updatedResource = thumbnail.resource as? CloudStickerPackThumbnailMediaResource {
-                            if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
-                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
-                            }
-                        }
+                    if let _ = thumbnail.resource as? CloudStickerPackThumbnailMediaResource, let _ = resource as? CloudStickerPackThumbnailMediaResource {
+                        return .single(RevalidatedMediaResource(updatedResource: thumbnail.resource, updatedReference: nil))
                     }
                 }
                 return .fail(.generic)

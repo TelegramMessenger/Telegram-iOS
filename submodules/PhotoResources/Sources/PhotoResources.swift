@@ -32,8 +32,8 @@ public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> Telegr
 
 private let progressiveRangeMap: [(Int, [Int])] = [
     (100, [0]),
-    (400, [1]),
-    (600, [2, 3]),
+    (400, [3]),
+    (600, [4]),
     (Int(Int32.max), [2, 3, 4])
 ]
 
@@ -565,7 +565,7 @@ public func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReferenc
     }
 }
 
-public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false, highQuality: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
     |> map { _, _, generate in
         return generate
@@ -627,6 +627,11 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                 thumbnailImage = image
             }
+            
+            if quality == .blurred && fullSizeImage != nil {
+                thumbnailImage = fullSizeImage
+                fullSizeImage = nil
+            }
                         
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
@@ -679,7 +684,7 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
                 return context
             }
             
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
@@ -2298,7 +2303,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryPhotoDatas(account: account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously)
     
     return signal
@@ -2347,8 +2352,8 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
             }
             
             var blurredThumbnailImage: UIImage?
-            if let thumbnailImage = thumbnailImage {
-              if max(thumbnailImage.width, thumbnailImage.height) > 200 {
+            if let thumbnailImage = thumbnailImage, !skipThumbnail {
+                if max(thumbnailImage.width, thumbnailImage.height) > 200 {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)

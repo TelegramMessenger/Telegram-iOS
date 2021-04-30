@@ -20,23 +20,22 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
 
     tulsi_path = os.path.join(project_path, 'Tulsi.app/Contents/MacOS/Tulsi')
 
-    if is_apple_silicon():
-        tulsi_build_bazel_path = build_environment.bazel_x86_64_path
-        if tulsi_build_bazel_path is None or not os.path.isfile(tulsi_build_bazel_path):
-            print('Could not find a valid bazel x86_64 binary at {}'.format(tulsi_build_bazel_path))
-            exit(1)
-    else:
-        tulsi_build_bazel_path = build_environment.bazel_path
+    tulsi_build_bazel_path = build_environment.bazel_path
 
     current_dir = os.getcwd()
     os.chdir(os.path.join(build_environment.base_path, 'build-system/tulsi'))
-    call_executable([
-        tulsi_build_bazel_path,
-        'build', '//:tulsi',
-        '--xcode_version={}'.format(build_environment.xcode_version),
-        '--use_top_level_targets_for_symlinks',
-        '--verbose_failures'
-    ])
+
+    tulsi_build_command = []
+    tulsi_build_command += [tulsi_build_bazel_path]
+    tulsi_build_command += ['build', '//:tulsi']
+    if is_apple_silicon():
+        tulsi_build_command += ['--macos_cpus=arm64']
+    tulsi_build_command += ['--xcode_version={}'.format(build_environment.xcode_version)]
+    tulsi_build_command += ['--use_top_level_targets_for_symlinks']
+    tulsi_build_command += ['--verbose_failures']
+
+    call_executable(tulsi_build_command)
+
     os.chdir(current_dir)
 
     bazel_wrapper_path = os.path.abspath('build-input/gen/project/bazel')

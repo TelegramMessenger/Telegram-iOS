@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
     ],
     visibility = [
         "//visibility:public",

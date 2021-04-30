@@ -37,7 +37,7 @@ public func presentationStringsFormattedNumber(_ count: Int32, _ groupingSeparat
     }
 }
 
-public func timeIntervalString(strings: PresentationStrings, value: Int32, preferLowerValue: Bool = false, roundToNearest: Bool = false) -> String {
+public func timeIntervalString(strings: PresentationStrings, value: Int32, preferLowerValue: Bool = false) -> String {
     if preferLowerValue {
         if value <= 60 {
             return strings.MessageTimer_Seconds(max(1, value))
@@ -65,6 +65,38 @@ public func timeIntervalString(strings: PresentationStrings, value: Int32, prefe
             return strings.MessageTimer_Weeks(max(1, value / (60 * 60 * 24 * 7)))
         } else {
             return strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))
+        }
+    }
+}
+
+public func scheduledTimeIntervalString(strings: PresentationStrings, value: Int32, preferLowerValue: Bool = false) -> String {
+    if preferLowerValue {
+        if value <= 60 {
+            return strings.ScheduledIn_Seconds(max(1, value))
+        } else if value <= 60 * 60 {
+            return strings.ScheduledIn_Minutes(max(1, value / 60))
+        } else if value <= 60 * 60 * 24 {
+            return strings.ScheduledIn_Hours(max(1, value / (60 * 60)))
+        } else if value <= 60 * 60 * 24 * 7 {
+            return strings.ScheduledIn_Days(max(1, value / (60 * 60 * 24)))
+        } else if value <= 60 * 60 * 24 * 30 {
+            return strings.ScheduledIn_Weeks(max(1, value / (60 * 60 * 24 * 7)))
+        } else {
+            return strings.ScheduledIn_Months(max(1, value / (60 * 60 * 24 * 30)))
+        }
+    } else {
+        if value < 60 {
+            return strings.ScheduledIn_Seconds(max(1, value))
+        } else if value < 60 * 60 {
+            return strings.ScheduledIn_Minutes(max(1, value / 60))
+        } else if value < 60 * 60 * 24 {
+            return strings.ScheduledIn_Hours(max(1, value / (60 * 60)))
+        } else if value < 60 * 60 * 24 * 7 {
+            return strings.ScheduledIn_Days(max(1, value / (60 * 60 * 24)))
+        } else if value < 60 * 60 * 24 * 30 {
+            return strings.ScheduledIn_Weeks(max(1, value / (60 * 60 * 24 * 7)))
+        } else {
+            return strings.ScheduledIn_Months(max(1, value / (60 * 60 * 24 * 30)))
         }
     }
 }

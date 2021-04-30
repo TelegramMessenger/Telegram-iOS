@@ -37,12 +37,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let displayDuration: TooltipScreen.DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let requestDismiss: () -> Void
+    private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
     private let scrollingContainer: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundContainerNode: ASDisplayNode
     private let backgroundNode: ASImageNode
     private var effectView: UIView?
+    private var gradientNode: ASDisplayNode?
+    private var arrowGradientNode: ASDisplayNode?
     private let arrowNode: ASImageNode
     private let arrowContainer: ASDisplayNode
     private var arrowEffectView: UIView?
@@ -53,7 +56,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
         self.tooltipStyle = style
         self.icon = icon
         self.customContentNode = customContentNode
@@ -61,6 +64,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.displayDuration = displayDuration
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.requestDismiss = requestDismiss
+        self.openActiveTextItem = openActiveTextItem
         
         self.containerNode = ASDisplayNode()
         self.backgroundContainerNode = ASDisplayNode()
@@ -119,7 +123,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.arrowContainer = ASDisplayNode()
         
         let fontSize: CGFloat
-        if style == .light {
+        if case .light = style {
             self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
             self.backgroundContainerNode.clipsToBounds = true
             self.backgroundContainerNode.cornerRadius = 14.0
@@ -130,6 +134,38 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             self.arrowEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
             self.arrowContainer.view.addSubview(self.arrowEffectView!)
+            
+            let maskLayer = CAShapeLayer()
+            if let path = try? svgPath("M85.882251,0 C79.5170552,0 73.4125613,2.52817247 68.9116882,7.02834833 L51.4264069,24.5109211 C46.7401154,29.1964866 39.1421356,29.1964866 34.4558441,24.5109211 L16.9705627,7.02834833 C12.4696897,2.52817247 6.36519576,0 0,0 L85.882251,0 ", scale: CGPoint(x: 0.333333, y: 0.333333), offset: CGPoint()) {
+                maskLayer.path = path.cgPath
+            }
+            maskLayer.frame = CGRect(origin: CGPoint(), size: arrowSize)
+            self.arrowContainer.layer.mask = maskLayer
+        } else if case let .gradient(leftColor, rightColor) = style {
+            self.gradientNode = ASDisplayNode()
+            self.gradientNode?.setLayerBlock({
+                let layer = CAGradientLayer()
+                layer.colors = [leftColor.cgColor, rightColor.cgColor]
+                layer.startPoint = CGPoint()
+                layer.endPoint = CGPoint(x: 1.0, y: 0.0)
+                return layer
+            })
+            self.arrowGradientNode = ASDisplayNode()
+            self.arrowGradientNode?.setLayerBlock({
+                let layer = CAGradientLayer()
+                layer.colors = [leftColor.cgColor, rightColor.cgColor]
+                layer.startPoint = CGPoint()
+                layer.endPoint = CGPoint(x: 1.0, y: 0.0)
+                return layer
+            })
+            self.backgroundContainerNode.clipsToBounds = true
+            self.backgroundContainerNode.cornerRadius = 14.0
+            if #available(iOS 13.0, *) {
+                self.backgroundContainerNode.layer.cornerCurve = .continuous
+            }
+            fontSize = 17.0
+            
+            self.arrowContainer.addSubnode(self.arrowGradientNode!)
             
             let maskLayer = CAShapeLayer()
             if let path = try? svgPath("M85.882251,0 C79.5170552,0 73.4125613,2.52817247 68.9116882,7.02834833 L51.4264069,24.5109211 C46.7401154,29.1964866 39.1421356,29.1964866 34.4558441,24.5109211 L16.9705627,7.02834833 C12.4696897,2.52817247 6.36519576,0 0,0 L85.882251,0 ", scale: CGPoint(x: 0.333333, y: 0.333333), offset: CGPoint()) {
@@ -176,7 +212,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.containerNode.addSubnode(self.backgroundContainerNode)
         self.arrowContainer.addSubnode(self.arrowNode)
         self.backgroundNode.addSubnode(self.arrowContainer)
-        if let effectView = self.effectView {
+        if let gradientNode = self.gradientNode {
+            self.backgroundContainerNode.addSubnode(gradientNode)
+            self.containerNode.addSubnode(self.arrowContainer)
+            self.arrowNode.removeFromSupernode()
+        }
+        else if let effectView = self.effectView {
             self.backgroundContainerNode.view.addSubview(effectView)
             if let _ = self.arrowEffectView {
                 self.containerNode.addSubnode(self.arrowContainer)
@@ -216,15 +257,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                openActiveTextItem(.url(url, concealed), .tap)
+                openActiveTextItem?(.url(url, concealed), .tap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem(.mention(mention.peerId, mention.mention), .tap)
+                openActiveTextItem?(.mention(mention.peerId, mention.mention), .tap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem(.textMention(mention), .tap)
+                openActiveTextItem?(.textMention(mention), .tap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem(.botCommand(command), .tap)
+                openActiveTextItem?(.botCommand(command), .tap)
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem(.hashtag(hashtag.hashtag), .tap)
+                openActiveTextItem?(.hashtag(hashtag.hashtag), .tap)
             }
         }
         
@@ -237,15 +278,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                openActiveTextItem(.url(url, concealed), .longTap)
+                openActiveTextItem?(.url(url, concealed), .longTap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem(.mention(mention.peerId, mention.mention), .longTap)
+                openActiveTextItem?(.mention(mention.peerId, mention.mention), .longTap)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem(.textMention(mention), .longTap)
+                openActiveTextItem?(.textMention(mention), .longTap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem(.botCommand(command), .longTap)
+                openActiveTextItem?(.botCommand(command), .longTap)
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem(.hashtag(hashtag.hashtag), .longTap)
+                openActiveTextItem?(.hashtag(hashtag.hashtag), .longTap)
             }
         }
     }
@@ -257,7 +298,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let sideInset: CGFloat = 13.0 + layout.safeInsets.left
         let bottomInset: CGFloat = 10.0
-        let contentInset: CGFloat = 9.0
+        let contentInset: CGFloat = 11.0
         let contentVerticalInset: CGFloat = 11.0
         let animationSize: CGSize
         let animationInset: CGFloat
@@ -286,7 +327,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let backgroundHeight: CGFloat
         switch self.tooltipStyle {
-            case .default:
+            case .default, .gradient:
                 backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
             case .light:
                 backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
@@ -297,7 +338,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         case let .point(rect, arrowPosition):
             let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
                 case .right:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.minX - backgroundWidth - bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
@@ -313,6 +354,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 backgroundFrame.origin.y = rect.maxY + bottomInset
                 invertArrow = true
             }
+            if case .top = arrowPosition, !invertArrow {
+                invertArrow = true
+                backgroundFrame.origin.y = rect.maxY + bottomInset
+            }
             self.isArrowInverted = invertArrow
         case .top:
             let backgroundWidth = containerWidth
@@ -325,6 +370,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         }
+        if let gradientNode = self.gradientNode {
+            transition.updateFrame(node: gradientNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        }
         if let image = self.arrowNode.image, case let .point(rect, arrowPosition) = self.location {
             let arrowSize = image.size
             let arrowCenterX = rect.midX
@@ -332,7 +380,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             let arrowFrame: CGRect
             
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     if invertArrow {
                         arrowFrame = CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: -arrowSize.height), size: arrowSize)
                     } else {
@@ -342,8 +390,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     
                     transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: -backgroundFrame.minX, dy: 0.0))
                     
-                    self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowSize)
-                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(), size: arrowSize)
+                    let arrowBounds = CGRect(origin: CGPoint(), size: arrowSize)
+                    self.arrowNode.frame = arrowBounds
+                    self.arrowEffectView?.frame = arrowBounds
+                    self.arrowGradientNode?.frame = CGRect(origin: CGPoint(x: -arrowFrame.minX + backgroundFrame.minX, y: 0.0), size:  backgroundFrame.size)
                 case .right:
                     arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: rect.midY), size: CGSize(width: arrowSize.height, height: arrowSize.width))
                     
@@ -351,8 +401,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     
                     transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 0.0, dy: -backgroundFrame.minY - floorToScreenPixels((backgroundFrame.height - arrowSize.width) / 2.0)))
                     
-                    self.arrowNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
-                    self.arrowEffectView?.frame = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
+                    let arrowBounds = CGRect(origin: CGPoint(x: 0.0, y: -0.5), size: arrowSize)
+                    self.arrowNode.frame = arrowBounds
+                    self.arrowEffectView?.frame = arrowBounds
+                    self.arrowGradientNode?.frame = arrowBounds
             }
         } else {
             self.arrowNode.isHidden = true
@@ -367,7 +419,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
-            if let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
+            if let _ = self.openActiveTextItem, let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
                 return result
             }
             
@@ -404,7 +456,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
            
             let startPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     startPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -448,7 +500,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             let targetPoint: CGPoint
             switch arrowPosition {
-                case .bottom:
+                case .bottom, .top:
                     let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
                     targetPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
@@ -484,8 +536,9 @@ public final class TooltipScreen: ViewController {
     }
     
     public enum ArrowPosition {
-        case bottom
+        case top
         case right
+        case bottom
     }
     
     public enum Location {
@@ -501,6 +554,7 @@ public final class TooltipScreen: ViewController {
     public enum Style {
         case `default`
         case light
+        case gradient(UIColor, UIColor)
     }
     
     public let text: String
@@ -511,7 +565,7 @@ public final class TooltipScreen: ViewController {
     private let location: TooltipScreen.Location
     private let displayDuration: DisplayDuration
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
-    private let openActiveTextItem: (TooltipActiveTextItem, TooltipActiveTextAction) -> Void
+    private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
     private var controllerNode: TooltipScreenNode {
         return self.displayNode as! TooltipScreenNode
@@ -525,7 +579,7 @@ public final class TooltipScreen: ViewController {
     
     private var dismissTimer: Foundation.Timer?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil) {
         self.text = text
         self.textEntities = textEntities
         self.style = style

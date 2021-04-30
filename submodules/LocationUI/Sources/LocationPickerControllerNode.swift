@@ -10,7 +10,6 @@ import SwiftSignalKit
 import MergeLists
 import ItemListUI
 import ItemListVenueItem
-import ActivityIndicator
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
@@ -41,7 +40,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     case location(PresentationTheme, String, String, TelegramMediaMap?, CLLocationCoordinate2D?)
     case liveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?)
     case header(PresentationTheme, String)
-    case venue(PresentationTheme, TelegramMediaMap, Int)
+    case venue(PresentationTheme, TelegramMediaMap?, Int)
     case attribution(PresentationTheme, LocationAttribution)
     
     var stableId: LocationPickerEntryId {
@@ -52,8 +51,8 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 return .liveLocation
             case .header:
                 return .header
-            case let .venue(_, venue, _):
-                return .venue(venue.venue?.id ?? "")
+            case let .venue(_, venue, index):
+                return .venue(venue?.venue?.id ?? "\(index)")
             case .attribution:
                 return .attribution
         }
@@ -80,7 +79,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     return false
                 }
             case let .venue(lhsTheme, lhsVenue, lhsIndex):
-                if case let .venue(rhsTheme, rhsVenue, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsVenue.venue?.id == rhsVenue.venue?.id, lhsIndex == rhsIndex {
+                if case let .venue(rhsTheme, rhsVenue, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -158,9 +157,9 @@ private enum LocationPickerEntry: Comparable, Identifiable {
             case let .header(_, title):
                 return LocationSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
             case let .venue(_, venue, _):
-                let venueType = venue.venue?.type ?? ""
-                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: {
-                    interaction?.sendVenue(venue)
+                let venueType = venue?.venue?.type ?? ""
+                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: venue.flatMap { venue in
+                    return { interaction?.sendVenue(venue) }
                 }, infoAction: ["home", "work"].contains(venueType) ? {
                     interaction?.openHomeWorkInfo()
                     } : nil)
@@ -253,7 +252,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     private let listNode: ListView
     private let emptyResultsTextNode: ImmediateTextNode
     private let headerNode: LocationMapHeaderNode
-    private let activityIndicator: ActivityIndicator
     private let shadeNode: ASDisplayNode
     private let innerShadeNode: ASDisplayNode
     
@@ -301,8 +299,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         self.optionsNode = LocationOptionsNode(presentationData: presentationData, updateMapMode: interaction.updateMapMode)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(self.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
-        
         self.shadeNode = ASDisplayNode()
         self.shadeNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.shadeNode.alpha = 0.0
@@ -316,7 +312,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         self.addSubnode(self.listNode)
         self.addSubnode(self.headerNode)
         self.addSubnode(self.optionsNode)
-        self.listNode.addSubnode(self.activityIndicator)
         self.listNode.addSubnode(self.emptyResultsTextNode)
         self.shadeNode.addSubnode(self.innerShadeNode)
         self.addSubnode(self.shadeNode)
@@ -504,8 +499,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
                 
                 let displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
+                var index: Int = 0
                 if let venues = displayedVenues {
-                    var index: Int = 0
                     var attribution: LocationAttribution?
                     for venue in venues {
                         if venue.venue?.provider == "foursquare" {
@@ -518,6 +513,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     }
                     if let attribution = attribution {
                         entries.append(.attribution(presentationData.theme, attribution))
+                    }
+                } else {
+                    for i in 0 ..< 8 {
+                        entries.append(.venue(presentationData.theme, nil, index))
+                        index += 1
                     }
                 }
                 let previousEntries = previousEntries.swap(entries)
@@ -637,7 +637,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(0.0, offset + overlap)))
             listTransition.updateFrame(node: strongSelf.headerNode, frame: headerFrame)
             strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, offset: 0.0, size: headerFrame.size, transition: listTransition)
-            strongSelf.layoutActivityIndicator(transition: listTransition)
+            strongSelf.layoutEmptyResultsPlaceholder(transition: listTransition)
         }
         
         self.listNode.beganInteractiveDragging = { [weak self] in
@@ -755,12 +755,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             if let strongSelf = self {
-                strongSelf.activityIndicator.isHidden = !transition.isLoading
                 strongSelf.emptyResultsTextNode.isHidden = transition.isLoading || !transition.isEmpty
                 
                 strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_NoPlacesNearby, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                 
-                strongSelf.layoutActivityIndicator(transition: .immediate)
+                strongSelf.layoutEmptyResultsPlaceholder(transition: .immediate)
             }
         })
     }
@@ -799,7 +798,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         }
     }
     
-    private func layoutActivityIndicator(transition: ContainedViewLayoutTransition) {
+    private func layoutEmptyResultsPlaceholder(transition: ContainedViewLayoutTransition) {
         guard let (layout, navigationHeight) = self.validLayout else {
             return
         }
@@ -812,10 +811,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             headerHeight = topInset
         }
         
-        let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         let actionsInset: CGFloat = 148.0
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - indicatorSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: indicatorSize))
-        
         let padding: CGFloat = 16.0
         let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: emptyTextSize))
@@ -875,7 +871,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         self.innerShadeNode.frame = CGRect(x: 0.0, y: 4.0, width: layout.size.width, height: 10000.0)
         self.innerShadeNode.alpha = layout.intrinsicInsets.bottom > 0.0 ? 1.0 : 0.0
         
-        self.layoutActivityIndicator(transition: transition)
+        self.layoutEmptyResultsPlaceholder(transition: transition)
         
         if isFirstLayout {
             while !self.enqueuedTransitions.isEmpty {

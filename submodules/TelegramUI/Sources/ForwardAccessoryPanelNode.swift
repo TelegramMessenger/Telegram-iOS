@@ -9,6 +9,8 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import LocalizedPeerData
+import AlertUI
+import PresentationDataUtils
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -63,6 +65,8 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
                 return (strings.ForwardedPolls(1), true)
             case let dice as TelegramMediaDice:
                 return (dice.emoji, true)
+            case let invoice as TelegramMediaInvoice:
+                return (invoice.title, true)
             default:
                 break
         }
@@ -81,11 +85,15 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     private let actionArea: AccessibilityAreaNode
     
+    let context: AccountContext
     var theme: PresentationTheme
+    var strings: PresentationStrings
     
     init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         self.messageIds = messageIds
         self.theme = theme
+        self.strings = strings
         
         self.closeButton = ASButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
@@ -94,7 +102,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()
-        self.lineNode.displayWithoutProcessing = true
+        self.lineNode.displayWithoutProcessing = false
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
@@ -152,6 +160,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
                 
                 strongSelf.setNeedsLayout()
+                if let subnodes = strongSelf.subnodes {
+                    for subnode in subnodes {
+                        subnode.setNeedsDisplay()
+                    }
+                }
             }
         }))
     }
@@ -167,8 +180,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        if self.theme !== theme {
+        if self.theme !== theme || self.strings !== strings {
             self.theme = theme
+            self.strings = strings
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
@@ -188,6 +202,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
+    }
+
+    override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
     }
     
     override func layout() {
@@ -215,9 +232,12 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     @objc func closePressed() {
-        if let dismiss = self.dismiss {
-            dismiss()
-        }
+        let alertController = textAlertController(context: self.context, title: self.strings.Conversation_CancelForwardTitle, text: self.strings.Conversation_CancelForwardText, actions: [TextAlertAction(type: .genericAction, title: self.strings.Conversation_CancelForwardSelectChat, action: { [weak self] in
+            self?.interfaceInteraction?.forwardCurrentForwardMessages()
+        }), TextAlertAction(type: .defaultAction, title: self.strings.Conversation_CancelForwardCancelForward, action: { [weak self] in
+            self?.dismiss?()
+        })], actionLayout: .vertical)
+        self.interfaceInteraction?.presentController(alertController, nil)
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {

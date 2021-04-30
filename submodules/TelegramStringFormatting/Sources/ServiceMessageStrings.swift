@@ -27,11 +27,11 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
-    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
+public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forChatList: Bool) -> String? {
+    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
 }
 
-public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
+public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forChatList: Bool) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
     let primaryTextColor: UIColor
@@ -446,14 +446,29 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
-            case let .groupPhoneCall(_, _, duration):
-                if let duration = duration {
+            case let .groupPhoneCall(_, _, scheduleDate, duration):
+                if let scheduleDate = scheduleDate {
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0).0 }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0).0 }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0).0 }, yesterdayFormatString: { $0 }))
+                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate)
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let titleString = strings.Notification_VoiceChatScheduled(authorName, timeString)
+                        attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
+                } else if let duration = duration {
                     let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
-                    let titleString = strings.Notification_VoiceChatStarted(authorName)
-                    attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        let titleString = strings.Notification_VoiceChatStartedChannel
+                        attributedString =  NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let titleString = strings.Notification_VoiceChatStarted(authorName)
+                        attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
                 }
             case let .customText(text, entities):
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)

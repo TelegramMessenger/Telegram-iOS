@@ -9,7 +9,7 @@ import Display
 import UniversalMediaPlayer
 import TelegramPresentationData
 
-private let textFont = Font.regular(13.0)
+private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
 private let scrubberBackgroundColor = UIColor(white: 1.0, alpha: 0.42)
 private let scrubberForegroundColor = UIColor.white
@@ -120,7 +120,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.fetchStatusDisposable.dispose()
     }
     
-    var collapsed: Bool = false
+    var collapsed: Bool?
     func setCollapsed(_ collapsed: Bool, animated: Bool) {
         guard self.collapsed != collapsed else {
             return
@@ -128,15 +128,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.collapsed = collapsed
         
-        guard let (size, _, _) = self.containerLayout else {
-            return
-        }
-        
         let alpha: CGFloat = collapsed ? 0.0 : 1.0
         self.leftTimestampNode.alpha = alpha
         self.rightTimestampNode.alpha = alpha
-        self.infoNode.alpha = size.width < size.height && !self.collapsed ? 1.0 : 0.0
         self.updateScrubberVisibility(animated: animated)
+        
+        if let (size, _, _) = self.containerLayout {
+            self.infoNode.alpha = size.width < size.height && !collapsed ? 1.0 : 0.0
+        }
     }
     
     private func updateScrubberVisibility(animated: Bool) {
@@ -144,12 +143,16 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         var alpha: CGFloat = 1.0
         if let playbackStatus = self.playbackStatus, playbackStatus.duration <= 30.0 {
         } else {
-            alpha = self.collapsed ? 0.0 : 1.0
+            alpha = self.collapsed == true ? 0.0 : 1.0
             collapsed = false
         }
-        self.scrubberNode.setCollapsed(collapsed, animated: animated)
+        self.scrubberNode.setCollapsed(collapsed == true, animated: animated)
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .linear) : .immediate
         transition.updateAlpha(node: self.scrubberNode, alpha: alpha)
+    }
+    
+    func animateTo(_ timestamp: Double) {
+        self.scrubberNode.animateTo(timestamp)
     }
     
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
@@ -222,6 +225,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int?) {
+        let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
         if let fileSize = fileSize {
             if let fetchStatus = fetchStatus {
                 self.fetchStatusDisposable.set((fetchStatus
@@ -230,9 +234,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         var text: String
                         switch status {
                             case .Remote:
-                                text = dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)
+                                text = dataSizeString(fileSize, forceDecimal: true, formatting: formatting)
                             case let .Fetching(_, progress):
-                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, decimalSeparator: decimalSeparator), dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)).0
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting), dataSizeString(fileSize, forceDecimal: true, formatting: formatting)).0
                             default:
                                 text = ""
                         }
@@ -244,7 +248,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     }
                 }))
             } else {
-                self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator), font: textFont, textColor: .white)
+                self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, formatting: formatting), font: textFont, textColor: .white)
             }
         } else {
             self.infoNode.attributedText = nil
@@ -280,7 +284,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         let infoSize = self.infoNode.measure(infoConstrainedSize)
         self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
         transition.updatePosition(node: self.infoNode, position: CGPoint(x: size.width / 2.0, y: infoOffset + infoSize.height / 2.0))
-        self.infoNode.alpha = size.width < size.height && !self.collapsed ? 1.0 : 0.0
+        self.infoNode.alpha = size.width < size.height && self.collapsed == false ? 1.0 : 0.0
         
         self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
     }

@@ -163,7 +163,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 if case .presence = sortOrder {
                     text = strings.Contacts_SortedByPresence
                 }
-                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, header: nil, action: {
+                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, accessible: false, header: nil, action: {
                     interaction.openSortMenu()
             })
             case let .permissionInfo(_, title, text, suppressed):
@@ -240,7 +240,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     })]
                 }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
                     interaction.openPeer(peer, .generic)
                 }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction)
         }
@@ -594,10 +594,46 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
         }
     }
     
+    
+    var index: Int = 0
+    
+    var existingPeerIds = Set<ContactListPeerId>()
+    if let selectionState = selectionState {
+        for peer in selectionState.foundPeers {
+            if existingPeerIds.contains(peer.id) {
+                continue
+            }
+            existingPeerIds.insert(peer.id)
+            
+            let selection: ContactsPeerItemSelection = .selectable(selected: selectionState.selectedPeerIndices[peer.id] != nil)
+            
+            var presence: PeerPresence?
+            if case let .peer(peer, _, _) = peer {
+                presence = presences[peer.id]
+            }
+            let enabled: Bool
+            switch peer {
+                case let .peer(peer, _, _):
+                    enabled = !disabledPeerIds.contains(peer.id)
+                default:
+                    enabled = true
+            }
+            
+            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled))
+            index += 1
+        }
+    }
+    
     for i in 0 ..< orderedPeers.count {
+        let peer = orderedPeers[i]
+        if existingPeerIds.contains(peer.id) {
+            continue
+        }
+        existingPeerIds.insert(peer.id)
+        
         let selection: ContactsPeerItemSelection
         if let selectionState = selectionState {
-            selection = .selectable(selected: selectionState.selectedPeerIndices[orderedPeers[i].id] != nil)
+            selection = .selectable(selected: selectionState.selectedPeerIndices[peer.id] != nil)
         } else {
             selection = .none
         }
@@ -606,20 +642,21 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             case .orderedByPresence:
                 header = commonHeader
             default:
-                header = headers[orderedPeers[i].id]
+                header = headers[peer.id]
         }
         var presence: PeerPresence?
-        if case let .peer(peer, _, _) = orderedPeers[i] {
+        if case let .peer(peer, _, _) = peer {
             presence = presences[peer.id]
         }
         let enabled: Bool
-        switch orderedPeers[i] {
+        switch peer {
             case let .peer(peer, _, _):
                 enabled = !disabledPeerIds.contains(peer.id)
             default:
                 enabled = true
         }
-        entries.append(.peer(i, orderedPeers[i], presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled))
+        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled))
+        index += 1
     }
     return entries
 }
@@ -706,15 +743,21 @@ public enum ContactListPresentation {
 
 public struct ContactListNodeGroupSelectionState: Equatable {
     public let selectedPeerIndices: [ContactListPeerId: Int]
+    public let foundPeers: [ContactListPeer]
+    public let selectedPeerMap: [ContactListPeerId: ContactListPeer]
     public let nextSelectionIndex: Int
     
-    private init(selectedPeerIndices: [ContactListPeerId: Int], nextSelectionIndex: Int) {
+    private init(selectedPeerIndices: [ContactListPeerId: Int], foundPeers: [ContactListPeer], selectedPeerMap: [ContactListPeerId: ContactListPeer], nextSelectionIndex: Int) {
         self.selectedPeerIndices = selectedPeerIndices
+        self.foundPeers = foundPeers
+        self.selectedPeerMap = selectedPeerMap
         self.nextSelectionIndex = nextSelectionIndex
     }
     
     public init() {
         self.selectedPeerIndices = [:]
+        self.foundPeers = []
+        self.selectedPeerMap = [:]
         self.nextSelectionIndex = 0
     }
     
@@ -722,13 +765,21 @@ public struct ContactListNodeGroupSelectionState: Equatable {
         var updatedIndices = self.selectedPeerIndices
         if let _ = updatedIndices[peerId] {
             updatedIndices.removeValue(forKey: peerId)
-            return ContactListNodeGroupSelectionState(selectedPeerIndices: updatedIndices, nextSelectionIndex: self.nextSelectionIndex)
+            return ContactListNodeGroupSelectionState(selectedPeerIndices: updatedIndices, foundPeers: self.foundPeers, selectedPeerMap: self.selectedPeerMap, nextSelectionIndex: self.nextSelectionIndex)
         } else {
             updatedIndices[peerId] = self.nextSelectionIndex
-            return ContactListNodeGroupSelectionState(selectedPeerIndices: updatedIndices, nextSelectionIndex: self.nextSelectionIndex + 1)
+            return ContactListNodeGroupSelectionState(selectedPeerIndices: updatedIndices, foundPeers: self.foundPeers, selectedPeerMap: self.selectedPeerMap, nextSelectionIndex: self.nextSelectionIndex + 1)
         }
     }
-}
+    
+    public func withFoundPeers(_ foundPeers: [ContactListPeer]) -> ContactListNodeGroupSelectionState {
+        return ContactListNodeGroupSelectionState(selectedPeerIndices: self.selectedPeerIndices, foundPeers: foundPeers, selectedPeerMap: self.selectedPeerMap, nextSelectionIndex: self.nextSelectionIndex)
+    }
+    
+    public func withSelectedPeerMap(_ selectedPeerMap: [ContactListPeerId: ContactListPeer]) -> ContactListNodeGroupSelectionState {
+        return ContactListNodeGroupSelectionState(selectedPeerIndices: self.selectedPeerIndices, foundPeers: self.foundPeers, selectedPeerMap: selectedPeerMap, nextSelectionIndex: self.nextSelectionIndex)
+    }
+ }
 
 public final class ContactListNode: ASDisplayNode {
     private let context: AccountContext
@@ -754,11 +805,35 @@ public final class ContactListNode: ASDisplayNode {
     private var selectionStateValue: ContactListNodeGroupSelectionState? {
         didSet {
             self.selectionStatePromise.set(.single(self.selectionStateValue))
+            self.selectionStateUpdated?(self.selectionStateValue)
         }
     }
     public var selectionState: ContactListNodeGroupSelectionState? {
         return self.selectionStateValue
     }
+    public var selectionStateUpdated: ((ContactListNodeGroupSelectionState?) -> Void)?
+    
+    public var selectedPeers: [ContactListPeer] {
+        if let selectionState = self.selectionState {
+            var selectedPeers: [ContactListPeer] = []
+            var selectedIndices: [(Int, ContactListPeerId)] = []
+            for (id, index) in selectionState.selectedPeerIndices {
+                selectedIndices.append((index, id))
+            }
+            selectedIndices.sort(by: { lhs, rhs in
+                return lhs.0 < rhs.0
+            })
+            for (_, id) in selectedIndices {
+                if let peer = selectionState.selectedPeerMap[id] {
+                    selectedPeers.append(peer)
+                }
+            }
+            return selectedPeers
+        } else {
+            return []
+        }
+    }
+    
     private var interaction: ContactListNodeInteraction?
     
     private var enableUpdatesValue = false
@@ -799,7 +874,7 @@ public final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false) {
+    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
@@ -864,6 +939,7 @@ public final class ContactListNode: ASDisplayNode {
         
         let processingQueue = Queue()
         let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
+        let previousSelectionState = Atomic<ContactListNodeGroupSelectionState?>(value: nil)
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
@@ -874,7 +950,26 @@ public final class ContactListNode: ASDisplayNode {
         }, suppressWarning: { [weak self] in
             self?.suppressPermissionWarning?()
         }, openPeer: { [weak self] peer, action in
-            self?.openPeer?(peer, action)
+            if let strongSelf = self {
+                if multipleSelection {
+                    var updated = false
+                    strongSelf.updateSelectionState({ state in
+                        if let state = state {
+                            updated = true
+                            var selectedPeerMap = state.selectedPeerMap
+                            selectedPeerMap[peer.id] = peer
+                            return state.withToggledPeerId(peer.id).withSelectedPeerMap(selectedPeerMap)
+                        } else {
+                            return nil
+                        }
+                    })
+                    if !updated {
+                        strongSelf.openPeer?(peer, action)
+                    }
+                } else {
+                    strongSelf.openPeer?(peer, action)
+                }
+            }
         }, contextAction: contextAction)
         
         self.indexNode.indexSelected = { [weak self] section in
@@ -1036,6 +1131,15 @@ public final class ContactListNode: ASDisplayNode {
                             }
                             
                             var peers: [ContactListPeer] = []
+                            
+                            if let selectionState = selectionState {
+                                for peer in selectionState.foundPeers {
+                                    if case let .peer(peer, _, _) = peer {
+                                        existingPeerIds.insert(peer.id)
+                                    }
+                                    peers.append(peer)
+                                }
+                            }
                             
                             if !excludeSelf && !existingPeerIds.contains(accountPeer.id) {
                                 let lowercasedQuery = query.lowercased()
@@ -1210,6 +1314,7 @@ public final class ContactListNode: ASDisplayNode {
                         }
                         let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons)
                         let previous = previousEntries.swap(entries)
+                        let previousSelection = previousSelectionState.swap(selectionState)
                         
                         var hadPermissionInfo = false
                         if let previous = previous {
@@ -1229,10 +1334,11 @@ public final class ContactListNode: ASDisplayNode {
                         }
                         
                         let animation: ContactListAnimation
-                        if hadPermissionInfo != hasPermissionInfo {
+                        if (previousSelection == nil) != (selectionState == nil) {
                             animation = .insertion
-                        }
-                        else if let previous = previous, !presentationData.disableAnimations, (entries.count - previous.count) < 20 {
+                        } else if hadPermissionInfo != hasPermissionInfo {
+                            animation = .insertion
+                        } else if let previous = previous, !presentationData.disableAnimations, (entries.count - previous.count) < 20 {
                             animation = .default
                         } else {
                             animation = .none
@@ -1337,7 +1443,6 @@ public final class ContactListNode: ASDisplayNode {
     }
     
     public func updateSelectedChatLocation(_ chatLocation: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
-        
         self.interaction?.itemHighlighting.chatLocation = chatLocation
         self.interaction?.itemHighlighting.progress = progress
         
@@ -1352,7 +1457,7 @@ public final class ContactListNode: ASDisplayNode {
         self.disposable.dispose()
         self.presentationDataDisposable?.dispose()
     }
-    
+        
     public func updateSelectionState(_ f: (ContactListNodeGroupSelectionState?) -> ContactListNodeGroupSelectionState?) {
         let updatedSelectionState = f(self.selectionStateValue)
         if updatedSelectionState != self.selectionStateValue {

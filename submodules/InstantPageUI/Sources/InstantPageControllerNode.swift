@@ -15,8 +15,11 @@ import SaveToCameraRoll
 import GalleryUI
 import OpenInExternalAppUI
 import LocationUI
+import UndoUI
+import ContextUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
+    private weak var controller: InstantPageController?
     private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
     private var themeSettings: PresentationThemeSettings?
@@ -88,7 +91,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+        self.controller = controller
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -137,6 +141,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                 let shareController = ShareController(context: context, subject: .url(content.url))
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                }
                 strongSelf.present(shareController, nil)
             }
         }
@@ -549,6 +559,31 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
+                    }, activatePinchPreview: { [weak self] sourceNode in
+                        guard let strongSelf = self, let controller = strongSelf.controller else {
+                            return
+                        }
+                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                            guard let strongSelf = self else {
+                                return CGRect()
+                            }
+
+                            let localRect = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.navigationBar.frame.maxY), size: CGSize(width: strongSelf.bounds.width, height: strongSelf.bounds.height - strongSelf.navigationBar.frame.maxY))
+                            return strongSelf.view.convert(localRect, to: nil)
+                        })
+                        controller.window?.presentInGlobalOverlay(pinchController)
+                    }, pinchPreviewFinished: { [weak self] itemNode in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        for (_, listItemNode) in strongSelf.visibleItemsWithNodes {
+                            if let listItemNode = listItemNode as? InstantPagePeerReferenceNode {
+                                if listItemNode.frame.intersects(itemNode.frame) && listItemNode.frame.maxY <= itemNode.frame.maxY + 2.0 {
+                                    listItemNode.layer.animateAlpha(from: 0.0, to: listItemNode.alpha, duration: 0.25)
+                                    break
+                                }
+                            }
+                        }
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
@@ -1140,7 +1175,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadProgress.set(0.02)
     
         self.loadWebpageDisposable.set(nil)
-        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url.url)
+        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: url.url, skipUrlAuth: true)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.loadProgress.set(0.07)
@@ -1199,6 +1234,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }, sendFile: nil,
                         sendSticker: nil,
                         requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
                         present: { c, a in
                             self?.present(c, a)
                         }, dismissInput: {
@@ -1242,7 +1278,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
             
             let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)

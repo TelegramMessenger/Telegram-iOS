@@ -6,7 +6,8 @@
 
 #import "Instance.h"
 #import "InstanceImpl.h"
-#import "reference/InstanceImplReference.h"
+#import "v2/InstanceV2Impl.h"
+#include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
 
@@ -158,7 +159,7 @@
         if (keepLandscape) {
             resolvedId += std::string(":landscape");
         }
-        _interface = tgcalls::VideoCaptureInterface::Create(resolvedId);
+        _interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), resolvedId);
     }
     return self;
 }
@@ -331,8 +332,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)__unused includeReference {
-    return @[@"2.7.7", @"3.0.0"];
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
+    [list addObject:@"2.7.7"];
+    [list addObject:@"3.0.0"];
+    if (includeReference) {
+        [list addObject:@"4.0.0"];
+    }
+    return list;
 }
 
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
@@ -426,8 +433,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .statsLogPath = statsLogPath.length == 0 ? "" : std::string(statsLogPath.UTF8String),
+            .logPath =  std::string(logPath.length == 0 ? "" : logPath.UTF8String),
+            .statsLogPath = std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .enableHighBitrateVideo = true,
             .preferredVideoCodecs = preferredVideoCodecs,
@@ -443,9 +450,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceV2Impl>();
         });
-        
-        
         
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
@@ -819,6 +825,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @end
 
+namespace {
+
+class BroadcastPartTaskImpl : public tgcalls::BroadcastPartTask {
+public:
+    BroadcastPartTaskImpl(id<OngoingGroupCallBroadcastPartTask> task) {
+        _task = task;
+    }
+    
+    virtual ~BroadcastPartTaskImpl() {
+    }
+    
+    virtual void cancel() override {
+        [_task cancel];
+    }
+    
+private:
+    id<OngoingGroupCallBroadcastPartTask> _task;
+};
+
+}
 
 @interface GroupCallThreadLocalContext () {
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
@@ -833,7 +859,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -843,13 +869,17 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
-            .networkStateUpdated = [weakSelf, queue, networkStateUpdated](bool isConnected) {
+            .threads = tgcalls::StaticThreads::getThreads(),
+            .networkStateUpdated = [weakSelf, queue, networkStateUpdated](tgcalls::GroupNetworkState networkState) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {
                         return;
                     }
-                    networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
+                    GroupCallNetworkState mappedState;
+                    mappedState.isConnected = networkState.isConnected;
+                    mappedState.isTransitioningFromBroadcastToRtc = networkState.isTransitioningFromBroadcastToRtc;
+                    networkStateUpdated(mappedState);
                 }];
             },
             .audioLevelsUpdated = [audioLevelsUpdated](tgcalls::GroupLevelsUpdate const &levels) {
@@ -877,7 +907,45 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     [mappedSources addObject:@(it)];
                 }
                 participantDescriptionsRequired(mappedSources);
-            }
+            },
+            .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+                    tgcalls::BroadcastPart parsedPart;
+                    parsedPart.timestampMilliseconds = part.timestampMilliseconds;
+                    
+                    parsedPart.responseTimestamp = part.responseTimestamp;
+                    
+                    tgcalls::BroadcastPart::Status mappedStatus;
+                    switch (part.status) {
+                        case OngoingGroupCallBroadcastPartStatusSuccess: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::Success;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusNotReady: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusResyncNeeded: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::ResyncNeeded;
+                            break;
+                        }
+                        default: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                    }
+                    parsedPart.status = mappedStatus;
+                    
+                    parsedPart.oggData.resize(part.oggData.length);
+                    [part.oggData getBytes:parsedPart.oggData.data() length:part.oggData.length];
+                    
+                    completion(std::move(parsedPart));
+                });
+                return std::make_shared<BroadcastPartTaskImpl>(task);
+            },
+            .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
+            .enableVideo = enableVideo,
+            .initialEnableNoiseSuppression = enableNoiseSuppression
         }));
     }
     return self;
@@ -984,6 +1052,31 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     
     completion(string, payload.ssrc);
+}
+
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
+    if (_instance) {
+        tgcalls::GroupConnectionMode mappedConnectionMode;
+        switch (connectionMode) {
+            case OngoingCallConnectionModeNone: {
+                mappedConnectionMode = tgcalls::GroupConnectionMode::GroupConnectionModeNone;
+                break;
+            }
+            case OngoingCallConnectionModeRtc: {
+                mappedConnectionMode = tgcalls::GroupConnectionMode::GroupConnectionModeRtc;
+                break;
+            }
+            case OngoingCallConnectionModeBroadcast: {
+                mappedConnectionMode = tgcalls::GroupConnectionMode::GroupConnectionModeBroadcast;
+                break;
+            }
+            default: {
+                mappedConnectionMode = tgcalls::GroupConnectionMode::GroupConnectionModeNone;
+                break;
+            }
+        }
+        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled);
+    }
 }
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
@@ -1146,6 +1239,22 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
             [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
         }
         parsedParticipants.push_back(parsedParticipant);
+    }
+
+    NSDictionary *video = dict[@"video"];
+    if ([video isKindOfClass:[NSDictionary class]]) {
+        NSArray *serverSources = video[@"server_sources"];
+        if ([serverSources isKindOfClass:[NSArray class]]) {
+            for (NSNumber *sourceNumber in serverSources) {
+                if ([sourceNumber isKindOfClass:[NSNumber class]]) {
+                    int32_t signedSource = [sourceNumber intValue];
+                    result.serverVideoBandwidthProbingSsrc = *(int32_t *)&signedSource;
+                } else if ([sourceNumber isKindOfClass:[NSString class]]) {
+                    uint32_t source = (uint32_t)[sourceNumber longLongValue];
+                    result.serverVideoBandwidthProbingSsrc = source;
+                }
+            }
+        }
     }
     
     if (_instance) {
@@ -1318,6 +1427,12 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
+- (void)setIsNoiseSuppressionEnabled:(bool)isNoiseSuppressionEnabled {
+    if (_instance) {
+        _instance->setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled);
+    }
+}
+
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
         _instance->setVideoCapture([videoCapturer getInterface], [completion](auto payload){
@@ -1407,6 +1522,21 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     if (self != nil) {
         _audioSsrc = audioSsrc;
         _jsonParams = jsonParams;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallBroadcastPart
+
+- (instancetype _Nonnull)initWithTimestampMilliseconds:(int64_t)timestampMilliseconds responseTimestamp:(double)responseTimestamp status:(OngoingGroupCallBroadcastPartStatus)status oggData:(NSData * _Nonnull)oggData {
+    self = [super init];
+    if (self != nil) {
+        _timestampMilliseconds = timestampMilliseconds;
+        _responseTimestamp = responseTimestamp;
+        _status = status;
+        _oggData = oggData;
     }
     return self;
 }

@@ -144,7 +144,6 @@ private let voiceMessageDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
     formatter.allowedUnits = [.minute, .second]
-    formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
 
@@ -152,7 +151,6 @@ private let musicDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
     formatter.allowedUnits = [.hour, .minute, .second]
-    formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
 
@@ -186,8 +184,6 @@ final class ChatMessageAccessibilityData {
     let singleUrl: String?
     
     init(item: ChatMessageItem, isSelected: Bool?) {
-        var label: String = ""
-        let value: String
         var hint: String?
         var traits: UIAccessibilityTraits = []
         var singleUrl: String?
@@ -204,344 +200,377 @@ final class ChatMessageAccessibilityData {
             }
         }
         
-        let authorName = item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-        
-        if let chatPeer = item.message.peers[item.message.id.peerId] {
-            let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: [item.message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+        let dataForMessage: (Message, Bool) -> (String, String) = { message, isReply -> (String, String) in
+            var label: String = ""
+            var value: String = ""
             
-            var text = messageText
-            
-            loop: for media in item.message.media {
-                if let _ = media as? TelegramMediaImage {
-                    if isIncoming {
-                        if announceIncomingAuthors, let authorName = authorName {
-                            label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).0
-                        } else {
-                            label = item.presentationData.strings.VoiceOver_Chat_Photo
-                        }
-                    } else {
-                        label = item.presentationData.strings.VoiceOver_Chat_YourPhoto
-                    }
-                    text = ""
-                    if !item.message.text.isEmpty {
-                        text.append("\n")
-                        
-                        text.append(item.presentationData.strings.VoiceOver_Chat_Caption(item.message.text).0)
-                    }
-                } else if let file = media as? TelegramMediaFile {
-                    var isSpecialFile = false
-                    for attribute in file.attributes {
-                        switch attribute {
-                            case let .Audio(audio):
-                                isSpecialFile = true
-                                if isSelected == nil {
-                                    hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
-                                }
-                                traits.insert(.startsMediaSession)
-                                if audio.isVoice {
-                                    let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
-                                    if isIncoming {
-                                        if announceIncomingAuthors, let authorName = authorName {
-                                            label = item.presentationData.strings.VoiceOver_Chat_VoiceMessageFrom(authorName).0
-                                        } else {
-                                            label = item.presentationData.strings.VoiceOver_Chat_VoiceMessage
-                                        }
-                                    } else {
-                                        label = item.presentationData.strings.VoiceOver_Chat_YourVoiceMessage
-                                    }
-                                    text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
-                                } else {
-                                    let durationString = musicDurationFormatter.string(from: Double(audio.duration)) ?? ""
-                                    if isIncoming {
-                                        if announceIncomingAuthors, let authorName = authorName {
-                                            label = item.presentationData.strings.VoiceOver_Chat_MusicFrom(authorName).0
-                                        } else {
-                                            label = item.presentationData.strings.VoiceOver_Chat_Music
-                                        }
-                                    } else {
-                                        label = item.presentationData.strings.VoiceOver_Chat_YourMusic
-                                    }
-                                    let performer = audio.performer ?? "Unknown"
-                                    let title = audio.title ?? "Unknown"
-                                    
-                                    text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).0
-                                    text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0)
-                                }
-                            case let .Video(video):
-                                isSpecialFile = true
-                                if isSelected == nil {
-                                    hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
-                                }
-                                traits.insert(.startsMediaSession)
-                                let durationString = voiceMessageDurationFormatter.string(from: Double(video.duration)) ?? ""
-                                if video.flags.contains(.instantRoundVideo) {
-                                    if isIncoming {
-                                        if announceIncomingAuthors, let authorName = authorName {
-                                            label = item.presentationData.strings.VoiceOver_Chat_VideoMessageFrom(authorName).0
-                                        } else {
-                                            label = item.presentationData.strings.VoiceOver_Chat_VideoMessage
-                                        }
-                                    } else {
-                                        label = item.presentationData.strings.VoiceOver_Chat_YourVideoMessage
-                                    }
-                                } else {
-                                    if isIncoming {
-                                        if announceIncomingAuthors, let authorName = authorName {
-                                            label = item.presentationData.strings.VoiceOver_Chat_VideoFrom(authorName).0
-                                        } else {
-                                            label = item.presentationData.strings.VoiceOver_Chat_Video
-                                        }
-                                    } else {
-                                        label = item.presentationData.strings.VoiceOver_Chat_YourVideo
-                                    }
-                                }
-                                text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
-                            default:
-                                break
-                        }
-                    }
-                    if !isSpecialFile {
-                        if isSelected == nil {
-                            hint = item.presentationData.strings.VoiceOver_Chat_OpenHint
-                        }
-                        let sizeString = fileSizeFormatter.string(fromByteCount: Int64(file.size ?? 0))
+            if let chatPeer = message.peers[item.message.id.peerId] {
+                let authorName = message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                
+                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+                
+                var text = messageText
+                
+                loop: for media in message.media {
+                    if let _ = media as? TelegramMediaImage {
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
-                                label = item.presentationData.strings.VoiceOver_Chat_FileFrom(authorName).0
+                                label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).0
                             } else {
-                                label = item.presentationData.strings.VoiceOver_Chat_File
+                                label = item.presentationData.strings.VoiceOver_Chat_Photo
                             }
                         } else {
-                            label = item.presentationData.strings.VoiceOver_Chat_YourFile
+                            label = item.presentationData.strings.VoiceOver_Chat_YourPhoto
                         }
-                        text = "\(file.fileName ?? ""). "
-                        text.append(item.presentationData.strings.VoiceOver_Chat_Size(sizeString).0)
-                    }
-                    if !item.message.text.isEmpty {
-                        text.append("\n")
-                        text.append(item.presentationData.strings.VoiceOver_Chat_Caption(item.message.text).0)
-                    }
-                    break loop
-                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                    var contentText = item.presentationData.strings.VoiceOver_Chat_PagePreview + ". "
-                    if let title = content.title, !title.isEmpty {
-                        contentText.append(item.presentationData.strings.VoiceOver_Chat_Title(title).0)
-                        contentText.append(". ")
-                    }
-                    if let text = content.text, !text.isEmpty {
-                        contentText.append(text)
-                    }
-                    text = "\(item.message.text)\n\(contentText)"
-                } else if let contact = media as? TelegramMediaContact {
-                    if isIncoming {
-                        if announceIncomingAuthors, let authorName = authorName {
-                            label = item.presentationData.strings.VoiceOver_Chat_ContactFrom(authorName).0
-                        } else {
-                            label = item.presentationData.strings.VoiceOver_Chat_Contact
+                        text = ""
+                        if !message.text.isEmpty {
+                            text.append("\n")
+                            
+                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message.text).0)
                         }
-                    } else {
-                        label = item.presentationData.strings.VoiceOver_Chat_YourContact
-                    }
-                    var displayName = ""
-                    if !contact.firstName.isEmpty {
-                        displayName.append(contact.firstName)
-                    }
-                    if !contact.lastName.isEmpty {
-                        if !displayName.isEmpty {
-                            displayName.append(" ")
+                    } else if let file = media as? TelegramMediaFile {
+                        var isSpecialFile = false
+                        for attribute in file.attributes {
+                            switch attribute {
+                                case let .Sticker(displayText, packReference, _):
+                                    isSpecialFile = true
+                                    text = displayText
+                                    if file.mimeType == "application/x-tgsticker" {
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_AnimatedStickerFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_AnimatedSticker
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourAnimatedSticker
+                                        }
+                                    } else {
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_StickerFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_Sticker
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourSticker
+                                        }
+                                    }
+                                case let .Audio(audio):
+                                    isSpecialFile = true
+                                    if isSelected == nil {
+                                        hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
+                                    }
+                                    traits.insert(.startsMediaSession)
+                                    if audio.isVoice {
+                                        let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_VoiceMessageFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_VoiceMessage
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourVoiceMessage
+                                        }
+                                        text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
+                                    } else {
+                                        let durationString = musicDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_MusicFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_Music
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourMusic
+                                        }
+                                        let performer = audio.performer ?? "Unknown"
+                                        let title = audio.title ?? "Unknown"
+                                        
+                                        text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).0
+                                        text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0)
+                                    }
+                                case let .Video(video):
+                                    isSpecialFile = true
+                                    if isSelected == nil {
+                                        hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
+                                    }
+                                    traits.insert(.startsMediaSession)
+                                    let durationString = voiceMessageDurationFormatter.string(from: Double(video.duration)) ?? ""
+                                    if video.flags.contains(.instantRoundVideo) {
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_VideoMessageFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_VideoMessage
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourVideoMessage
+                                        }
+                                    } else {
+                                        if isIncoming {
+                                            if announceIncomingAuthors, let authorName = authorName {
+                                                label = item.presentationData.strings.VoiceOver_Chat_VideoFrom(authorName).0
+                                            } else {
+                                                label = item.presentationData.strings.VoiceOver_Chat_Video
+                                            }
+                                        } else {
+                                            label = item.presentationData.strings.VoiceOver_Chat_YourVideo
+                                        }
+                                    }
+                                    text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
+                                default:
+                                    break
+                            }
                         }
-                        displayName.append(contact.lastName)
-                    }
-                    var phoneNumbersString = ""
-                    var phoneNumberCount = 0
-                    var emailAddressesString = ""
-                    var emailAddressCount = 0
-                    var organizationString = ""
-                    if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let contactData = DeviceContactExtendedData(vcard: vCardData) {
-                        if displayName.isEmpty && !contactData.organization.isEmpty {
-                            displayName = contactData.organization
-                        }
-                        if !contactData.basicData.phoneNumbers.isEmpty {
-                            for phone in contactData.basicData.phoneNumbers {
-                                if !phoneNumbersString.isEmpty {
-                                    phoneNumbersString.append(", ")
+                        if !isSpecialFile {
+                            if isSelected == nil {
+                                hint = item.presentationData.strings.VoiceOver_Chat_OpenHint
+                            }
+                            let sizeString = fileSizeFormatter.string(fromByteCount: Int64(file.size ?? 0))
+                            if isIncoming {
+                                if announceIncomingAuthors, let authorName = authorName {
+                                    label = item.presentationData.strings.VoiceOver_Chat_FileFrom(authorName).0
+                                } else {
+                                    label = item.presentationData.strings.VoiceOver_Chat_File
                                 }
-                                for c in phone.value {
+                            } else {
+                                label = item.presentationData.strings.VoiceOver_Chat_YourFile
+                            }
+                            text = "\(file.fileName ?? ""). "
+                            text.append(item.presentationData.strings.VoiceOver_Chat_Size(sizeString).0)
+                        }
+                        if !message.text.isEmpty {
+                            text.append("\n")
+                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message.text).0)
+                        }
+                        break loop
+                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                        var contentText = item.presentationData.strings.VoiceOver_Chat_PagePreview + ". "
+                        if let title = content.title, !title.isEmpty {
+                            contentText.append(item.presentationData.strings.VoiceOver_Chat_Title(title).0)
+                            contentText.append(". ")
+                        }
+                        if let text = content.text, !text.isEmpty {
+                            contentText.append(text)
+                        }
+                        text = "\(message.text)\n\(contentText)"
+                    } else if let contact = media as? TelegramMediaContact {
+                        if isIncoming {
+                            if announceIncomingAuthors, let authorName = authorName {
+                                label = item.presentationData.strings.VoiceOver_Chat_ContactFrom(authorName).0
+                            } else {
+                                label = item.presentationData.strings.VoiceOver_Chat_Contact
+                            }
+                        } else {
+                            label = item.presentationData.strings.VoiceOver_Chat_YourContact
+                        }
+                        var displayName = ""
+                        if !contact.firstName.isEmpty {
+                            displayName.append(contact.firstName)
+                        }
+                        if !contact.lastName.isEmpty {
+                            if !displayName.isEmpty {
+                                displayName.append(" ")
+                            }
+                            displayName.append(contact.lastName)
+                        }
+                        var phoneNumbersString = ""
+                        var phoneNumberCount = 0
+                        var emailAddressesString = ""
+                        var emailAddressCount = 0
+                        var organizationString = ""
+                        if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let contactData = DeviceContactExtendedData(vcard: vCardData) {
+                            if displayName.isEmpty && !contactData.organization.isEmpty {
+                                displayName = contactData.organization
+                            }
+                            if !contactData.basicData.phoneNumbers.isEmpty {
+                                for phone in contactData.basicData.phoneNumbers {
+                                    if !phoneNumbersString.isEmpty {
+                                        phoneNumbersString.append(", ")
+                                    }
+                                    for c in phone.value {
+                                        phoneNumbersString.append(c)
+                                        phoneNumbersString.append(" ")
+                                    }
+                                    phoneNumberCount += 1
+                                }
+                            } else {
+                                for c in contact.phoneNumber {
                                     phoneNumbersString.append(c)
                                     phoneNumbersString.append(" ")
                                 }
                                 phoneNumberCount += 1
                             }
-                        } else {
-                            for c in contact.phoneNumber {
-                                phoneNumbersString.append(c)
-                                phoneNumbersString.append(" ")
+                            
+                            for email in contactData.emailAddresses {
+                                if !emailAddressesString.isEmpty {
+                                    emailAddressesString.append(", ")
+                                }
+                                emailAddressesString.append("\(email.value)")
+                                emailAddressCount += 1
                             }
-                            phoneNumberCount += 1
+                            if !contactData.organization.isEmpty && displayName != contactData.organization {
+                                organizationString = contactData.organization
+                            }
+                        } else {
+                            phoneNumbersString.append("\(contact.phoneNumber)")
+                        }
+                        text = "\(displayName)."
+                        if !phoneNumbersString.isEmpty {
+                            if phoneNumberCount > 1 {
+                                text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumberCount(Int32(phoneNumberCount)))
+                                text.append(": ")
+                            } else {
+                                text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumber)
+                            }
+                            text.append("\(phoneNumbersString). ")
+                        }
+                        if !emailAddressesString.isEmpty {
+                            if emailAddressCount > 1 {
+                                text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmailCount(Int32(emailAddressCount)))
+                                text.append(": ")
+                            } else {
+                                text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmail)
+                                text.append(": ")
+                            }
+                            text.append("\(emailAddressesString). ")
+                        }
+                        if !organizationString.isEmpty {
+                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactOrganization(organizationString).0)
+                            text.append(".")
+                        }
+                    } else if let poll = media as? TelegramMediaPoll {
+                        if isIncoming {
+                            if announceIncomingAuthors, let authorName = authorName {
+                                label = item.presentationData.strings.VoiceOver_Chat_AnonymousPollFrom(authorName).0
+                            } else {
+                                label = item.presentationData.strings.VoiceOver_Chat_AnonymousPoll
+                            }
+                        } else {
+                            label = item.presentationData.strings.VoiceOver_Chat_YourAnonymousPoll
                         }
                         
-                        for email in contactData.emailAddresses {
-                            if !emailAddressesString.isEmpty {
-                                emailAddressesString.append(", ")
+                        var optionVoterCount: [Int: Int32] = [:]
+                        var maxOptionVoterCount: Int32 = 0
+                        var totalVoterCount: Int32 = 0
+                        let voters: [TelegramMediaPollOptionVoters]?
+                        if poll.isClosed {
+                            voters = poll.results.voters ?? []
+                        } else {
+                            voters = poll.results.voters
+                        }
+                        var selectedOptionId: Data?
+                        if let voters = voters, let totalVoters = poll.results.totalVoters {
+                            var didVote = false
+                            for voter in voters {
+                                if voter.selected {
+                                    didVote = true
+                                    selectedOptionId = voter.opaqueIdentifier
+                                }
                             }
-                            emailAddressesString.append("\(email.value)")
-                            emailAddressCount += 1
-                        }
-                        if !contactData.organization.isEmpty && displayName != contactData.organization {
-                            organizationString = contactData.organization
-                        }
-                    } else {
-                        phoneNumbersString.append("\(contact.phoneNumber)")
-                    }
-                    text = "\(displayName)."
-                    if !phoneNumbersString.isEmpty {
-                        if phoneNumberCount > 1 {
-                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumberCount(Int32(phoneNumberCount)))
-                            text.append(": ")
-                        } else {
-                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumber)
-                        }
-                        text.append("\(phoneNumbersString). ")
-                    }
-                    if !emailAddressesString.isEmpty {
-                        if emailAddressCount > 1 {
-                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmailCount(Int32(emailAddressCount)))
-                            text.append(": ")
-                        } else {
-                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmail)
-                            text.append(": ")
-                        }
-                        text.append("\(emailAddressesString). ")
-                    }
-                    if !organizationString.isEmpty {
-                        text.append(item.presentationData.strings.VoiceOver_Chat_ContactOrganization(organizationString).0)
-                        text.append(".")
-                    }
-                } else if let poll = media as? TelegramMediaPoll {
-                    if isIncoming {
-                        if announceIncomingAuthors, let authorName = authorName {
-                            label = item.presentationData.strings.VoiceOver_Chat_AnonymousPollFrom(authorName).0
-                        } else {
-                            label = item.presentationData.strings.VoiceOver_Chat_AnonymousPoll
-                        }
-                    } else {
-                        label = item.presentationData.strings.VoiceOver_Chat_YourAnonymousPoll
-                    }
-                    
-                    var optionVoterCount: [Int: Int32] = [:]
-                    var maxOptionVoterCount: Int32 = 0
-                    var totalVoterCount: Int32 = 0
-                    let voters: [TelegramMediaPollOptionVoters]?
-                    if poll.isClosed {
-                        voters = poll.results.voters ?? []
-                    } else {
-                        voters = poll.results.voters
-                    }
-                    var selectedOptionId: Data?
-                    if let voters = voters, let totalVoters = poll.results.totalVoters {
-                        var didVote = false
-                        for voter in voters {
-                            if voter.selected {
-                                didVote = true
-                                selectedOptionId = voter.opaqueIdentifier
-                            }
-                        }
-                        totalVoterCount = totalVoters
-                        if didVote || poll.isClosed {
-                            for i in 0 ..< poll.options.count {
-                                inner: for optionVoters in voters {
-                                    if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {
-                                        optionVoterCount[i] = optionVoters.count
-                                        maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count)
-                                        break inner
+                            totalVoterCount = totalVoters
+                            if didVote || poll.isClosed {
+                                for i in 0 ..< poll.options.count {
+                                    inner: for optionVoters in voters {
+                                        if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {
+                                            optionVoterCount[i] = optionVoters.count
+                                            maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count)
+                                            break inner
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    
-                    var optionVoterCounts: [Int]
-                    if totalVoterCount != 0 {
-                        optionVoterCounts = countNicePercent(votes: (0 ..< poll.options.count).map({ Int(optionVoterCount[$0] ?? 0) }), total: Int(totalVoterCount))
-                    } else {
-                        optionVoterCounts = Array(repeating: 0, count: poll.options.count)
-                    }
-                    
-                    text = item.presentationData.strings.VoiceOver_Chat_Title(poll.text).0
-                    text.append(". ")
-                    
-                    text.append(item.presentationData.strings.VoiceOver_Chat_PollOptionCount(Int32(poll.options.count)))
-                    text.append(": ")
-                    var optionsText = ""
-                    for i in 0 ..< poll.options.count {
-                        let option = poll.options[i]
                         
-                        if !optionsText.isEmpty {
-                            optionsText.append(", ")
-                        }
-                        optionsText.append(option.text)
-                        if let selectedOptionId = selectedOptionId, selectedOptionId == option.opaqueIdentifier {
-                            optionsText.append(", ")
-                            optionsText.append(item.presentationData.strings.VoiceOver_Chat_OptionSelected)
+                        var optionVoterCounts: [Int]
+                        if totalVoterCount != 0 {
+                            optionVoterCounts = countNicePercent(votes: (0 ..< poll.options.count).map({ Int(optionVoterCount[$0] ?? 0) }), total: Int(totalVoterCount))
+                        } else {
+                            optionVoterCounts = Array(repeating: 0, count: poll.options.count)
                         }
                         
-                        if let _ = optionVoterCount[i] {
-                            if maxOptionVoterCount != 0 && totalVoterCount != 0 {
-                                optionsText.append(", \(optionVoterCounts[i])%")
+                        text = item.presentationData.strings.VoiceOver_Chat_Title(poll.text).0
+                        text.append(". ")
+                        
+                        text.append(item.presentationData.strings.VoiceOver_Chat_PollOptionCount(Int32(poll.options.count)))
+                        text.append(": ")
+                        var optionsText = ""
+                        for i in 0 ..< poll.options.count {
+                            let option = poll.options[i]
+                            
+                            if !optionsText.isEmpty {
+                                optionsText.append(", ")
+                            }
+                            optionsText.append(option.text)
+                            if let selectedOptionId = selectedOptionId, selectedOptionId == option.opaqueIdentifier {
+                                optionsText.append(", ")
+                                optionsText.append(item.presentationData.strings.VoiceOver_Chat_OptionSelected)
+                            }
+                            
+                            if let _ = optionVoterCount[i] {
+                                if maxOptionVoterCount != 0 && totalVoterCount != 0 {
+                                    optionsText.append(", \(optionVoterCounts[i])%")
+                                }
                             }
                         }
-                    }
-                    text.append("\(optionsText). ")
-                    if totalVoterCount != 0 {
-                        text.append(item.presentationData.strings.VoiceOver_Chat_PollVotes(Int32(totalVoterCount)))
-                    } else {
-                        text.append(item.presentationData.strings.VoiceOver_Chat_PollNoVotes)
-                    }
-                    if poll.isClosed {
-                        text.append(item.presentationData.strings.VoiceOver_Chat_PollFinalResults)
+                        text.append("\(optionsText). ")
+                        if totalVoterCount != 0 {
+                            text.append(item.presentationData.strings.VoiceOver_Chat_PollVotes(Int32(totalVoterCount)))
+                        } else {
+                            text.append(item.presentationData.strings.VoiceOver_Chat_PollNoVotes)
+                        }
+                        if poll.isClosed {
+                            text.append(item.presentationData.strings.VoiceOver_Chat_PollFinalResults)
+                        }
                     }
                 }
-            }
-            
-            var result = ""
-            
-            if let isSelected = isSelected {
-                if isSelected {
-                    result += item.presentationData.strings.VoiceOver_Chat_Selected
+                
+                var result = ""
+                
+                if let isSelected = isSelected {
+                    if isSelected {
+                        result += item.presentationData.strings.VoiceOver_Chat_Selected
+                        result += "\n"
+                    }
+                    traits.insert(.startsMediaSession)
+                }
+                
+                result += "\(text)"
+                
+                let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
+                
+                result += "\n\(dateString)"
+                if !isIncoming && item.read && !isReply {
                     result += "\n"
+                    if announceIncomingAuthors {
+                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+                    } else {
+                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                    }
                 }
-                traits.insert(.startsMediaSession)
+                value = result
+            } else {
+                value = ""
             }
             
-            result += "\(text)"
-            
-            let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(item.message.timestamp)), dateStyle: .medium, timeStyle: .short)
-            
-            result += "\n\(dateString)"
-            if !isIncoming && item.read {
-                result += "\n"
-                if announceIncomingAuthors {
-                    result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+            if label.isEmpty {
+                if let author = message.author {
+                    if isIncoming {
+                        label = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    } else {
+                        label = item.presentationData.strings.VoiceOver_Chat_YourMessage
+                    }
                 } else {
-                    result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                    label = item.presentationData.strings.VoiceOver_Chat_Message
                 }
             }
-            value = result
-        } else {
-            value = ""
+            
+            return (label, value)
         }
         
-        if label.isEmpty {
-            if let author = item.message.author {
-                if isIncoming {
-                    label = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                } else {
-                    label = item.presentationData.strings.VoiceOver_Chat_YourMessage
-                }
-            } else {
-                label = item.presentationData.strings.VoiceOver_Chat_Message
-            }
-        }
+        var (label, value) = dataForMessage(item.message, false)
         
         for attribute in item.message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -571,7 +600,7 @@ final class ChatMessageAccessibilityData {
                     }
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[attribute.messageId] {
-                let replyLabel: String
+                var replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
                         replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0
@@ -581,6 +610,10 @@ final class ChatMessageAccessibilityData {
                 } else {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
+                
+                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
+                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
+                
                 label = "\(replyLabel) . \(label)"
             }
         }

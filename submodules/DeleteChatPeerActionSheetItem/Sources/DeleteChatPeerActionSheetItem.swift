@@ -16,6 +16,7 @@ public enum DeleteChatPeerAction {
     case clearCache
     case clearCacheSuggestion
     case removeFromGroup
+    case removeFromChannel
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 26.0)
@@ -141,12 +142,14 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                     text?.0 += "\n\n\(strings.Conversation_AlsoClearCacheTitle)"
                 }
             case .removeFromGroup:
-                text = strings.VoiceChat_RemovePeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+                text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+            case .removeFromChannel:
+                text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:
                 break
             }
             if let text = text {
-                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
+                let formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
                 for (_, range) in text.1 {
                     formattedAttributedText.addAttribute(.font, value: boldFont, range: range)
                 }

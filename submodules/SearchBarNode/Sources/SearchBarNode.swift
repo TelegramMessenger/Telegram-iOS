@@ -928,7 +928,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + padding, y: verticalOffset + textBackgroundHeight), size: CGSize(width: contentFrame.width - padding * 2.0 - (self.hasCancelButton ? cancelButtonSize.width + 11.0 : 0.0), height: textBackgroundHeight))
         transition.updateFrame(node: self.textBackgroundNode, frame: textBackgroundFrame)
         
-        let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 24.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 24.0 - 20.0), height: textBackgroundFrame.size.height))
+        let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 24.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 24.0 - 27.0), height: textBackgroundFrame.size.height))
         
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size

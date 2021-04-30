@@ -32,26 +32,6 @@ private func setupSharedLogger(rootPath: String, path: String) {
     }
 }
 
-private func parseFileLocationResource(_ dict: [AnyHashable: Any]) -> TelegramMediaResource? {
-    guard let datacenterId = dict["datacenterId"] as? Int32 else {
-        return nil
-    }
-    guard let volumeId = dict["volumeId"] as? Int64 else {
-        return nil
-    }
-    guard let localId = dict["localId"] as? Int32 else {
-        return nil
-    }
-    guard let secret = dict["secret"] as? Int64 else {
-        return nil
-    }
-    var fileReference: Data?
-    if let fileReferenceString = dict["fileReference"] as? String {
-        fileReference = dataWithHexString(fileReferenceString)
-    }
-    return CloudFileMediaResource(datacenterId: Int(datacenterId), volumeId: volumeId, localId: localId, secret: secret, size: nil, fileReference: fileReference)
-}
-
 public struct NotificationViewControllerInitializationData {
     public let appGroupPath: String
     public let apiId: Int32
@@ -146,6 +126,7 @@ public final class NotificationViewControllerImpl {
                 return nil
             }, requestSetAlternateIconName: { _, f in
                 f(false)
+            }, forceOrientation: { _ in
             })
             
             let presentationDataPromise = Promise<PresentationData>()

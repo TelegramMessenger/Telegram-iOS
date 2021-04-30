@@ -162,7 +162,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 imageDimensions = externalReference.content?.dimensions?.cgSize
                 if let content = externalReference.content, externalReference.type == "gif", let thumbnailResource = imageResource
                     , let dimensions = content.dimensions {
-                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [])], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
+                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     imageResource = nil
                 }
             case let .internalReference(internalReference):
@@ -224,7 +224,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         
         if updatedImageResource {
             if let imageResource = imageResource {
-                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(fittedImageDimensions.width * 2.0), height: Int32(fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [])
+                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(fittedImageDimensions.width * 2.0), height: Int32(fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil)
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                 updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, photoReference: .standalone(media: tmpImage))
             } else {

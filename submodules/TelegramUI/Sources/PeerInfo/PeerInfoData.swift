@@ -25,19 +25,22 @@ final class PeerInfoState {
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
     let avatarUploadProgress: CGFloat?
+    let highlightedButton: PeerInfoHeaderButtonKey?
     
     init(
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
-        avatarUploadProgress: CGFloat?
+        avatarUploadProgress: CGFloat?,
+        highlightedButton: PeerInfoHeaderButtonKey?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
+        self.highlightedButton = highlightedButton
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -46,7 +49,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -56,7 +60,8 @@ final class PeerInfoState {
             selectedMessageIds: selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -66,7 +71,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -76,7 +82,8 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
-            avatarUploadProgress: self.avatarUploadProgress
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton
         )
     }
     
@@ -86,7 +93,19 @@ final class PeerInfoState {
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
-            avatarUploadProgress: avatarUploadProgress
+            avatarUploadProgress: avatarUploadProgress,
+            highlightedButton: self.highlightedButton
+        )
+    }
+    
+    func withHighlightedButton(_ highlightedButton: PeerInfoHeaderButtonKey?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: highlightedButton
         )
     }
 }
@@ -317,40 +336,6 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId, is
         }
     }
     |> distinctUntilChanged
-}
-
-private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
-    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> mapToSignal { view -> Signal<AvatarGalleryEntry?, NoError> in
-        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
-            return .single(nil)
-        }
-        return initialAvatarGalleryEntries(account: context.account, peer: peer)
-        |> map { entries in
-            return entries.first
-        }
-    }
-    |> distinctUntilChanged
-    |> mapToSignal { firstEntry -> Signal<(Bool, [AvatarGalleryEntry]), NoError> in
-        if let firstEntry = firstEntry {
-            return context.account.postbox.loadedPeerWithId(peerId)
-            |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry]), NoError>in
-                return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
-            }
-        } else {
-            return .single((true, []))
-        }
-    }
-    |> map { items -> Any in
-        return items
-    }
-}
-
-func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
-    return context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId))
-    |> map { items -> (Bool, [AvatarGalleryEntry]) in
-        return items as? (Bool, [AvatarGalleryEntry]) ?? (true, [])
-    }
 }
 
 func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signal<Never, NoError> {
@@ -993,8 +978,16 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var canViewStats = false
         var hasDiscussion = false
         var hasVoiceChat = false
+        var displayMore = true
+        var canStartVoiceChat = false
         if let cachedChannelData = cachedData as? CachedChannelData {
             canViewStats = cachedChannelData.flags.contains(.canViewStats)
+        }
+        if channel.flags.contains(.hasVoiceChat) {
+            hasVoiceChat = true
+        }
+        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+            displayMore = true
         }
         switch channel.info {
         case let .broadcast(info):
@@ -1013,6 +1006,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 hasVoiceChat = true
             }
         }
+        if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
+            canStartVoiceChat = true
+        }
         switch channel.participationStatus {
         case .member:
             break
@@ -1023,7 +1019,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             displayLeave = false
         }
         result.append(.mute)
-        if hasVoiceChat {
+        if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
         if hasDiscussion {
@@ -1033,7 +1029,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if displayLeave {
             result.append(.leave)
         }
-        var displayMore = true
         if displayLeave && !channel.flags.contains(.isCreator) {
             if let _ = channel.adminRights {
                 displayMore = false
@@ -1056,9 +1051,17 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var isPublic = false
         var isCreator = false
         var hasVoiceChat = false
+        var canStartVoiceChat = false
         
         if group.flags.contains(.hasVoiceChat) {
             hasVoiceChat = true
+        }
+        if !hasVoiceChat {
+            if case .creator = group.role {
+                canStartVoiceChat = true
+            } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canManageCalls) {
+                canStartVoiceChat = true
+            }
         }
         
         if case .creator = group.role {
@@ -1078,13 +1081,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if !group.hasBannedPermission(.banAddMembers) {
             canAddMembers = true
         }
-        
         if canAddMembers {
             result.append(.addMember)
         }
-        
         result.append(.mute)
-        if hasVoiceChat {
+        if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
         result.append(.search)

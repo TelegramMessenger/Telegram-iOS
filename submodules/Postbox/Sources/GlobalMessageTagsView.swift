@@ -348,7 +348,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         }
         
         if let later = self.later {
-            addedEntries += postbox.messageHistoryTable.laterEntries(globalTagMask: self.globalTag, index: later.predecessor(), count: self.count).map { entry -> InternalGlobalMessageTagsEntry in
+            addedEntries += postbox.messageHistoryTable.laterEntries(globalTagMask: self.globalTag, index: later.globalPredecessor(), count: self.count).map { entry -> InternalGlobalMessageTagsEntry in
                 switch entry {
                     case let .message(message):
                         return .intermediateMessage(message)
@@ -358,7 +358,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
             }
         }
         if let earlier = self.earlier {
-            addedEntries += postbox.messageHistoryTable.earlierEntries(globalTagMask: self.globalTag, index: earlier.successor(), count: self.count).map { entry -> InternalGlobalMessageTagsEntry in
+            addedEntries += postbox.messageHistoryTable.earlierEntries(globalTagMask: self.globalTag, index: earlier.globalSuccessor(), count: self.count).map { entry -> InternalGlobalMessageTagsEntry in
                 switch entry {
                     case let .message(message):
                         return .intermediateMessage(message)
