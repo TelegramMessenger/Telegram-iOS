@@ -908,6 +908,11 @@ private:
         videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
         videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
 
+        int minOutgoingVideoBitrateKbit = 100;
+#if DEBUG
+        //minOutgoingVideoBitrateKbit = 900;
+#endif
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
@@ -932,7 +937,6 @@ private:
                 }
                 audioLevelsUpdated(result);
             },
-            .minOutgoingVideoBitrateKbit = 1024,
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
@@ -1013,7 +1017,8 @@ private:
                 });
 
                 return std::make_shared<RequestMediaChannelDescriptionTaskImpl>(task);
-            }
+            },
+            .minOutgoingVideoBitrateKbit = minOutgoingVideoBitrateKbit
         }));
     }
     return self;
