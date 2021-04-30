@@ -161,7 +161,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
             if let preloadedSticker = interfaceState.greetingData?.sticker {
-                sticker = .single(preloadedSticker)
+                sticker = preloadedSticker
             } else {
                 sticker = self.context.engine.stickers.randomGreetingSticker()
                 |> map { item -> TelegramMediaFile? in
@@ -338,7 +338,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
         } else if !self.didSetupSticker {
             let sticker: Signal<TelegramMediaFile?, NoError>
             if let preloadedSticker = interfaceState.greetingData?.sticker {
-                sticker = .single(preloadedSticker)
+                sticker = preloadedSticker
             } else {
                 sticker = self.context.engine.stickers.randomGreetingSticker()
                 |> map { item -> TelegramMediaFile? in
@@ -876,6 +876,7 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeNearbyChatContent(context: self.context, interaction: self.interaction)
                 case .greeting:
                     node = ChatEmptyNodeGreetingChatContent(context: self.context, interaction: self.interaction)
+                    self.context.prefetchManager?.prepareNextGreetingSticker()
             }
             self.content = (contentType, node)
             self.addSubnode(node)

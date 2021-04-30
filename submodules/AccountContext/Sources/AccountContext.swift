@@ -219,17 +219,14 @@ public final class ChatPeerNearbyData: Equatable {
 
 public final class ChatGreetingData: Equatable {
     public static func == (lhs: ChatGreetingData, rhs: ChatGreetingData) -> Bool {
-        if let lhsSticker = lhs.sticker, let rhsSticker = rhs.sticker, !lhsSticker.isEqual(to: rhsSticker) {
-            return false
-        } else if (lhs.sticker == nil) != (rhs.sticker == nil) {
-            return false
-        }
-        return true
+        return lhs.uuid == rhs.uuid
     }
     
-    public let sticker: TelegramMediaFile?
+    public let uuid: UUID
+    public let sticker: Signal<TelegramMediaFile?, NoError>
     
-    public init(sticker: TelegramMediaFile?) {
+    public init(uuid: UUID, sticker: Signal<TelegramMediaFile?, NoError>) {
+        self.uuid = uuid
         self.sticker = sticker
     }
 }
@@ -285,14 +282,13 @@ public final class NavigateToChatControllerParams {
     public let activateMessageSearch: (ChatSearchDomain, String)?
     public let peekData: ChatPeekTimeout?
     public let peerNearbyData: ChatPeerNearbyData?
-    public let greetingData: ChatGreetingData?
     public let reportReason: ReportReason?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, greetingData: ChatGreetingData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -309,7 +305,6 @@ public final class NavigateToChatControllerParams {
         self.activateMessageSearch = activateMessageSearch
         self.peekData = peekData
         self.peerNearbyData = peerNearbyData
-        self.greetingData = greetingData
         self.reportReason = reportReason
         self.animated = animated
         self.options = options
@@ -719,6 +714,7 @@ public protocol AccountContext: class {
     var liveLocationManager: LiveLocationManager? { get }
     var peersNearbyManager: PeersNearbyManager? { get }
     var fetchManager: FetchManager { get }
+    var prefetchManager: PrefetchManager? { get }
     var downloadedMediaStoreManager: DownloadedMediaStoreManager { get }
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
     var wallpaperUploadManager: WallpaperUploadManager? { get }
