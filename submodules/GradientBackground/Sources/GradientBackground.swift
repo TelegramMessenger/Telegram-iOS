@@ -47,7 +47,24 @@ private func generateGradientComponent(size: CGSize, color: UIColor) -> UIImage?
 }
 
 public final class GradientBackgroundNode: ASDisplayNode {
-    private var pointImages: [UIImageView] = []
+    private final class PointImage {
+        let stack: [UIImageView]
+
+        init(image: UIImage, count: Int) {
+            self.stack = (0 ..< count).map { _ in
+                let imageView = UIImageView(image: image)
+                imageView.alpha = min(1.0, (1.0 / CGFloat(count)) * 1.2)
+                return imageView
+            }
+        }
+
+        func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
+            for imageView in stack {
+                transition.updateFrame(view: imageView, frame: frame)
+            }
+        }
+    }
+    private var pointImages: [PointImage] = []
     private let dimView: UIView
 
     private var phase: Int = 0
@@ -72,11 +89,20 @@ public final class GradientBackgroundNode: ASDisplayNode {
             UIColor(rgb: 0xFBE37D)
         ]
 
+        let layerCount = 2
+
         for i in 0 ..< colors.count {
-            let pointImage = UIImageView(image: generateGradientComponent(size: CGSize(width: 300.0, height: 300.0), color: colors[i].withMultiplied(hue: 1.0, saturation: 1.1, brightness: 1.1)))
-            //pointImage.layer.compositingFilter = "multiplyBlendMode"
-            self.view.addSubview(pointImage)
+            let image = generateGradientComponent(size: CGSize(width: 300.0, height: 300.0), color: colors[i].withMultiplied(hue: 1.0, saturation: 1.1, brightness: 1.0))!
+
+            let pointImage = PointImage(image: image, count: layerCount)
+
             self.pointImages.append(pointImage)
+        }
+
+        for i in 0 ..< layerCount {
+            for pointImage in self.pointImages {
+                self.view.addSubview(pointImage.stack[i])
+            }
         }
 
         self.view.addSubview(self.dimView)
@@ -90,37 +116,44 @@ public final class GradientBackgroundNode: ASDisplayNode {
         let positions: [CGPoint]
 
         let basePositions: [CGPoint] = [
-            CGPoint(x: 0.2, y: 0.2),
-            CGPoint(x: 0.2, y: 0.8),
-            CGPoint(x: 0.8, y: 0.8),
-            CGPoint(x: 0.8, y: 0.2),
-        ]
+            CGPoint(x: 0.80, y: 0.10),
+            CGPoint(x: 0.60, y: 0.20),
+            CGPoint(x: 0.35, y: 0.25),
+            CGPoint(x: 0.25, y: 0.60),
+            CGPoint(x: 0.20, y: 0.90),
+            CGPoint(x: 0.40, y: 0.80),
+            CGPoint(x: 0.65, y: 0.75),
+            CGPoint(x: 0.75, y: 0.40)
+        ]/*.map { point -> CGPoint in
+            var point = point
+            if point.x < 0.5 {
+                point.x *= 0.5
+            } else {
+                point.x = 1.0 - (1.0 - point.x) * 0.5
+            }
+            if point.y < 0.5 {
+                point.y *= 0.5
+            } else {
+                point.y = 1.0 - (1.0 - point.x) * 0.5
+            }
+            return point
+        }*/
 
-        switch self.phase % 4 {
-        case 0:
-            positions = basePositions
-        case 1:
-            positions = shiftArray(array: basePositions, offset: 1)
-        case 2:
-            positions = shiftArray(array: basePositions, offset: 2)
-        case 3:
-            positions = shiftArray(array: basePositions, offset: 3)
-        default:
-            preconditionFailure()
-        }
+        positions = shiftArray(array: basePositions, offset: self.phase % 8)
 
-        for i in 0 ..< positions.count {
+        for i in 0 ..< positions.count / 2 {
             if self.pointImages.count <= i {
                 break
             }
-            let pointCenter = CGPoint(x: size.width * positions[i].x, y: size.height * positions[i].y)
-            let pointSize = CGSize(width: size.width * 2.0, height: size.height * 2.0)
-            transition.updateFrame(view: self.pointImages[i], frame: CGRect(origin: CGPoint(x: pointCenter.x - pointSize.width / 2.0, y: pointCenter.y - pointSize.height / 2.0), size: pointSize))
+            let position = positions[i * 2]
+            let pointCenter = CGPoint(x: size.width * position.x, y: size.height * position.y)
+            let pointSize = CGSize(width: size.width * 1.8, height: size.height * 1.5)
+            self.pointImages[i].updateFrame(frame: CGRect(origin: CGPoint(x: pointCenter.x - pointSize.width / 2.0, y: pointCenter.y - pointSize.height / 2.0), size: pointSize), transition: transition)
         }
     }
 
     public func animateEvent(transition: ContainedViewLayoutTransition) {
-        self.phase = (self.phase + 1) % 4
+        self.phase = self.phase + 1
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: transition)
         }
