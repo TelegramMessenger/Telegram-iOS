@@ -937,7 +937,6 @@ private:
                 }
                 audioLevelsUpdated(result);
             },
-            .minOutgoingVideoBitrateKbit = 1024,
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
