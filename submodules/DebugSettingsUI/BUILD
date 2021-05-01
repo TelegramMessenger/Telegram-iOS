@@ -1,12 +1,14 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 swift_library(
     name = "DebugSettingsUI",
     module_name = "DebugSettingsUI",
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
