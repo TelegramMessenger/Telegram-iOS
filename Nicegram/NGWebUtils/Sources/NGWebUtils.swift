@@ -12,9 +12,9 @@ public func getTgId(_ peer: Peer?) -> Int64 {
     if let peer = peer {
         var peerId: Int64
         if let peer = peer as? TelegramUser  {
-            peerId = Int64(peer.id.hashValue)
+            peerId = peer.id.toInt64()
         } else { // Channels, Chats, Groups
-            peerId = Int64("-100" + String(peer.id.hashValue)) ?? 1
+            peerId = Int64("-100" + String(peer.id.toInt64())) ?? 1
         }
         return peerId
     }

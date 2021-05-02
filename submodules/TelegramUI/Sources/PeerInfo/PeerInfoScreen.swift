@@ -712,7 +712,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         var idText = ""
         
         if let user = data.peer as? TelegramUser {
-            idText = String(user.id.hashValue)
+            idText = String(user.id.toInt64())
         }
         
         // Sorry RTL users
@@ -986,7 +986,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     
     if let user = data.peer as? TelegramUser {
         // MARK: Nicegram User ID
-        idText = String(user.id.hashValue)
+        idText = String(user.id.toInt64())
         isUser = true
         
         if !callMessages.isEmpty {
@@ -1073,7 +1073,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let channel = data.peer as? TelegramChannel {
         // MARK: Nicegram Channel ID
-        idText = "-100" + String(channel.id.hashValue)
+        idText = "-100" + String(channel.id.toInt64())
         
         let ItemUsername = 1
         let ItemAbout = 2
@@ -1159,7 +1159,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let group = data.peer as? TelegramGroup {
         // MARK: Nicegram Group ID
-        idText = String(group.id.hashValue)
+        idText = String(group.id.toInt64())
          
         if let cachedData = data.cachedData as? CachedGroupData {
             let aboutText: String?
