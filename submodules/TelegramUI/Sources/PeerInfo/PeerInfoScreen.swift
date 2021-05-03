@@ -1073,7 +1073,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let channel = data.peer as? TelegramChannel {
         // MARK: Nicegram Channel ID
-        idText = "-100" + String(channel.id.toInt64())
+        idText = "-100" + String(channel.id.id._internalGetInt32Value())
         
         let ItemUsername = 1
         let ItemAbout = 2
@@ -1159,7 +1159,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let group = data.peer as? TelegramGroup {
         // MARK: Nicegram Group ID
-        idText = String(group.id.toInt64())
+        idText = String(group.id.id._internalGetInt32Value())
          
         if let cachedData = data.cachedData as? CachedGroupData {
             let aboutText: String?
