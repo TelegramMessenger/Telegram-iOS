@@ -5,6 +5,7 @@
 
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
+#import <CoreMedia/CoreMedia.h>
 #else
 #import <AppKit/AppKit.h>
 #define UIView NSView
@@ -110,10 +111,19 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape;
 
+#if TARGET_OS_IOS
++ (instancetype _Nonnull)capturerWithExternalSampleBufferProvider;
+#endif
+
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+
+#if TARGET_OS_IOS
+- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer;
+- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer;
+#endif
 
 @end
 

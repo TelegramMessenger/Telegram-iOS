@@ -1465,6 +1465,10 @@ swift_library(
         "BroadcastUpload/**/*.swift",
     ]),
     deps = [
+        "//submodules/TelegramUI:TelegramUI",
+        "//submodules/TelegramVoip:TelegramVoip",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/BuildConfig:BuildConfig",
     ],
 )
 
@@ -1510,6 +1514,8 @@ ios_extension(
     }),
     deps = [":BroadcastUploadExtensionLib"],
     frameworks = [
+        ":TelegramUIFramework",
+        ":SwiftSignalKitFramework",
     ],
 )
 

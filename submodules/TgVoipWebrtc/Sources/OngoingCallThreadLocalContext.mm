@@ -25,6 +25,9 @@
 #import "group/GroupInstanceImpl.h"
 #import "group/GroupInstanceCustomImpl.h"
 
+#import "VideoCaptureInterfaceImpl.h"
+#import "platform/darwin/CustomExternalCapturer.h"
+
 @implementation OngoingCallConnectionDescriptionWebrtc
 
 - (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
@@ -144,11 +147,21 @@
 
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     bool _keepLandscape;
+    std::shared_ptr<std::vector<uint8_t>> _croppingBuffer;
 }
 
 @end
 
 @implementation OngoingCallThreadLocalContextVideoCapturer
+
+- (instancetype _Nonnull)initWithInterface:(std::shared_ptr<tgcalls::VideoCaptureInterface>)interface {
+    self = [super init];
+    if (self != nil) {
+        _interface = interface;
+        _croppingBuffer = std::make_shared<std::vector<uint8_t>>();
+    }
+    return self;
+}
 
 - (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape {
     self = [super init];
@@ -164,9 +177,54 @@
     return self;
 }
 
+#if TARGET_OS_IOS
+
+tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls::VideoCaptureInterface *videoCapture) {
+    return videoCapture
+        ? static_cast<tgcalls::VideoCaptureInterfaceImpl*>(videoCapture)->object()->getSyncAssumingSameThread()
+        : nullptr;
+}
+
++ (instancetype _Nonnull)capturerWithExternalSampleBufferProvider {
+    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom");
+    return [[OngoingCallThreadLocalContextVideoCapturer alloc] initWithInterface:interface];
+}
+#endif
 
 - (void)dealloc {
 }
+
+#if TARGET_OS_IOS
+- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer {
+    if (!sampleBuffer) {
+        return;
+    }
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, sampleBuffer = CFRetain(sampleBuffer)]() {
+        auto capture = GetVideoCaptureAssumingSameThread(interface.get());
+        auto source = capture->source();
+        if (source) {
+            [CustomExternalCapturer passSampleBuffer:(CMSampleBufferRef)sampleBuffer toSource:source];
+        }
+        CFRelease(sampleBuffer);
+    });
+}
+
+- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer {
+    if (!pixelBuffer) {
+        return;
+    }
+
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer]() {
+        auto capture = GetVideoCaptureAssumingSameThread(interface.get());
+        auto source = capture->source();
+        if (source) {
+            [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer toSource:source croppingBuffer:*croppingBuffer];
+        }
+        CFRelease(pixelBuffer);
+    });
+}
+
+#endif
 
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId {
     std::string resolvedId = deviceId.UTF8String;

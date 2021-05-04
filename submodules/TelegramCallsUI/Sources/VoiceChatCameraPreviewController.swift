@@ -11,6 +11,7 @@ import TelegramPresentationData
 import SolidRoundedButtonNode
 import PresentationDataUtils
 import UIKitRuntimeUtils
+import ReplayKit
 
 final class VoiceChatCameraPreviewController: ViewController {
     private var controllerNode: VoiceChatCameraPreviewControllerNode {
@@ -60,7 +61,7 @@ final class VoiceChatCameraPreviewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = VoiceChatCameraPreviewControllerNode(context: self.context, cameraNode: self.cameraNode)
+        self.displayNode = VoiceChatCameraPreviewControllerNode(controller: self, context: self.context, cameraNode: self.cameraNode)
         self.controllerNode.shareCamera = { [weak self] in
             if let strongSelf = self {
                 strongSelf.shareCamera(strongSelf.cameraNode)
@@ -107,6 +108,7 @@ final class VoiceChatCameraPreviewController: ViewController {
 }
 
 private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private weak var controller: VoiceChatCameraPreviewController?
     private let context: AccountContext
     private var presentationData: PresentationData
     
@@ -121,6 +123,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let previewContainerNode: ASDisplayNode
     private let cameraButton: SolidRoundedButtonNode
     private let screenButton: SolidRoundedButtonNode
+    private var broadcastPickerView: UIView?
     private let cancelButton: SolidRoundedButtonNode
     
     private let switchCameraButton: HighlightTrackingButtonNode
@@ -128,6 +131,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let switchCameraIconNode: ASImageNode
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
+
+    private var applicationStateDisposable: Disposable?
     
     var shareCamera: (() -> Void)?
     var switchCamera: (() -> Void)?
@@ -135,7 +140,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, cameraNode: GroupVideoNode) {
+    init(controller: VoiceChatCameraPreviewController, context: AccountContext, cameraNode: GroupVideoNode) {
+        self.controller = controller
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -179,6 +185,14 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.screenButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
         self.screenButton.title = self.presentationData.strings.VoiceChat_VideoPreviewShareScreen
+
+        if #available(iOS 12.0, *) {
+            let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
+            broadcastPickerView.alpha = 0.1
+            broadcastPickerView.preferredExtension = "\(self.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
+            broadcastPickerView.showsMicrophoneButton = false
+            self.broadcastPickerView = broadcastPickerView
+        }
         
         self.cancelButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .regular, height: 52.0, cornerRadius: 11.0, gloss: false)
         self.cancelButton.title = self.presentationData.strings.Common_Cancel
@@ -217,6 +231,9 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.cameraButton)
         self.contentContainerNode.addSubnode(self.screenButton)
+        if let broadcastPickerView = self.broadcastPickerView {
+            self.contentContainerNode.view.addSubview(broadcastPickerView)
+        }
         self.contentContainerNode.addSubnode(self.cancelButton)
         
         self.contentContainerNode.addSubnode(self.previewContainerNode)
@@ -291,6 +308,16 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
         transition.animateView({
             self.bounds = targetBounds
+        })
+
+        self.applicationStateDisposable = (self.context.sharedContext.applicationBindings.applicationIsActive
+        |> filter { !$0 }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controller?.dismiss()
         })
     }
     
@@ -390,6 +417,9 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         let screenButtonHeight = self.screenButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: screenButtonHeight))
+        if let broadcastPickerView = self.broadcastPickerView {
+            broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+        }
        
         let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: cancelButtonHeight))
