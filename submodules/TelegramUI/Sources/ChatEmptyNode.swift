@@ -853,6 +853,7 @@ final class ChatEmptyNode: ASDisplayNode {
             contentType = .regular
         }
         
+        var updateGreetingSticker = false
         var contentTransition = transition
         if self.content?.0 != contentType {
             var animateContentIn = false
@@ -876,7 +877,7 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeNearbyChatContent(context: self.context, interaction: self.interaction)
                 case .greeting:
                     node = ChatEmptyNodeGreetingChatContent(context: self.context, interaction: self.interaction)
-                    self.context.prefetchManager?.prepareNextGreetingSticker()
+                    updateGreetingSticker = true
             }
             self.content = (contentType, node)
             self.addSubnode(node)
@@ -894,6 +895,10 @@ final class ChatEmptyNode: ASDisplayNode {
         var contentSize = CGSize()
         if let contentNode = self.content?.1 {
             contentSize = contentNode.updateLayout(interfaceState: interfaceState, size: displayRect.size, transition: contentTransition)
+            
+            if updateGreetingSticker {
+                self.context.prefetchManager?.prepareNextGreetingSticker()
+            }
         }
         
         let contentFrame = CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - contentSize.width) / 2.0), y: displayRect.minY + floor((displayRect.height - contentSize.height) / 2.0)), size: contentSize)
