@@ -3345,6 +3345,10 @@ public final class VoiceChatController: ViewController {
                     }, switchCamera: { [weak self] in
                         self?.call.switchVideoCamera()
                     }, shareScreen: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+
                         self?.call.requestScreencast()
                     })
                     strongSelf.controller?.present(controller, in: .window(.root))
