@@ -527,10 +527,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             isScheduled = true
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0) })).0
             } else {
                 title = self.strings.Conversation_ScheduledVoiceChat
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0) })).0
             }
             
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
