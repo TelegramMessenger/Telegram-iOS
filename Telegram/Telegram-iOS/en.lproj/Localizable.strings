@@ -6466,3 +6466,6 @@ Sorry for the inconvenience.";
 "VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
 "VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
 "VoiceChat.VideoPreviewShareScreen" = "Share Screen";
+
+"VoiceChat.TapToViewCameraVideo" = "Tap to view camera video";
+"VoiceChat.TapToViewScreenVideo" = "Tap to view screen sharing";

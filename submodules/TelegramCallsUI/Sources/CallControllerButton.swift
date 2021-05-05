@@ -205,6 +205,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     if previousContent == nil {
                         animationNode.seekToEnd()
                     } else if previousContent?.image != content.image {
+                        animationNode.setAnimation(name: animationName)
                         animationNode.play()
                     }
                 }
