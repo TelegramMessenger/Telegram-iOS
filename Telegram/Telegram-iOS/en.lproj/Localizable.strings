@@ -6447,7 +6447,6 @@ Sorry for the inconvenience.";
 
 "Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
 
-
 "Privacy.ContactsReset.ContactsDeleted" = "All synced contacts deleted.";
 
 "Privacy.DeleteDrafts.DraftsDeleted" = "All cloud drafts deleted.";
