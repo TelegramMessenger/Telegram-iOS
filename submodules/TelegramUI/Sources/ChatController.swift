@@ -1050,7 +1050,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 replyPanel = accessoryPanelNode
             }
 
-            if strongSelf.chatDisplayNode.shouldAnimateMessageTransition {
+            var shouldAnimateMessageTransition = strongSelf.chatDisplayNode.shouldAnimateMessageTransition
+            if sourceNode is ChatEmptyNodeStickerContentNode {
+                shouldAnimateMessageTransition = true
+            }
+            if shouldAnimateMessageTransition {
                 if let sourceNode = sourceNode as? ChatMediaInputStickerGridItemNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
                         guard let strongSelf = self else {
@@ -1072,6 +1076,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
                 } else if let sourceNode = sourceNode as? StickerPaneSearchStickerItemNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+                } else if let sourceNode = sourceNode as? ChatEmptyNodeStickerContentNode {
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .emptyPanel(itemNode: sourceNode), replyPanel: nil), initiated: {})
                 }
             }
             
@@ -2492,8 +2498,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if !onlyHaptic {
                 strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
             }
-        }, greetingStickerNode: { [weak self] in
-            return self?.chatDisplayNode.greetingStickerNode
         }, openPeerContextMenu: { [weak self] peer, messageId, node, rect, gesture in
             guard let strongSelf = self else {
                 return

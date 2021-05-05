@@ -67,7 +67,11 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
     }
 }
 
-private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+protocol ChatEmptyNodeStickerContentNode: ASDisplayNode {
+    var stickerNode: ChatMediaInputStickerGridItemNode { get }
+}
+
+final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -75,24 +79,14 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
     private let textNode: ImmediateTextNode
     
     private var stickerItem: ChatMediaInputStickerGridItem?
-    private let stickerNode: ChatMediaInputStickerGridItemNode
+    let stickerNode: ChatMediaInputStickerGridItemNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
     
     private var didSetupSticker = false
     private let disposable = MetaDisposable()
-    
-    var greetingStickerNode: ASDisplayNode? {
-        if let animationNode = self.stickerNode.animationNode, animationNode.supernode === stickerNode {
-            return animationNode
-        } else if self.stickerNode.imageNode.supernode === stickerNode {
-            return self.stickerNode.imageNode
-        } else {
-            return nil
-        }
-    }
-    
+        
     init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
         self.interaction = interaction
@@ -140,7 +134,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self.stickerNode, self.stickerNode.bounds)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self, self.stickerNode.bounds)
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -234,7 +228,7 @@ private final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNo
     }
 }
 
-private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -242,23 +236,13 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
     private let textNode: ImmediateTextNode
     
     private var stickerItem: ChatMediaInputStickerGridItem?
-    private let stickerNode: ChatMediaInputStickerGridItemNode
+    let stickerNode: ChatMediaInputStickerGridItemNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
     
     private var didSetupSticker = false
     private let disposable = MetaDisposable()
-    
-    var greetingStickerNode: ASDisplayNode? {
-        if let animationNode = self.stickerNode.animationNode, animationNode.supernode === stickerNode {
-            return animationNode
-        } else if self.stickerNode.imageNode.supernode === stickerNode {
-            return self.stickerNode.imageNode
-        } else {
-            return nil
-        }
-    }
     
     init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
@@ -307,7 +291,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self.stickerNode, self.stickerNode.bounds)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self, self.stickerNode.bounds)
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -907,17 +891,6 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
-    }
-    
-    var greetingStickerNode: ASDisplayNode? {
-        if let (_, node) = self.content {
-            if let node = node as? ChatEmptyNodeGreetingChatContent {
-                return node.greetingStickerNode
-            } else if let node = node as? ChatEmptyNodeNearbyChatContent {
-                return node.greetingStickerNode
-            }
-        }
-        return nil
     }
 }
 

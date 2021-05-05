@@ -792,23 +792,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, (@escaping () -> Void) -> Void)? {
-        if let greetingStickerNode = self.emptyNode?.greetingStickerNode {
-            let historyNode = self.historyNode
-            historyNode.alpha = 0.0
-            return (greetingStickerNode, self, self.historyNode, { completion in
-                historyNode.alpha = 1.0
-                historyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
-                    completion()
-                })
-            })
-        } else {
-            return nil
-        }
-    }
-    
     private var isInFocus: Bool = false
-    
     func inFocusUpdated(isInFocus: Bool) {
         self.isInFocus = isInFocus
         
