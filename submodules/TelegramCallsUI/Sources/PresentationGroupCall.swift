@@ -2527,7 +2527,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
 
-    public func requestScreencast() {
+    private func requestScreencast() {
         if self.screencastCallContext != nil {
             return
         }
