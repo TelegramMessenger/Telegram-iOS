@@ -185,6 +185,10 @@ final class GroupVideoNode: ASDisplayNode {
         
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
+
+        // TODO: properly fix the issue
+        // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
+        self.videoView.view.alpha = 0.995
     }
 }
 
@@ -3358,12 +3362,6 @@ public final class VoiceChatController: ViewController {
                         }
                     }, switchCamera: { [weak self] in
                         self?.call.switchVideoCamera()
-                    }, shareScreen: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-
-                        self?.call.requestScreencast()
                     })
                     strongSelf.controller?.present(controller, in: .window(.root))
                 }

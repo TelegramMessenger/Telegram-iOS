@@ -348,7 +348,6 @@ public protocol PresentationGroupCall: class {
     func lowerHand()
     func requestVideo()
     func disableVideo()
-    func requestScreencast()
     func disableScreencast()
     func switchVideoCamera()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)

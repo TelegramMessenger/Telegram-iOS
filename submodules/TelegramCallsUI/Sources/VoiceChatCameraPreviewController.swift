@@ -25,16 +25,14 @@ final class VoiceChatCameraPreviewController: ViewController {
     private let cameraNode: GroupVideoNode
     private let shareCamera: (ASDisplayNode) -> Void
     private let switchCamera: () -> Void
-    private let shareScreen: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode) -> Void, switchCamera: @escaping () -> Void, shareScreen: @escaping () -> Void) {
+    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode) -> Void, switchCamera: @escaping () -> Void) {
         self.context = context
         self.cameraNode = cameraNode
         self.shareCamera = shareCamera
         self.switchCamera = switchCamera
-        self.shareScreen = shareScreen
         
         super.init(navigationBarPresentationData: nil)
         
@@ -70,10 +68,6 @@ final class VoiceChatCameraPreviewController: ViewController {
         }
         self.controllerNode.switchCamera = { [weak self] in
             self?.switchCamera()
-        }
-        self.controllerNode.shareScreen = { [weak self] in
-            self?.shareScreen()
-            self?.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -136,7 +130,6 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     
     var shareCamera: (() -> Void)?
     var switchCamera: (() -> Void)?
-    var shareScreen: (() -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
@@ -246,11 +239,6 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.cameraButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.shareCamera?()
-            }
-        }
-        self.screenButton.pressed = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.shareScreen?()
             }
         }
         self.cancelButton.pressed = { [weak self] in
