@@ -1556,17 +1556,21 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             if currentItem != nil {
                                 if case .tile = item.style {
                                     if item.pinned {
+                                        if strongSelf.avatarNode.alpha.isZero {
+                                            strongSelf.videoContainerNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
+                                            strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                                        }
                                         transition.updateAlpha(node: videoNode, alpha: 0.0)
                                         transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
-                                        strongSelf.videoContainerNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
                                         transition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
-                                        strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
                                     } else {
+                                        if !strongSelf.avatarNode.alpha.isZero {
+                                            strongSelf.videoContainerNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+                                            strongSelf.avatarNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
+                                        }
                                         transition.updateAlpha(node: videoNode, alpha: 1.0)
                                         transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 1.0)
-                                        strongSelf.videoContainerNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                                         transition.updateAlpha(node: strongSelf.avatarNode, alpha: 0.0)
-                                        strongSelf.avatarNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
                                     }
                                 } else {
                                     if item.pinned {
@@ -1658,7 +1662,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.videoContainerNode.isHidden = item.transparent
                             strongSelf.pinIconNode.isHidden = !item.transparent
                             if item.transparent && currentItem?.pinned != item.pinned {
-                                strongSelf.pinIconNode.image = generateTintedImage(image: UIImage(bundleImageName: item.pinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: UIColor(rgb: 0xffffff))
+                                strongSelf.pinIconNode.image = generateTintedImage(image: UIImage(bundleImageName: item.pinned ? "Chat/Context Menu/Pin" : "Chat/Context Menu/Unpin"), color: UIColor(rgb: 0xffffff))
                             }
                         case .tile:
                             strongSelf.pinIconNode.isHidden = true
