@@ -115,6 +115,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
+-(void)setOnFatalError:(dispatch_block_t _Nullable)onError;
+
 @end
 
 @interface OngoingCallThreadLocalContextWebrtc : NSObject
