@@ -242,6 +242,10 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     return _interface;
 }
 
+-(void)setOnFatalError:(dispatch_block_t _Nullable)onError {
+    _interface->setOnFatalError(onError);
+}
+
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
     std::shared_ptr<tgcalls::VideoCaptureInterface> interface = _interface;
     dispatch_async(dispatch_get_main_queue(), ^{
