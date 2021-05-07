@@ -8,7 +8,7 @@ import TelegramPresentationData
 import AccountContext
 
 public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
-    public let backgroundNode: ASDisplayNode
+    public let backgroundNode: NavigationBackgroundNode
     public let headerNode: MediaNavigationAccessoryHeaderNode
     
     private let currentHeaderHeight: CGFloat = MediaNavigationAccessoryHeaderNode.minimizedHeight
@@ -18,12 +18,11 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestu
     init(context: AccountContext) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.backgroundColor)
         self.headerNode = MediaNavigationAccessoryHeaderNode(presentationData: self.presentationData)
         
         super.init()
-        
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.headerNode)
@@ -32,12 +31,13 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestu
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.color = self.presentationData.theme.rootController.navigationBar.backgroundColor
         self.headerNode.updatePresentationData(presentationData)
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: self.currentHeaderHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         
         let headerHeight = self.currentHeaderHeight
         transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: headerHeight)))
