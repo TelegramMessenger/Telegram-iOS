@@ -213,19 +213,28 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             updatedContentAreaInScreenSpace.origin.x = 0.0
             updatedContentAreaInScreenSpace.size.width = self.clippingNode.bounds.width
 
-            //let timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.0, 0.0, 1.0)
-
             let clippingOffset = updatedContentAreaInScreenSpace.minY - self.clippingNode.frame.minY
             self.clippingNode.frame = CGRect(origin: CGPoint(x: 0.0, y: updatedContentAreaInScreenSpace.minY), size: self.clippingNode.bounds.size)
             self.clippingNode.bounds = CGRect(origin: CGPoint(x: 0.0, y: clippingOffset), size: self.clippingNode.bounds.size)
-
-            //self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: updatedContentAreaInScreenSpace, duration: verticalDuration, mediaTimingFunction: timingFunction, removeOnCompletion: false)
-            //self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: verticalDuration, mediaTimingFunction: timingFunction, removeOnCompletion: false)
 
             switch self.source {
             case let .textInput(initialTextInput, replyPanel):
                 self.contextSourceNode.isExtractedToContextPreview = true
                 self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
+
+                var currentContentRect = self.contextSourceNode.contentRect
+                let contextSourceNode = self.contextSourceNode
+                self.contextSourceNode.layoutUpdated = { [weak self, weak contextSourceNode] size in
+                    guard let strongSelf = self, let contextSourceNode = contextSourceNode, strongSelf.contextSourceNode === contextSourceNode else {
+                        return
+                    }
+                    let updatedContentRect = contextSourceNode.contentRect
+                    let deltaY = updatedContentRect.height - currentContentRect.height
+                    if !deltaY.isZero {
+                        currentContentRect = updatedContentRect
+                        strongSelf.addContentOffset(offset: deltaY, itemNode: nil)
+                    }
+                }
 
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 

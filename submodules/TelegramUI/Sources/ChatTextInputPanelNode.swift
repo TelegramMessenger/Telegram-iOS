@@ -192,12 +192,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackground
     }
     
     let image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
-        if let backgroundColor = backgroundColor {
-            context.setFillColor(backgroundColor.cgColor)
-            context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
-        } else {
-            context.clear(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
-        }
+        context.clear(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
 
         if let inputBackgroundColor = inputBackgroundColor {
             context.setBlendMode(.normal)
@@ -235,6 +230,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: ImmediateTextNode
     var contextPlaceholderNode: TextNode?
     var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
+    let textInputContainerBackgroundNode: ASImageNode
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     
@@ -426,10 +422,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
+
+        self.textInputContainerBackgroundNode = ASImageNode()
+        self.textInputContainerBackgroundNode.isUserInteractionEnabled = false
+        self.textInputContainerBackgroundNode.displaysAsynchronously = false
         
         self.textInputContainer = ASDisplayNode()
+        self.textInputContainer.addSubnode(self.textInputContainerBackgroundNode)
         self.textInputContainer.clipsToBounds = true
-        self.textInputContainer.backgroundColor = presentationInterfaceState.theme.chat.inputPanel.inputBackgroundColor
         
         self.textInputBackgroundNode = ASImageNode()
         self.textInputBackgroundNode.displaysAsynchronously = false
@@ -794,10 +794,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     textInputNode.keyboardAppearance = keyboardAppearance
                 }
                 
-                self.textInputContainer.backgroundColor = interfaceState.theme.chat.inputPanel.inputBackgroundColor
-                
                 self.theme = interfaceState.theme
-                
                 
                 if isEditingMedia {
                     self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
@@ -819,6 +816,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, inputBackgroundColor: nil, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 self.transparentTextInputBackgroundImage = textInputBackgroundImage(backgroundColor: nil, inputBackgroundColor: interfaceState.theme.chat.inputPanel.inputBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                self.textInputContainerBackgroundNode.image = generateStretchableFilledCircleImage(diameter: minimalInputHeight, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor)
                 
                 self.searchLayoutClearImageNode.image = PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme)
                 
@@ -1307,6 +1305,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
+        transition.updateFrame(node: self.textInputContainerBackgroundNode, frame: CGRect(origin: CGPoint(), size: textInputFrame.size))
         transition.updateAlpha(node: self.textInputContainer, alpha: audioRecordingItemsAlpha)
         
         if let textInputNode = self.textInputNode {
