@@ -127,7 +127,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         
         let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
         
-        let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
+        let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
         return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
         |> mapError { _ -> Void in
             return Void()
@@ -394,26 +394,26 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     }
     
     if ((mediaTypes.photo + mediaTypes.video) > 1) && (mediaTypes.music == 0 && mediaTypes.other == 0) {
-        groupingKey = arc4random64()
+        groupingKey = Int64.random(in: Int64.min ... Int64.max)
     } else if ((mediaTypes.photo + mediaTypes.video) == 0) && ((mediaTypes.music > 1 && mediaTypes.other == 0) || (mediaTypes.music == 0 && mediaTypes.other > 1)) {
-        groupingKey = arc4random64()
+        groupingKey = Int64.random(in: Int64.min ... Int64.max)
     }
     
     var mediaMessages: [EnqueueMessage] = []
     for item in items {
         switch item {
             case let .text(text):
-                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
             case let .media(media):
                 switch media {
                     case let .media(reference):
-                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey)
+                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil)
                         messages.append(message)
                         mediaMessages.append(message)
                         
                 }
                 if let _ = groupingKey, mediaMessages.count % 10 == 0 {
-                    groupingKey = arc4random64()
+                    groupingKey = Int64.random(in: Int64.min ... Int64.max)
                 }
         }
     }

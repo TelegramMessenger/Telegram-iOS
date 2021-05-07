@@ -78,7 +78,7 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
         }
     }
     
-    func recentOnline(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, updated: @escaping (Int32) -> Void) -> Disposable {
+    func recentOnline(account: Account, accountPeerId: PeerId, peerId: PeerId, updated: @escaping (Int32) -> Void) -> Disposable {
         let context: PeerChannelMembersOnlineContext
         if let current = self.onlineContexts[peerId] {
             context = current
@@ -88,7 +88,7 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
             self.onlineContexts[peerId] = context
             
             let signal = (
-                chatOnlineMembers(postbox: postbox, network: network, peerId: peerId)
+                TelegramEngine(account: account).peers.chatOnlineMembers(peerId: peerId)
                 |> then(
                     .complete()
                     |> delay(30.0, queue: .mainQueue())
@@ -483,7 +483,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func recentOnline(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Int32, NoError> {
+    public func recentOnline(account: Account, accountPeerId: PeerId, peerId: PeerId) -> Signal<Int32, NoError> {
         return Signal { [weak self] subscriber in
             guard let strongSelf = self else {
                 subscriber.putNext(0)
@@ -491,7 +491,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                 return EmptyDisposable
             }
             let disposable = strongSelf.impl.syncWith({ impl -> Disposable in
-                return impl.recentOnline(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, updated: { value in
+                return impl.recentOnline(account: account, accountPeerId: accountPeerId, peerId: peerId, updated: { value in
                     subscriber.putNext(value)
                 })
             })

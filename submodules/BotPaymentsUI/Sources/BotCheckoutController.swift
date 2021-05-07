@@ -36,13 +36,13 @@ public final class BotCheckoutController: ViewController {
                 "button_text_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.foregroundColor.argb)
             ]
 
-            return fetchBotPaymentForm(postbox: context.account.postbox, network: context.account.network, messageId: messageId, themeParams: themeParams)
+            return context.engine.payments.fetchBotPaymentForm(messageId: messageId, themeParams: themeParams)
             |> mapError { _ -> FetchError in
                 return .generic
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
                 if let current = paymentForm.savedInfo {
-                    return validateBotPaymentForm(account: context.account, saveInfo: true, messageId: messageId, formInfo: current)
+                    return context.engine.payments.validateBotPaymentForm(saveInfo: true, messageId: messageId, formInfo: current)
                     |> mapError { _ -> FetchError in
                         return .generic
                     }

@@ -299,7 +299,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 case .Fetching:
                     if let context = self.context, let message = self.message, message.flags.isSending {
                        let _ = context.account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: context.account.postbox.mediaBox, ids: [message.id])
+                            context.engine.messages.deleteMessages(transaction: transaction, ids: [message.id])
                         }).start()
                     } else if let media = media, let context = self.context, let message = message {
                         if let media = media as? TelegramMediaFile {

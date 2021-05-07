@@ -527,7 +527,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     func setup(origin: GalleryItemOriginData?, caption: NSAttributedString) {
         let titleText = origin?.title
-        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0) }
+        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).0 }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
@@ -610,8 +610,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         }
         
-        var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
-        
+        var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp).0
         if !displayInfo {
             authorNameText = ""
             dateText = ""
@@ -998,7 +997,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
-                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forEveryone).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
                     }))
@@ -1013,13 +1012,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
-                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
                     }))
                 }
                 if !ask && items.count == 1 {
-                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
                     strongSelf.interacting?(true)

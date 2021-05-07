@@ -445,7 +445,7 @@ public final class WebSearchController: ViewController {
         }
         
         let account = self.context.account
-        let contextBot = resolvePeerByName(account: account, name: name)
+        let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
         |> mapToSignal { peerId -> Signal<Peer?, NoError> in
             if let peerId = peerId {
                 return account.postbox.loadedPeerWithId(peerId)

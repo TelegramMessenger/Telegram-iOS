@@ -158,3 +158,8 @@ public protocol FetchManager {
     func cancelInteractiveFetches(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource)
     func fetchStatus(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) -> Signal<MediaResourceStatus, NoError>
 }
+
+public protocol PrefetchManager {
+    var preloadedGreetingSticker: ChatGreetingData { get }
+    func prepareNextGreetingSticker()
+}

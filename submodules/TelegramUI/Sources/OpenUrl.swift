@@ -439,7 +439,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if valid {
-                            if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                            if let botId = botId, let scope = scope, let publicKey = publicKey {
                                 if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                     opaquePayload = Data()
                                     if opaqueNonce.isEmpty {
@@ -678,7 +678,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }
             } else {
-                if parsedUrl.host == "settings" {
+                if parsedUrl.host == "importStickers" {
+                    handleResolvedUrl(.importStickers)
+                } else if parsedUrl.host == "settings" {
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {

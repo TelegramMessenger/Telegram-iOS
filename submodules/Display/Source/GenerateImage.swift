@@ -479,7 +479,7 @@ public class DrawingContext {
         }
     }
     
-    public init(size: CGSize, scale: CGFloat = 0.0, premultiplied: Bool = true, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = 0.0, premultiplied: Bool = true, opaque: Bool = false, clear: Bool = false) {
         let actualScale: CGFloat
         if scale.isZero {
             actualScale = deviceScale
@@ -492,8 +492,10 @@ public class DrawingContext {
         
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
         self.length = bytesPerRow * Int(scaledSize.height)
-        
-        if premultiplied {
+
+        if opaque {
+            self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue)
+        } else if premultiplied {
             self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
         } else {
             self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.first.rawValue)

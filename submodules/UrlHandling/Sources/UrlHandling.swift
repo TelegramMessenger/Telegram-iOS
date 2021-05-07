@@ -265,7 +265,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
-                } else if let value = Int(pathComponents[1]) {
+                } else if let value = Int32(pathComponents[1]) {
                     var threadId: Int32?
                     var commentId: Int32?
                     if let queryItems = components.queryItems {
@@ -286,11 +286,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                     if let threadId = threadId {
-                        return .peerName(peerName, .replyThread(threadId, Int32(value)))
+                        return .peerName(peerName, .replyThread(threadId, value))
                     } else if let commentId = commentId {
-                        return .peerName(peerName, .replyThread(Int32(value), commentId))
+                        return .peerName(peerName, .replyThread(value, commentId))
                     } else {
-                        return .peerName(peerName, .channelMessage(Int32(value)))
+                        return .peerName(peerName, .channelMessage(value))
                     }
                 } else {
                     return nil
@@ -303,13 +303,13 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
     return nil
 }
 
-private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
+private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
     switch url {
         case let .peerName(name, parameter):
-            return resolvePeerByName(account: account, name: name)
+            return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                return account.postbox.transaction { transaction -> Peer? in
+                return context.account.postbox.transaction { transaction -> Peer? in
                     if let peerId = peerId {
                         return transaction.getPeer(peerId)
                     } else {
@@ -329,7 +329,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                 return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
+                                return fetchChannelReplyThreadMessage(account: context.account, messageId: replyThreadMessageId, atMessageId: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                     return .single(nil)
@@ -355,7 +355,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 }
             }
         case let .peerId(peerId):
-            return account.postbox.transaction { transaction -> Peer? in
+            return context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peerId)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
@@ -366,7 +366,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 }
             }
         case let .privateMessage(messageId, threadId):
-            return account.postbox.transaction { transaction -> Peer? in
+            return context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(messageId.peerId)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
@@ -374,14 +374,14 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = TelegramEngine(account: account).peerNames.findChannelById(channelId: messageId.peerId.id._internalGetInt32Value())
+                    foundPeer = TelegramEngine(account: context.account).peers.findChannelById(channelId: messageId.peerId.id._internalGetInt32Value())
                 }
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
                     if let foundPeer = foundPeer {
                         if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
+                            return fetchChannelReplyThreadMessage(account: context.account, messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)
@@ -409,7 +409,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
         case let .proxy(host, port, username, password, secret):
             return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
         case let .internalInstantView(url):
-            return resolveInstantViewUrl(account: account, url: url)
+            return resolveInstantViewUrl(account: context.account, url: url)
             |> map(Optional.init)
         case let .confirmationCode(code):
             return .single(.confirmationCode(code))
@@ -567,7 +567,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     let basePrefix = scheme + basePath + "/"
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
-                            return resolveInternalUrl(account: context.account, url: internalUrl)
+                            return resolveInternalUrl(context: context, url: internalUrl)
                             |> map { resolved -> ResolvedUrl in
                                 if let resolved = resolved {
                                     return resolved

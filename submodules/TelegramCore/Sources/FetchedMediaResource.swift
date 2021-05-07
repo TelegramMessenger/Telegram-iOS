@@ -369,7 +369,7 @@ final class MediaReferenceRevalidationContext {
     
     func peer(postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<Peer, RevalidateMediaReferenceError> {
         return self.genericItem(key: .peer(peer: peer), background: background, request: { next, error in
-            return (updatedRemotePeer(postbox: postbox, network: network, peer: peer)
+            return (_internal_updatedRemotePeer(postbox: postbox, network: network, peer: peer)
             |> mapError { _ -> RevalidateMediaReferenceError in
                 return .generic
             }).start(next: { value in

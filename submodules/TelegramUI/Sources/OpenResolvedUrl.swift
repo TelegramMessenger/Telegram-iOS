@@ -23,6 +23,7 @@ import ShareController
 import ChatInterfaceState
 import TelegramCallsUI
 import UndoUI
+import ImportStickerPackUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -241,7 +242,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             if let to = to {
                 if to.hasPrefix("@") {
-                    let _ = (resolvePeerByName(account: context.account, name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
+                    let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
                     |> deliverOnMainQueue).start(next: { peerId in
                         if let peerId = peerId {
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
@@ -479,6 +480,17 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
                     }), on: .root, blockInteraction: false, completion: {})
                 }))
+            }
+        case .importStickers:
+            dismissInput()
+            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerpack"), let stickerPack = ImportStickerPack(data: data) {
+                for controller in navigationController.overlayControllers {
+                    if controller is ImportStickerPackController {
+                        controller.dismiss()
+                    }
+                }
+                let controller = ImportStickerPackController(context: context, stickerPack: stickerPack, parentNavigationController: navigationController)
+                present(controller, nil)
             }
     }
 }

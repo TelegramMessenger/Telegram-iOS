@@ -319,6 +319,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
 
 public func makeDefaultDayPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, serviceBackgroundColor: UIColor?, day: Bool, preview: Bool) -> PresentationTheme {
     var serviceBackgroundColor = serviceBackgroundColor ?? defaultServiceBackgroundColor
+
+    if !day {
+        serviceBackgroundColor = UIColor(white: 0.0, alpha: 0.2)
+    }
     
     let intro = PresentationThemeIntro(
         statusBarStyle: .black,
@@ -335,7 +339,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
      
     let rootTabBar = PresentationThemeRootTabBar(
-        backgroundColor: UIColor(rgb: 0xf7f7f7),
+        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         separatorColor: UIColor(rgb: 0xa3a3a3),
         iconColor: UIColor(rgb: 0x959595),
         selectedIconColor: UIColor(rgb: 0x007ee5),
@@ -353,7 +357,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
-        backgroundColor: UIColor(rgb: 0xf7f7f7),
+        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
@@ -651,8 +655,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let inputPanel = PresentationThemeChatInputPanel(
-        panelBackgroundColor: UIColor(rgb: 0xf7f7f7),
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff),
+        panelBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5),
         panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: UIColor(rgb: 0x007ee5),
         panelControlColor: UIColor(rgb: 0x858e99),

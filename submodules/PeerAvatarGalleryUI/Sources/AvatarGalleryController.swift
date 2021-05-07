@@ -885,7 +885,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         }
                     } else {
                         if let messageId = messageId {
-                            let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
+                            let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: [messageId], type: .forEveryone).start()
                         }
                         
                         if entry == self.entries.first {

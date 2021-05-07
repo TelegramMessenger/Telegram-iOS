@@ -59,9 +59,6 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
         }
         
         var sources: [SizeSource] = []
-        if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
-            sources.append(.miniThumbnail(data: miniThumbnail))
-        }
         let thumbnailByteSize = Int(progressiveRepresentation.progressiveSizes[0])
         var largestByteSize = Int(progressiveRepresentation.progressiveSizes[0])
         for (maxDimension, byteSizes) in progressiveRangeMap {
@@ -78,6 +75,12 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
             if maxDimension >= Int(fullRepresentationSize.width) {
                 break
             }
+        }
+        if sources.isEmpty {
+            sources.append(.image(size: largestByteSize))
+        }
+        if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+            sources.insert(.miniThumbnail(data: miniThumbnail), at: 0)
         }
         
         return Signal { subscriber in

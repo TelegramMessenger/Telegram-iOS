@@ -1220,7 +1220,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 case conversionFailed
                             }
                             
-                            let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                            let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                             |> map(Optional.init)
                             |> `catch` { error -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                 switch error {

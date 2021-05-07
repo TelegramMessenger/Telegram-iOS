@@ -78,12 +78,33 @@ private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     }
 }
 
+private struct CustomListItemResourceId: MediaResourceId {
+    public var uniqueId: String {
+        return "customNode"
+    }
+    
+    public var hashValue: Int {
+        return 0
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if to is CustomListItemResourceId {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public enum PeerInfoAvatarListItem: Equatable {
+    case custom(ASDisplayNode)
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     
     var id: WrappedMediaResourceId {
         switch self {
+        case .custom:
+            return WrappedMediaResourceId(CustomListItemResourceId())
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return WrappedMediaResourceId(representation.resource.id)
@@ -95,6 +116,8 @@ public enum PeerInfoAvatarListItem: Equatable {
     
     var videoRepresentations: [VideoRepresentationWithReference] {
         switch self {
+            case .custom:
+                return []
             case let .topImage(_, videoRepresentations, _):
                 return videoRepresentations
             case let .image(_, _, videoRepresentations, _):
@@ -330,6 +353,14 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let immediateThumbnailData: Data?
         var id: Int64
         switch item {
+        case let .custom(node):
+            id = 0
+            representations = []
+            videoRepresentations = []
+            immediateThumbnailData = nil
+            if !synchronous {
+                self.addSubnode(node)
+            }
         case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
@@ -925,7 +956,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     private var additionalEntryProgress: Signal<Float?, NoError>? = nil
-    public func update(size: CGSize, peer: Peer?, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, peer: Peer?, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let previousExpanded = self.isExpanded
         self.isExpanded = isExpanded
@@ -981,6 +1012,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var items: [PeerInfoAvatarListItem] = []
+                if let customNode = customNode {
+                    items.append(.custom(customNode))
+                }
                 for entry in entries {
                     items.append(PeerInfoAvatarListItem(entry: entry))
                 }

@@ -6,6 +6,7 @@ import Postbox
 import AccountContext
 import TelegramPresentationData
 import AvatarNode
+import AnimationUI
 
 func optionsBackgroundImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
@@ -30,6 +31,15 @@ func optionsButtonImage(dark: Bool) -> UIImage? {
     })
 }
 
+func optionsCircleImage(dark: Bool) -> UIImage? {
+    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    })
+}
+
 func closeButtonImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -51,6 +61,7 @@ func closeButtonImage(dark: Bool) -> UIImage? {
 final class VoiceChatHeaderButton: HighlightableButtonNode {
     enum Content {
         case image(UIImage?)
+        case more(UIImage?)
         case avatar(Peer)
     }
     
@@ -60,6 +71,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
     private let avatarNode: AvatarNode
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
@@ -109,6 +121,15 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     
     private var content: Content?
     func setContent(_ content: Content, animated: Bool = false) {
+        if case .more = content, self.animationNode == nil {
+            let iconColor = UIColor(rgb: 0xffffff)
+            let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
+                                                                                      "Point 3.Group 1.Fill 1": iconColor,
+                                                                                      "Point 1.Group 1.Fill 1": iconColor], scale: 1.0)
+            animationNode.frame = self.containerNode.bounds
+            self.addSubnode(animationNode)
+            self.animationNode = animationNode
+        }
         if animated {
             switch content {
                 case let .image(image):
@@ -127,7 +148,12 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
                     self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
                     self.iconNode.isHidden = true
                     self.avatarNode.isHidden = false
-                    
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.avatarNode.isHidden = true
+                    self.animationNode?.isHidden = false
             }
         } else {
             self.content = content
@@ -140,6 +166,12 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
                     self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
                     self.iconNode.isHidden = true
                     self.avatarNode.isHidden = false
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.avatarNode.isHidden = true
+                    self.animationNode?.isHidden = false
             }
         }
     }
@@ -154,5 +186,9 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     }
         
     func onLayout() {
+    }
+    
+    func play() {
+        self.animationNode?.playOnce()
     }
 }

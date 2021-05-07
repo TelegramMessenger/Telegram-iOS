@@ -17,7 +17,7 @@ import UrlWhitelist
 import AccountContext
 import TelegramStringFormatting
 
-private let iconFont = Font.with(size: 30.0, design: .round, traits: [.bold])
+private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
 
 private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
 

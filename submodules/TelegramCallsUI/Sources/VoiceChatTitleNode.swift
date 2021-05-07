@@ -66,6 +66,9 @@ final class VoiceChatTitleNode: ASDisplayNode {
     }
     
     func update(size: CGSize, title: String, subtitle: String, slide: Bool, transition: ContainedViewLayoutTransition) {
+        guard !size.width.isZero else {
+            return
+        }
         var titleUpdated = false
         if let previousTitle = self.titleNode.attributedText?.string {
             titleUpdated = previousTitle != title

@@ -96,7 +96,7 @@ public func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaRef
                                 return
                             }
                             
-                            let tempVideoPath = NSTemporaryDirectory() + "\(arc4random64()).mp4"
+                            let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
                             PHPhotoLibrary.shared().performChanges({
                                 if isImage {
                                     if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {

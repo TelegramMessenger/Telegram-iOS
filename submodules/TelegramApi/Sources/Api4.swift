@@ -7837,16 +7837,20 @@ public extension Api {
                     })
                 }
             
-                public static func checkGroupCall(call: Api.InputGroupCall, source: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func checkGroupCall(call: Api.InputGroupCall, sources: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1219855382)
+                    buffer.appendInt32(-1248003721)
                     call.serialize(buffer, true)
-                    serializeInt32(source, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.checkGroupCall", parameters: [("call", call), ("source", source)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sources.count))
+                    for item in sources {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "phone.checkGroupCall", parameters: [("call", call), ("sources", sources)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int32]? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        var result: [Int32]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
                         }
                         return result
                     })
@@ -7868,15 +7872,17 @@ public extension Api {
                     })
                 }
             
-                public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, volume: Int32?, raiseHand: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func editGroupCallParticipant(flags: Int32, call: Api.InputGroupCall, participant: Api.InputPeer, muted: Api.Bool?, volume: Int32?, raiseHand: Api.Bool?, videoMuted: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-646583424)
+                    buffer.appendInt32(-1362751260)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     participant.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {muted!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(volume!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {raiseHand!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "phone.editGroupCallParticipant", parameters: [("flags", flags), ("call", call), ("participant", participant), ("volume", volume), ("raiseHand", raiseHand)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 3) != 0 {videoMuted!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "phone.editGroupCallParticipant", parameters: [("flags", flags), ("call", call), ("participant", participant), ("muted", muted), ("volume", volume), ("raiseHand", raiseHand), ("videoMuted", videoMuted)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -7969,6 +7975,35 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func joinGroupCallPresentation(call: Api.InputGroupCall, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-873829436)
+                    call.serialize(buffer, true)
+                    params.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.joinGroupCallPresentation", parameters: [("call", call), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func leaveGroupCallPresentation(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(475058500)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.leaveGroupCallPresentation", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

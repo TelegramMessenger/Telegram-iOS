@@ -443,7 +443,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 |> take(1)).start(next: { previewTheme, settings in
                     let saveThemeTemplateFile: (String, LocalFileMediaResource, @escaping () -> Void) -> Void = { title, resource, completion in
                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: resource.fileId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/x-tgtheme-ios", size: nil, attributes: [.FileName(fileName: "\(title).tgios-theme")])
-                        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                         let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
 
@@ -478,7 +478,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     let themeData: Data?
                     let themeThumbnailData: Data?
                     if let theme = theme, let themeString = encodePresentationTheme(theme), let data = themeString.data(using: .utf8) {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                         context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                         themeResource = resource

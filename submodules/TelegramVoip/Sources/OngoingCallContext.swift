@@ -335,8 +335,12 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
 public final class OngoingCallVideoCapturer {
     internal let impl: OngoingCallThreadLocalContextVideoCapturer
     
-    public init(keepLandscape: Bool = false) {
-        self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
+    public init(keepLandscape: Bool = false, isCustom: Bool = false) {
+        if isCustom {
+            self.impl = OngoingCallThreadLocalContextVideoCapturer.withExternalSampleBufferProvider()
+        } else {
+            self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
+        }
     }
     
     public func switchVideoInput(isFront: Bool) {
@@ -382,6 +386,14 @@ public final class OngoingCallVideoCapturer {
     
     public func setIsVideoEnabled(_ value: Bool) {
         self.impl.setIsVideoEnabled(value)
+    }
+
+    public func injectSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        self.impl.submitSampleBuffer(sampleBuffer)
+    }
+
+    public func injectPixelBuffer(_ pixelBuffer: CVPixelBuffer) {
+        self.impl.submitPixelBuffer(pixelBuffer)
     }
 }
 
@@ -729,19 +741,20 @@ public final class OngoingCallContext {
                         }
                     })
                 }
+
+                strongSelf.signalingDataDisposable = callSessionManager.beginReceivingCallSignalingData(internalId: internalId, { [weak self] dataList in
+                    queue.async {
+                        self?.withContext { context in
+                            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                for data in dataList {
+                                    context.addSignaling(data)
+                                }
+                            }
+                        }
+                    }
+                })
             }
         }))
-        
-        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)).start(next: { [weak self] data in
-            print("data received")
-            queue.async {
-                self?.withContext { context in
-                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                        context.addSignaling(data)
-                    }
-                }
-            }
-        })
     }
     
     deinit {

@@ -187,7 +187,9 @@ public final class CallController: ViewController {
                             if port.type == .bluetooth {
                                 var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
                                 let portName = port.name.lowercased()
-                                if portName.contains("airpods pro") {
+                                if portName.contains("airpods max") {
+                                    image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
+                                } else if portName.contains("airpods pro") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
                                 } else if portName.contains("airpods") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsButton")

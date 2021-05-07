@@ -56,7 +56,7 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager:
         }
         
         for (_, index) in readMessageIndexByNamespace {
-            applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
+            _internal_applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)
         }
     })
 }

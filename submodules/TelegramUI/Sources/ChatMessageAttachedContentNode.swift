@@ -412,17 +412,17 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 textString = string.attributedSubstring(from: NSMakeRange(0, 1000))
             }
             
-            var automaticPlayback = false
-            
-            var skipStandardStatus = false
-            
             var isReplyThread = false
             if case .replyThread = chatLocation {
                 isReplyThread = true
             }
 
-            var imageMode = false
-
+            var skipStandardStatus = false
+            var isImage = false
+            var isFile = false
+            
+            var automaticPlayback = false
+            
             var textStatusType: ChatMessageDateAndStatusType?
             var imageStatusType: ChatMessageDateAndStatusType?
             var additionalImageBadgeContent: ChatMessageInteractiveMediaBadgeContent?
@@ -430,62 +430,66 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             if let (media, flags) = mediaAndFlags {
                 if let file = media as? TelegramMediaFile {
                     if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
-                        imageMode = true
+                        isImage = true
                     } else if file.isInstantVideo {
-                        imageMode = true
+                        isImage = true
                     } else if file.isVideo {
-                        imageMode = true
+                        isImage = true
                     } else if file.isSticker || file.isAnimatedSticker {
-                        imageMode = true
+                        isImage = true
+                    } else {
+                        isFile = true
                     }
                 } else if let _ = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
-                        imageMode = true
+                        isImage = true
                     }
                 } else if let _ = media as? TelegramMediaWebFile {
-                    imageMode = true
+                    isImage = true
                 } else if let _ = media as? WallpaperPreviewMedia {
-                    imageMode = true
+                    isImage = true
                 }
             }
 
             if preferMediaBeforeText {
-                imageMode = false
+                isImage = false
             }
 
-            let statusInText = !imageMode
+            let statusInText = !isImage
 
             switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if let count = webpageGalleryMediaCount {
                         additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: presentationData.strings.Items_NOfM("1", "\(count)").0))
-                        skipStandardStatus = imageMode
+                        skipStandardStatus = isImage
                     } else if let mediaBadge = mediaBadge {
                         additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: mediaBadge))
+                    } else {
+                        skipStandardStatus = isFile
                     }
 
                     if !skipStandardStatus {
                         if message.effectivelyIncoming(context.account.peerId) {
-                            if imageMode {
+                            if isImage {
                                 imageStatusType = .ImageIncoming
                             } else {
                                 textStatusType = .BubbleIncoming
                             }
                         } else {
                             if message.flags.contains(.Failed) {
-                                if imageMode {
+                                if isImage {
                                     imageStatusType = .ImageOutgoing(.Failed)
                                 } else {
                                     textStatusType = .BubbleOutgoing(.Failed)
                                 }
                             } else if (message.flags.isSending && !message.isSentOrAcknowledged) || attributes.updatingMedia != nil {
-                                if imageMode {
+                                if isImage {
                                     imageStatusType = .ImageOutgoing(.Sending)
                                 } else {
                                     textStatusType = .BubbleOutgoing(.Sending)
                                 }
                             } else {
-                                if imageMode {
+                                if isImage {
                                     imageStatusType = .ImageOutgoing(.Sent(read: messageRead))
                                 } else {
                                     textStatusType = .BubbleOutgoing(.Sent(read: messageRead))

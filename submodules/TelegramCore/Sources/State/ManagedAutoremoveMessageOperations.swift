@@ -62,7 +62,9 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
         |> distinctUntilChanged*/
 
         let timeOffset: Signal<Double, NoError> = .single(0.0)
-        
+
+        Logger.shared.log("Autoremove", "starting isRemove: \(isRemove)")
+
         let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
@@ -83,7 +85,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
 
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
-                            deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
+                            _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?

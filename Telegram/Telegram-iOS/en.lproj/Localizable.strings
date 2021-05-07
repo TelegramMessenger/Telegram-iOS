@@ -5740,6 +5740,7 @@ Sorry for the inconvenience.";
 
 "Notification.VoiceChatStarted" = "%1$@ started a voice chat";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
+"Notification.VoiceChatEndedGroup" = "%1$@ ended the voice chat (%2$@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";
 "VoiceChat.Panel.Members_0" = "%@ participants";
@@ -6445,3 +6446,25 @@ Sorry for the inconvenience.";
 "VoiceChat.ReminderNotify" = "We will notify you when it starts.";
 
 "Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
+
+"Privacy.ContactsReset.ContactsDeleted" = "All synced contacts deleted.";
+
+"Privacy.DeleteDrafts.DraftsDeleted" = "All cloud drafts deleted.";
+
+"Privacy.PaymentsClear.PaymentInfoCleared" = "Payment info cleared.";
+"Privacy.PaymentsClear.ShippingInfoCleared" = "Shipping info cleared.";
+"Privacy.PaymentsClear.AllInfoCleared" = "Payment and shipping info cleared.";
+
+"Settings.Tips" = "Telegram Features";
+"Settings.TipsUsername" = "TelegramTips";
+
+"Calls.NoVoiceAndVideoCallsPlaceholder" = "Your recent voice and video calls will appear here.";
+"Calls.StartNewCall" = "Start New Call";
+
+"VoiceChat.VideoPreviewTitle" = "Video Preview";
+"VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
+"VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
+"VoiceChat.VideoPreviewShareScreen" = "Share Screen";
+
+"VoiceChat.TapToViewCameraVideo" = "Tap to view camera video";
+"VoiceChat.TapToViewScreenVideo" = "Tap to view screen sharing";

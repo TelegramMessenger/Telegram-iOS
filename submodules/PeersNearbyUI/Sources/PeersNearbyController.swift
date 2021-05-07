@@ -229,7 +229,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 var text = strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0
                 let isSelfPeer = peer.peer.0.id == arguments.context.account.peerId
                 if isSelfPeer {
-                    text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires)).0
+                    text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires).0).0
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
                     if !isSelfPeer {
@@ -512,7 +512,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         cancelImpl = {
             checkCreationAvailabilityDisposable.set(nil)
         }
-        checkCreationAvailabilityDisposable.set((context.engine.peerNames.checkPublicChannelCreationAvailability(location: true)
+        checkCreationAvailabilityDisposable.set((context.engine.peers.checkPublicChannelCreationAvailability(location: true)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()

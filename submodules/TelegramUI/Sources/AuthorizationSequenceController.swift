@@ -110,7 +110,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.presentationData.theme)
+            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, account: self.account, theme: self.presentationData.theme)
             controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
                     if let strings = strings {
@@ -718,7 +718,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     var value = stat()
                                     if stat(result.fileURL.path, &value) == 0 {
                                         if let data = try? Data(contentsOf: result.fileURL) {
-                                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
                                         }

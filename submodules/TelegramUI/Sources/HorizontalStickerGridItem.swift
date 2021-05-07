@@ -49,9 +49,9 @@ final class HorizontalStickerGridItem: GridItem {
 
 final class HorizontalStickerGridItemNode: GridItemNode {
     private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
-    private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
-    private var placeholderNode: StickerShimmerEffectNode?
+    let imageNode: TransformImageNode
+    private(set) var animationNode: AnimatedStickerNode?
+    private(set) var placeholderNode: StickerShimmerEffectNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     

@@ -20,7 +20,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
-    private let contextSourceNode: ContextExtractedContentContainingNode
+    let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
@@ -985,6 +985,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             }
         }
     }
+
+    override func cancelInsertionAnimations() {
+        self.layer.removeAllAnimations()
+    }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
@@ -1003,7 +1007,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
-    
+
+    func animateFromSnapshot(snapshotView: UIView, transition: ContainedViewLayoutTransition) {
+        snapshotView.frame = self.interactiveVideoNode.view.convert(snapshotView.frame, from: self.contextSourceNode.contentNode.view)
+        self.interactiveVideoNode.animateFromSnapshot(snapshotView: snapshotView, transition: transition)
+    }
+
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveVideoNode.playMediaWithSound()
     }

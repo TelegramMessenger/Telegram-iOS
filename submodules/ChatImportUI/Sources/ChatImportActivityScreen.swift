@@ -823,7 +823,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         let resolvedPeerId: Signal<PeerId, ImportManager.ImportError>
         if self.peerId.namespace == Namespaces.Peer.CloudGroup {
-            resolvedPeerId = convertGroupToSupergroup(account: self.context.account, peerId: self.peerId)
+            resolvedPeerId = self.context.engine.peers.convertGroupToSupergroup(peerId: self.peerId)
             |> mapError { _ -> ImportManager.ImportError in
                 return .generic
             }

@@ -406,6 +406,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 let immediateThumbnailData: Data?
                 var id: Int64
                 switch item {
+                case .custom:
+                    representations = []
+                    videoRepresentations = []
+                    immediateThumbnailData = nil
+                    id = 0
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -696,6 +701,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             let immediateThumbnailData: Data?
             var id: Int64
             switch item {
+                case .custom:
+                    representations = []
+                    videoRepresentations = []
+                    immediateThumbnailData = nil
+                    id = 0
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -1958,7 +1968,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode.updateTransitionFraction(transitionFraction, transition: transition)
         
         if self.navigationTitle != presentationData.strings.EditProfile_Title || themeUpdated {
-            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.bold(17.0), textColor: presentationData.theme.rootController.navigationBar.primaryTextColor)
+            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.semibold(17.0), textColor: presentationData.theme.rootController.navigationBar.primaryTextColor)
         }
         
         let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: width, height: navigationHeight))
@@ -1988,11 +1998,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let peer = peer {
             if peer.id == self.context.account.peerId && !self.isSettings {
-                titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else if peer.id == self.context.account.peerId && !self.isSettings {
-                titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else {
-                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             }
             
             if self.isSettings, let user = peer as? TelegramUser {
@@ -2018,7 +2028,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             }
         } else {
-            titleString = NSAttributedString(string: " ", font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            titleString = NSAttributedString(string: " ", font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
         }

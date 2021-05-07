@@ -1637,7 +1637,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.isInteractingPromise.set(true)
             
-            let signal = stickerPacksAttachedToMedia(account: self.context.account, media: media)
+            let signal = self.context.engine.stickers.stickerPacksAttachedToMedia(media: media)
             |> afterDisposed {
                 Queue.mainQueue().async {
                     progressDisposable.dispose()

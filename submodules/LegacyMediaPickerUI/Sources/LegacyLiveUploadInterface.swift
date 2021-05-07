@@ -54,7 +54,7 @@ public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUplo
     
     public init(account: Account) {
         self.account = account
-        self.id = arc4random64()
+        self.id = Int64.random(in: Int64.min ... Int64.max)
         
         var updateImpl: ((String, Int) -> Void)?
         super.init(update: { path, size in

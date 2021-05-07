@@ -384,7 +384,7 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     
     let peersSignal: Signal<[InactiveChannel]?, NoError> = .single(nil)
     |> then(
-        inactiveChannelList(network: context.account.network)
+        context.engine.peers.inactiveChannelList()
         |> map { peers -> [InactiveChannel]? in
             return peers.sorted(by: { lhs, rhs in
                 return lhs.lastActivityDate < rhs.lastActivityDate
