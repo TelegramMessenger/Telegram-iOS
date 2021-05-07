@@ -12,6 +12,7 @@ import MergeLists
 import ActivityIndicator
 import TextFormat
 import AccountContext
+import ContextUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -189,7 +190,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 controller.visibilityUpdated = { [weak self] visible in

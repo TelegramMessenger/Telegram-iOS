@@ -104,13 +104,6 @@ public extension AlertControllerTheme {
     }
 }
 
-extension PeekControllerTheme {
-    convenience public init(presentationTheme: PresentationTheme) {
-        let actionSheet = presentationTheme.actionSheet
-        self.init(isDark: actionSheet.backgroundType == .dark, menuBackgroundColor: actionSheet.opaqueItemBackgroundColor, menuItemHighligtedColor: actionSheet.opaqueItemHighlightedBackgroundColor, menuItemSeparatorColor: actionSheet.opaqueItemSeparatorColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
-    }
-}
-
 public extension NavigationControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
         let navigationStatusBar: NavigationStatusBarStyle

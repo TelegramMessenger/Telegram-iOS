@@ -55,9 +55,9 @@ final class ChatPanelInterfaceInteraction {
     let beginMessageSelection: ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let deleteSelectedMessages: () -> Void
     let reportSelectedMessages: () -> Void
-    let reportMessages: ([Message], ContextController?) -> Void
-    let blockMessageAuthor: (Message, ContextController?) -> Void
-    let deleteMessages: ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void
+    let reportMessages: ([Message], ContextControllerProtocol?) -> Void
+    let blockMessageAuthor: (Message, ContextControllerProtocol?) -> Void
+    let deleteMessages: ([Message], ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void
     let forwardSelectedMessages: () -> Void
     let forwardCurrentForwardMessages: () -> Void
     let forwardMessages: ([Message]) -> Void
@@ -94,8 +94,8 @@ final class ChatPanelInterfaceInteraction {
     let setupMessageAutoremoveTimeout: () -> Void
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
-    let pinMessage: (MessageId, ContextController?) -> Void
-    let unpinMessage: (MessageId, Bool, ContextController?) -> Void
+    let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
+    let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
     let unpinAllMessages: () -> Void
     let openPinnedList: (MessageId) -> Void
     let shareAccountContact: () -> Void
@@ -138,9 +138,9 @@ final class ChatPanelInterfaceInteraction {
         beginMessageSelection: @escaping ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
-        reportMessages: @escaping ([Message], ContextController?) -> Void,
-        blockMessageAuthor: @escaping (Message, ContextController?) -> Void,
-        deleteMessages: @escaping ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void,
+        reportMessages: @escaping ([Message], ContextControllerProtocol?) -> Void,
+        blockMessageAuthor: @escaping (Message, ContextControllerProtocol?) -> Void,
+        deleteMessages: @escaping ([Message], ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void,
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
         forwardMessages: @escaping ([Message]) -> Void,
@@ -177,8 +177,8 @@ final class ChatPanelInterfaceInteraction {
         setupMessageAutoremoveTimeout: @escaping () -> Void,
         sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
-        pinMessage: @escaping (MessageId, ContextController?) -> Void,
-        unpinMessage: @escaping (MessageId, Bool, ContextController?) -> Void,
+        pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
+        unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
         unpinAllMessages: @escaping () -> Void,
         openPinnedList: @escaping (MessageId) -> Void,
         shareAccountContact: @escaping () -> Void,

@@ -17,7 +17,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/ShareController:ShareController",
-	"//submodules/ItemListUI:ItemListUI",
+        "//submodules/ItemListUI:ItemListUI",
         "//submodules/StickerResources:StickerResources",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
@@ -28,6 +28,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

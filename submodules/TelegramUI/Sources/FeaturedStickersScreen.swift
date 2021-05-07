@@ -15,6 +15,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import SearchBarNode
 import UndoUI
+import ContextUI
 
 private final class FeaturedInteraction {
     let installPack: (ItemCollectionInfo, Bool) -> Void
@@ -460,16 +461,16 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                         |> deliverOnMainQueue
                         |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                             if let strongSelf = self {
-                                var menuItems: [PeekControllerMenuItem] = []
+                                var menuItems: [ContextMenuItem] = []
                                 menuItems = [
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                        if let strongSelf = self {
-                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                        } else {
-                                            return false
-                                        }
-                                    }),
-                                    PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        f(.default)
+                                        
+//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
+                                    })),
+                                    .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                        
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -477,9 +478,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                    })),
+                                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                        
                                         if let strongSelf = self {
                                             loop: for attribute in item.file.attributes {
                                                 switch attribute {
@@ -502,9 +504,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 }
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                                    }))
                                 ]
                                 return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                             } else {
@@ -524,16 +524,16 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 |> deliverOnMainQueue
                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                     if let strongSelf = self {
-                        var menuItems: [PeekControllerMenuItem] = []
+                        var menuItems: [ContextMenuItem] = []
                         menuItems = [
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                if let strongSelf = self {
-                                    return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                } else {
-                                    return false
-                                }
-                            }),
-                            PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                            .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                f(.default)
+                                
+//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
+                            })),
+                            .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                f(.default)
+                                
                                 if let strongSelf = self {
                                     if isStarred {
                                         let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -541,34 +541,33 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                     }
                                 }
-                                return true
-                            }),
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                            })),
+                            .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                f(.default)
+                                
                                 if let strongSelf = self {
                                     loop: for attribute in item.file.attributes {
                                         switch attribute {
-                                            case let .Sticker(_, packReference, _):
-                                                if let packReference = packReference {
-                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
-                                                        if let strongSelf = self {
-                                                            return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
-                                                        } else {
-                                                            return false
-                                                        }
-                                                    })
-                                          
-                                                    strongSelf.controller?.view.endEditing(true)
-                                                    strongSelf.controller?.present(controller, in: .window(.root))
-                                                }
-                                                break loop
-                                            default:
-                                                break
+                                        case let .Sticker(_, packReference, _):
+                                            if let packReference = packReference {
+                                                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
+                                                    if let strongSelf = self {
+                                                        return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
+                                                    } else {
+                                                        return false
+                                                    }
+                                                })
+                                                
+                                                strongSelf.controller?.view.endEditing(true)
+                                                strongSelf.controller?.present(controller, in: .window(.root))
+                                            }
+                                            break loop
+                                        default:
+                                            break
                                         }
                                     }
                                 }
-                                return true
-                            }),
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                            }))
                         ]
                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                     } else {
@@ -579,7 +578,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 strongSelf.controller?.presentInGlobalOverlay(controller)

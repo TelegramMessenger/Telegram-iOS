@@ -183,8 +183,6 @@ public enum TabBarItemContextActionType {
     public let navigationBar: NavigationBar?
     private(set) var toolbar: Toolbar?
     
-    private var previewingContext: Any?
-    
     public var displayNavigationBar = true
     open var navigationBarRequiresEntireLayoutUpdate: Bool {
         return true
@@ -609,33 +607,6 @@ public enum TabBarItemContextActionType {
             navigationController.filterController(self, animated: true)
         } else {
             self.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    public func registerForPreviewingNonNative(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme) {
-        if true || self.traitCollection.forceTouchCapability != .available {
-            if self.previewingContext == nil {
-                let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
-                    self?.presentInGlobalOverlay(c, with: a)
-                }, customPresent: { [weak self] c, n in
-                    return self?.customPresentPreviewingController?(c, n)
-                })
-                self.previewingContext = previewingContext
-            }
-        }
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    open override func unregisterForPreviewing(withContext previewing: UIViewControllerPreviewing) {
-        if self.previewingContext != nil {
-            self.previewingContext = nil
-        } else {
-            super.unregisterForPreviewing(withContext: previewing)
         }
     }
     

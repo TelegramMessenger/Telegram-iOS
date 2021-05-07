@@ -11,6 +11,13 @@ import SwiftSignalKit
 
 private let animationDurationFactor: Double = 1.0
 
+public protocol ContextControllerProtocol {
+    var useComplexItemsTransitionAnimation: Bool { get set }
+    
+    func setItems(_ items: Signal<[ContextMenuItem], NoError>)
+    func dismiss(completion: (() -> Void)?)
+}
+
 public enum ContextMenuActionItemTextLayout {
     case singleLine
     case twoLinesMax
@@ -66,9 +73,9 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
-    public let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
+    public let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.text = text
         self.textColor = textColor
         self.textFont = textFont
@@ -86,7 +93,7 @@ public protocol ContextMenuCustomNode: ASDisplayNode {
 }
 
 public protocol ContextMenuCustomItem {
-    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
 }
 
 public enum ContextMenuItem {
@@ -113,7 +120,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let reactionSelected: (ReactionContextItem.Reaction) -> Void
     private let beganAnimatingOut: () -> Void
     private let attemptTransitionControllerIntoNavigation: () -> Void
-    private let getController: () -> ContextController?
+    private let getController: () -> ContextControllerProtocol?
     private weak var gesture: ContextGesture?
     private var displayTextSelectionTip: Bool
     
@@ -1159,7 +1166,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let layout = self.validLayout {
             self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .spring), previousActionsContainerNode: previousActionsContainerNode)
-            
         } else {
             previousActionsContainerNode.removeFromSupernode()
         }
@@ -1748,7 +1754,7 @@ public enum ContextContentSource {
     case controller(ContextControllerContentSource)
 }
 
-public final class ContextController: ViewController, StandalonePresentableController {
+public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
     private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource

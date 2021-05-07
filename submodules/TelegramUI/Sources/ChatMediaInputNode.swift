@@ -1098,16 +1098,16 @@ final class ChatMediaInputNode: ChatInputNode {
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {
-                                    var menuItems: [PeekControllerMenuItem] = []
+                                    var menuItems: [ContextMenuItem] = []
                                     menuItems = [
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                            if let strongSelf = self {
-                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
-                                            } else {
-                                                return false
-                                            }
-                                        }),
-                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                        .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                            f(.default)
+                                        
+//                                          let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
+                                            })),
+                                        .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                            f(.default)
+                                            
                                             if let strongSelf = self {
                                                 if isStarred {
                                                     let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -1115,9 +1115,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                 }
                                             }
-                                            return true
-                                        }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                        })),
+                                        .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
                                             if let strongSelf = self {
                                                 loop: for attribute in item.file.attributes {
                                                     switch attribute {
@@ -1140,10 +1143,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }
                                                 }
                                             }
-                                            return true
-                                        }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                                        }))
                                     ]
+
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
                                     return nil
@@ -1182,16 +1184,16 @@ final class ChatMediaInputNode: ChatInputNode {
                                 |> deliverOnMainQueue
                                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                     if let strongSelf = self {
-                                        var menuItems: [PeekControllerMenuItem] = []
+                                        var menuItems: [ContextMenuItem] = []
                                         menuItems = [
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                                if let strongSelf = self {
-                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
-                                                } else {
-                                                    return false
-                                                }
-                                            }),
-                                            PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                            .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                                f(.default)
+                                            
+    //                                          let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
+                                                })),
+                                            .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                                f(.default)
+                                                
                                                 if let strongSelf = self {
                                                     if isStarred {
                                                         let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -1199,34 +1201,35 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                     }
                                                 }
-                                                return true
-                                            }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                            })),
+                                            .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in
+                                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
+                                            }, action: { _, f in
+                                                f(.default)
+                                                
                                                 if let strongSelf = self {
                                                     loop: for attribute in item.file.attributes {
                                                         switch attribute {
-                                                            case let .Sticker(_, packReference, _):
-                                                                if let packReference = packReference {
-                                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
-                                                                                                                                               if let strongSelf = self {
-                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
-                                                                                                                                               } else {
-                                                                                                                                                   return false
-                                                                                                                                               }
-                                                                    })
-                                                          
-                                                                    strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
-                                                                    strongSelf.controllerInteraction.presentController(controller, nil)
-                                                                }
-                                                                break loop
-                                                            default:
-                                                                break
+                                                        case let .Sticker(_, packReference, _):
+                                                            if let packReference = packReference {
+                                                                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                                    if let strongSelf = self {
+                                                                        return strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
+                                                                    } else {
+                                                                        return false
+                                                                    }
+                                                                })
+                                                                
+                                                                strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
+                                                                strongSelf.controllerInteraction.presentController(controller, nil)
+                                                            }
+                                                            break loop
+                                                        default:
+                                                            break
                                                         }
                                                     }
                                                 }
-                                                return true
-                                            }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                                            }))
                                         ]
                                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {
@@ -1241,7 +1244,8 @@ final class ChatMediaInputNode: ChatInputNode {
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 controller.visibilityUpdated = { [weak self] visible in

@@ -33,7 +33,7 @@ public enum PeerReportOption {
     case other
 }
 
-public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextController?, backAction: ((ContextController) -> Void)? = nil, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], passthrough: Bool = false, completion: @escaping (ReportReason?, Bool) -> Void) {
+public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)? = nil, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], passthrough: Bool = false, completion: @escaping (ReportReason?, Bool) -> Void) {
     if let contextController = contextController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var items: [ContextMenuItem] = []
@@ -163,7 +163,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
         }
         contextController.setItems(.single(items))
     } else {
-        contextController?.dismiss()
+        contextController?.dismiss(completion: nil)
         parent.view.endEditing(true)
         parent.present(peerReportOptionsController(context: context, subject: subject, passthrough: passthrough, present: { [weak parent] c, a in
             parent?.present(c, in: .window(.root), with: a)

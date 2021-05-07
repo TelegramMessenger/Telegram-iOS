@@ -1,6 +1,9 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
+import SwiftSignalKit
+import TelegramPresentationData
 
 public final class PeekControllerTheme {
     public let isDark: Bool
@@ -20,12 +23,25 @@ public final class PeekControllerTheme {
     }
 }
 
-public final class PeekController: ViewController {
+extension PeekControllerTheme {
+    convenience public init(presentationTheme: PresentationTheme) {
+        let actionSheet = presentationTheme.actionSheet
+        self.init(isDark: actionSheet.backgroundType == .dark, menuBackgroundColor: actionSheet.opaqueItemBackgroundColor, menuItemHighligtedColor: actionSheet.opaqueItemHighlightedBackgroundColor, menuItemSeparatorColor: actionSheet.opaqueItemSeparatorColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
+    }
+}
+
+public final class PeekController: ViewController, ContextControllerProtocol {
+    public var useComplexItemsTransitionAnimation: Bool = false
+    
+    public func setItems(_ items: Signal<[ContextMenuItem], NoError>) {
+        
+    }
+    
     private var controllerNode: PeekControllerNode {
         return self.displayNode as! PeekControllerNode
     }
     
-    private let theme: PeekControllerTheme
+    private let presentationData: PresentationData
     private let content: PeekControllerContent
     var sourceNode: () -> ASDisplayNode?
     
@@ -33,8 +49,8 @@ public final class PeekController: ViewController {
     
     private var animatedIn = false
     
-    public init(theme: PeekControllerTheme, content: PeekControllerContent, sourceNode: @escaping () -> ASDisplayNode?) {
-        self.theme = theme
+    public init(presentationData: PresentationData, content: PeekControllerContent, sourceNode: @escaping () -> ASDisplayNode?) {
+        self.presentationData = presentationData
         self.content = content
         self.sourceNode = sourceNode
         
@@ -48,7 +64,7 @@ public final class PeekController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeekControllerNode(theme: self.theme, content: self.content, requestDismiss: { [weak self] in
+        self.displayNode = PeekControllerNode(presentationData: self.presentationData, controller: self, content: self.content, requestDismiss: { [weak self] in
             self?.dismiss()
         })
         self.displayNodeDidLoad()

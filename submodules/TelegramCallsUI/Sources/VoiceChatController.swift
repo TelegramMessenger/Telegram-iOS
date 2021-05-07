@@ -73,6 +73,9 @@ final class GroupVideoNode: ASDisplayNode {
     private let videoViewContainer: UIView
     private let videoView: PresentationCallVideoView
     
+    private var effectView: UIVisualEffectView?
+    private var isBlurred: Bool = false
+    
     private var validLayout: (CGSize, Bool)?
     
     var tapped: (() -> Void)?
@@ -119,6 +122,52 @@ final class GroupVideoNode: ASDisplayNode {
         })
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
+        if self.isBlurred == isBlurred {
+            return
+        }
+        self.isBlurred = isBlurred
+        
+        if isBlurred {
+            if self.effectView == nil {
+                let effectView = UIVisualEffectView()
+                self.effectView = effectView
+                effectView.frame = self.videoViewContainer.bounds
+                self.videoViewContainer.addSubview(effectView)
+            }
+            if animated {
+                UIView.animate(withDuration: 0.3, animations: {
+                    self.effectView?.effect = UIBlurEffect(style: light ? .light : .dark)
+                })
+            } else {
+                self.effectView?.effect = UIBlurEffect(style: light ? .light : .dark)
+            }
+        } else if let effectView = self.effectView {
+            self.effectView = nil
+            UIView.animate(withDuration: 0.3, animations: {
+                effectView.effect = nil
+            }, completion: { [weak effectView] _ in
+                effectView?.removeFromSuperview()
+            })
+        }
+    }
+    
+    func flip(withBackground: Bool) {
+        if withBackground {
+            self.backgroundColor = .black
+        }
+        UIView.transition(with: withBackground ? self.videoViewContainer : self.view, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
+            UIView.performWithoutAnimation {
+                self.updateIsBlurred(isBlurred: true, light: true, animated: false)
+            }
+        }) { finished in
+            self.backgroundColor = nil
+            Queue.mainQueue().after(0.5) {
+                self.updateIsBlurred(isBlurred: false)
+            }
+        }
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -186,6 +235,10 @@ final class GroupVideoNode: ASDisplayNode {
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
 
+        if let effectView = self.effectView {
+            transition.updateFrame(view: effectView, frame: self.videoViewContainer.bounds)
+        }
+        
         // TODO: properly fix the issue
         // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
         self.videoView.view.alpha = 0.995
@@ -1989,8 +2042,9 @@ public final class VoiceChatController: ViewController {
                 if let (peerId, _) = maxLevelWithVideo {
                     if strongSelf.currentDominantSpeakerWithVideo != peerId {
                         strongSelf.currentDominantSpeakerWithVideo = peerId
-                        
-                        strongSelf.updateMainParticipant(waitForFullSize: true)
+                        if !strongSelf.requestedVideoSources.isEmpty {
+                            strongSelf.updateMainParticipant(waitForFullSize: true)
+                        }
                     }
                 }
                 
@@ -2159,6 +2213,8 @@ public final class VoiceChatController: ViewController {
                         }
                         strongSelf.updateMainParticipant(waitForFullSize: false)
                     }
+                } else if strongSelf.currentDominantSpeakerWithVideo != nil && !strongSelf.requestedVideoSources.isEmpty {
+                    strongSelf.updateMainParticipant(waitForFullSize: true)
                 }
                 
                 if updated {
@@ -3819,6 +3875,9 @@ public final class VoiceChatController: ViewController {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .linear) : .immediate
             self.cameraButton.update(size: videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: normalButtonAppearance, image: hasVideo ? .cameraOn : .cameraOff), text: self.presentationData.strings.VoiceChat_Video, transition: transition)
                     
+            transition.updateAlpha(node: self.switchCameraButton, alpha: self.call.hasVideo ? 1.0 : 0.0)
+            transition.updateAlpha(node: self.audioButton, alpha: self.call.hasVideo ? 0.0 : 1.0)
+            
             self.switchCameraButton.update(size: videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: normalButtonAppearance, image: .flipCamera), text: "", transition: transition)
             
             self.audioButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: soundAppearance, image: soundImage, isEnabled: soundEnabled), text: soundTitle, transition: transition)

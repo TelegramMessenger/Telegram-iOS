@@ -9,13 +9,14 @@ import SwiftSignalKit
 import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ContextUI
 
 public final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
     public let item: ImportStickerPack.Sticker
-    let menu: [PeekControllerMenuItem]
+    let menu: [ContextMenuItem]
     
-    public init(account: Account, item: ImportStickerPack.Sticker, menu: [PeekControllerMenuItem]) {
+    public init(account: Account, item: ImportStickerPack.Sticker, menu: [ContextMenuItem]) {
         self.account = account
         self.item = item
         self.menu = menu
@@ -25,11 +26,11 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         return .freeform
     }
     
-    public func menuActivation() -> PeerkControllerMenuActivation {
+    public func menuActivation() -> PeerControllerMenuActivation {
         return .press
     }
     
-    public func menuItems() -> [PeekControllerMenuItem] {
+    public func menuItems() -> [ContextMenuItem] {
         return self.menu
     }
     
