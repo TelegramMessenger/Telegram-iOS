@@ -243,7 +243,10 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 -(void)setOnFatalError:(dispatch_block_t _Nullable)onError {
+#if TARGET_OS_IOS
+#else
     _interface->setOnFatalError(onError);
+#endif
 }
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
@@ -967,8 +970,8 @@ private:
         }
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
-        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
-        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
 
         int minOutgoingVideoBitrateKbit = 100;
 #if DEBUG
