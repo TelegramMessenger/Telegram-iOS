@@ -4,8 +4,11 @@ swift_library(
     name = "GradientBackground",
     module_name = "GradientBackground",
     srcs = glob([
-		"Sources/**/*.swift",
+        "Sources/**/*.swift",
     ]),
+    copts = [
+        "-O",
+    ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",

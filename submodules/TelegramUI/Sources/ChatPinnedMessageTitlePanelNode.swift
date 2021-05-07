@@ -54,7 +54,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     private let imageNode: TransformImageNode
     private let imageNodeContainer: ASDisplayNode
-    
+
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
 
     private var currentLayout: (CGFloat, CGFloat, CGFloat)?
@@ -91,6 +92,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.activityIndicatorContainer.addSubnode(self.activityIndicator)
         self.activityIndicator.alpha = 0.0
         ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: self.activityIndicatorContainer, scale: 0.1)
+
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -119,6 +122,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.imageNodeContainer = ASDisplayNode()
         
         super.init()
+
+        self.addSubnode(self.backgroundNode)
         
         self.tapButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -185,6 +190,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 50.0
         var themeUpdated = false
+
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         
         self.contextContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
@@ -193,8 +201,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
             self.listButton.setImage(PresentationResourcesChat.chatInputPanelPinnedListIconImage(interfaceState.theme), for: [])
-            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+            self.backgroundNode.color = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         if self.statusDisposable == nil, let interfaceInteraction = self.interfaceInteraction, let statuses = interfaceInteraction.statuses {

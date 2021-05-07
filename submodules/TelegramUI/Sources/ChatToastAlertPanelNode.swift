@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 
 final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     
@@ -25,6 +26,8 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     }
     
     override init() {
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -34,7 +37,8 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode.insets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
         
         super.init()
-        
+
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)
     }
@@ -42,8 +46,11 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 40.0
 
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
+
         self.textColor = interfaceState.theme.rootController.navigationBar.primaryTextColor
-        self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+        self.backgroundNode.color = interfaceState.theme.chat.historyNavigation.fillColor
         self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))

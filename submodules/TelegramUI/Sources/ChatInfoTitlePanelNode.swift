@@ -151,8 +151,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         let panelHeight: CGFloat = 55.0
         
         if themeUpdated {
-            self.backgroundNode.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+            self.backgroundNode.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         let updatedButtons: [ChatInfoTitleButton]

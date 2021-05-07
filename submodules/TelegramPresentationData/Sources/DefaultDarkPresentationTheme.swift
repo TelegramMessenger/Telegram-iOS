@@ -232,7 +232,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
 
 public func makeDefaultDarkPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
     let rootTabBar = PresentationThemeRootTabBar(
-        backgroundColor: UIColor(rgb: 0x1c1c1d),
+        backgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.5),
         separatorColor: UIColor(rgb: 0x3d3d40),
         iconColor: UIColor(rgb: 0x828282),
         selectedIconColor: UIColor(rgb: 0xffffff),
@@ -250,7 +250,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         controlColor: UIColor(rgb: 0x767676),
         accentTextColor: UIColor(rgb: 0xffffff),
-        backgroundColor: UIColor(rgb: 0x1c1c1d),
+        backgroundColor: UIColor(rgb: 0x1a1a1a, alpha: 0.5),
         separatorColor: UIColor(rgb: 0x3d3d40),
         badgeBackgroundColor:  UIColor(rgb: 0xffffff),
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
@@ -439,8 +439,8 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
     )
 
     let inputPanel = PresentationThemeChatInputPanel(
-        panelBackgroundColor: UIColor(rgb: 0x1c1c1d),
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000),
+        panelBackgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.5),
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000, alpha: 0.5),
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelControlAccentColor: UIColor(rgb: 0xffffff),
         panelControlColor: UIColor(rgb: 0x808080),

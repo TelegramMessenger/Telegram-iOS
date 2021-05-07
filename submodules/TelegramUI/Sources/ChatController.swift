@@ -8599,9 +8599,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.editMessageMediaWithLegacySignals(signals!)
                     completion()
                 } else {
+                    let immediateCompletion = getAnimatedTransitionSource == nil
                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: {
-                        completion()
+                        if !immediateCompletion {
+                            completion()
+                        }
                     })
+                    if immediateCompletion {
+                        completion()
+                    }
                 }
             }, selectRecentlyUsedInlineBot: { [weak self] peer in
                 if let strongSelf = self, let addressName = peer.addressName {
@@ -9542,7 +9548,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: @escaping (String) -> UIView? = { _ in nil }, completion: @escaping () -> Void = {}) {
+    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).start(next: { [weak self] items in
             if let strongSelf = self {
@@ -9555,7 +9561,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let correlationId = Int64.random(in: 0 ..< Int64.max)
                         message = message.withUpdatedCorrelationId(correlationId)
 
-                        if items.count == 1 {
+                        if items.count == 1, let getAnimatedTransitionSource = getAnimatedTransitionSource {
                             completionImpl = nil
                             strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
                                 return getAnimatedTransitionSource(uniqueId)

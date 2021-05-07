@@ -3012,7 +3012,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         
                         switch scrollToItem.directionHint {
                             case .Up:
-                                offset = updatedLowerBound - (previousUpperBound ?? 0.0)
+                                if let previousUpperBound = previousUpperBound {
+                                    offset = updatedLowerBound - previousUpperBound
+                                }
                             case .Down:
                                 offset = updatedUpperBound - (previousLowerBound ?? self.visibleSize.height)
                         }
