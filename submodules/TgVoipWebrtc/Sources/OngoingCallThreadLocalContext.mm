@@ -20,13 +20,13 @@
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
+#import "platform/darwin/CustomExternalCapturer.h"
 #endif
 
 #import "group/GroupInstanceImpl.h"
 #import "group/GroupInstanceCustomImpl.h"
 
 #import "VideoCaptureInterfaceImpl.h"
-#import "platform/darwin/CustomExternalCapturer.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
