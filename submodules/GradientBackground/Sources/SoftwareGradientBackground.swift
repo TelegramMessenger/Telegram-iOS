@@ -274,7 +274,11 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
     }
 
     public func animateEvent(transition: ContainedViewLayoutTransition) {
-        self.phase = self.phase + 1
+        if self.phase == 0 {
+            self.phase = 7
+        } else {
+            self.phase = self.phase - 1
+        }
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: transition)
         }
