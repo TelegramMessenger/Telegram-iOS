@@ -239,6 +239,9 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
                 let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                if abs(targetAbsoluteRect.minY - 691.6666666666666) > 0.1 {
+                    assert(true)
+                }
                 let sourceBackgroundAbsoluteRect = initialTextInput.backgroundView.frame.offsetBy(dx: initialTextInput.sourceRect.minX, dy: initialTextInput.sourceRect.minY)
                 let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.minX, y: sourceBackgroundAbsoluteRect.maxY - self.contextSourceNode.contentRect.height), size: self.contextSourceNode.contentRect.size)
 
