@@ -603,6 +603,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openInfoImpl = { [weak self] focus in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutInfoController(context: context, invoice: paymentFormValue.invoice, messageId: messageId, initialFormInfo: currentFormInfo, focus: focus, formInfoUpdated: { formInfo, validatedInfo in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue {
                         strongSelf.currentFormInfo = formInfo
@@ -877,6 +878,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
+                strongSelf.controller?.view.endEditing(true)
                 let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
                     openNewCard()
@@ -892,6 +894,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openShippingMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let shippingOptions = strongSelf.currentValidatedFormInfo?.shippingOptions, !shippingOptions.isEmpty {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutPaymentShippingOptionSheetController(context: strongSelf.context, currency: paymentFormValue.invoice.currency, options: shippingOptions, currentId: strongSelf.currentShippingOptionId, applyValue: { id in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                         strongSelf.currentShippingOptionId = id

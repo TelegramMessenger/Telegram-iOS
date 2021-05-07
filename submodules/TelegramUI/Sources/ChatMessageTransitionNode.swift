@@ -129,6 +129,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             case inputPanel(itemNode: ChatMediaInputStickerGridItemNode)
             case mediaPanel(itemNode: HorizontalStickerGridItemNode)
             case inputPanelSearch(itemNode: StickerPaneSearchStickerItemNode)
+            case emptyPanel(itemNode: ChatEmptyNodeStickerContentNode)
         }
 
         final class AudioMicInput {
@@ -299,6 +300,9 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 case let .inputPanelSearch(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
                     sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: nil)
+                case let .emptyPanel(sourceItemNode):
+                    stickerSource = Sticker(imageNode: sourceItemNode.stickerNode.imageNode, animationNode: sourceItemNode.stickerNode.animationNode, placeholderNode: nil, relativeSourceRect: sourceItemNode.stickerNode.imageNode.frame)
+                    sourceAbsoluteRect = sourceItemNode.stickerNode.view.convert(sourceItemNode.stickerNode.imageNode.frame, to: nil)
                 }
 
                 let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
@@ -347,6 +351,8 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 case let .mediaPanel(sourceItemNode):
                     sourceItemNode.isHidden = true
                 case let .inputPanelSearch(sourceItemNode):
+                    sourceItemNode.isHidden = true
+                case let .emptyPanel(sourceItemNode):
                     sourceItemNode.isHidden = true
                 }
             case let .audioMicInput(audioMicInput):

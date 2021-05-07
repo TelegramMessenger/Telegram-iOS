@@ -6447,7 +6447,6 @@ Sorry for the inconvenience.";
 
 "Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
 
-
 "Privacy.ContactsReset.ContactsDeleted" = "All synced contacts deleted.";
 
 "Privacy.DeleteDrafts.DraftsDeleted" = "All cloud drafts deleted.";
@@ -6466,3 +6465,6 @@ Sorry for the inconvenience.";
 "VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
 "VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
 "VoiceChat.VideoPreviewShareScreen" = "Share Screen";
+
+"VoiceChat.TapToViewCameraVideo" = "Tap to view camera video";
+"VoiceChat.TapToViewScreenVideo" = "Tap to view screen sharing";

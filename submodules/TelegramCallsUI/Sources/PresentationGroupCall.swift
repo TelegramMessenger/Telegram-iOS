@@ -450,7 +450,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var genericCallContext: OngoingGroupCallContext?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
+
     private var screencastCallContext: OngoingGroupCallContext?
+    private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
+    private var screencastCapturer: OngoingCallVideoCapturer?
+
+    //private var screencastIpcContext: IpcGroupCallAppContext?
+
     private var ssrcMapping: [UInt32: PeerId] = [:]
     
     private var requestedSsrcs = Set<UInt32>()
@@ -620,8 +626,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var videoCapturer: OngoingCallVideoCapturer?
     private var useFrontCamera: Bool = true
 
-    private var screenCapturer: OngoingCallVideoCapturer?
-
     private let incomingVideoSourcePromise = Promise<Set<String>>(Set())
     public var incomingVideoSources: Signal<Set<String>, NoError> {
         return self.incomingVideoSourcePromise.get()
@@ -632,6 +636,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public private(set) var schedulePending = false
     private var isScheduled = false
     private var isScheduledStarted = false
+
+    private var screencastFramesDisposable: Disposable?
+    private var screencastStateDisposable: Disposable?
     
     init(
         accountContext: AccountContext,
@@ -891,6 +898,38 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if let _ = self.initialCall {
             self.requestCall(movingFromBroadcastToRtc: false)
         }
+
+        let basePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination"
+        let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath)
+        self.screencastBufferServerContext = screencastBufferServerContext
+        let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
+        self.screencastCapturer = screencastCapturer
+        self.screencastFramesDisposable = (screencastBufferServerContext.frames
+        |> deliverOnMainQueue).start(next: { [weak screencastCapturer] screencastFrame in
+            guard let screencastCapturer = screencastCapturer else {
+                return
+            }
+            screencastCapturer.injectPixelBuffer(screencastFrame)
+        })
+        self.screencastStateDisposable = (screencastBufferServerContext.isActive
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] isActive in
+            guard let strongSelf = self else {
+                return
+            }
+            if isActive {
+                strongSelf.requestScreencast()
+            } else {
+                strongSelf.disableScreencast()
+            }
+        })
+
+        /*Queue.mainQueue().after(2.0, { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: basePath)
+        })*/
     }
     
     deinit {
@@ -929,6 +968,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.removedChannelMembersDisposable?.dispose()
 
         self.peerUpdatesSubscription?.dispose()
+
+        self.screencastFramesDisposable?.dispose()
+        self.screencastStateDisposable?.dispose()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
@@ -2139,7 +2181,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.markedAsCanBeRemoved = true
 
         self.genericCallContext?.stop()
+
+        //self.screencastIpcContext = nil
         self.screencastCallContext?.stop()
+
         self._canBeRemoved.set(.single(true))
         
         if self.didConnectOnce {
@@ -2482,7 +2527,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
 
-    public func requestScreencast() {
+    private func requestScreencast() {
         if self.screencastCallContext != nil {
             return
         }
@@ -2493,7 +2538,87 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }
 
-        if self.screenCapturer == nil {
+        let screencastCallContext = OngoingGroupCallContext(video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, audioStreamData: nil, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false)
+        self.screencastCallContext = screencastCallContext
+
+        self.screencastJoinDisposable.set((screencastCallContext.joinPayload
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
+            guard let strongSelf = self else {
+                return
+            }
+
+            strongSelf.requestDisposable.set((joinGroupCallAsScreencast(
+                account: strongSelf.account,
+                peerId: strongSelf.peerId,
+                callId: callInfo.id,
+                accessHash: callInfo.accessHash,
+                joinPayload: joinPayload.0
+            )
+            |> deliverOnMainQueue).start(next: { joinCallResult in
+                guard let strongSelf = self, let screencastCallContext = strongSelf.screencastCallContext else {
+                    return
+                }
+                let clientParams = joinCallResult.jsonParams
+
+                //screencastIpcContext.setJoinResponsePayload(clientParams)
+
+                screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
+                screencastCallContext.setJoinResponse(payload: clientParams)
+
+                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
+            }, error: { error in
+                guard let _ = self else {
+                    return
+                }
+            }))
+        }))
+
+        /*if self.screencastIpcContext != nil {
+            return
+        }
+
+        let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
+
+        guard let callInfo = maybeCallInfo else {
+            return
+        }
+
+        let screencastIpcContext = IpcGroupCallAppContext(basePath: self.accountContext.sharedContext.basePath + "/broadcast-coordination")
+        self.screencastIpcContext = screencastIpcContext
+        self.hasScreencast = true
+
+        self.screencastJoinDisposable.set((screencastIpcContext.joinPayload
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
+            guard let strongSelf = self else {
+                return
+            }
+
+            strongSelf.requestDisposable.set((joinGroupCallAsScreencast(
+                account: strongSelf.account,
+                peerId: strongSelf.peerId,
+                callId: callInfo.id,
+                accessHash: callInfo.accessHash,
+                joinPayload: joinPayload
+            )
+            |> deliverOnMainQueue).start(next: { joinCallResult in
+                guard let strongSelf = self, let screencastIpcContext = strongSelf.screencastIpcContext else {
+                    return
+                }
+                let clientParams = joinCallResult.jsonParams
+
+                screencastIpcContext.setJoinResponsePayload(clientParams)
+
+                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
+            }, error: { error in
+                guard let _ = self else {
+                    return
+                }
+            }))
+        }))
+
+        /*if self.screenCapturer == nil {
             let screenCapturer = OngoingCallVideoCapturer()
             self.screenCapturer = screenCapturer
         }
@@ -2512,7 +2637,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         )
 
         self.screencastCallContext = screencastCallContext
-        self.hasScreencast = true
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload
         |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -2551,7 +2675,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     return
                 }
             }))
-        }))
+        }))*/*/
     }
 
     public func disableScreencast() {
@@ -2570,10 +2694,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 ).start())
             }
         }
-        if let _ = self.screenCapturer {
-            self.screenCapturer = nil
-            self.screencastCallContext?.disableVideo()
-        }
+        /*if let _ = self.screencastIpcContext {
+            self.screencastIpcContext = nil
+
+            let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
+
+            if let callInfo = maybeCallInfo {
+                self.screencastJoinDisposable.set(leaveGroupCallAsScreencast(
+                    account: self.account,
+                    callId: callInfo.id,
+                    accessHash: callInfo.accessHash
+                ).start())
+            }
+        }*/
     }
     
     public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {

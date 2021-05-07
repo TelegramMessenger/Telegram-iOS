@@ -55,6 +55,7 @@ private var testHasInstance = false
 public final class SharedAccountContextImpl: SharedAccountContext {
     public let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
+    public let sharedContainerPath: String
     public let basePath: String
     public let accountManager: AccountManager
     public let appLockContext: AppLockContext
@@ -160,7 +161,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -168,6 +169,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
+        self.sharedContainerPath = sharedContainerPath
         self.basePath = basePath
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat
@@ -1262,8 +1264,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, displayPsa: { _, _ in
             }, displayDiceTooltip: { _ in
             }, animateDiceSuccess: { _ in
-            }, greetingStickerNode: {
-                return nil
             }, openPeerContextMenu: { _, _, _, _, _ in
             }, openMessageReplies: { _, _, _ in
             }, openReplyThreadOriginalMessage: { _ in

@@ -110,7 +110,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 if let date = date {
-                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).0
                 }
                 
                 if (!videoRepresentations.isEmpty) {
