@@ -2166,8 +2166,6 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.videoNodes.append((endpointId, videoNode))
 
                                 if let _ = strongSelf.validLayout {
-//                                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                                    
                                     loop: for i in 0 ..< strongSelf.currentEntries.count {
                                         let entry = strongSelf.currentEntries[i]
                                         let tileEntry = strongSelf.currentTileEntries[i]
@@ -4699,11 +4697,6 @@ public final class VoiceChatController: ViewController {
             let previousPinnedEntry = self.pinnedEntry
             self.pinnedEntry = pinnedEntry
             
-            let previousEntries = self.currentEntries
-            let previousTileEntries = self.currentTileEntries
-            self.currentEntries = entries
-            self.currentTileEntries = tileEntries
-            
             var previousPinnedPeerEntry: PeerEntry?
             var pinnedPeerEntry: PeerEntry?
             
@@ -4718,9 +4711,14 @@ public final class VoiceChatController: ViewController {
             }
             
             if updatePinnedPeer && (previousPinnedPeerEntry?.videoEndpointId != pinnedPeerEntry?.videoEndpointId || previousPinnedPeerEntry?.screencastEndpointId != pinnedPeerEntry?.screencastEndpointId) {
-                self.updateMainParticipant(waitForFullSize: false, updateMembers: true, force: true)
+                self.updateMainParticipant(waitForFullSize: false, currentEntries: entries, updateMembers: true, force: true)
                 return
             }
+            
+            let previousEntries = self.currentEntries
+            let previousTileEntries = self.currentTileEntries
+            self.currentEntries = entries
+            self.currentTileEntries = tileEntries
             
             if previousEntries.count == entries.count {
                 var allEqual = true
@@ -4756,16 +4754,18 @@ public final class VoiceChatController: ViewController {
         }
         
         private var didSetMainParticipant = false
-        private func updateMainParticipant(waitForFullSize: Bool, updateMembers: Bool = true, force: Bool = false) {
+        private func updateMainParticipant(waitForFullSize: Bool, currentEntries: [ListEntry]? = nil, updateMembers: Bool = true, force: Bool = false) {
             let effectiveMainParticipant = self.currentForcedSpeakerWithVideo ?? self.currentDominantSpeakerWithVideo
             guard effectiveMainParticipant != self.effectiveSpeakerWithVideo?.0 || force else {
                 return
             }
             
+            let currentEntries = currentEntries ?? self.currentEntries
+            
             var effectivePeer: (PeerId, String, String?)? = nil
             var anyPeer: (PeerId, String, String?)? = nil
             if let peerId = effectiveMainParticipant {
-                for entry in self.currentEntries {
+                for entry in currentEntries {
                     switch entry {
                     case let .peer(peer):
                         if peer.peer.id == peerId {
