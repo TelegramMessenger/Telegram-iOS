@@ -1670,14 +1670,14 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }))
                         }
-                    } else {
+                    } else if canUpdateAvatarVisibility {
                         strongSelf.avatarNode.alpha = 1.0
                     }
                     
                     switch item.style {
                         case .list:
                             strongSelf.audioLevelView?.alpha = item.transparent ? 0.0 : 1.0
-                            strongSelf.avatarNode.isHidden = item.transparent
+                            strongSelf.avatarNode.isHidden = item.transparent || strongSelf.isExtracted
                             strongSelf.videoContainerNode.isHidden = item.transparent
                             strongSelf.pinIconNode.isHidden = !item.transparent
                             if item.transparent && currentItem?.pinned != item.pinned {
