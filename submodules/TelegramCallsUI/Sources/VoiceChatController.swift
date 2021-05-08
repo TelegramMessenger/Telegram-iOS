@@ -76,7 +76,7 @@ final class GroupVideoNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
     
-    private var validLayout: (CGSize, Bool, Bool)?
+    private var validLayout: (CGSize, Bool)?
     
     var tapped: (() -> Void)?
     
@@ -104,8 +104,8 @@ final class GroupVideoNode: ASDisplayNode {
                     return
                 }
                 strongSelf.readyPromise.set(true)
-                if let (size, scale, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, scale: scale, isLandscape: isLandscape, transition: .immediate)
+                if let (size, isLandscape) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
                 }
             }
         })
@@ -115,8 +115,8 @@ final class GroupVideoNode: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                if let (size, scale, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, scale: scale, isLandscape: isLandscape, transition: .immediate)
+                if let (size, isLandscape) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
                 }
             }
         })
@@ -176,8 +176,8 @@ final class GroupVideoNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, scale: Bool = true, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, scale, isLandscape)
+    func updateLayout(size: CGSize, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, isLandscape)
         transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: CGRect(origin: CGPoint(), size: size))
         
         let orientation = self.videoView.getOrientation()
@@ -209,14 +209,7 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
-        
-        var isLandscape = isLandscape
-//        if case .rotation0 = orientation {
-//        } else {
-//            isLandscape = false
-//        }
-        
-        var originalVideoSize = rotatedVideoSize
+    
         var containerSize = size
         if switchOrientation {
             rotatedVideoSize = CGSize(width: rotatedVideoSize.height, height: rotatedVideoSize.width)
@@ -235,17 +228,11 @@ final class GroupVideoNode: ASDisplayNode {
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
         
-        var scale = scale
-//        if case .rotation0 = orientation {
-//        } else {
-//            scale = false
-//        }
-//
-        var videoSize = scale ? rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0)) : rotatedVideoFrame.size
+        let videoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
         transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
         
-        var transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
+        let transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
         let transition: ContainedViewLayoutTransition = .immediate
@@ -2076,11 +2063,9 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 if let (peerId, _) = maxLevelWithVideo {
-                    if strongSelf.currentDominantSpeakerWithVideo != peerId {
-                        strongSelf.currentDominantSpeakerWithVideo = peerId
-                        if !strongSelf.requestedVideoSources.isEmpty {
-                            strongSelf.updateMainParticipant(waitForFullSize: false)
-                        }
+                    strongSelf.currentDominantSpeakerWithVideo = peerId
+                    if !strongSelf.requestedVideoSources.isEmpty {
+                        strongSelf.updateMainParticipant(waitForFullSize: false)
                     }
                 }
                 
@@ -3934,7 +3919,7 @@ public final class VoiceChatController: ViewController {
             
             self.leaveButton.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0xff3b30, 0.3)), image: .cancel), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
-            transition.updateAlpha(node: self.cameraButton.textNode, alpha: hasVideo ? 1.0 : 0.0)
+            transition.updateAlpha(node: self.cameraButton.textNode, alpha: hasVideo ? buttonsTitleAlpha : 0.0)
             transition.updateAlpha(node: self.switchCameraButton.textNode, alpha: buttonsTitleAlpha)
             transition.updateAlpha(node: self.audioButton.textNode, alpha: buttonsTitleAlpha)
             transition.updateAlpha(node: self.leaveButton.textNode, alpha: buttonsTitleAlpha)
@@ -4515,7 +4500,7 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>, updatePinnedPeer: Bool = true) {
             var disableAnimation = false
             if self.currentCallMembers?.1 != callMembers.1 {
                 disableAnimation = true
@@ -4719,10 +4704,22 @@ public final class VoiceChatController: ViewController {
             self.currentEntries = entries
             self.currentTileEntries = tileEntries
             
-            if let previousPinnedEntry = previousPinnedEntry, case let .peer(previousPeerEntry) = previousPinnedEntry, let pinnedEntry = pinnedEntry, case let .peer(peerEntry) = pinnedEntry {
-                if previousPeerEntry.videoEndpointId != peerEntry.videoEndpointId || previousPeerEntry.screencastEndpointId != peerEntry.screencastEndpointId {
-                    self.updateMainParticipant(waitForFullSize: false, updateMembers: false, force: true)
-                }
+            var previousPinnedPeerEntry: PeerEntry?
+            var pinnedPeerEntry: PeerEntry?
+            
+            if let previousPinnedEntry = previousPinnedEntry, case let .peer(previousPeerEntry) = previousPinnedEntry {
+                previousPinnedPeerEntry = previousPeerEntry
+            }
+            if let pinnedEntry = pinnedEntry, case let .peer(peerEntry) = pinnedEntry {
+                pinnedPeerEntry = peerEntry
+            }
+            if previousPinnedPeerEntry?.peer.id != pinnedPeerEntry?.peer.id {
+                self.updateDecorationsLayout(transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+            
+            if updatePinnedPeer && (previousPinnedPeerEntry?.videoEndpointId != pinnedPeerEntry?.videoEndpointId || previousPinnedPeerEntry?.screencastEndpointId != pinnedPeerEntry?.screencastEndpointId) {
+                self.updateMainParticipant(waitForFullSize: false, updateMembers: true, force: true)
+                return
             }
             
             if previousEntries.count == entries.count {
@@ -4766,13 +4763,14 @@ public final class VoiceChatController: ViewController {
             }
             
             var effectivePeer: (PeerId, String, String?)? = nil
+            var anyPeer: (PeerId, String, String?)? = nil
             if let peerId = effectiveMainParticipant {
                 for entry in self.currentEntries {
                     switch entry {
                     case let .peer(peer):
                         if peer.peer.id == peerId {
                             var effectiveEndpointId = peer.effectiveVideoEndpointId
-                            if self.switchedToCameraPeers.contains(peerId), let videoEndpointId = peer.videoEndpointId {
+                            if self.switchedToCameraPeers.contains(peer.peer.id), let videoEndpointId = peer.videoEndpointId {
                                 effectiveEndpointId = videoEndpointId
                             }
                             
@@ -4784,13 +4782,33 @@ public final class VoiceChatController: ViewController {
                             }
                             
                             if let endpointId = effectiveEndpointId {
-                                effectivePeer = (peerId, endpointId, otherEndpointId)
+                                effectivePeer = (peer.peer.id, endpointId, otherEndpointId)
+                            }
+                        } else if anyPeer == nil && peer.effectiveVideoEndpointId != nil {
+                            var effectiveEndpointId = peer.effectiveVideoEndpointId
+                            if self.switchedToCameraPeers.contains(peer.peer.id), let videoEndpointId = peer.videoEndpointId {
+                                effectiveEndpointId = videoEndpointId
+                            }
+                            
+                            var otherEndpointId: String?
+                            if effectiveEndpointId != peer.videoEndpointId {
+                                otherEndpointId = peer.videoEndpointId
+                            } else if effectiveEndpointId != peer.screencastEndpointId {
+                                otherEndpointId = peer.screencastEndpointId
+                            }
+                            
+                            if let endpointId = effectiveEndpointId {
+                                anyPeer = (peer.peer.id, endpointId, otherEndpointId)
                             }
                         }
                     default:
                         break
                     }
                 }
+            }
+                
+            if effectivePeer == nil {
+                effectivePeer = anyPeer
             }
             
             let completion = {
@@ -4824,7 +4842,7 @@ public final class VoiceChatController: ViewController {
             
             self.effectiveSpeakerWithVideo = effectivePeer.flatMap { ($0.0, $0.1) }
             if updateMembers {
-                self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+                self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), updatePinnedPeer: false)
             }
             self.call.setFullSizeVideo(endpointId: effectivePeer?.1)
             self.mainVideoContainerNode?.updatePeer(peer: effectivePeer, waitForFullSize: waitForFullSize, completion: { [weak self] in
