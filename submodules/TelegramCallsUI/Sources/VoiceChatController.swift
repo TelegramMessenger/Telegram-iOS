@@ -223,9 +223,9 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if isLandscape {
-            rotatedVideoSize = originalVideoSize.aspectFitted(size)
+            rotatedVideoSize = rotatedVideoSize.aspectFitted(size)
         } else {
-            rotatedVideoSize = originalVideoSize.aspectFilled(size)
+            rotatedVideoSize = rotatedVideoSize.aspectFilled(size)
         }
 
         var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
