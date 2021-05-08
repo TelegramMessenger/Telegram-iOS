@@ -874,6 +874,7 @@ public final class VoiceChatController: ViewController {
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
                         return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: nil, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                            return nil
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
                                 return interaction.getPeerVideo(endpointId, peerEntry.style != .list)
                             } else {
@@ -925,8 +926,8 @@ public final class VoiceChatController: ViewController {
         private let dimNode: ASDisplayNode
         private let contentContainer: ASDisplayNode
         private let backgroundNode: ASDisplayNode
-        private let mainVideoClippingNode: ASDisplayNode
-        private var mainVideoContainerNode: MainVideoContainerNode?
+        private let mainStageVideoClippingNode: ASDisplayNode
+        private var mainStageVideoContainerNode: MainVideoContainerNode?
         private var mainParticipantNode: VoiceChatParticipantItemNode
         private var toggleFullscreenButton: HighlightTrackingButtonNode
         private let listNode: ListView
@@ -1050,6 +1051,7 @@ public final class VoiceChatController: ViewController {
         private var currentDominantSpeakerWithVideo: PeerId?
         private var currentForcedSpeakerWithVideo: PeerId?
         private var effectiveSpeakerWithVideo: (PeerId, String)?
+        private let updateSpeakerWithVideoDisposable = MetaDisposable()
         
         private var updateAvatarDisposable = MetaDisposable()
         private let updateAvatarPromise = Promise<(TelegramMediaImageRepresentation, Float)?>(nil)
@@ -1089,10 +1091,10 @@ public final class VoiceChatController: ViewController {
             self.backgroundNode.backgroundColor = self.isScheduling ? panelBackgroundColor : secondaryPanelBackgroundColor
             self.backgroundNode.clipsToBounds = false
             
-            self.mainVideoClippingNode = ASDisplayNode()
-            self.mainVideoClippingNode.clipsToBounds = true
+            self.mainStageVideoClippingNode = ASDisplayNode()
+            self.mainStageVideoClippingNode.clipsToBounds = true
     
-            self.mainVideoContainerNode = MainVideoContainerNode(context: call.accountContext, call: call)
+            self.mainStageVideoContainerNode = MainVideoContainerNode(context: call.accountContext, call: call)
             
             
             self.mainParticipantNode = VoiceChatParticipantItemNode()
@@ -1253,13 +1255,13 @@ public final class VoiceChatController: ViewController {
                     } else {
                         strongSelf.currentForcedSpeakerWithVideo = nil
                     }
-                    strongSelf.updateMainParticipant(waitForFullSize: false)
+                    strongSelf.updateMainStageVideo(waitForFullSize: false)
                 }
             }, togglePeerVideo: { [weak self] peerId in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.mainVideoContainerNode?.otherVideoTapped?()
+                strongSelf.mainStageVideoContainerNode?.otherVideoTapped?()
             }, openInvite: { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -1865,7 +1867,7 @@ public final class VoiceChatController: ViewController {
             self.topPanelNode.addSubnode(self.topCornersNode)
             
             self.bottomPanelNode.addSubnode(self.audioButton)
-            if let _ = self.mainVideoContainerNode {
+            if let _ = self.mainStageVideoContainerNode {
                 self.bottomPanelNode.addSubnode(self.cameraButton)
                 self.bottomPanelNode.addSubnode(self.switchCameraButton)
             }
@@ -1877,11 +1879,11 @@ public final class VoiceChatController: ViewController {
             self.addSubnode(self.contentContainer)
             self.contentContainer.addSubnode(self.backgroundNode)
             
-            if let mainVideoContainer = self.mainVideoContainerNode {
-                self.contentContainer.addSubnode(self.mainVideoClippingNode)
-                self.mainVideoClippingNode.addSubnode(mainVideoContainer)
-                self.mainVideoClippingNode.addSubnode(self.mainParticipantNode)
-                self.mainVideoClippingNode.addSubnode(self.toggleFullscreenButton)
+            if let mainVideoContainer = self.mainStageVideoContainerNode {
+                self.contentContainer.addSubnode(self.mainStageVideoClippingNode)
+                self.mainStageVideoClippingNode.addSubnode(mainVideoContainer)
+                self.mainStageVideoClippingNode.addSubnode(self.mainParticipantNode)
+                self.mainStageVideoClippingNode.addSubnode(self.toggleFullscreenButton)
             }
             self.contentContainer.addSubnode(self.listNode)
             self.contentContainer.addSubnode(self.topPanelNode)
@@ -2064,9 +2066,7 @@ public final class VoiceChatController: ViewController {
                 
                 if let (peerId, _) = maxLevelWithVideo {
                     strongSelf.currentDominantSpeakerWithVideo = peerId
-                    if !strongSelf.requestedVideoSources.isEmpty {
-                        strongSelf.updateMainParticipant(waitForFullSize: false)
-                    }
+                    strongSelf.updateMainStageVideo(waitForFullSize: false)
                 }
                 
                 strongSelf.itemInteraction?.updateAudioLevels(levels)
@@ -2089,11 +2089,9 @@ public final class VoiceChatController: ViewController {
             self.audioButton.addTarget(self, action: #selector(self.audioOutputPressed), forControlEvents: .touchUpInside)
             self.cameraButton.addTarget(self, action: #selector(self.cameraPressed), forControlEvents: .touchUpInside)
             self.switchCameraButton.addTarget(self, action: #selector(self.switchCameraPressed), forControlEvents: .touchUpInside)
-
             self.optionsButton.contextAction = { [weak self] sourceNode, gesture in
                 self?.openContextMenu(sourceNode: sourceNode, gesture: gesture)
             }
-            
             self.optionsButton.addTarget(self, action: #selector(self.optionsPressed), forControlEvents: .touchUpInside)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
             
@@ -2228,12 +2226,7 @@ public final class VoiceChatController: ViewController {
                         if peerId == strongSelf.currentDominantSpeakerWithVideo {
                             strongSelf.currentDominantSpeakerWithVideo = nil
                         }
-                        strongSelf.updateMainParticipant(waitForFullSize: false)
-                    }
-                } else if strongSelf.currentDominantSpeakerWithVideo != nil && !strongSelf.requestedVideoSources.isEmpty && !strongSelf.didSetMainParticipant {
-                    strongSelf.didSetMainParticipant = true
-                    Queue.mainQueue().after(0.1) {
-                        strongSelf.updateMainParticipant(waitForFullSize: true)
+                        strongSelf.updateMainStageVideo(waitForFullSize: false)
                     }
                 }
             }))
@@ -2260,7 +2253,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            self.mainVideoContainerNode?.tapped = { [weak self] in
+            self.mainStageVideoContainerNode?.tapped = { [weak self] in
                 if let strongSelf = self, !strongSelf.animatingExpansion {
                     var effectiveDisplayMode = strongSelf.displayMode
                     var isLandscape = false
@@ -2398,7 +2391,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
-            self.mainVideoContainerNode?.otherVideoTapped = { [weak self] in
+            self.mainStageVideoContainerNode?.otherVideoTapped = { [weak self] in
                 if let strongSelf = self, let peerId = strongSelf.effectiveSpeakerWithVideo?.0 {
                     let switchingToCamera = !strongSelf.switchedToCameraPeers.contains(peerId)
                     if switchingToCamera {
@@ -2406,7 +2399,7 @@ public final class VoiceChatController: ViewController {
                     } else {
                         strongSelf.switchedToCameraPeers.remove(peerId)
                     }
-                    strongSelf.updateMainParticipant(waitForFullSize: false, force: true)
+                    strongSelf.updateMainStageVideo(waitForFullSize: false, force: true)
                     strongSelf.displayToggleVideoSourceTooltip(screencast: !switchingToCamera)
                 }
             }
@@ -2448,6 +2441,7 @@ public final class VoiceChatController: ViewController {
             self.voiceSourcesDisposable.dispose()
             self.updateAvatarDisposable.dispose()
             self.ignoreConnectingTimer?.invalidate()
+            self.updateSpeakerWithVideoDisposable.dispose()
         }
         
         @objc private func toggleFullscreenPressed() {
@@ -2455,7 +2449,7 @@ public final class VoiceChatController: ViewController {
             } else {
                 self.displayMode = .fullscreen(controlsHidden: true)
             }
-            self.mainVideoContainerNode?.tapped?()
+            self.mainStageVideoContainerNode?.tapped?()
         }
 
         private func openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -3471,7 +3465,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private var hasMainVideo: Bool {
-            return self.mainVideoContainerNode != nil && self.effectiveSpeakerWithVideo != nil
+            return self.mainStageVideoContainerNode != nil && self.effectiveSpeakerWithVideo != nil
         }
                 
         private var bringVideoToBackOnCompletion = false
@@ -3548,7 +3542,7 @@ public final class VoiceChatController: ViewController {
             }
             let sideInset: CGFloat = 16.0
             
-            if let mainVideoContainer = self.mainVideoContainerNode {
+            if let mainVideoContainer = self.mainStageVideoContainerNode {
                 let videoClippingFrame: CGRect
                 let videoContainerFrame: CGRect
                 let videoInset: CGFloat
@@ -3615,7 +3609,7 @@ public final class VoiceChatController: ViewController {
                 transition.updateFrame(node: self.mainParticipantNode, frame: CGRect(x: 0.0, y: videoClippingFrame.height - offset, width: mainParticipantNodeWidth, height: 56.0))
                 transition.updateFrame(node: self.toggleFullscreenButton, frame: CGRect(x: mainParticipantNodeWidth + 1.0, y: videoClippingFrame.height - offset + 7.0, width: 44.0, height: 44.0))
                 
-                transition.updateFrame(node: self.mainVideoClippingNode, frame: videoClippingFrame)
+                transition.updateFrame(node: self.mainStageVideoClippingNode, frame: videoClippingFrame)
                 transition.updateFrame(node: mainVideoContainer, frame: videoContainerFrame, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.animatingExpansion = false
@@ -3623,7 +3617,7 @@ public final class VoiceChatController: ViewController {
                         if strongSelf.bringVideoToBackOnCompletion {
                             strongSelf.tileListNode.isHidden = true
                             strongSelf.bringVideoToBackOnCompletion = false
-                            strongSelf.contentContainer.insertSubnode(strongSelf.mainVideoClippingNode, belowSubnode: strongSelf.tileListNode)
+                            strongSelf.contentContainer.insertSubnode(strongSelf.mainStageVideoClippingNode, belowSubnode: strongSelf.tileListNode)
                         }
                     }
                 })
@@ -3966,7 +3960,7 @@ public final class VoiceChatController: ViewController {
                 self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
             }
                         
-            if let videoIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.mainVideoClippingNode }), let listIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.listNode }) {
+            if let videoIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.mainStageVideoClippingNode }), let listIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.listNode }) {
                 switch effectiveDisplayMode {
                     case .default:
                         if listIndex < videoIndex {
@@ -3974,7 +3968,7 @@ public final class VoiceChatController: ViewController {
                         }
                     case .fullscreen:
                         if listIndex > videoIndex {
-                            self.contentContainer.insertSubnode(self.mainVideoClippingNode, belowSubnode: self.tileListNode)
+                            self.contentContainer.insertSubnode(self.mainStageVideoClippingNode, belowSubnode: self.tileListNode)
                         }
                 }
             }
@@ -4117,7 +4111,7 @@ public final class VoiceChatController: ViewController {
             let forthButtonFrame: CGRect
             
             let leftButtonFrame: CGRect
-            if self.mainVideoContainerNode == nil || isScheduled {
+            if self.mainStageVideoContainerNode == nil || isScheduled {
                 leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize)
             } else {
                 leftButtonFrame = CGRect(origin: CGPoint(x: sideButtonOrigin, y: floor((self.effectiveBottomAreaHeight - sideButtonSize.height - upperButtonDistance - cameraButtonSize.height) / 2.0) + upperButtonDistance + cameraButtonSize.height), size: sideButtonSize)
@@ -4138,7 +4132,7 @@ public final class VoiceChatController: ViewController {
                     if isLandscape {
                         let sideInset: CGFloat
                         let buttonsCount: Int
-                        if self.mainVideoContainerNode == nil {
+                        if self.mainStageVideoContainerNode == nil {
                             sideInset = 42.0
                             buttonsCount = 3
                         } else {
@@ -4711,7 +4705,7 @@ public final class VoiceChatController: ViewController {
             }
             
             if updatePinnedPeer && (previousPinnedPeerEntry?.videoEndpointId != pinnedPeerEntry?.videoEndpointId || previousPinnedPeerEntry?.screencastEndpointId != pinnedPeerEntry?.screencastEndpointId) {
-                self.updateMainParticipant(waitForFullSize: false, currentEntries: entries, updateMembers: true, force: true)
+                self.updateMainStageVideo(waitForFullSize: false, currentEntries: entries, updateMembers: true, force: true)
                 return
             }
             
@@ -4753,8 +4747,7 @@ public final class VoiceChatController: ViewController {
             self.enqueueTileTransition(tileTransition)
         }
         
-        private var didSetMainParticipant = false
-        private func updateMainParticipant(waitForFullSize: Bool, currentEntries: [ListEntry]? = nil, updateMembers: Bool = true, force: Bool = false) {
+        private func updateMainStageVideo(waitForFullSize: Bool, currentEntries: [ListEntry]? = nil, updateMembers: Bool = true, force: Bool = false) {
             let effectiveMainParticipant = self.currentForcedSpeakerWithVideo ?? self.currentDominantSpeakerWithVideo
             guard effectiveMainParticipant != self.effectiveSpeakerWithVideo?.0 || force else {
                 return
@@ -4806,8 +4799,14 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
-                
+
             if effectivePeer == nil {
+                if self.currentForcedSpeakerWithVideo != nil {
+                    self.currentForcedSpeakerWithVideo = nil
+                }
+                if self.currentDominantSpeakerWithVideo != nil {
+                    self.currentDominantSpeakerWithVideo = nil
+                }
                 effectivePeer = anyPeer
             }
             
@@ -4836,8 +4835,8 @@ public final class VoiceChatController: ViewController {
             
             var waitForFullSize = waitForFullSize
             if !self.isExpanded {
-                waitForFullSize = true
-                self.mainVideoClippingNode.alpha = 0.0
+                waitForFullSize = effectivePeer != nil
+                self.mainStageVideoClippingNode.alpha = 0.0
             }
             
             self.effectiveSpeakerWithVideo = effectivePeer.flatMap { ($0.0, $0.1) }
@@ -4845,16 +4844,40 @@ public final class VoiceChatController: ViewController {
                 self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), updatePinnedPeer: false)
             }
             self.call.setFullSizeVideo(endpointId: effectivePeer?.1)
-            self.mainVideoContainerNode?.updatePeer(peer: effectivePeer, waitForFullSize: waitForFullSize, completion: { [weak self] in
-                if waitForFullSize {
-                    completion()
-                    
-                    if let strongSelf = self, strongSelf.mainVideoClippingNode.alpha.isZero {
-                        strongSelf.mainVideoClippingNode.alpha = 1.0
-                        strongSelf.mainVideoClippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+            
+            self.updateSpeakerWithVideoDisposable.set((self.call.incomingVideoSources
+            |> mapToSignal { videoSources -> Signal<Bool, NoError> in
+                if let (_, endpointId, otherEndpointId) = effectivePeer {
+                    var exists = true
+                    if !videoSources.contains(endpointId) {
+                        exists = false
+                    }
+                    if let otherEndpointId = otherEndpointId, !videoSources.contains(otherEndpointId) {
+                        exists = false
+                    }
+                    if exists {
+                        return .single(true)
                     }
                 }
-            })
+                return .complete()
+            }
+            |> take(1)
+            |> deliverOnMainQueue
+            ).start(next: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.mainStageVideoContainerNode?.updatePeer(peer: effectivePeer, waitForFullSize: waitForFullSize, completion: { [weak self] in
+                        if waitForFullSize {
+                            completion()
+                            
+                            if let strongSelf = self, strongSelf.mainStageVideoClippingNode.alpha.isZero {
+                                strongSelf.mainStageVideoClippingNode.alpha = 1.0
+                                strongSelf.mainStageVideoClippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                            }
+                        }
+                    })
+                }
+            }))
+            
             if !waitForFullSize {
                 completion()
             }
@@ -5399,7 +5422,7 @@ public final class VoiceChatController: ViewController {
         
         
         private func displayToggleVideoSourceTooltip(screencast: Bool) {
-            guard let videoContainerNode = self.mainVideoContainerNode, let peerId = self.effectiveSpeakerWithVideo?.0 else {
+            guard let videoContainerNode = self.mainStageVideoContainerNode, let peerId = self.effectiveSpeakerWithVideo?.0 else {
                 return
             }
             
