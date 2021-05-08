@@ -88,6 +88,7 @@ final class GroupVideoNode: ASDisplayNode {
     init(videoView: PresentationCallVideoView) {
         self.videoViewContainer = UIView()
         self.videoView = videoView
+        self.videoView.view.alpha = 0.99
         
         super.init()
         
@@ -210,27 +211,42 @@ final class GroupVideoNode: ASDisplayNode {
         
         var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
         
-        if isLandscape {
-            rotatedVideoSize = rotatedVideoSize.aspectFitted(size)
+        var isLandscape = isLandscape
+        if case .rotation0 = orientation {
         } else {
-            rotatedVideoSize = rotatedVideoSize.aspectFilled(size)
+            isLandscape = false
         }
         
+        var originalVideoSize = rotatedVideoSize
         if switchOrientation {
             rotatedVideoSize = CGSize(width: rotatedVideoSize.height, height: rotatedVideoSize.width)
         }
+        
+        if isLandscape {
+            rotatedVideoSize = originalVideoSize.aspectFitted(size)
+        } else {
+            rotatedVideoSize = originalVideoSize.aspectFilled(size)
+        }
+
         var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
         rotatedVideoFrame.origin.x = floor(rotatedVideoFrame.origin.x)
         rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
         
+        var scale = scale
+//        if case .rotation0 = orientation {
+//        } else {
+//            scale = false
+//        }
+//
         var videoSize = scale ? rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0)) : rotatedVideoFrame.size
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
         transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
         
-        let transformScale = rotatedVideoFrame.width / videoSize.width
+        var transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
         transition.updateTransformScale(layer: self.videoView.view.layer, scale: transformScale)
+        self.videoView.view.transform = CGAffineTransform(scaleX: transformScale, y: transformScale)
         
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
@@ -241,7 +257,7 @@ final class GroupVideoNode: ASDisplayNode {
         
         // TODO: properly fix the issue
         // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
-        self.videoView.view.alpha = 0.99
+//        self.videoView.view.alpha = 0.99
     }
 }
 
@@ -871,6 +887,7 @@ public final class VoiceChatController: ViewController {
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
                         return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: nil, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
+                            return nil
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
                                 return interaction.getPeerVideo(endpointId, peerEntry.style != .list)
                             } else {
@@ -1088,10 +1105,9 @@ public final class VoiceChatController: ViewController {
             
             self.mainVideoClippingNode = ASDisplayNode()
             self.mainVideoClippingNode.clipsToBounds = true
+    
+            self.mainVideoContainerNode = MainVideoContainerNode(context: call.accountContext, call: call)
             
-            if sharedContext.immediateExperimentalUISettings.demoVideoChats {
-                self.mainVideoContainerNode = MainVideoContainerNode(context: call.accountContext, call: call)
-            }
             
             self.mainParticipantNode = VoiceChatParticipantItemNode()
             self.toggleFullscreenButton = HighlightTrackingButtonNode()
@@ -4022,7 +4038,7 @@ public final class VoiceChatController: ViewController {
             var topCornersY = topPanelHeight
             if isLandscape {
                 listTopInset = topPanelHeight
-            } else if self.mainVideoContainerNode != nil && self.isExpanded {
+            } else if self.hasMainVideo && self.isExpanded {
                 let videoContainerHeight = min(mainVideoHeight, layout.size.width)
                 listTopInset += videoContainerHeight
                 topCornersY += videoContainerHeight
