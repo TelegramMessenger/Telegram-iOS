@@ -814,6 +814,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.pinned {
                         self.avatarNode.alpha = 1.0
                         videoNode.alpha = 0.0
+                        startContainerPosition = startContainerPosition.offsetBy(dx: 0.0, dy: 9.0)
                     } else {
                         self.avatarNode.alpha = 0.0
                     }
@@ -971,6 +972,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         let currentTitle = self.currentTitle
+        let hasVideo = self.videoNode != nil
         
         return { item, params, first, last in
             var updatedTheme: PresentationTheme?
@@ -988,14 +990,16 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             if case .list = item.style, item.transparent{
                 titleFont = Font.semibold(17.0)
                 titleColor = UIColor(rgb: 0xffffff, alpha: 0.65)
-            } else if case .tile = item.style {
+            } else if case .tile = item.style, !hasVideo {
                 switch item.text {
                     case let .text(_, _, textColor):
                         switch textColor {
                             case .generic:
                                 titleColor = item.presentationData.theme.list.itemPrimaryTextColor
                             case .accent:
-                                titleColor = item.presentationData.theme.list.itemAccentColor
+                                if item.peer.id != item.context.account.peerId {
+                                    titleColor = item.presentationData.theme.list.itemAccentColor
+                                }
                             case .constructive:
                                 titleColor = constructiveColor
                             case .destructive:
@@ -1550,6 +1554,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.borderImageNode.isHidden = !item.pinned || item.style == .list
                     
+                    let canUpdateAvatarVisibility = !strongSelf.isExtracted && !strongSelf.animatingExtraction
+                    
                     if let videoNode = videoNode {
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                         if !strongSelf.isExtracted && !strongSelf.animatingExtraction {
@@ -1575,7 +1581,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 } else {
                                     if item.pinned {
                                         videoNode.alpha = 0.0
-                                        strongSelf.avatarNode.alpha = 1.0
+                                        if canUpdateAvatarVisibility {
+                                            strongSelf.avatarNode.alpha = 1.0
+                                        }
                                     } else if strongSelf.videoReady {
                                         videoNode.alpha = 1.0
                                         strongSelf.avatarNode.alpha = 0.0
@@ -1584,7 +1592,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             } else {
                                 if item.pinned {
                                     videoNode.alpha = 0.0
-                                    strongSelf.avatarNode.alpha = 1.0
+                                    if canUpdateAvatarVisibility {
+                                        strongSelf.avatarNode.alpha = 1.0
+                                    }
                                 } else if strongSelf.videoReady {
                                     videoNode.alpha = 1.0
                                     strongSelf.avatarNode.alpha = 0.0
@@ -1602,7 +1612,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             videoNode.position = CGPoint(x: videoSize.width / 2.0, y: videoSize.height / 2.0)
                             videoNode.bounds = CGRect(origin: CGPoint(), size: videoSize)
                         }
-                    
+
                         if videoNodeUpdated {
                             strongSelf.videoReadyDelayed = false
                             strongSelf.videoReadyDisposable.set((videoNode.ready
@@ -1612,13 +1622,18 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                         strongSelf.videoReadyDelayed = true
                                     }
                                     strongSelf.videoReady = ready
-                                    if let videoNode = strongSelf.videoNode, ready && (strongSelf.item?.transparent != true) {
+                                    if let videoNode = strongSelf.videoNode, ready && !item.transparent {
                                         if strongSelf.videoReadyDelayed {
                                             Queue.mainQueue().after(0.15) {
-                                                switch item.style {
+                                                guard let currentItem = strongSelf.item else {
+                                                    return
+                                                }
+                                                switch currentItem.style {
                                                     case .list:
-                                                        if item.pinned {
-                                                            strongSelf.avatarNode.alpha = 1.0
+                                                        if currentItem.pinned {
+                                                            if canUpdateAvatarVisibility {
+                                                                strongSelf.avatarNode.alpha = 1.0
+                                                            }
                                                             videoNode.alpha = 0.0
                                                         } else {
                                                             strongSelf.avatarNode.alpha = 0.0
@@ -1627,8 +1642,10 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                                             videoNode.alpha = 1.0
                                                         }
                                                     case .tile:
-                                                        if item.pinned {
-                                                            strongSelf.avatarNode.alpha = 1.0
+                                                        if currentItem.pinned {
+                                                            if canUpdateAvatarVisibility {
+                                                                strongSelf.avatarNode.alpha = 1.0
+                                                            }
                                                             videoNode.alpha = 0.0
                                                         } else {
                                                             strongSelf.avatarNode.alpha = 0.0
@@ -1640,7 +1657,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                             }
                                         } else {
                                             if item.pinned {
-                                                strongSelf.avatarNode.alpha = 1.0
+                                                if canUpdateAvatarVisibility {
+                                                    strongSelf.avatarNode.alpha = 1.0
+                                                }
                                                 videoNode.alpha = 0.0
                                             } else {
                                                 strongSelf.avatarNode.alpha = 0.0

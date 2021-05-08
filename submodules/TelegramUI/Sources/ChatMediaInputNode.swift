@@ -1025,6 +1025,33 @@ final class ChatMediaInputNode: ChatInputNode {
                     let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect)
                 }
             })))
+            
+            if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+                var isScheduledMessages = false
+                if case .scheduledMessages = interfaceState.subject {
+                    isScheduledMessages = true
+                }
+                if !isScheduledMessages {
+                    if case let .peer(peerId) = interfaceState.chatLocation {
+                        if peerId != self?.context.account.peerId && peerId.namespace != Namespaces.Peer.SecretChat  {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
+
+                            })))
+                        }
+                    
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.default)
+
+                        })))
+                    }
+                }
+            }
+            
             if isSaved || isGifSaved {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
@@ -1098,13 +1125,34 @@ final class ChatMediaInputNode: ChatInputNode {
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {
-                                    var menuItems: [ContextMenuItem] = []
-                                    menuItems = [
-                                        .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                            f(.default)
-                                        
-//                                          let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
-                                            })),
+                                    var menuItems: [ContextMenuItem] = []                                    
+                                    if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+                                        var isScheduledMessages = false
+                                        if case .scheduledMessages = interfaceState.subject {
+                                            isScheduledMessages = true
+                                        }
+                                        if !isScheduledMessages {
+                                            if case let .peer(peerId) = interfaceState.chatLocation {
+                                                if peerId != self?.context.account.peerId && peerId.namespace != Namespaces.Peer.SecretChat  {
+                                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                                                    }, action: { _, f in
+                                                        f(.default)
+
+                                                    })))
+                                                }
+                                            
+                                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                                }, action: { _, f in
+                                                    f(.default)
+
+                                                })))
+                                            }
+                                        }
+                                    }
+                                    
+                                    menuItems.append(
                                         .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                             f(.default)
                                             
@@ -1115,8 +1163,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                 }
                                             }
-                                        })),
-                                        .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in
+                                        }))
+                                    )
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
                                         }, action: { _, f in
                                             f(.default)
@@ -1143,8 +1192,8 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }
                                                 }
                                             }
-                                        }))
-                                    ]
+                                    })))
+                                    
 
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
@@ -1185,12 +1234,33 @@ final class ChatMediaInputNode: ChatInputNode {
                                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [ContextMenuItem] = []
-                                        menuItems = [
-                                            .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                                f(.default)
-                                            
-    //                                          let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
-                                                })),
+                                        if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+                                            var isScheduledMessages = false
+                                            if case .scheduledMessages = interfaceState.subject {
+                                                isScheduledMessages = true
+                                            }
+                                            if !isScheduledMessages {
+                                                if case let .peer(peerId) = interfaceState.chatLocation {
+                                                    if peerId != self?.context.account.peerId && peerId.namespace != Namespaces.Peer.SecretChat  {
+                                                        menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                                                        }, action: { _, f in
+                                                            f(.default)
+
+                                                        })))
+                                                    }
+                                                
+                                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                                    }, action: { _, f in
+                                                        f(.default)
+
+                                                    })))
+                                                }
+                                            }
+                                        }
+                                        
+                                        menuItems.append(
                                             .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                                 f(.default)
                                                 
@@ -1201,7 +1271,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                     }
                                                 }
-                                            })),
+                                            }))
+                                        )
+                                        menuItems.append(
                                             .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in
                                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
                                             }, action: { _, f in
@@ -1230,7 +1302,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }
                                                 }
                                             }))
-                                        ]
+                                        )
                                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {
                                         return nil
