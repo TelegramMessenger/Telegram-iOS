@@ -65,7 +65,9 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
 
         Logger.shared.log("Autoremove", "starting isRemove: \(isRemove)")
 
-        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: isRemove ? 0 : 1)).start(next: { timeOffset, view in
+        let tag: UInt16 = isRemove ? 0 : 1
+
+        let disposable = combineLatest(timeOffset, postbox.timestampBasedMessageAttributesView(tag: tag)).start(next: { timeOffset, view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)]) in
                 return helper.update(view.head)
             }
@@ -111,6 +113,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                             })
                         }
                     } else {
+                        transaction.clearTimestampBasedAttribute(id: entry.messageId, tag: tag)
                         Logger.shared.log("Autoremove", "No message to autoremove for \(entry.messageId)")
                     }
                 })
