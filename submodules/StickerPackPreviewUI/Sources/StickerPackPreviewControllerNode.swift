@@ -12,6 +12,7 @@ import MergeLists
 import ActivityIndicator
 import TextFormat
 import AccountContext
+import ContextUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -204,28 +205,26 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self {
-                            var menuItems: [PeekControllerMenuItem] = []
+                            var menuItems: [ContextMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
-                                        if let strongSelf = self {
-                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                        } else {
-                                            return false
-                                        }
-                                    }))
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        f(.default)
+                                        
+//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
+                                    })))
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
-                                        if let strongSelf = self {
-                                            if isStarred {
-                                                let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                            } else {
-                                                let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                            }
+                                menuItems.append(.action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
+                                    if let strongSelf = self {
+                                        if isStarred {
+                                            let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
+                                        } else {
+                                            let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                         }
-                                    return true
-                                }))
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true }))
+                                    }
+                                })))
                             }
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {
@@ -237,7 +236,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 controller.visibilityUpdated = { [weak self] visible in
@@ -550,11 +549,17 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     func animateIn() {
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
         
-        let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        
+        let offset: CGFloat = 510.0        
         let dimPosition = self.dimNode.layer.position
-        self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+        let targetBounds = self.bounds
+        self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
+        self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
+        transition.animateView({
+            self.bounds = targetBounds
+            self.dimNode.position = dimPosition
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {

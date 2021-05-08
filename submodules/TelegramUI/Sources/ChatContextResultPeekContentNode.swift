@@ -9,13 +9,14 @@ import SwiftSignalKit
 import AVFoundation
 import PhotoResources
 import AppBundle
+import ContextUI
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account
     let contextResult: ChatContextResult
-    let menu: [PeekControllerMenuItem]
+    let menu: [ContextMenuItem]
     
-    init(account: Account, contextResult: ChatContextResult, menu: [PeekControllerMenuItem]) {
+    init(account: Account, contextResult: ChatContextResult, menu: [ContextMenuItem]) {
         self.account = account
         self.contextResult = contextResult
         self.menu = menu
@@ -25,11 +26,11 @@ final class ChatContextResultPeekContent: PeekControllerContent {
         return .contained
     }
     
-    func menuActivation() -> PeerkControllerMenuActivation {
+    func menuActivation() -> PeerControllerMenuActivation {
         return .drag
     }
     
-    func menuItems() -> [PeekControllerMenuItem] {
+    func menuItems() -> [ContextMenuItem] {
         return self.menu
     }
     

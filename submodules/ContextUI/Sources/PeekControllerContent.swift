@@ -1,21 +1,22 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
 
 public enum PeekControllerContentPresentation {
     case contained
     case freeform
 }
 
-public enum PeerkControllerMenuActivation {
+public enum PeerControllerMenuActivation {
     case drag
     case press
 }
 
 public protocol PeekControllerContent {
     func presentation() -> PeekControllerContentPresentation
-    func menuActivation() -> PeerkControllerMenuActivation
-    func menuItems() -> [PeekControllerMenuItem]
+    func menuActivation() -> PeerControllerMenuActivation
+    func menuItems() -> [ContextMenuItem]
     func node() -> PeekControllerContentNode & ASDisplayNode
     
     func topAccessoryNode() -> ASDisplayNode?

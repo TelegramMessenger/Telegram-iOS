@@ -3911,7 +3911,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
-    private func requestCall(isVideo: Bool, gesture: ContextGesture? = nil, contextController: ContextController? = nil, result: ((ContextMenuActionResult) -> Void)? = nil, backAction: ((ContextController) -> Void)? = nil) {
+    private func requestCall(isVideo: Bool, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil, result: ((ContextMenuActionResult) -> Void)? = nil, backAction: ((ContextControllerProtocol) -> Void)? = nil) {
         let peerId = self.peerId
         let requestCall: (PeerId?, CachedChannelData.ActiveCall?) -> Void = { [weak self] defaultJoinAsPeerId, activeCall in
             if let activeCall = activeCall {
@@ -4310,7 +4310,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         controller.push(statsController)
     }
     
-    private func openVoiceChatOptions(defaultJoinAsPeerId: PeerId?, gesture: ContextGesture? = nil, contextController: ContextController? = nil) {
+    private func openVoiceChatOptions(defaultJoinAsPeerId: PeerId?, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil) {
         let context = self.context
         let peerId = self.peerId
         let defaultJoinAsPeerId = defaultJoinAsPeerId ?? self.context.account.peerId
@@ -4392,7 +4392,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
     }
     
-    private func openVoiceChatDisplayAsPeerSelection(completion: @escaping (PeerId) -> Void, gesture: ContextGesture? = nil, contextController: ContextController? = nil, result: ((ContextMenuActionResult) -> Void)? = nil, backAction: ((ContextController) -> Void)? = nil) {
+    private func openVoiceChatDisplayAsPeerSelection(completion: @escaping (PeerId) -> Void, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil, result: ((ContextMenuActionResult) -> Void)? = nil, backAction: ((ContextControllerProtocol) -> Void)? = nil) {
         let dismissOnSelection = contextController == nil
         let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(context.account.peerId)
         |> map { peer in
@@ -4489,7 +4489,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
     }
     
-    private func openReport(user: Bool, contextController: ContextController?, backAction: ((ContextController) -> Void)?) {
+    private func openReport(user: Bool, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)?) {
         guard let controller = self.controller else {
             return
         }

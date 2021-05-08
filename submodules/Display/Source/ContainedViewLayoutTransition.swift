@@ -182,6 +182,39 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateFrameAsPositionAndBounds(layer: CALayer, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if layer.frame.equalTo(frame) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                layer.position = frame.center
+                layer.bounds = CGRect(origin: CGPoint(), size: frame.size)
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousPosition: CGPoint
+                let previousBounds: CGRect
+                if beginWithCurrentState, let presentation = layer.presentation() {
+                    previousPosition = presentation.position
+                    previousBounds = presentation.bounds
+                } else {
+                    previousPosition = layer.position
+                    previousBounds = layer.bounds
+                }
+                layer.position = frame.center
+                layer.bounds = CGRect(origin: CGPoint(), size: frame.size)
+                layer.animateFrame(from:
+                    CGRect(origin: CGPoint(x: previousPosition.x - previousBounds.width / 2.0, y: previousPosition.y - previousBounds.height / 2.0), size: previousBounds.size), to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            }
+        }
+    }
+    
     func updateFrameAdditive(node: ASDisplayNode, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)

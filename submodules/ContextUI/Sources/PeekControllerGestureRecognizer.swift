@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
+import Display
 
 private func traceDeceleratingScrollView(_ view: UIView, at point: CGPoint) -> Bool {
     if view.bounds.contains(point), let view = view as? UIScrollView, view.isDecelerating {
@@ -33,7 +34,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    private var menuActivation: PeerkControllerMenuActivation?
+    private var menuActivation: PeerControllerMenuActivation?
     private weak var presentedController: PeekController?
     
     public init(contentAtPoint: @escaping (CGPoint) -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>?, present: @escaping (PeekControllerContent, ASDisplayNode) -> ViewController?, updateContent: @escaping (PeekControllerContent?) -> Void = { _ in }, activateBySingleTap: Bool = false) {
@@ -105,8 +106,8 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                     (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
                 }
                 self.menuActivation = nil
-                self.presentedController = nil
-                self.state = .ended
+//                self.presentedController = nil
+//                self.state = .ended
             }
         }
     }
@@ -136,10 +137,8 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
             }
             self.state = .ended
         } else {
-            let velocity = self.velocity(in: self.view)
-            
-            if let presentedController = self.presentedController, presentedController.isNodeLoaded {
-                (presentedController.displayNode as? PeekControllerNode)?.endDraggingWithVelocity(velocity.y)
+            if let presentedController = self.presentedController, presentedController.isNodeLoaded, let location = touches.first?.location(in: presentedController.view) {
+                (presentedController.displayNode as? PeekControllerNode)?.endDragging(location)
                 self.presentedController = nil
                 self.menuActivation = nil
             }
@@ -172,7 +171,12 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
         
         if let touch = touches.first, let initialTapLocation = self.tapLocation {
             let touchLocation = touch.location(in: self.view)
-            if let menuActivation = self.menuActivation, let presentedController = self.presentedController {
+            if let presentedController = self.presentedController, self.menuActivation == nil {
+                if presentedController.isNodeLoaded {
+                    let touchLocation = touch.location(in: presentedController.view)
+                    (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(touchLocation)
+                }
+            } else if let menuActivation = self.menuActivation, let presentedController = self.presentedController {
                 switch menuActivation {
                     case .drag:
                         var offset = touchLocation.y - initialTapLocation.y
@@ -181,7 +185,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                         offset = (-((1.0 - (1.0 / (((delta) * 0.55 / (factor)) + 1.0))) * factor)) * (offset < 0.0 ? 1.0 : -1.0)
                         
                         if presentedController.isNodeLoaded {
-                            (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(offset)
+//                            (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(offset)
                         }
                     case .press:
                         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
