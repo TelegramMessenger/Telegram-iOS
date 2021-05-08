@@ -68,6 +68,7 @@ final class VoiceChatCameraPreviewController: ViewController {
         }
         self.controllerNode.switchCamera = { [weak self] in
             self?.switchCamera()
+            self?.cameraNode.flip(withBackground: true)
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -392,7 +393,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.previewContainerNode, frame: CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize))
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
-        self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
+        self.cameraNode.updateLayout(size: previewSize, scale: false, isLandscape: false, transition: .immediate)
         
         let switchCameraFrame = CGRect(x: previewSize.width - 48.0 - 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.switchCameraButton, frame: switchCameraFrame)

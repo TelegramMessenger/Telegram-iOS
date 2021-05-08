@@ -76,7 +76,7 @@ final class GroupVideoNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
     
-    private var validLayout: (CGSize, Bool)?
+    private var validLayout: (CGSize, Bool, Bool)?
     
     var tapped: (() -> Void)?
     
@@ -104,8 +104,8 @@ final class GroupVideoNode: ASDisplayNode {
                     return
                 }
                 strongSelf.readyPromise.set(true)
-                if let (size, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
+                if let (size, scale, isLandscape) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, scale: scale, isLandscape: isLandscape, transition: .immediate)
                 }
             }
         })
@@ -115,8 +115,8 @@ final class GroupVideoNode: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                if let (size, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
+                if let (size, scale, isLandscape) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, scale: scale, isLandscape: isLandscape, transition: .immediate)
                 }
             }
         })
@@ -176,8 +176,8 @@ final class GroupVideoNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, isLandscape)
+    func updateLayout(size: CGSize, scale: Bool = true, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, scale, isLandscape)
         transition.updateFrame(view: self.videoViewContainer, frame: CGRect(origin: CGPoint(), size: size))
         
         let orientation = self.videoView.getOrientation()
@@ -225,12 +225,12 @@ final class GroupVideoNode: ASDisplayNode {
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
         
-        var videoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
+        var videoSize = scale ? rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0)) : rotatedVideoFrame.size
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
         transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
         
-        let scale = rotatedVideoFrame.width / videoSize.width
-        transition.updateTransformScale(layer: self.videoView.view.layer, scale: scale)
+        let transformScale = rotatedVideoFrame.width / videoSize.width
+        transition.updateTransformScale(layer: self.videoView.view.layer, scale: transformScale)
         
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
