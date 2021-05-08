@@ -88,7 +88,6 @@ final class GroupVideoNode: ASDisplayNode {
     init(videoView: PresentationCallVideoView) {
         self.videoViewContainer = UIView()
         self.videoView = videoView
-        self.videoView.view.alpha = 0.99
         
         super.init()
         
@@ -179,7 +178,7 @@ final class GroupVideoNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, scale: Bool = true, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, scale, isLandscape)
-        transition.updateFrame(view: self.videoViewContainer, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: CGRect(origin: CGPoint(), size: size))
         
         let orientation = self.videoView.getOrientation()
         var aspect = self.videoView.getAspect()
@@ -212,20 +211,22 @@ final class GroupVideoNode: ASDisplayNode {
         var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
         
         var isLandscape = isLandscape
-        if case .rotation0 = orientation {
-        } else {
-            isLandscape = false
-        }
+//        if case .rotation0 = orientation {
+//        } else {
+//            isLandscape = false
+//        }
         
         var originalVideoSize = rotatedVideoSize
+        var containerSize = size
         if switchOrientation {
             rotatedVideoSize = CGSize(width: rotatedVideoSize.height, height: rotatedVideoSize.width)
+            containerSize = CGSize(width: containerSize.height, height: containerSize.width)
         }
         
         if isLandscape {
-            rotatedVideoSize = rotatedVideoSize.aspectFitted(size)
+            rotatedVideoSize = rotatedVideoSize.aspectFitted(containerSize)
         } else {
-            rotatedVideoSize = rotatedVideoSize.aspectFilled(size)
+            rotatedVideoSize = rotatedVideoSize.aspectFilled(containerSize)
         }
 
         var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
@@ -245,8 +246,7 @@ final class GroupVideoNode: ASDisplayNode {
         transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
         
         var transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
-        transition.updateTransformScale(layer: self.videoView.view.layer, scale: transformScale)
-        self.videoView.view.transform = CGAffineTransform(scaleX: transformScale, y: transformScale)
+        transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
@@ -257,7 +257,7 @@ final class GroupVideoNode: ASDisplayNode {
         
         // TODO: properly fix the issue
         // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
-//        self.videoView.view.alpha = 0.99
+        self.videoView.view.alpha = 0.995
     }
 }
 
