@@ -301,7 +301,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
-    let gradientBackgroundNode: GradientBackgroundNode?
+    var gradientBackgroundNode: GradientBackgroundNode?
     let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
@@ -319,7 +319,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var searchNavigationNode: ChatSearchNavigationContentNode?
     
-    private let inputPanelBackgroundNode: ASDisplayNode
+    private let inputPanelBackgroundNode: NavigationBackgroundNode
     private let inputPanelBackgroundSeparatorNode: ASDisplayNode
     private var plainInputSeparatorAlpha: CGFloat?
     private var usePlainInputSeparator: Bool
@@ -471,7 +471,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode.displaysAsynchronously = false
 
         if chatPresentationInterfaceState.chatWallpaper.isBuiltin {
-            self.gradientBackgroundNode = GradientBackgroundNode()
+            self.gradientBackgroundNode = createGradientBackgroundNode()
         } else {
             self.gradientBackgroundNode = nil
         }
@@ -489,17 +489,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.reactionContainerNode = ReactionSelectionParentNode(account: context.account, theme: chatPresentationInterfaceState.theme)
         
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
-        
-        self.inputPanelBackgroundNode = ASDisplayNode()
+
         if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-            self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+            self.inputPanelBackgroundNode = NavigationBackgroundNode(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper)
             self.usePlainInputSeparator = true
         } else {
-            self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+            self.inputPanelBackgroundNode = NavigationBackgroundNode(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor)
             self.usePlainInputSeparator = false
             self.plainInputSeparatorAlpha = nil
         }
-        self.inputPanelBackgroundNode.isLayerBacked = true
+        self.inputPanelBackgroundNode.isUserInteractionEnabled = false
         
         self.inputPanelBackgroundSeparatorNode = ASDisplayNode()
         self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
@@ -1247,7 +1246,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
             } else {
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - insets.bottom - 120.0, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
             }
         } else {
@@ -1586,7 +1585,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var apparentInputPanelFrame = inputPanelFrame
-        var apparentSecondaryInputPanelFrame = secondaryInputPanelFrame
+        let apparentSecondaryInputPanelFrame = secondaryInputPanelFrame
         var apparentInputBackgroundFrame = inputBackgroundFrame
         var apparentNavigateButtonsFrame = navigateButtonsFrame
         if case let .media(_, maybeExpanded) = self.chatPresentationInterfaceState.inputMode, let expanded = maybeExpanded, case .search = expanded, let inputPanelFrame = inputPanelFrame {
@@ -1603,6 +1602,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
+        self.inputPanelBackgroundNode.update(size: apparentInputBackgroundFrame.size, transition: transition)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         
@@ -1980,6 +1980,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.backgroundNode.imageContentMode = .scaleAspectFill
                 }
                 self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
+
+                if chatPresentationInterfaceState.chatWallpaper.isBuiltin {
+                    if self.gradientBackgroundNode == nil {
+                        let gradientBackgroundNode = createGradientBackgroundNode()
+                        self.gradientBackgroundNode = gradientBackgroundNode
+                        self.backgroundNode.supernode?.insertSubnode(gradientBackgroundNode, aboveSubnode: self.backgroundNode)
+                    }
+                } else if let gradientBackgroundNode = self.gradientBackgroundNode {
+                    self.gradientBackgroundNode = nil
+                    gradientBackgroundNode.removeFromSupernode()
+                }
             }
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
@@ -1992,10 +2003,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if themeUpdated {
                 if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-                    self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
                     self.usePlainInputSeparator = true
                 } else {
-                    self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
                     self.usePlainInputSeparator = false
                     self.plainInputSeparatorAlpha = nil
                 }
@@ -2690,6 +2701,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
+                            #if DEBUG
+                            webpage = nil
+                            #endif
                             messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
                         }
                     }
@@ -2946,6 +2960,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var shouldAnimateMessageTransition: Bool {
         switch self.historyNode.visibleContentOffset() {
         case let .known(value) where value < 20.0:
+            return true
+        case .none:
             return true
         default:
             return false

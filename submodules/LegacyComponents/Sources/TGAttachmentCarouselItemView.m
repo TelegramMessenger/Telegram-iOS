@@ -270,7 +270,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 if (strongSelf->_selectionContext.allowGrouping)
                     [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-                strongSelf.sendPressed(nil, false, false, 0);
+                strongSelf.sendPressed(nil, false, false, 0, false);
             }
         }];
         [_sendMediaItemView setHidden:true animated:false];
@@ -282,7 +282,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf != nil && strongSelf.sendPressed != nil)
-                    strongSelf.sendPressed(nil, true, false, 0);
+                    strongSelf.sendPressed(nil, true, false, 0, false);
             }];
             _sendFileItemView.requiresDivider = false;
             [_sendFileItemView setHidden:true animated:false];
@@ -807,7 +807,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (strongSelf->_selectionContext.allowGrouping)
                 [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime);
+            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime, true);
         }
     };
     

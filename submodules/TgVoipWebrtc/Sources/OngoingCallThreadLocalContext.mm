@@ -20,13 +20,13 @@
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
+#import "platform/darwin/CustomExternalCapturer.h"
 #endif
 
 #import "group/GroupInstanceImpl.h"
 #import "group/GroupInstanceCustomImpl.h"
 
 #import "VideoCaptureInterfaceImpl.h"
-#import "platform/darwin/CustomExternalCapturer.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
@@ -240,6 +240,13 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 
 - (std::shared_ptr<tgcalls::VideoCaptureInterface>)getInterface {
     return _interface;
+}
+
+-(void)setOnFatalError:(dispatch_block_t _Nullable)onError {
+#if TARGET_OS_IOS
+#else
+    _interface->setOnFatalError(onError);
+#endif
 }
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
@@ -964,12 +971,9 @@ private:
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
         videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
-        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
 
-        int minOutgoingVideoBitrateKbit = 100;
-#if DEBUG
-        //minOutgoingVideoBitrateKbit = 900;
-#endif
+        int minOutgoingVideoBitrateKbit = 500;
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){

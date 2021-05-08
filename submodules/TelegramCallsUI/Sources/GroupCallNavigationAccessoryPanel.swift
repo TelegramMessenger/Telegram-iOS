@@ -130,7 +130,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let avatarsNode: AnimatedAvatarSetNode
     private var audioLevelGenerators: [PeerId: FakeAudioLevelGenerator] = [:]
     private var audioLevelGeneratorTimer: SwiftSignalKit.Timer?
-    
+
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     
     private let membersDisposable = MetaDisposable()
@@ -174,13 +175,17 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
+
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
         super.init()
-        
+
         self.addSubnode(self.contentNode)
+
+        self.contentNode.addSubnode(self.backgroundNode)
         
         self.tapButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -280,7 +285,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
         
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.color = self.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isScheduled ? .white : presentationData.theme.chat.inputPanel.actionControlForegroundColor)
@@ -630,6 +635,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.micButton.isHidden = self.currentData?.groupCall == nil
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: panelHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
     }
     
     public func animateIn(_ transition: ContainedViewLayoutTransition) {

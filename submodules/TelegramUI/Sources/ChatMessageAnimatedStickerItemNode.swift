@@ -511,7 +511,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                animationNode.visibility = isPlaying && !alreadySeen
+                animationNode.visibility = isPlaying
                 
                 if self.didSetUpAnimationNode && alreadySeen {
                     if let emojiFile = self.emojiFile, emojiFile.resource is LocalFileReferenceMediaResource {
@@ -546,7 +546,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             fitzModifier = EmojiFitzModifier(emoji: fitz)
                         }
                     }
-                    
+
                     if let file = file {
                         let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                         let fittedSize = isEmoji ? dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))

@@ -115,6 +115,69 @@ enum NavigationPreviousAction: Equatable {
     }
 }
 
+public final class NavigationBackgroundNode: ASDisplayNode {
+    public var color: UIColor {
+        didSet {
+            if !self.color.isEqual(oldValue) {
+                self.backgroundNode.backgroundColor = self.color
+                self.updateBackgroundBlur()
+            }
+        }
+    }
+
+    private var effectView: UIVisualEffectView?
+    private let backgroundNode: ASDisplayNode
+
+    public init(color: UIColor) {
+        self.color = color
+
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = self.color
+
+        super.init()
+
+        self.addSubnode(self.backgroundNode)
+
+        self.updateBackgroundBlur()
+    }
+
+    private func updateBackgroundBlur() {
+        if self.color.alpha > 0.1 && self.color.alpha < 0.95 {
+            self.effectView?.removeFromSuperview()
+            self.effectView = nil
+
+            if self.color.lightness > 0.6 {
+                if #available(iOS 13.0, *) {
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
+                } else {
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+                }
+            } else {
+                if #available(iOS 13.0, *) {
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+                } else {
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+                }
+            }
+
+            if let effectView = self.effectView {
+                effectView.frame = self.bounds
+                self.view.insertSubview(effectView, at: 0)
+            }
+        } else if let effectView = self.effectView {
+            self.effectView = nil
+            effectView.removeFromSuperview()
+        }
+    }
+
+    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        if let effectView = self.effectView {
+            transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
+        }
+    }
+}
+
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
@@ -635,7 +698,8 @@ open class NavigationBar: ASDisplayNode {
         }
         self.updateAccessibilityElements()
     }
-    
+
+    private let backgroundNode: NavigationBackgroundNode
     public let backButtonNode: NavigationButtonNode
     public let badgeNode: NavigationBarBadgeNode
     public let backButtonArrow: ASImageNode
@@ -750,13 +814,17 @@ open class NavigationBar: ASDisplayNode {
             self.titleNode.accessibilityLabel = title
         }
         self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
+
+        self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.backgroundColor)
         
         super.init()
-        
+
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.buttonsContainerNode)
         self.addSubnode(self.clippingNode)
-        
-        self.backgroundColor = self.presentationData.theme.backgroundColor
+
+        self.backgroundColor = nil
+        self.isOpaque = false
         
         self.stripeNode.isLayerBacked = true
         self.stripeNode.displaysAsynchronously = false
@@ -811,7 +879,7 @@ open class NavigationBar: ASDisplayNode {
         if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
             self.presentationData = presentationData
             
-            self.backgroundColor = self.presentationData.theme.backgroundColor
+            self.backgroundNode.color = self.presentationData.theme.backgroundColor
             
             self.backButtonNode.color = self.presentationData.theme.buttonColor
             self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
@@ -853,6 +921,9 @@ open class NavigationBar: ASDisplayNode {
         }
         
         self.validLayout = (size, defaultHeight, additionalHeight, leftInset, rightInset, appearsHidden)
+
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.backgroundNode.update(size: size, transition: transition)
         
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
         

@@ -305,7 +305,7 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
 }
 
 final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     
     private let closeButton: HighlightableButtonNode
@@ -317,8 +317,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var peerNearbyInfoNode: ChatInfoTitlePanelPeerNearbyInfoNode?
     
     override init() {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -340,8 +339,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
-            self.backgroundNode.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+            self.backgroundNode.color = interfaceState.theme.rootController.navigationBar.backgroundColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         var panelHeight: CGFloat = 40.0
@@ -439,6 +438,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         

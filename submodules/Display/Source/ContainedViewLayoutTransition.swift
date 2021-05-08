@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-public enum ContainedViewLayoutTransitionCurve {
+public enum ContainedViewLayoutTransitionCurve: Equatable, Hashable {
     case linear
     case easeInOut
     case spring
@@ -10,6 +10,21 @@ public enum ContainedViewLayoutTransitionCurve {
     
     public static var slide: ContainedViewLayoutTransitionCurve {
         return .custom(0.33, 0.52, 0.25, 0.99)
+    }
+}
+
+public extension ContainedViewLayoutTransitionCurve {
+    func solve(at offset: CGFloat) -> CGFloat {
+        switch self {
+        case .linear:
+            return offset
+        case .easeInOut:
+            return listViewAnimationCurveEaseInOut(offset)
+        case .spring:
+            return listViewAnimationCurveSystem(offset)
+        case let .custom(c1x, c1y, c2x, c2y):
+            return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
+        }
     }
 }
 

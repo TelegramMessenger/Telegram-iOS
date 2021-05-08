@@ -29,7 +29,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let tapAction: () -> Void
     private let close: () -> Void
     
-    private let contentNode: ASDisplayNode
+    private let contentNode: NavigationBackgroundNode
     
     private let iconNode: ASImageNode
     private let wavesNode: LiveLocationWavesNode
@@ -50,8 +50,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.tapAction = tapAction
         self.close = close
         
-        self.contentNode = ASDisplayNode()
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+        self.contentNode = NavigationBackgroundNode(color: self.theme.rootController.navigationBar.backgroundColor)
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -101,7 +100,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+        self.contentNode.color = self.theme.rootController.navigationBar.backgroundColor
         self.iconNode.image = PresentationResourcesRootController.navigationLiveLocationIcon(self.theme)
         
         self.wavesNode.color = self.theme.rootController.navigationBar.accentTextColor
@@ -113,6 +112,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.validLayout = (size, leftInset, rightInset)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.contentNode.update(size: self.contentNode.bounds.size, transition: transition)
         
         let titleString = NSAttributedString(string: self.strings.Conversation_LiveLocation, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
         var subtitleString: NSAttributedString?

@@ -496,8 +496,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
         self.mainContextSourceNode.contentNode.addSubnode(self.backgroundNode)
-        self.mainContextSourceNode.contentNode.addSubnode(self.contentContainersWrapperNode)
         self.mainContextSourceNode.contentNode.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.contentContainersWrapperNode)
         self.addSubnode(self.messageAccessibilityArea)
         
         self.messageAccessibilityArea.activate = { [weak self] in
@@ -2307,6 +2307,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: transition)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
         strongSelf.shadowNode.setType(type: backgroundType, hasWallpaper: hasWallpaper, graphics: graphics)
+        if case .none = backgroundType {
+            strongSelf.clippingNode.clipsToBounds = false
+        } else {
+            strongSelf.clippingNode.clipsToBounds = true
+        }
         
         strongSelf.backgroundType = backgroundType
         
@@ -2631,7 +2636,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         containerSupernode = strongSelf.clippingNode
                     } else {
                         contextSourceNode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.mainContextSourceNode
-                        containerSupernode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.clippingNode
+                        containerSupernode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode.contentNode ?? strongSelf.clippingNode
                     }
                     containerSupernode.addSubnode(contentNode)
                     
