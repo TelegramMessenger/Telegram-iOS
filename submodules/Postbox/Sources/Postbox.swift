@@ -1096,6 +1096,11 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox?.searchPeers(query: query) ?? []
     }
+
+    public func clearTimestampBasedAttribute(id: MessageId, tag: UInt16) {
+        assert(!self.disposed)
+        self.postbox?.clearTimestampBasedAttribute(id: id, tag: tag)
+    }
 }
 
 public enum PostboxResult {
@@ -3564,6 +3569,10 @@ public final class Postbox {
                 self.addHole(peerId: peerId, namespace: holeNamespace, space: .everywhere, range: 1 ... Int32.max - 1)
             }
         }
+    }
+
+    fileprivate func clearTimestampBasedAttribute(id: MessageId, tag: UInt16) {
+        self.timestampBasedMessageAttributesTable.remove(tag: tag, id: id, operations: &self.currentTimestampBasedMessageAttributesOperations)
     }
     
     fileprivate func reindexUnreadCounters() {
