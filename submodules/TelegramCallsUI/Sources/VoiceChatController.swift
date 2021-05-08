@@ -887,7 +887,6 @@ public final class VoiceChatController: ViewController {
                         let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
                         
                         return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, ssrc: peerEntry.ssrc, presence: nil, text: text, expandedText: expandedText, icon: icon, style: peerEntry.style, enabled: true, transparent: transparent, pinned: peerEntry.pinned, selectable: true, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, getVideo: {
-                            return nil
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
                                 return interaction.getPeerVideo(endpointId, peerEntry.style != .list)
                             } else {
