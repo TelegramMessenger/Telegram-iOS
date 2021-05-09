@@ -334,8 +334,8 @@ associated_domains_fragment = "" if telegram_bundle_id not in official_bundle_id
 <array>
     <string>applinks:telegram.me</string>
     <string>applinks:t.me</string>
-    <strings>applinks:nicegram.app</strings>
-    <strings>applinks:yfqcuhfv.xyz</strings>
+    <string>applinks:nicegram.app</string>
+    <string>applinks:yfqcuhfv.xyz</string>
 </array>
 """
 
