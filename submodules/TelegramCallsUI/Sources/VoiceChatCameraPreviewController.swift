@@ -204,7 +204,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.switchCameraIconNode = ASImageNode()
         self.switchCameraIconNode.displaysAsynchronously = false
-        self.switchCameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSwitchCameraButton"), color: .white)
+        self.switchCameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/SwitchCameraIcon"), color: .white)
         self.switchCameraIconNode.contentMode = .center
         
         super.init()
