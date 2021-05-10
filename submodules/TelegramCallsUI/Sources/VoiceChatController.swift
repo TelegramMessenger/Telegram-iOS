@@ -134,8 +134,8 @@ final class GroupVideoNode: ASDisplayNode {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView()
                 self.effectView = effectView
-                effectView.frame = self.videoViewContainer.bounds
-                self.videoViewContainer.addSubview(effectView)
+                effectView.frame = self.bounds
+                self.view.addSubview(effectView)
             }
             if animated {
                 UIView.animate(withDuration: 0.3, animations: {
@@ -239,7 +239,7 @@ final class GroupVideoNode: ASDisplayNode {
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
 
         if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: self.videoViewContainer.bounds)
+            transition.updateFrame(view: effectView, frame: self.bounds)
         }
         
         // TODO: properly fix the issue
@@ -810,14 +810,18 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                         let yourText: String
-                        if (peerEntry.about?.isEmpty ?? true) && peer.smallProfileImage == nil {
-                            yourText = presentationData.strings.VoiceChat_TapToAddPhotoOrBio
-                        } else if peer.smallProfileImage == nil {
-                            yourText = presentationData.strings.VoiceChat_TapToAddPhoto
-                        } else if (peerEntry.about?.isEmpty ?? true) {
-                            yourText = presentationData.strings.VoiceChat_TapToAddBio
-                        } else {
+                        if transparent {
                             yourText = presentationData.strings.VoiceChat_You
+                        } else {
+                            if (peerEntry.about?.isEmpty ?? true) && peer.smallProfileImage == nil {
+                                yourText = presentationData.strings.VoiceChat_TapToAddPhotoOrBio
+                            } else if peer.smallProfileImage == nil {
+                                yourText = presentationData.strings.VoiceChat_TapToAddPhoto
+                            } else if (peerEntry.about?.isEmpty ?? true) {
+                                yourText = presentationData.strings.VoiceChat_TapToAddBio
+                            } else {
+                                yourText = presentationData.strings.VoiceChat_You
+                            }
                         }
                         switch state {
                         case .listening:
@@ -3445,6 +3449,13 @@ public final class VoiceChatController: ViewController {
         
         @objc private func switchCameraPressed() {
             self.call.switchVideoCamera()
+            
+            let springDuration: Double = 0.7
+            let springDamping: CGFloat = 100.0
+            self.switchCameraButton.isUserInteractionEnabled = false
+            self.switchCameraButton.layer.animateSpring(from: 0.0 as NSNumber, to: CGFloat.pi as NSNumber, keyPath: "transform.rotation.z", duration: springDuration, damping: springDamping, completion: { [weak self] _ in
+                self?.switchCameraButton.isUserInteractionEnabled = true
+            })
         }
         
         private var isLandscape: Bool {
@@ -3953,6 +3964,10 @@ public final class VoiceChatController: ViewController {
                 if case .fullscreen = effectiveDisplayMode {
                 } else {
                     effectiveDisplayMode = .fullscreen(controlsHidden: false)
+                }
+            } else if case .default = effectiveDisplayMode {
+                if self.hasMainVideo {
+                    self.tileListNode.isHidden = true
                 }
             }
             
@@ -4890,7 +4905,7 @@ public final class VoiceChatController: ViewController {
                 if let (layout, _) = self.validLayout, layout.size.width > layout.size.height, case .compact = layout.metrics.widthClass {
                     return false
                 }
-                if case .fullscreen = self.displayMode {
+                if self.isLandscape {
                     return false
                 }
                 

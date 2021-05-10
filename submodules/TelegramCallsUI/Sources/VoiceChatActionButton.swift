@@ -169,7 +169,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                         if small {
                             transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale * 0.9)
-                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale * 0.9)
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: smallIconScale * 0.9)
                         } else {
                             transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
                         }
@@ -182,7 +182,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                         if small {
                             transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale)
-                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale)
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: smallIconScale)
                         } else {
                             transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
                         }

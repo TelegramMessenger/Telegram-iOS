@@ -68,7 +68,7 @@ final class VoiceChatCameraPreviewController: ViewController {
         }
         self.controllerNode.switchCamera = { [weak self] in
             self?.switchCamera()
-            self?.cameraNode.flip(withBackground: true)
+            self?.cameraNode.flip(withBackground: false)
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -192,6 +192,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.cancelButton.title = self.presentationData.strings.Common_Cancel
         
         self.previewContainerNode = ASDisplayNode()
+        self.previewContainerNode.clipsToBounds = true
         self.previewContainerNode.cornerRadius = 11.0
         self.previewContainerNode.backgroundColor = .black
         
@@ -264,6 +265,13 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     
     @objc private func switchCameraPressed() {
         self.switchCamera?()
+        
+        let springDuration: Double = 0.7
+        let springDamping: CGFloat = 100.0
+        self.switchCameraButton.isUserInteractionEnabled = false
+        self.switchCameraIconNode.layer.animateSpring(from: 0.0 as NSNumber, to: CGFloat.pi as NSNumber, keyPath: "transform.rotation.z", duration: springDuration, damping: springDamping, completion: { [weak self] _ in
+            self?.switchCameraButton.isUserInteractionEnabled = true
+        })
     }
         
     func updatePresentationData(_ presentationData: PresentationData) {
