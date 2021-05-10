@@ -307,6 +307,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 self.highlightedActionNode = nil
                 highlightedActionNode.performAction()
             }
+        } else if self.actionsContainerNode.alpha.isZero {
+            self.requestDismiss()
         }
     }
     
