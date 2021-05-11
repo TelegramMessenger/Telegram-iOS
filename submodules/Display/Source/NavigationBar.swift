@@ -148,19 +148,30 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 
             if self.color.lightness > 0.6 {
                 if #available(iOS 13.0, *) {
-                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
                 } else {
                     self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
                 }
             } else {
                 if #available(iOS 13.0, *) {
-                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+                    self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
                 } else {
                     self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
                 }
             }
 
             if let effectView = self.effectView {
+                if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
+                    sublayer.filters = filters.filter { filter in
+                        guard let filter = filter as? NSObject else {
+                            return true
+                        }
+                        if String(describing: filter) != "gaussianBlur" {
+                            return false
+                        }
+                        return true
+                    }
+                }
                 effectView.frame = self.bounds
                 self.view.insertSubview(effectView, at: 0)
             }
@@ -171,9 +182,15 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     }
 
     public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
+        let contentFrame = CGRect(origin: CGPoint(), size: size)
+        transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
+        if let effectView = self.effectView, effectView.frame != contentFrame {
+            transition.updateFrame(layer: effectView.layer, frame: contentFrame)
+            if let sublayers = effectView.layer.sublayers {
+                for sublayer in sublayers {
+                    transition.updateFrame(layer: sublayer, frame: contentFrame)
+                }
+            }
         }
     }
 }
@@ -185,7 +202,7 @@ open class NavigationBar: ASDisplayNode {
     
     var presentationData: NavigationBarPresentationData
     
-    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, CGFloat, Bool)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, Bool)?
     private var requestedLayout: Bool = false
     var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -911,19 +928,22 @@ open class NavigationBar: ASDisplayNode {
         
         if let validLayout = self.validLayout, self.requestedLayout {
             self.requestedLayout = false
-            self.updateLayout(size: validLayout.0, defaultHeight: validLayout.1, additionalHeight: validLayout.2, leftInset: validLayout.3, rightInset: validLayout.4, appearsHidden: validLayout.5, transition: .immediate)
+            self.updateLayout(size: validLayout.0, defaultHeight: validLayout.1, additionalHeight: validLayout.2, additionalBackgroundHeight: validLayout.3, leftInset: validLayout.4, rightInset: validLayout.5, appearsHidden: validLayout.6, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, transition: ContainedViewLayoutTransition) {
         if self.layoutSuspended {
             return
         }
         
-        self.validLayout = (size, defaultHeight, additionalHeight, leftInset, rightInset, appearsHidden)
+        self.validLayout = (size, defaultHeight, additionalHeight, additionalBackgroundHeight, leftInset, rightInset, appearsHidden)
 
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.backgroundNode.update(size: size, transition: transition)
+        let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + additionalBackgroundHeight))
+        if self.backgroundNode.frame != backgroundFrame {
+            transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+            self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
+        }
         
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
         
@@ -1164,7 +1184,7 @@ open class NavigationBar: ASDisplayNode {
             let node = NavigationButtonNode()
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
-            if let (size, defaultHeight, _, _, _, _) = self.validLayout {
+            if let (size, defaultHeight, _, _, _, _, _) = self.validLayout {
                 let _ = node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }
@@ -1187,7 +1207,7 @@ open class NavigationBar: ASDisplayNode {
             }
             node.updateItems(items)
             node.color = accentColor
-            if let (size, defaultHeight, _, _, _, _) = self.validLayout {
+            if let (size, defaultHeight, _, _, _, _, _) = self.validLayout {
                 let _ = node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }

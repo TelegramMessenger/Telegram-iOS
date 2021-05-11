@@ -1,12 +1,12 @@
 import Postbox
 
 public struct WallpaperSettings: PostboxCoding, Equatable {
-    public let blur: Bool
-    public let motion: Bool
-    public let color: UInt32?
-    public let bottomColor: UInt32?
-    public let intensity: Int32?
-    public let rotation: Int32?
+    public var blur: Bool
+    public var motion: Bool
+    public var color: UInt32?
+    public var bottomColor: UInt32?
+    public var intensity: Int32?
+    public var rotation: Int32?
     
     public init(blur: Bool = false, motion: Bool = false, color: UInt32? = nil, bottomColor: UInt32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
         self.blur = blur

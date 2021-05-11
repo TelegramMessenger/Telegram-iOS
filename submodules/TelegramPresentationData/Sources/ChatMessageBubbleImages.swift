@@ -197,7 +197,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             borderWidth = UIScreenPixel + innerExtension
             borderOffset = -innerExtension / 2.0 + UIScreenPixel / 2.0
         } else {
-            borderWidth = UIScreenPixel * 2.0 + innerExtension
+            borderWidth = UIScreenPixel + innerExtension
             borderOffset = -innerExtension / 2.0 + UIScreenPixel * 2.0 / 2.0
         }
         context.setLineWidth(borderWidth)

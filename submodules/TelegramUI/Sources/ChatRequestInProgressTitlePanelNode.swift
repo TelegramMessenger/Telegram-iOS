@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import TelegramPresentationData
 
 final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     
@@ -13,8 +12,6 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var strings: PresentationStrings?
     
     override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
-
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -23,12 +20,11 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         super.init()
 
-        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         if interfaceState.strings !== self.strings {
             self.strings = interfaceState.strings
             
@@ -38,20 +34,17 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
-            self.backgroundNode.color = interfaceState.theme.rootController.navigationBar.backgroundColor
+
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         let panelHeight: CGFloat = 40.0
-
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: 100.0))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         
-        return panelHeight
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }
 }

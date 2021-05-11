@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import WallpaperResources
+import GradientBackground
 
 private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
@@ -36,6 +37,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     let buttonNode = HighlightTrackingButtonNode()
     let backgroundNode = ASDisplayNode()
     let imageNode = TransformImageNode()
+    private var gradientNode: GradientBackgroundNode?
     private let statusNode: RadialStatusNode
     
     var pressed: (() -> Void)?
@@ -71,6 +73,22 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+
+        if case .builtin = wallpaper {
+            if self.gradientNode == nil {
+                let gradientNode = createGradientBackgroundNode()
+                self.gradientNode = gradientNode
+                self.addSubnode(gradientNode)
+            }
+        } else if let gradientNode = self.gradientNode {
+            self.gradientNode = nil
+            gradientNode.removeFromSupernode()
+        }
+
+        if let gradientNode = self.gradientNode {
+            gradientNode.frame = CGRect(origin: CGPoint(), size: size)
+            gradientNode.updateLayout(size: size, transition: .immediate)
+        }
         
         let state: RadialStatusNodeState = selected ? .check(.white) : .none
         self.statusNode.transitionToState(state, animated: false, completion: {})

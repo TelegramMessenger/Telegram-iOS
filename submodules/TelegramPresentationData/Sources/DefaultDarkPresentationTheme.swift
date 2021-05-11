@@ -250,7 +250,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         controlColor: UIColor(rgb: 0x767676),
         accentTextColor: UIColor(rgb: 0xffffff),
-        backgroundColor: UIColor(rgb: 0x1a1a1a, alpha: 0.5),
+        backgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.7).withMultipliedBrightnessBy(1.1),
         separatorColor: UIColor(rgb: 0x3d3d40),
         badgeBackgroundColor:  UIColor(rgb: 0xffffff),
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),

@@ -12,6 +12,7 @@ import AccountContext
 import ChatListUI
 import WallpaperResources
 import LegacyComponents
+import WallpaperBackgroundNode
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in
@@ -110,10 +111,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.instantChatBackgroundNode.image != nil {
             self.ready.set(.single(true))
         }
-        if case .gradient = wallpaper {
-            self.instantChatBackgroundNode.imageContentMode = .scaleToFill
-        }
-        self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
+        self.instantChatBackgroundNode.update(wallpaper: wallpaper)
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()

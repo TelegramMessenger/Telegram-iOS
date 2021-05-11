@@ -18,6 +18,7 @@ import GalleryUI
 import LocalMediaResources
 import WallpaperResources
 import AppBundle
+import WallpaperBackgroundNode
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -90,6 +91,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
+    let nativeNode: WallpaperBackgroundNode
     private let statusNode: RadialStatusNode
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
@@ -122,6 +124,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
+        self.nativeNode = WallpaperBackgroundNode()
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
@@ -471,8 +474,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             if self.cropNode.supernode == nil {
                 self.imageNode.contentMode = .scaleAspectFill
                 self.wrapperNode.addSubnode(self.imageNode)
+                self.wrapperNode.addSubnode(self.nativeNode)
             } else {
                 self.imageNode.contentMode = .scaleToFill
+            }
+
+            switch entry {
+            case let .wallpaper(wallpaper, _):
+                if case .builtin = wallpaper {
+                    self.nativeNode.isHidden = false
+                    self.nativeNode.update(wallpaper: wallpaper)
+                } else {
+                    self.nativeNode.isHidden = true
+                }
+            default:
+                self.nativeNode.isHidden = true
             }
             
             self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
@@ -660,6 +676,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {
+        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case .builtin = wallpaper {
+            return
+        }
+
         if enabled {
             let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
             horizontal.minimumRelativeValue = motionAmount
@@ -890,6 +910,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if self.cropNode.supernode == nil {
             self.imageNode.frame = self.wrapperNode.bounds
+            self.nativeNode.frame = self.wrapperNode.bounds
+            self.nativeNode.updateLayout(size: self.nativeNode.bounds.size, transition: .immediate)
             self.blurredNode.frame = self.imageNode.frame
         } else {
             self.cropNode.frame = self.wrapperNode.bounds

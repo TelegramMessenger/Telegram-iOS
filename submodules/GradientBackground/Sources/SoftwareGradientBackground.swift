@@ -3,6 +3,17 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
+private func shiftArray(array: [CGPoint], offset: Int) -> [CGPoint] {
+    var newArray = array
+    var offset = offset
+    while offset > 0 {
+        let element = newArray.removeFirst()
+        newArray.append(element)
+        offset -= 1
+    }
+    return newArray
+}
+
 private func gatherPositions(_ list: [CGPoint]) -> [CGPoint] {
     var result: [CGPoint] = []
     for i in 0 ..< list.count / 2 {

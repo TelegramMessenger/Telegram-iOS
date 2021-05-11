@@ -373,8 +373,12 @@ public enum TabBarItemContextActionType {
     deinit {
         
     }
+
+    open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.applyNavigationBarLayout(layout, additionalBackgroundHeight: 0.0, transition: transition)
+    }
     
-    private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, additionalBackgroundHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
         if self._presentedInModal {
@@ -406,7 +410,7 @@ public enum TabBarItemContextActionType {
             if let _ = navigationBar.contentNode, let _ = navigationBar.secondaryContentNode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, additionalHeight: 0.0, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, additionalHeight: 0.0, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")

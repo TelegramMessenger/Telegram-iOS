@@ -500,7 +500,12 @@ public class WallpaperGalleryController: ViewController {
                                         applyWallpaper(wallpaper)
                                     })
                                 } else {
-                                    applyWallpaper(wallpaper)
+                                    var updatedWallpaper = wallpaper
+                                    if var settings = wallpaper.settings {
+                                        settings.motion = options.contains(.motion)
+                                        updatedWallpaper = updatedWallpaper.withUpdatedSettings(settings)
+                                    }
+                                    applyWallpaper(updatedWallpaper)
                                 }
                             default:
                                 break

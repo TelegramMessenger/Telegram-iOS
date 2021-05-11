@@ -16,6 +16,7 @@ import UrlEscaping
 import StickerResources
 import SaveToCameraRoll
 import TelegramStringFormatting
+import WallpaperBackgroundNode
 
 public struct ShareControllerAction {
     let title: String

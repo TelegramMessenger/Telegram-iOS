@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import WallpaperBackgroundNode
 
 struct ChatPreviewMessageItem: Equatable {
     static func == (lhs: ChatPreviewMessageItem, rhs: ChatPreviewMessageItem) -> Bool {
@@ -95,7 +96,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
 }
 
 class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: WallpaperBackgroundNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
@@ -109,11 +110,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     private let disposable = MetaDisposable()
     
     init() {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.contentMode = .scaleAspectFill
+        self.backgroundNode = WallpaperBackgroundNode()
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -287,6 +284,8 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
+                    strongSelf.backgroundNode.update(wallpaper: item.wallpaper)
+                    strongSelf.backgroundNode.updateLayout(size: strongSelf.backgroundNode.bounds.size, transition: .immediate)
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))

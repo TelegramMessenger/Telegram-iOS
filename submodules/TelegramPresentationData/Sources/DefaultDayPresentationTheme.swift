@@ -337,18 +337,6 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x46739e), bottomColor: UIColor(rgb: 0x2a5982)),
         buttonColor: .clear
     )
-     
-    let rootTabBar = PresentationThemeRootTabBar(
-        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-        separatorColor: UIColor(rgb: 0xa3a3a3),
-        iconColor: UIColor(rgb: 0x959595),
-        selectedIconColor: UIColor(rgb: 0x007ee5),
-        textColor: UIColor(rgb: 0x959595),
-        selectedTextColor: UIColor(rgb: 0x007ee5),
-        badgeBackgroundColor: UIColor(rgb: 0xff3b30),
-        badgeStrokeColor: UIColor(rgb: 0xff3b30),
-        badgeTextColor: UIColor(rgb: 0xffffff)
-    )
     
     let rootNavigationBar = PresentationThemeRootNavigationBar(
         buttonColor: UIColor(rgb: 0x007ee5),
@@ -357,7 +345,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
-        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
+        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.75),
         separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
@@ -368,6 +356,18 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         segmentedDividerColor: UIColor(rgb: 0xd6d6dc),
         clearButtonBackgroundColor: UIColor(rgb: 0xE3E3E3, alpha: 0.78),
         clearButtonForegroundColor: UIColor(rgb: 0x7f7f7f)
+    )
+
+    let rootTabBar = PresentationThemeRootTabBar(
+        backgroundColor: rootNavigationBar.backgroundColor,
+        separatorColor: UIColor(rgb: 0xa3a3a3),
+        iconColor: UIColor(rgb: 0x959595),
+        selectedIconColor: UIColor(rgb: 0x007ee5),
+        textColor: UIColor(rgb: 0x959595),
+        selectedTextColor: UIColor(rgb: 0x007ee5),
+        badgeBackgroundColor: UIColor(rgb: 0xff3b30),
+        badgeStrokeColor: UIColor(rgb: 0xff3b30),
+        badgeTextColor: UIColor(rgb: 0xffffff)
     )
     
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
@@ -497,7 +497,12 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
-    let bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
+    let bubbleStrokeColor: UIColor
+    if day {
+        bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
+    } else {
+        bubbleStrokeColor = UIColor(white: 0.0, alpha: 0.2)
+    }
 
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
@@ -655,8 +660,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let inputPanel = PresentationThemeChatInputPanel(
-        panelBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5),
+        panelBackgroundColor: rootNavigationBar.backgroundColor,
+        panelBackgroundColorNoWallpaper: rootNavigationBar.backgroundColor,
         panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: UIColor(rgb: 0x007ee5),
         panelControlColor: UIColor(rgb: 0x858e99),

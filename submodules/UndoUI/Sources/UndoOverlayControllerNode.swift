@@ -806,9 +806,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     override func didLoad() {
         super.didLoad()
-        if self.panelNode.backgroundColor == .clear {
-            self.panelNode.view.addSubview(self.effectView)
-        }
+        
+        self.panelNode.view.addSubview(self.effectView)
     }
     
     @objc private func buttonPressed() {
