@@ -1266,7 +1266,9 @@ webrtc_sources = [
     "modules/video_coding/codecs/h264/h264.cc",
     "modules/video_coding/codecs/h264/h264_color_space.cc",
     "modules/video_coding/codecs/h264/h264_decoder_impl.cc",
+    "modules/video_coding/codecs/h264/h264_decoder_impl.h",
     "modules/video_coding/codecs/h264/h264_encoder_impl.cc",
+    "modules/video_coding/codecs/h264/h264_encoder_impl.h",
     "modules/video_coding/codecs/multiplex/augmented_video_frame_buffer.cc",
     "modules/video_coding/codecs/multiplex/multiplex_decoder_adapter.cc",
     "modules/video_coding/codecs/multiplex/multiplex_encoded_image_packer.cc",
@@ -3212,7 +3214,9 @@ common_flags = [
     "-DWEBRTC_POSIX",
     "-DHAVE_WEBRTC_VIDEO",
     "-DRTC_ENABLE_VP9",
+    "-DWEBRTC_USE_H264",
     "-DHAVE_SCTP",
+    "-Ithird-party/openh264",
 ]
 
 arm_specific_flags = [
@@ -3588,6 +3592,8 @@ objc_library(
         ":libevent",
         ":libyuv",
         "//third-party/libvpx:vpx",
+        "//submodules/ffmpeg:ffmpeg",
+        #"//third-party/openh264:openh264",
     ],
     weak_sdk_frameworks = [
         "Network",

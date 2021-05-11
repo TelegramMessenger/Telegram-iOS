@@ -17,7 +17,8 @@ BUILD_ROOT="_iosbuild"
 CONFIGURE_ARGS="--disable-docs
                 --disable-examples
                 --disable-libyuv
-                --disable-unit-tests"
+                --disable-unit-tests
+                --enable-postproc"
 DIST_DIR="_dist"
 FRAMEWORK_DIR="VPX.framework"
 FRAMEWORK_LIB="VPX.framework/VPX"
