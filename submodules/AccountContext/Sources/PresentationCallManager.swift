@@ -308,6 +308,67 @@ public enum PresentationGroupCallTone {
     case recordingStarted
 }
 
+public struct PresentationGroupCallRequestedVideo {
+    public enum Quality {
+        case thumbnail
+        case medium
+        case full
+    }
+
+    public var audioSsrc: UInt32
+    public var endpointId: String
+    public var videoInformation: String
+    public var quality: Quality
+}
+
+public extension GroupCallParticipantsContext.Participant {
+    var videoEndpointId: String? {
+        if let jsonParams = self.videoJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let endpoint = json["endpoint"] as? String {
+                return endpoint
+            }
+        }
+        return nil
+    }
+
+    var presentationEndpointId: String? {
+        if let jsonParams = self.presentationJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
+            if let endpoint = json["endpoint"] as? String {
+                return endpoint
+            }
+        }
+        return nil
+    }
+}
+
+public extension GroupCallParticipantsContext.Participant {
+    func requestedVideoChannel(quality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
+        guard let audioSsrc = self.ssrc else {
+            return nil
+        }
+        guard let videoInformation = self.videoJsonDescription else {
+            return nil
+        }
+        guard let videoEndpointId = self.videoEndpointId else {
+            return nil
+        }
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: videoEndpointId, videoInformation: videoInformation, quality: quality)
+    }
+
+    func requestedPresentationVideoChannel(quality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
+        guard let audioSsrc = self.ssrc else {
+            return nil
+        }
+        guard let videoInformation = self.presentationJsonDescription else {
+            return nil
+        }
+        guard let presentationEndpointId = self.presentationEndpointId else {
+            return nil
+        }
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: presentationEndpointId, videoInformation: videoInformation, quality: quality)
+    }
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -323,6 +384,7 @@ public protocol PresentationGroupCall: class {
     
     var canBeRemoved: Signal<Bool, NoError> { get }
     var state: Signal<PresentationGroupCallState, NoError> { get }
+    var stateVersion: Signal<Int, NoError> { get }
     var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
     var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> { get }
@@ -352,7 +414,7 @@ public protocol PresentationGroupCall: class {
     func switchVideoCamera()
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: PeerId, volume: Int32, sync: Bool)
-    func setFullSizeVideo(endpointId: String?)
+    func setRequestedVideoList(items: [PresentationGroupCallRequestedVideo])
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
 
     func playTone(_ tone: PresentationGroupCallTone)
@@ -367,8 +429,6 @@ public protocol PresentationGroupCall: class {
     var invitedPeers: Signal<[PeerId], NoError> { get }
     
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
-    
-    var incomingVideoSources: Signal<Set<String>, NoError> { get }
     
     func makeIncomingVideoView(endpointId: String, completion: @escaping (PresentationCallVideoView?) -> Void)
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)

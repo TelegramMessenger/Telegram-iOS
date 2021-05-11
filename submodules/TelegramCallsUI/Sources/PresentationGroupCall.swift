@@ -90,26 +90,6 @@ private extension GroupCallParticipantsContext.Participant {
     }
 }
 
-extension GroupCallParticipantsContext.Participant {
-    var videoEndpointId: String? {
-        if let jsonParams = self.videoJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
-            if let endpoint = json["endpoint"] as? String {
-                return endpoint
-            }
-        }
-        return nil
-    }
-
-    var presentationEndpointId: String? {
-        if let jsonParams = self.presentationJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
-            if let endpoint = json["endpoint"] as? String {
-                return endpoint
-            }
-        }
-        return nil
-    }
-}
-
 public final class AccountGroupCallContextImpl: AccountGroupCallContext {
     public final class Proxy {
         public let context: AccountGroupCallContextImpl
@@ -553,6 +533,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public var state: Signal<PresentationGroupCallState, NoError> {
         return self.statePromise.get()
     }
+
+    private var stateVersionValue: Int = 0 {
+        didSet {
+            if self.stateVersionValue != oldValue {
+                self.stateVersionPromise.set(self.stateVersionValue)
+            }
+        }
+    }
+    private let stateVersionPromise = ValuePromise<Int>(0)
+    public var stateVersion: Signal<Int, NoError> {
+        return self.stateVersionPromise.get()
+    }
     
     private var membersValue: PresentationGroupCallMembers? {
         didSet {
@@ -625,11 +617,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var videoCapturer: OngoingCallVideoCapturer?
     private var useFrontCamera: Bool = true
-
-    private let incomingVideoSourcePromise = Promise<Set<String>>(Set())
-    public var incomingVideoSources: Signal<Set<String>, NoError> {
-        return self.incomingVideoSourcePromise.get()
-    }
 
     private var peerUpdatesSubscription: Disposable?
     
@@ -1423,12 +1410,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                 }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: enableNoiseSuppression)
-                self.incomingVideoSourcePromise.set(genericCallContext.videoSources
-                |> deliverOnMainQueue
-                |> map { sources -> Set<String> in
-                    return Set(sources)
-                })
+
                 self.genericCallContext = genericCallContext
+                self.stateVersionValue += 1
             }
             self.joinDisposable.set((genericCallContext.joinPayload
             |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -2561,12 +2545,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 let clientParams = joinCallResult.jsonParams
 
-                //screencastIpcContext.setJoinResponsePayload(clientParams)
-
                 screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
                 screencastCallContext.setJoinResponse(payload: clientParams)
-
-                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
             }, error: { error in
                 guard let _ = self else {
                     return
@@ -2721,8 +2701,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func setFullSizeVideo(endpointId: String?) {
-        self.genericCallContext?.setFullSizeVideo(endpointId: endpointId)
+    public func setRequestedVideoList(items: [PresentationGroupCallRequestedVideo]) {
+        self.genericCallContext?.setRequestedVideoChannels(items.compactMap { item -> OngoingGroupCallContext.VideoChannel in
+            let mappedQuality: OngoingGroupCallContext.VideoChannel.Quality
+            switch item.quality {
+            case .thumbnail:
+                mappedQuality = .thumbnail
+            case .medium:
+                mappedQuality = .medium
+            case .full:
+                mappedQuality = .full
+            }
+            return OngoingGroupCallContext.VideoChannel(
+                audioSsrc: item.audioSsrc,
+                videoDescription: item.videoInformation,
+                quality: mappedQuality
+            )
+        })
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {

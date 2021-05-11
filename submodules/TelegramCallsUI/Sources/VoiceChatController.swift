@@ -1048,6 +1048,8 @@ public final class VoiceChatController: ViewController {
         private let displayedRaisedHandsPromise = ValuePromise<Set<PeerId>>(Set())
         
         private var requestedVideoSources = Set<String>()
+        private var requestedVideoChannels: [PresentationGroupCallRequestedVideo] = []
+
         private var videoNodes: [(String, GroupVideoNode)] = []
         private var endpointToPeerId: [String: PeerId] = [:]
         private var peerIdToEndpoint: [PeerId: String] = [:]
@@ -2147,8 +2149,17 @@ public final class VoiceChatController: ViewController {
                 }
                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0), action: { _ in return false })
             }))
+
+            self.voiceSourcesDisposable.set((self.call.stateVersion
+            |> distinctUntilChanged
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.callStateDidReset()
+            }))
             
-            self.voiceSourcesDisposable.set((self.call.incomingVideoSources
+            /*self.voiceSourcesDisposable.set((self.call.incomingVideoSources
             |> deliverOnMainQueue).start(next: { [weak self] endpointIds in
                 guard let strongSelf = self else {
                     return
@@ -2233,7 +2244,7 @@ public final class VoiceChatController: ViewController {
                         strongSelf.updateMainStageVideo(waitForFullSize: false)
                     }
                 }
-            }))
+            }))*/
             
             self.titleNode.tapped = { [weak self] in
                 if let strongSelf = self, !strongSelf.isScheduling {
@@ -4542,6 +4553,8 @@ public final class VoiceChatController: ViewController {
             
             var endpointIdToPeerId: [String: PeerId] = [:]
             var peerIdToEndpointId: [PeerId: String] = [:]
+
+            var requestedVideoChannels: [PresentationGroupCallRequestedVideo] = []
             
             var pinnedEntry: ListEntry?
             for member in callMembers.0 {
@@ -4667,7 +4680,25 @@ public final class VoiceChatController: ViewController {
                         style: .list
                     ))
                 }
+
+                if var videoChannel = member.requestedVideoChannel(quality: .thumbnail) {
+                    if self.effectiveSpeakerWithVideo?.1 == videoChannel.endpointId {
+                        videoChannel.quality = .full
+                    }
+
+                    requestedVideoChannels.append(videoChannel)
+                }
+                if var presentationChannel = member.requestedVideoChannel(quality: .thumbnail) {
+                    if self.effectiveSpeakerWithVideo?.1 == presentationChannel.endpointId {
+                        presentationChannel.quality = .full
+                    }
+
+                    requestedVideoChannels.append(presentationChannel)
+                }
             }
+
+            self.requestedVideoChannels = requestedVideoChannels
+            self.updateRequestedVideoChannels()
                         
             for peer in invitedPeers {
                 if processedPeerIds.contains(peer.id) {
@@ -4760,6 +4791,101 @@ public final class VoiceChatController: ViewController {
             
             let tileTransition = preparedTransition(from: previousTileEntries, to: tileEntries, isLoading: false, isEmpty: false, canInvite: canInvite, crossFade: false, animated: !disableAnimation, context: self.context, presentationData: presentationData, interaction: self.itemInteraction!)
             self.enqueueTileTransition(tileTransition)
+        }
+
+        private func callStateDidReset() {
+            self.requestedVideoSources.removeAll()
+            self.filterRequestedVideoChannels(channels: [])
+            self.updateRequestedVideoChannels()
+        }
+
+        private func filterRequestedVideoChannels(channels: [PresentationGroupCallRequestedVideo]) {
+            var validSources = Set<String>()
+            for channel in channels {
+                validSources.insert(channel.endpointId)
+
+                if !self.requestedVideoSources.contains(channel.endpointId) {
+                    self.requestedVideoSources.insert(channel.endpointId)
+                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, completion: { [weak self] videoView in
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self, let videoView = videoView else {
+                                return
+                            }
+                            let videoNode = GroupVideoNode(videoView: videoView)
+                            strongSelf.videoNodes.append((channel.endpointId, videoNode))
+
+                            if let _ = strongSelf.validLayout {
+                                loop: for i in 0 ..< strongSelf.currentEntries.count {
+                                    let entry = strongSelf.currentEntries[i]
+                                    let tileEntry = strongSelf.currentTileEntries[i]
+                                    switch entry {
+                                    case let .peer(peerEntry):
+                                        if peerEntry.effectiveVideoEndpointId == channel.endpointId {
+                                            let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                            strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                            strongSelf.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: tileEntry.item(context: strongSelf.context, presentationData: presentationData, interaction: strongSelf.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                            break loop
+                                        }
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+
+            var removeRequestedVideoSources: [String] = []
+            for source in self.requestedVideoSources {
+                if !validSources.contains(source) {
+                    removeRequestedVideoSources.append(source)
+                }
+            }
+            for source in removeRequestedVideoSources {
+                self.requestedVideoSources.remove(source)
+            }
+
+            for i in (0 ..< self.videoNodes.count).reversed() {
+                if !validSources.contains(self.videoNodes[i].0) {
+                    let endpointId = self.videoNodes[i].0
+                    self.videoNodes.remove(at: i)
+
+                    loop: for j in 0 ..< self.currentEntries.count {
+                        let entry = self.currentEntries[j]
+                        let tileEntry = self.currentTileEntries[j]
+                        switch entry {
+                        case let .peer(peerEntry):
+                            if peerEntry.effectiveVideoEndpointId == endpointId {
+                                let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
+                                self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: j, previousIndex: j, item: entry.item(context: self.context, presentationData: presentationData, interaction: self.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                self.tileListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: j, previousIndex: j, item: tileEntry.item(context: self.context, presentationData: presentationData, interaction: self.itemInteraction!, transparent: false), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                break loop
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+            }
+
+            if let (peerId, endpointId) = self.effectiveSpeakerWithVideo {
+                if !validSources.contains(endpointId) {
+                    if peerId == self.currentForcedSpeakerWithVideo {
+                        self.currentForcedSpeakerWithVideo = nil
+                    }
+                    if peerId == self.currentDominantSpeakerWithVideo {
+                        self.currentDominantSpeakerWithVideo = nil
+                    }
+                    self.updateMainStageVideo(waitForFullSize: false)
+                }
+            }
+        }
+
+        private func updateRequestedVideoChannels() {
+            self.filterRequestedVideoChannels(channels: self.requestedVideoChannels)
+
+            self.call.setRequestedVideoList(items: self.requestedVideoChannels)
         }
         
         private func updateMainStageVideo(waitForFullSize: Bool, currentEntries: [ListEntry]? = nil, updateMembers: Bool = true, force: Bool = false) {
@@ -4858,9 +4984,21 @@ public final class VoiceChatController: ViewController {
             if updateMembers {
                 self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), updatePinnedPeer: false)
             }
-            self.call.setFullSizeVideo(endpointId: effectivePeer?.1)
+
+            self.mainStageVideoContainerNode?.updatePeer(peer: effectivePeer, waitForFullSize: waitForFullSize, completion: { [weak self] in
+                if waitForFullSize {
+                    completion()
+
+                    if let strongSelf = self, strongSelf.mainStageVideoClippingNode.alpha.isZero {
+                        strongSelf.mainStageVideoClippingNode.alpha = 1.0
+                        strongSelf.mainStageVideoClippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                    }
+                }
+            })
+
+            //self.call.setFullSizeVideo(endpointId: effectivePeer?.1)
             
-            self.updateSpeakerWithVideoDisposable.set((self.call.incomingVideoSources
+            /*self.updateSpeakerWithVideoDisposable.set((self.call.incomingVideoSources
             |> mapToSignal { videoSources -> Signal<Bool, NoError> in
                 if let (_, endpointId, otherEndpointId) = effectivePeer {
                     var exists = true
@@ -4891,7 +5029,7 @@ public final class VoiceChatController: ViewController {
                         }
                     })
                 }
-            }))
+            }))*/
             
             if !waitForFullSize {
                 completion()

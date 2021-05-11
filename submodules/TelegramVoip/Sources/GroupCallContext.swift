@@ -186,6 +186,24 @@ public final class OngoingGroupCallContext {
             self.videoDescription = videoDescription
         }
     }
+
+    public struct VideoChannel {
+        public enum Quality {
+            case thumbnail
+            case medium
+            case full
+        }
+
+        public var audioSsrc: UInt32
+        public var videoDescription: String
+        public var quality: Quality
+
+        public init(audioSsrc: UInt32, videoDescription: String, quality: Quality) {
+            self.audioSsrc = audioSsrc
+            self.videoDescription = videoDescription
+            self.quality = quality
+        }
+    }
     
     private final class Impl {
         let queue: Queue
@@ -198,8 +216,6 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
-        
-        let videoSources = ValuePromise<Set<String>>(Set(), ignoreRepeated: true)
         
         private var broadcastPartsSource: BroadcastPartSource?
         
@@ -225,8 +241,7 @@ public final class OngoingGroupCallContext {
             case .none:
                 _videoContentType = .none
             }
-            
-            let videoSources = self.videoSources
+
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
                 networkStateUpdated: { state in
@@ -238,9 +253,6 @@ public final class OngoingGroupCallContext {
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId,
                 videoCapturer: video?.impl,
-                incomingVideoSourcesUpdated: { endpointIds in
-                    videoSources.set(Set(endpointIds))
-                },
                 requestMediaChannelDescriptions: { ssrcs, completion in
                     final class OngoingGroupCallMediaChannelDescriptionTaskImpl : NSObject, OngoingGroupCallMediaChannelDescriptionTask {
                         private let disposable: Disposable
@@ -356,13 +368,24 @@ public final class OngoingGroupCallContext {
         func setVolume(ssrc: UInt32, volume: Double) {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
         }
-        
-        func setFullSizeVideo(endpointId: String?) {
-            self.context.setFullSizeVideoEndpointId(endpointId)
-        }
 
-        func setIgnoreVideoEndpointIds(endpointIds: [String]) {
-            self.context.setIgnoreVideoEndpointIds(endpointIds)
+        func setRequestedVideoChannels(_ channels: [VideoChannel]) {
+            self.context.setRequestedVideoChannels(channels.map { channel -> OngoingGroupCallRequestedVideoChannel in
+                let mappedQuality: OngoingGroupCallRequestedVideoQuality
+                switch channel.quality {
+                case .thumbnail:
+                    mappedQuality = .thumbnail
+                case .medium:
+                    mappedQuality = .medium
+                case .full:
+                    mappedQuality = .full
+                }
+                return OngoingGroupCallRequestedVideoChannel(
+                    audioSsrc: channel.audioSsrc,
+                    videoInformation: channel.videoDescription,
+                    quality: mappedQuality
+                )
+            })
         }
         
         func stop() {
@@ -576,18 +599,6 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public var videoSources: Signal<Set<String>, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.videoSources.get().start(next: { value in
-                    subscriber.putNext(value)
-                }))
-            }
-            return disposable
-        }
-    }
-    
     public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
@@ -664,16 +675,10 @@ public final class OngoingGroupCallContext {
             impl.setVolume(ssrc: ssrc, volume: volume)
         }
     }
-    
-    public func setFullSizeVideo(endpointId: String?) {
-        self.impl.with { impl in
-            impl.setFullSizeVideo(endpointId: endpointId)
-        }
-    }
 
-    public func setIgnoreVideoEndpointIds(endpointIds: [String]) {
+    public func setRequestedVideoChannels(_ channels: [VideoChannel]) {
         self.impl.with { impl in
-            impl.setIgnoreVideoEndpointIds(endpointIds: endpointIds)
+            impl.setRequestedVideoChannels(channels)
         }
     }
     
