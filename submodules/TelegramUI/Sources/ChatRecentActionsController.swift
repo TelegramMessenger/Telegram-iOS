@@ -204,7 +204,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         childrenLayout.intrinsicInsets.bottom += 49.0
         self.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func activateSearch() {

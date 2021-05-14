@@ -43,7 +43,7 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: 100.0))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }

@@ -133,7 +133,7 @@ public final class ChangePhoneNumberIntroController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! ChangePhoneNumberIntroControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! ChangePhoneNumberIntroControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func cancelPressed() {

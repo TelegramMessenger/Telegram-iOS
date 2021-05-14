@@ -165,7 +165,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
     
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let topSeparatorNode: ASDisplayNode
     
     let scrollNode: ASScrollNode
@@ -206,8 +206,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.context = context
         self.theme = theme
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
@@ -337,7 +336,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode.color = self.theme.chat.inputPanel.panelBackgroundColor
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
         self.sliderView?.backColor = self.theme.list.disclosureArrowColor
@@ -418,6 +417,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.validLayout = size
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: UIScreenPixel))
         
         let titleSize = self.titleNode.updateLayout(self.bounds.size)

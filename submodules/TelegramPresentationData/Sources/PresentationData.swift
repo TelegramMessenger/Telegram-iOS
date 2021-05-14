@@ -496,7 +496,7 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
     } else {
         switch wallpaper {
         case .builtin:
-            return .single(UIColor(rgb: 0x748391, alpha: 0.45))
+            return .single(UIColor(rgb: 0x000000, alpha: 0.2))
         case let .color(color):
             return .single(serviceColor(with: UIColor(argb: color)))
         case let .gradient(topColor, bottomColor, _):
@@ -681,7 +681,7 @@ public func defaultPresentationData() -> PresentationData {
     
     let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
     
-    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: .builtin(WallpaperSettings()), chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: .builtin(nil, WallpaperSettings()), chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
 }
 
 public extension PresentationData {

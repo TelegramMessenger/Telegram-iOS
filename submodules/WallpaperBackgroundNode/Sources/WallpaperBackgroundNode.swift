@@ -93,12 +93,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
         self.wallpaper = wallpaper
 
-        if wallpaper.isBuiltin {
+        if case let .builtin(gradient, _) = wallpaper {
             if self.gradientBackgroundNode == nil {
                 let gradientBackgroundNode = createGradientBackgroundNode()
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.addSubnode(gradientBackgroundNode)
             }
+            self.gradientBackgroundNode?.updateColors(colors: gradient?.colors.map({ color -> UIColor in
+                return UIColor(rgb: color)
+            }) ?? defaultBuiltinWallpaperGradientColors)
             self.contentNode.isHidden = true
         } else {
             if let gradientBackgroundNode = self.gradientBackgroundNode {
@@ -143,7 +146,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             return
         }
         switch wallpaper {
-        case let .builtin(settings):
+        case let .builtin(_, settings):
             if !settings.motion {
                 //return
             }

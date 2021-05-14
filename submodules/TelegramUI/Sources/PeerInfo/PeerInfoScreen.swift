@@ -5673,7 +5673,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if self.isSettings {
             if let settings = self.data?.globalSettings {
-                self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Settings_Search, hasSeparator: true, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
+                self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Settings_Search, hasBackground: true, hasSeparator: true, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
                     if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                         result.present(strongSelf.context, navigationController, { [weak self] mode, controller in
                             if let strongSelf = self {
@@ -5724,7 +5724,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             }
             
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.peerId, tagMask: tagMask, interfaceInteraction: self.chatInterfaceInteraction), cancel: { [weak self] in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, hasBackground: true, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.peerId, tagMask: tagMask, interfaceInteraction: self.chatInterfaceInteraction), cancel: { [weak self] in
                 self?.deactivateSearch()
             })
         }
@@ -6229,6 +6229,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     disabledButtonColor: baseNavigationBarPresentationData.theme.disabledButtonColor,
                     primaryTextColor: baseNavigationBarPresentationData.theme.primaryTextColor,
                     backgroundColor: .clear,
+                    enableBackgroundBlur: false,
                     separatorColor: .clear,
                     badgeBackgroundColor: baseNavigationBarPresentationData.theme.badgeBackgroundColor,
                     badgeStrokeColor: baseNavigationBarPresentationData.theme.badgeStrokeColor,
@@ -6362,6 +6363,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                 disabledButtonColor: baseNavigationBarPresentationData.theme.disabledButtonColor,
                 primaryTextColor: baseNavigationBarPresentationData.theme.primaryTextColor,
                 backgroundColor: .clear,
+                enableBackgroundBlur: false,
                 separatorColor: .clear,
                 badgeBackgroundColor: baseNavigationBarPresentationData.theme.badgeBackgroundColor,
                 badgeStrokeColor: baseNavigationBarPresentationData.theme.badgeStrokeColor,
@@ -6654,7 +6656,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        let navigationHeight = self.isSettings ? (self.navigationBar?.frame.height ?? 0.0) : self.navigationHeight
+        let navigationHeight = self.isSettings ? (self.navigationBar?.frame.height ?? 0.0) : self.navigationLayout(layout: layout).navigationFrame.maxY
         self.validLayout = (layout, navigationHeight)
         
         self.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition)
@@ -6754,7 +6756,7 @@ final class PeerInfoNavigationSourceTag {
 private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavigationTransitionNode {
     private let screenNode: PeerInfoScreenNode
     private let presentationData: PresentationData
-    
+
     private var topNavigationBar: NavigationBar?
     private var bottomNavigationBar: NavigationBar?
     private var reverseFraction: Bool = false
@@ -6796,6 +6798,8 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         bottomNavigationBar.isHidden = true
         
         if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
+            self.addSubnode(bottomNavigationBar.additionalContentNode)
+
             if let previousBackButtonArrow = bottomNavigationBar.makeTransitionBackArrowNode(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
                 self.previousBackButtonArrow = previousBackButtonArrow
                 self.addSubnode(previousBackButtonArrow)
@@ -6878,8 +6882,9 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
+            var topHeight = topNavigationBar.backgroundNode.bounds.height
             if let (layout, _) = self.screenNode.validLayout {
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, transition: transition, additive: false)
+                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, transition: transition, additive: false)
             }
             
             let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.bounds.height
@@ -6899,6 +6904,21 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))
+
+            if case let .animated(duration, _) = transition, (bottomNavigationBar.additionalContentNode.alpha.isZero || bottomNavigationBar.additionalContentNode.alpha == 1.0) {
+                bottomNavigationBar.additionalContentNode.alpha = fraction
+                if fraction.isZero {
+                    bottomNavigationBar.additionalContentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                } else {
+                    transition.updateAlpha(node: bottomNavigationBar.additionalContentNode, alpha: fraction)
+                }
+            } else {
+                transition.updateAlpha(node: bottomNavigationBar.additionalContentNode, alpha: fraction)
+            }
+
+            let bottomHeight = bottomNavigationBar.backgroundNode.bounds.height
+
+            transition.updateSublayerTransformOffset(layer: bottomNavigationBar.additionalContentNode.layer, offset: CGPoint(x: 0.0, y: (1.0 - fraction) * (topHeight - bottomHeight)))
         }
     }
     
@@ -6906,6 +6926,14 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         guard let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar else {
             return
         }
+
+        topNavigationBar.additionalContentNode.alpha = 1.0
+        ContainedViewLayoutTransition.immediate.updateSublayerTransformOffset(layer: topNavigationBar.additionalContentNode.layer, offset: CGPoint())
+        topNavigationBar.reattachAdditionalContentNode()
+
+        bottomNavigationBar.additionalContentNode.alpha = 1.0
+        ContainedViewLayoutTransition.immediate.updateSublayerTransformOffset(layer: bottomNavigationBar.additionalContentNode.layer, offset: CGPoint())
+        bottomNavigationBar.reattachAdditionalContentNode()
         
         topNavigationBar.isHidden = false
         bottomNavigationBar.isHidden = false

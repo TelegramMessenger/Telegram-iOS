@@ -529,7 +529,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func cancelPressed() {

@@ -74,9 +74,12 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
 
-        if case .builtin = wallpaper {
+        if case let .builtin(gradient, _) = wallpaper {
             if self.gradientNode == nil {
                 let gradientNode = createGradientBackgroundNode()
+                if let gradient = gradient {
+                    gradientNode.updateColors(colors: gradient.colors.map { UIColor(rgb: $0) })
+                }
                 self.gradientNode = gradientNode
                 self.addSubnode(gradientNode)
             }

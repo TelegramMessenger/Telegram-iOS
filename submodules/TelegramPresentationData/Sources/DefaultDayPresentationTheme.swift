@@ -44,7 +44,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .builtin(WallpaperSettings())
+                suggestedWallpaper = .builtin(nil, WallpaperSettings())
             }
         }
     }
@@ -345,7 +345,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
-        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.75),
+        backgroundColor: UIColor(rgb: 0xf7f7f7, alpha: 0.86),
         separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
@@ -713,7 +713,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let chat = PresentationThemeChat(
-        defaultWallpaper: day ? .color(0xffffff) : .builtin(WallpaperSettings()),
+        defaultWallpaper: day ? .color(0xffffff) : .builtin(nil, WallpaperSettings(motion: true)),
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,
@@ -806,3 +806,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         preview: preview
     )
 }
+
+public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
+    UIColor(rgb: 0x7FA381),
+    UIColor(rgb: 0xFFF5C5),
+    UIColor(rgb: 0x336F55),
+    UIColor(rgb: 0xFBE37D)
+]

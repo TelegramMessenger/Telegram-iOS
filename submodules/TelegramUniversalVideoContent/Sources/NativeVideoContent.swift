@@ -10,6 +10,7 @@ import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext
 import PhotoResources
+import UIKitRuntimeUtils
 
 public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)

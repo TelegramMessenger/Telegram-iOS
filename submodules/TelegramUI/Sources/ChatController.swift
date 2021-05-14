@@ -4524,7 +4524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -5627,7 +5627,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let location = location, location.y < strongSelf.navigationHeight {
+            if let location = location, location.y < strongSelf.navigationLayout(layout: layout).navigationFrame.maxY {
                 return
             }
             
@@ -7314,7 +7314,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.suspendedNavigationBarLayout = layout
             return
         }
-        self.applyNavigationBarLayout(layout, additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -7336,7 +7336,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
+        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
         }, updateExtraNavigationBarBackgroundHeight: { value in
             self.additionalNavigationBarBackgroundHeight = value
@@ -7358,7 +7358,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
     }
     

@@ -303,7 +303,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.activityIndicatorContainer, frame: CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width + 5.0, y: 15.0), size: indicatorSize))
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(), size: indicatorSize))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
         
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))

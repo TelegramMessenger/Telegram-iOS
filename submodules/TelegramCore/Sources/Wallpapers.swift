@@ -19,14 +19,14 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                         if case let .file(file) = wallpaper, !file.isDefault {
                         } else if !addedBuiltin {
                             addedBuiltin = true
-                            items.append(.builtin(WallpaperSettings()))
+                            items.append(.builtin(nil, WallpaperSettings()))
                         }
                         items.append(wallpaper)
                     }
                     
                     if !addedBuiltin {
                         addedBuiltin = true
-                        items.append(.builtin(WallpaperSettings()))
+                        items.append(.builtin(nil, WallpaperSettings()))
                     }
                     
                     if items == current {
@@ -60,7 +60,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
             if items.count == 0 {
-                return ([.builtin(WallpaperSettings())], 0)
+                return ([.builtin(nil, WallpaperSettings())], 0)
             } else {
                 return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
             }

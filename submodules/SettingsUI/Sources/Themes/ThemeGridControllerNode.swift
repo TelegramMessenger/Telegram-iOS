@@ -56,6 +56,14 @@ final class ThemeGridControllerInteraction {
 }
 
 private struct ThemeGridControllerEntry: Comparable, Identifiable {
+    enum StableId: Hashable {
+        case builtin([UInt32])
+        case color(UInt32)
+        case gradient(UInt32, UInt32)
+        case file(Int64, UInt32, Int32)
+        case image(String)
+    }
+
     let index: Int
     let wallpaper: TelegramWallpaper
     let isEditable: Bool
@@ -69,26 +77,21 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    var stableId: Int64 {
+    var stableId: StableId {
         switch self.wallpaper {
-            case .builtin:
-                return 0
+            case let .builtin(gradient, _):
+                return .builtin(gradient?.colors ?? [])
             case let .color(color):
-                return (Int64(1) << 32) | Int64(bitPattern: UInt64(color))
+                return .color(color)
             case let .gradient(topColor, bottomColor, _):
-                var hash: UInt32 = topColor
-                hash = hash &* 31 &+ bottomColor
-                return (Int64(2) << 32) | Int64(hash)
+                return .gradient(topColor, bottomColor)
             case let .file(id, _, _, _, _, _, _, _, settings):
-                var hash: Int = id.hashValue
-                hash = hash &* 31 &+ (settings.color?.hashValue ?? 0)
-                hash = hash &* 31 &+ (settings.intensity?.hashValue ?? 0)
-                return (Int64(3) << 32) | Int64(hash)
+                return .file(id, settings.color ?? 0, settings.intensity ?? 0)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
-                    return (Int64(4) << 32) | Int64(largest.resource.id.hashValue)
+                    return .image(largest.resource.id.uniqueId)
                 } else {
-                    return 0
+                    return .image("")
                 }
         }
     }
@@ -260,9 +263,20 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
-        
+
+        let defaultWallpaper = presentationData.theme.chat.defaultWallpaper
+
         let wallpapersPromise = Promise<[TelegramWallpaper]>()
-        wallpapersPromise.set(telegramWallpapers(postbox: context.account.postbox, network: context.account.network))
+        wallpapersPromise.set(telegramWallpapers(postbox: context.account.postbox, network: context.account.network)
+        |> map { wallpapers in
+            var wallpapers = wallpapers
+            if !wallpapers.contains(where: {
+                $0.isBasicallyEqual(to: defaultWallpaper)
+            }) {
+                wallpapers.insert(defaultWallpaper, at: 0)
+            }
+            return wallpapers
+        })
         self.wallpapersPromise = wallpapersPromise
         
         let deletedWallpaperSlugsValue = Atomic<Set<String>>(value: Set())
@@ -350,8 +364,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var index = 1
             
             var isSelectedEditable = true
-            if case .builtin = presentationData.chatWallpaper {
-                isSelectedEditable = false
+            if case let .builtin(gradient, _) = presentationData.chatWallpaper {
+                if gradient == nil {
+                    isSelectedEditable = false
+                }
             } else if presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 isSelectedEditable = false
             }
@@ -359,10 +375,24 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             var defaultWallpaper: TelegramWallpaper?
             if !presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
-                if case .builtin = presentationData.theme.chat.defaultWallpaper {
-                } else {
+                let entry = ThemeGridControllerEntry(index: 1, wallpaper: presentationData.theme.chat.defaultWallpaper, isEditable: false, isSelected: false)
+                if !entries.contains(where: { $0.stableId == entry.stableId }) {
                     defaultWallpaper = presentationData.theme.chat.defaultWallpaper
-                    entries.insert(ThemeGridControllerEntry(index: 1, wallpaper: presentationData.theme.chat.defaultWallpaper, isEditable: false, isSelected: false), at: 1)
+                    entries.insert(entry, at: index)
+                    index += 1
+                }
+            }
+
+            if !entries.contains(where: { entry in
+                if case .builtin = entry.wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                let entry = ThemeGridControllerEntry(index: 1, wallpaper: .builtin(nil, WallpaperSettings(motion: true)), isEditable: false, isSelected: false)
+                if !entries.contains(where: { $0.stableId == entry.stableId }) {
+                    entries.insert(entry, at: index)
                     index += 1
                 }
             }
@@ -392,13 +422,18 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     isDefault = true
                 }
                 var isEditable = true
-                if case .builtin = wallpaper {
-                    isEditable = false
+                if case let .builtin(gradient, _) = wallpaper {
+                    if gradient == nil {
+                        isEditable = false
+                    }
                 }
                 if !selected && !isDefault {
-                    entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, isEditable: isEditable, isSelected: false))
+                    let entry = ThemeGridControllerEntry(index: index, wallpaper: wallpaper, isEditable: isEditable, isSelected: false)
+                    if !entries.contains(where: { $0.stableId == entry.stableId }) {
+                        entries.append(entry)
+                        index += 1
+                    }
                 }
-                index += 1
             }
             
             let previous = previousEntries.swap(entries)

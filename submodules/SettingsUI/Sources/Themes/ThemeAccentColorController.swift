@@ -439,7 +439,7 @@ final class ThemeAccentColorController: ViewController {
                 var wallpaper: TelegramWallpaper
         
                 func extractBuiltinWallpaper(_ currentWallpaper: TelegramWallpaper) {
-                    if case let .builtin(settings) = currentWallpaper {
+                    if case let .builtin(_, settings) = currentWallpaper {
                         var defaultPatternWallpaper: TelegramWallpaper?
                         
                         for wallpaper in wallpapers {
@@ -617,6 +617,6 @@ final class ThemeAccentColorController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }

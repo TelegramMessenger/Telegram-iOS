@@ -75,7 +75,23 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
 }
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
-    case builtin(WallpaperSettings)
+    public struct Gradient: Equatable, PostboxCoding {
+        public var colors: [UInt32]
+
+        public init(colors: [UInt32]) {
+            self.colors = colors
+        }
+
+        public init(decoder: PostboxDecoder) {
+            self.colors = decoder.decodeInt32ArrayForKey("colors").map({ UInt32(bitPattern: $0) })
+        }
+
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32Array(self.colors.map({ Int32(bitPattern: $0) }), forKey: "colors")
+        }
+    }
+
+    case builtin(Gradient?, WallpaperSettings)
     case color(UInt32)
     case gradient(UInt32, UInt32, WallpaperSettings)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
@@ -84,8 +100,9 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
+                let gradient = decoder.decodeObjectForKey("gradient", decoder: { Gradient(decoder: $0) }) as? Gradient
                 let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-                self = .builtin(settings)
+                self = .builtin(gradient, settings)
             case 1:
                 self = .color(UInt32(bitPattern: decoder.decodeInt32ForKey("c", orElse: 0)))
             case 2:
@@ -118,8 +135,13 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .builtin(settings):
+            case let .builtin(gradient, settings):
                 encoder.encodeInt32(0, forKey: "v")
+                if let gradient = gradient {
+                    encoder.encodeObject(gradient, forKey: "gradient")
+                } else {
+                    encoder.encodeNil(forKey: "gradient")
+                }
                 encoder.encodeObject(settings, forKey: "settings")
             case let .color(color):
                 encoder.encodeInt32(1, forKey: "v")
@@ -149,8 +171,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public static func ==(lhs: TelegramWallpaper, rhs: TelegramWallpaper) -> Bool {
         switch lhs {
-            case let .builtin(settings):
-                if case .builtin(settings) = rhs {
+            case let .builtin(gradient, settings):
+                if case .builtin(gradient, settings) = rhs {
                     return true
                 } else {
                     return false
@@ -184,8 +206,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func isBasicallyEqual(to wallpaper: TelegramWallpaper) -> Bool {
         switch self {
-            case .builtin:
-                if case .builtin = wallpaper {
+            case let .builtin(gradient, _):
+                if case .builtin(gradient, _) = wallpaper {
                     return true
                 } else {
                     return false
@@ -219,7 +241,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public var settings: WallpaperSettings? {
         switch self {
-            case let .builtin(settings), let .gradient(_, _, settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
+            case let .builtin(_, settings), let .gradient(_, _, settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
                 return settings
             default:
                 return nil
@@ -228,8 +250,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func withUpdatedSettings(_ settings: WallpaperSettings) -> TelegramWallpaper {
         switch self {
-            case .builtin:
-                return .builtin(settings)
+            case let .builtin(gradient, _):
+                return .builtin(gradient, settings)
             case .color:
                 return self
             case let .gradient(topColor, bottomColor, _):

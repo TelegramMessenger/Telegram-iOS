@@ -434,7 +434,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
 
         let initialPanelHeight = panelHeight
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
         var chatPeer: Peer?
         if let renderedPeer = interfaceState.renderedPeer {

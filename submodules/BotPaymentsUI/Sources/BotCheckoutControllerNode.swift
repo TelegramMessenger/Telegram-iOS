@@ -538,7 +538,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
@@ -598,7 +598,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         
-        super.init(controller: nil, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: nil, navigationBar: navigationBar, state: signal)
         
         self.arguments = arguments
         

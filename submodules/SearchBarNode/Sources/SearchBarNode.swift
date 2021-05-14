@@ -26,7 +26,6 @@ private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> 
     }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-
 public struct SearchBarToken {
     public struct Style {
         public let backgroundColor: UIColor
@@ -620,8 +619,8 @@ public final class SearchBarNodeTheme: Equatable {
         self.keyboard = keyboard
     }
     
-    public init(theme: PresentationTheme, hasSeparator: Bool = true) {
-        self.background = theme.rootController.navigationBar.backgroundColor
+    public init(theme: PresentationTheme, hasBackground: Bool = true, hasSeparator: Bool = true) {
+        self.background = hasBackground ? theme.rootController.navigationBar.backgroundColor : .clear
         self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
         self.inputFill = theme.rootController.navigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.navigationSearchBar.inputPlaceholderTextColor
@@ -714,7 +713,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     public var tokensUpdated: (([SearchBarToken]) -> Void)?
     
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let textBackgroundNode: ASDisplayNode
     private var activityIndicator: ActivityIndicator?
@@ -813,8 +812,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.forceSeparator = forceSeparator
         self.cancelText = cancelText
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode = NavigationBackgroundNode(color: theme.background)
+        self.backgroundNode.isUserInteractionEnabled = false
+        //self.backgroundNode.isHidden = true
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -887,7 +887,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
         }
         if self.theme != theme {
-            self.backgroundNode.backgroundColor = theme.background
+            self.backgroundNode.color = theme.background
             if self.fieldStyle != .modern || self.forceSeparator {
                 self.separatorNode.backgroundColor = theme.separator
             }
@@ -914,6 +914,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.validLayout = (boundingSize, leftInset, rightInset)
         
         self.backgroundNode.frame = self.bounds
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: .immediate)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height), size: CGSize(width: self.bounds.size.width, height: UIScreenPixel)))
         
         let verticalOffset: CGFloat = boundingSize.height - 82.0

@@ -165,8 +165,10 @@ public class WallpaperGalleryController: ViewController {
     private var overlayNode: WallpaperGalleryOverlayNode?
     private var toolbarNode: WallpaperGalleryToolbarNode?
     private var patternPanelNode: WallpaperPatternPanelNode?
+    private var colorsPanelNode: WallpaperColorPanelNode?
     
     private var patternPanelEnabled = false
+    private var colorsPanelEnabled = false
     
     public init(context: AccountContext, source: WallpaperListSource) {
         self.context = context
@@ -284,6 +286,8 @@ public class WallpaperGalleryController: ViewController {
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.patternPanelNode?.updateTheme(self.presentationData.theme)
         self.patternPanelNode?.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil, nil) : nil
+
+        self.colorsPanelNode?.updateTheme(self.presentationData.theme)
     }
     
     func dismiss(forceAway: Bool) {
@@ -374,6 +378,7 @@ public class WallpaperGalleryController: ViewController {
                 dismissed = true
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     let options = centralItemNode.options
+                    let gradientColors = centralItemNode.colors
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
                         switch entry {
@@ -398,7 +403,7 @@ public class WallpaperGalleryController: ViewController {
                                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        var wallpaper = wallpaper.isBasicallyEqual(to: strongSelf.presentationData.theme.chat.defaultWallpaper) ? nil : wallpaper
+                                        let wallpaper = wallpaper.isBasicallyEqual(to: strongSelf.presentationData.theme.chat.defaultWallpaper) ? nil : wallpaper
                                         let themeReference: PresentationThemeReference
                                         if autoNightModeTriggered {
                                             themeReference = current.automaticThemeSwitchSetting.theme
@@ -505,6 +510,15 @@ public class WallpaperGalleryController: ViewController {
                                         settings.motion = options.contains(.motion)
                                         updatedWallpaper = updatedWallpaper.withUpdatedSettings(settings)
                                     }
+                                    if case let .builtin(_, settings) = updatedWallpaper {
+                                        var gradient: TelegramWallpaper.Gradient?
+                                        if let gradientColors = gradientColors {
+                                            if gradientColors != defaultBuiltinWallpaperGradientColors.map({ $0.rgb }) {
+                                                gradient = TelegramWallpaper.Gradient(colors: gradientColors)
+                                            }
+                                        }
+                                        updatedWallpaper = .builtin(gradient, settings)
+                                    }
                                     applyWallpaper(updatedWallpaper)
                                 }
                             default:
@@ -556,6 +570,32 @@ public class WallpaperGalleryController: ViewController {
                         strongSelf.patternPanelNode?.didAppear()
                     } else {
                         strongSelf.updateEntries(pattern: .color(0), preview: false)
+                    }
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                }
+            }
+
+            node.requestColorsPanel = { [weak self] colors in
+                if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+                    strongSelf.colorsPanelEnabled = colors != nil
+                    strongSelf.galleryNode.scrollView.isScrollEnabled = colors == nil
+                    if let colors = colors {
+                        strongSelf.colorsPanelNode?.updateState({ _ in
+                            return WallpaperColorPanelNodeState(
+                                selection: .index(0),
+                                firstColor: colors[0],
+                                defaultColor: colors[0],
+                                secondColor: colors[1],
+                                secondColorAvailable: true,
+                                rotateAvailable: false,
+                                rotation: 0,
+                                preview: false,
+                                simpleGradientGeneration: false,
+                                multiColors: colors
+                            )
+                        }, animated: false)
+                    } else {
+                        //strongSelf.updateEntries(pattern: .color(0), preview: false)
                     }
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
@@ -633,7 +673,7 @@ public class WallpaperGalleryController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         self.overlayNode?.frame = self.galleryNode.bounds
         
         transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
@@ -658,17 +698,48 @@ public class WallpaperGalleryController: ViewController {
             currentPatternPanelNode = patternPanelNode
             self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)
         }
+
+        let currentColorsPanelNode: WallpaperColorPanelNode
+        if let current = self.colorsPanelNode {
+            currentColorsPanelNode = current
+        } else {
+            let colorsPanelNode = WallpaperColorPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+            self.colorsPanelNode = colorsPanelNode
+            currentColorsPanelNode = colorsPanelNode
+            self.overlayNode?.insertSubnode(colorsPanelNode, belowSubnode: self.toolbarNode!)
+
+            colorsPanelNode.multiColorsChanged = { [weak self] colors in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode else {
+                    return
+                }
+                centralItemNode.updateColors(colors: colors)
+            }
+        }
         
         let panelHeight: CGFloat = 235.0
+
         var patternPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
         if self.patternPanelEnabled {
             patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)
             bottomInset += panelHeight
         }
-        bottomInset += 66.0
         
         transition.updateFrame(node: currentPatternPanelNode, frame: patternPanelFrame)
         currentPatternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
+
+        var colorsPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
+        if self.colorsPanelEnabled {
+            colorsPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)
+            bottomInset += panelHeight
+        }
+
+        transition.updateFrame(node: currentColorsPanelNode, frame: colorsPanelFrame)
+        currentColorsPanelNode.updateLayout(size: colorsPanelFrame.size, transition: transition)
+
+        bottomInset += 66.0
         
         self.validLayout = (layout, bottomInset)
         if !hadLayout {

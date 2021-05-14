@@ -137,7 +137,9 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     }
 }
 
-private let minInputFontSize: CGFloat = 5.0
+let chatTextInputMinFontSize: CGFloat = 5.0
+
+private let minInputFontSize = chatTextInputMinFontSize
 
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
     let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)

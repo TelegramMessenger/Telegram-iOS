@@ -301,7 +301,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self else {
                 return nil
             }
-            return strongSelf.titleAccessoryPanelContainer.view
+            return strongSelf.messageTransitionNode.view
         }
         
         self.setViewBlock({
@@ -372,19 +372,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
         self.addSubnode(self.navigateButtons)
-        
-        self.addSubnode(self.inputPanelBackgroundNode)
-        self.addSubnode(self.inputPanelBackgroundSeparatorNode)
-        
-        self.addSubnode(self.inputContextPanelContainer)
-
-        self.addSubnode(self.messageTransitionNode)
 
         if let navigationBar = self.navigationBar {
             self.addSubnode(navigationBar)
         }
 
-        self.addSubnode(self.titleAccessoryPanelContainer)
+        self.addSubnode(self.inputPanelBackgroundNode)
+        self.addSubnode(self.inputPanelBackgroundSeparatorNode)
+
+        self.addSubnode(self.inputContextPanelContainer)
+
+        self.addSubnode(self.messageTransitionNode)
+
+        self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -1218,12 +1218,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if layout.additionalInsets.right > 0.0 {
             apparentNavigateButtonsFrame.origin.y -= 16.0
         }
-
-        apparentInputBackgroundFrame.size.height += 41.0
         
         let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
-        self.inputPanelBackgroundNode.update(size: apparentInputBackgroundFrame.size, transition: transition)
+        self.inputPanelBackgroundNode.update(size: CGSize(width: apparentInputBackgroundFrame.size.width, height: apparentInputBackgroundFrame.size.height + 41.0), transition: transition)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         

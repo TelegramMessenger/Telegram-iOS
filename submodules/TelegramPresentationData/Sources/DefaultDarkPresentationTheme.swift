@@ -231,18 +231,6 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
 }
 
 public func makeDefaultDarkPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
-    let rootTabBar = PresentationThemeRootTabBar(
-        backgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.5),
-        separatorColor: UIColor(rgb: 0x3d3d40),
-        iconColor: UIColor(rgb: 0x828282),
-        selectedIconColor: UIColor(rgb: 0xffffff),
-        textColor: UIColor(rgb: 0x828282),
-        selectedTextColor: UIColor(rgb: 0xffffff),
-        badgeBackgroundColor:  UIColor(rgb: 0xffffff),
-        badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
-        badgeTextColor:  UIColor(rgb: 0x000000)
-    )
-
     let rootNavigationBar = PresentationThemeRootNavigationBar(
         buttonColor: UIColor(rgb: 0xffffff),
         disabledButtonColor: UIColor(rgb: 0x525252),
@@ -250,7 +238,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         controlColor: UIColor(rgb: 0x767676),
         accentTextColor: UIColor(rgb: 0xffffff),
-        backgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.7).withMultipliedBrightnessBy(1.1),
+        backgroundColor: UIColor(rgb: 0x1d1d1d, alpha: 0.94),
         separatorColor: UIColor(rgb: 0x3d3d40),
         badgeBackgroundColor:  UIColor(rgb: 0xffffff),
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
@@ -261,6 +249,18 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         segmentedDividerColor: UIColor(rgb: 0x505155),
         clearButtonBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1),
         clearButtonForegroundColor: UIColor(rgb: 0xffffff)
+    )
+
+    let rootTabBar = PresentationThemeRootTabBar(
+        backgroundColor: rootNavigationBar.backgroundColor,
+        separatorColor: UIColor(rgb: 0x3d3d40),
+        iconColor: UIColor(rgb: 0x828282),
+        selectedIconColor: UIColor(rgb: 0xffffff),
+        textColor: UIColor(rgb: 0x828282),
+        selectedTextColor: UIColor(rgb: 0xffffff),
+        badgeBackgroundColor:  UIColor(rgb: 0xffffff),
+        badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
+        badgeTextColor:  UIColor(rgb: 0x000000)
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
@@ -439,8 +439,8 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
     )
 
     let inputPanel = PresentationThemeChatInputPanel(
-        panelBackgroundColor: UIColor(rgb: 0x1c1c1d, alpha: 0.5),
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000, alpha: 0.5),
+        panelBackgroundColor: rootNavigationBar.backgroundColor,
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000, alpha: 0.94),
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelControlAccentColor: UIColor(rgb: 0xffffff),
         panelControlColor: UIColor(rgb: 0x808080),
