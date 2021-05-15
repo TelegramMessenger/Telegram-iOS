@@ -89,6 +89,8 @@ class WallpaperGalleryOverlayNode: ASDisplayNode {
 }
 
 class WallpaperGalleryControllerNode: GalleryControllerNode {
+    var nativeStatusBar: StatusBar?
+
     override func updateDistanceFromEquilibrium(_ value: CGFloat) {
         guard let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode else {
             return
@@ -109,6 +111,7 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
             self.setControlsHidden(true, animated: false)
 
             self.overlayNode?.alpha = 0.0
+            self.nativeStatusBar?.updateAlpha(0.0, transition: .immediate)
 
             if let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.updateDismissTransition(self.bounds.size.height)
@@ -117,6 +120,7 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
             self.setControlsHidden(false, animated: false)
 
             self.overlayNode?.alpha = 1.0
+            self.nativeStatusBar?.updateAlpha(1.0, transition: .immediate)
 
             if let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.updateDismissTransition(0.0)
@@ -351,7 +355,7 @@ public class WallpaperGalleryController: ViewController {
         self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
 
-        (self.displayNode as? WallpaperGalleryControllerNode)?.statusBar = self.statusBar
+        (self.displayNode as? WallpaperGalleryControllerNode)?.nativeStatusBar = self.statusBar
         
         self.galleryNode.navigationBar = self.navigationBar
         self.galleryNode.dismiss = { [weak self] in
