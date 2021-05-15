@@ -630,7 +630,8 @@ public class ShareRootControllerImpl {
                                                     super.containerLayoutUpdated(layout, transition: transition)
                                                     
                                                     let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: self.navigationHeight + floor((layout.size.height - self.navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
+                                                    let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: navigationHeight + floor((layout.size.height - navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
                                                 }
                                             }
                                             

@@ -2701,11 +2701,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
             }
         }
-        self.navigationBar?.allowsCustomTransition = { [weak self] in
-            guard let strongSelf = self else {
-                return false
-            }
-            return !strongSelf.chatDisplayNode.hasEmbeddedTitleContent
+        self.navigationBar?.allowsCustomTransition = {
+            return true
         }
         
         self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder)
@@ -4527,7 +4524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -4564,6 +4561,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
+                    }, updateExtraNavigationBarBackgroundHeight: { value in
+                        strongSelf.additionalNavigationBarBackgroundHeight = value
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -5628,7 +5627,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let location = location, location.y < strongSelf.navigationHeight {
+            if let location = location, location.y < strongSelf.navigationLayout(layout: layout).navigationFrame.maxY {
                 return
             }
             
@@ -6742,45 +6741,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
         }
         
-        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            let hasEmbeddedTitleContent = strongSelf.chatDisplayNode.hasEmbeddedTitleContent
-            let isEmbeddedTitleContentHidden = strongSelf.chatDisplayNode.isEmbeddedTitleContentHidden
-            
-            if strongSelf.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
-                strongSelf.hasEmbeddedTitleContent = hasEmbeddedTitleContent
-                
-                if strongSelf.hasEmbeddedTitleContent {
-                    strongSelf.statusBar.statusBarStyle = .White
-                } else {
-                    strongSelf.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
-                }
-                
-                if let navigationBar = strongSelf.navigationBar {
-                    if let navigationBarCopy = navigationBar.view.snapshotContentTree() {
-                        navigationBar.view.superview?.insertSubview(navigationBarCopy, aboveSubview: navigationBar.view)
-                        navigationBarCopy.alpha = 0.0
-                        navigationBarCopy.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak navigationBarCopy] _ in
-                            navigationBarCopy?.removeFromSuperview()
-                        })
-                    }
-                }
-                strongSelf.updateNavigationBarPresentation()
-            }
-            
-            if strongSelf.isEmbeddedTitleContentHidden != isEmbeddedTitleContentHidden {
-                strongSelf.isEmbeddedTitleContentHidden = isEmbeddedTitleContentHidden
-                
-                if let navigationBar = strongSelf.navigationBar {
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                    transition.updateAlpha(node: navigationBar, alpha: isEmbeddedTitleContentHidden ? 0.0 : 1.0)
-                }
-            }
-        }
-        
         self.interfaceInteraction = interfaceInteraction
         
         if let search = self.focusOnSearchAfterAppearance {
@@ -7344,8 +7304,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         return canManagePin
     }
+
+    private var suspendNavigationBarLayout: Bool = false
+    private var suspendedNavigationBarLayout: ContainerViewLayout?
+    private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+
+    override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        if self.suspendNavigationBarLayout {
+            self.suspendedNavigationBarLayout = layout
+            return
+        }
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+    }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.suspendNavigationBarLayout = true
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
@@ -7363,8 +7336,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
+        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
+        }, updateExtraNavigationBarBackgroundHeight: { value in
+            self.additionalNavigationBarBackgroundHeight = value
         })
         
         if case .compact = layout.metrics.widthClass {
@@ -7378,6 +7353,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
+        }
+
+        self.suspendNavigationBarLayout = false
+        if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
+            self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
     }
     

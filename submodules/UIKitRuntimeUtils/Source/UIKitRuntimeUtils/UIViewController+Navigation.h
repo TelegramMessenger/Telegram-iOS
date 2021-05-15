@@ -23,7 +23,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
 @property (nonatomic) bool disablesInteractiveKeyboardGestureRecognizer;
 @property (nonatomic) bool disablesInteractiveModalDismiss;
-@property (nonatomic, copy) bool (^ disablesInteractiveTransitionGestureRecognizerNow)();
+@property (nonatomic, copy) bool (^ _Nullable disablesInteractiveTransitionGestureRecognizerNow)();
 
 @property (nonatomic) UIResponderDisableAutomaticKeyboardHandling disableAutomaticKeyboardHandling;
 
@@ -41,3 +41,17 @@ void applyKeyboardAutocorrection();
 @property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
 
 @end
+
+/*@interface _UIPortalView : UIView
+
+- (void)setSourceView:(UIView * _Nullable)sourceView;
+- (bool)hidesSourceView;
+- (void)setHidesSourceView:(bool)arg1;
+- (void)setMatchesAlpha:(bool)arg1;
+- (void)setMatchesPosition:(bool)arg1;
+- (void)setMatchesTransform:(bool)arg1;
+- (bool)matchesTransform;
+- (bool)matchesPosition;
+- (bool)matchesAlpha;
+
+@end*/

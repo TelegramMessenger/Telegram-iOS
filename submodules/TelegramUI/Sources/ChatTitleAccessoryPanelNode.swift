@@ -4,9 +4,14 @@ import Display
 import AsyncDisplayKit
 
 class ChatTitleAccessoryPanelNode: ASDisplayNode {
+    struct LayoutResult {
+        var backgroundHeight: CGFloat
+        var insetHeight: CGFloat
+    }
+
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
-    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
-        return 0.0
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
+        preconditionFailure()
     }
 }

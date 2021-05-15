@@ -208,7 +208,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
             for inputQuery in inputQueries {
                 if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
-                    let baseFontSize: CGFloat = max(17.0, chatPresentationInterfaceState.fontSize.baseDisplaySize)
+                    let baseFontSize: CGFloat = max(chatTextInputMinFontSize, chatPresentationInterfaceState.fontSize.baseDisplaySize)
                     
                     let string = NSMutableAttributedString()
                     string.append(NSAttributedString(string: "@" + addressName, font: Font.regular(baseFontSize), textColor: UIColor.clear))

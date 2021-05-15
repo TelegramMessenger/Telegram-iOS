@@ -462,6 +462,6 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }

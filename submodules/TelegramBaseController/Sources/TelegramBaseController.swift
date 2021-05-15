@@ -94,19 +94,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     private var presentationDataDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
     
-    override open var navigationHeight: CGFloat {
-        return super.navigationHeight + self.additionalHeight
-    }
-    
-    override open var navigationInsetHeight: CGFloat {
-        return super.navigationInsetHeight + self.additionalHeight
-    }
-    
-    override open var visualNavigationInsetHeight: CGFloat {
-        return super.visualNavigationInsetHeight + self.additionalHeight
-    }
-    
-    public var additionalHeight: CGFloat {
+    override open var additionalNavigationBarHeight: CGFloat {
         var height: CGFloat = 0.0
         if let _ = self.groupCallAccessoryPanel {
             height += 50.0
@@ -118,10 +106,6 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             height += MediaNavigationAccessoryHeaderNode.minimizedHeight
         }
         return height
-    }
-    
-    open var primaryNavigationHeight: CGFloat {
-        return super.navigationHeight
     }
     
     public init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource, groupCallPanelSource: GroupCallPanelSource) {
@@ -376,11 +360,25 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    private var suspendNavigationBarLayout: Bool = false
+    private var suspendedNavigationBarLayout: ContainerViewLayout?
+    private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+
+    override open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        if self.suspendNavigationBarLayout {
+            self.suspendedNavigationBarLayout = layout
+            return
+        }
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+    }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.suspendNavigationBarLayout = true
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
-        var navigationHeight = super.navigationHeight
+        var navigationHeight = super.navigationLayout(layout: layout).navigationFrame.maxY - self.additionalNavigationBarHeight
         if !self.displayNavigationBar {
             navigationHeight = 0.0
         }
@@ -409,11 +407,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled)
                     )
                 })
-                if let navigationBar = self.navigationBar {
-                    self.displayNode.insertSubnode(groupCallAccessoryPanel, aboveSubnode: navigationBar)
-                } else {
-                    self.displayNode.addSubnode(groupCallAccessoryPanel)
-                }
+                self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)
                 self.groupCallAccessoryPanel = groupCallAccessoryPanel
                 groupCallAccessoryPanel.frame = panelFrame
                 
@@ -560,11 +554,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 })
-                if let navigationBar = self.navigationBar {
-                    self.displayNode.insertSubnode(locationBroadcastAccessoryPanel, aboveSubnode: navigationBar)
-                } else {
-                    self.displayNode.addSubnode(locationBroadcastAccessoryPanel)
-                }
+                self.navigationBar?.additionalContentNode.addSubnode(locationBroadcastAccessoryPanel)
                 self.locationBroadcastAccessoryPanel = locationBroadcastAccessoryPanel
                 locationBroadcastAccessoryPanel.frame = panelFrame
                 
@@ -806,11 +796,9 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 }
                 mediaAccessoryPanel.frame = panelFrame
                 if let dismissingPanel = self.dismissingPanel {
-                    self.displayNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
-                } else if let navigationBar = self.navigationBar {
-                    self.displayNode.insertSubnode(mediaAccessoryPanel, belowSubnode: navigationBar)
+                    self.navigationBar?.additionalContentNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
                 } else {
-                    self.displayNode.addSubnode(mediaAccessoryPanel)
+                    self.navigationBar?.additionalContentNode.addSubnode(mediaAccessoryPanel)
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
@@ -841,6 +829,12 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.dismissingPanel = nil
                 }
             })
+        }
+
+        self.suspendNavigationBarLayout = false
+        if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
+            self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
     }
     

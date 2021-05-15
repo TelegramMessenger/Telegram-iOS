@@ -305,7 +305,6 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
 }
 
 final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     
     private let closeButton: HighlightableButtonNode
@@ -317,7 +316,6 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var peerNearbyInfoNode: ChatInfoTitlePanelPeerNearbyInfoNode?
     
     override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -326,23 +324,21 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         super.init()
-        
-        self.addSubnode(self.backgroundNode)
+
         self.addSubnode(self.separatorNode)
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.addSubnode(self.closeButton)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
-            self.backgroundNode.color = interfaceState.theme.rootController.navigationBar.backgroundColor
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
-        
+
         var panelHeight: CGFloat = 40.0
         
         let contentRightInset: CGFloat = 14.0 + rightInset
@@ -436,11 +432,9 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
             }
         }
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
-        
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+
+        let initialPanelHeight = panelHeight
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
         var chatPeer: Peer?
         if let renderedPeer = interfaceState.renderedPeer {
@@ -502,7 +496,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             })
         }
         
-        return panelHeight
+        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight)
     }
     
     @objc func buttonPressed(_ view: UIButton) {

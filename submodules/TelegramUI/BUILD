@@ -222,6 +222,7 @@ swift_library(
         "//submodules/DebugSettingsUI:DebugSettingsUI",
         "//submodules/ImportStickerPackUI:ImportStickerPackUI",
         "//submodules/GradientBackground:GradientBackground",
+        "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
     ],
     visibility = [
         "//visibility:public",

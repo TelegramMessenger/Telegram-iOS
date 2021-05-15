@@ -497,7 +497,7 @@ public final class SecretMediaPreviewController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

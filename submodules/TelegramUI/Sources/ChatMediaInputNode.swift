@@ -423,7 +423,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private var inputNodeInteraction: ChatMediaInputNodeInteraction!
     private var trendingInteraction: TrendingPaneInteraction?
 
-    private let collectionListPanel: NavigationBackgroundNode
+    private let collectionListPanel: ASDisplayNode
     private let collectionListSeparator: ASDisplayNode
     private let collectionListContainer: CollectionListContainerNode
     
@@ -433,7 +433,9 @@ final class ChatMediaInputNode: ChatInputNode {
     private let gifListView: ListView
     private var searchContainerNode: PaneSearchContainerNode?
     private let searchContainerNodeLoadedDisposable = MetaDisposable()
-    
+
+    private let paneClippingContainer: ASDisplayNode
+    private let panesBackgroundNode: ASDisplayNode
     private let stickerPane: ChatMediaInputStickerPane
     private var animatingStickerPaneOut = false
     private let gifPane: ChatMediaInputGifPane
@@ -473,14 +475,15 @@ final class ChatMediaInputNode: ChatInputNode {
         self.strings = strings
         self.fontSize = fontSize
         self.gifPaneIsActiveUpdated = gifPaneIsActiveUpdated
+
+        self.paneClippingContainer = ASDisplayNode()
+        self.paneClippingContainer.clipsToBounds = true
+
+        self.panesBackgroundNode = ASDisplayNode()
         
         self.themeAndStringsPromise = Promise((theme, strings))
-        
-        if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-            self.collectionListPanel = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColorNoWallpaper)
-        } else {
-            self.collectionListPanel = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
-        }
+
+        self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
         
         self.collectionListSeparator = ASDisplayNode()
@@ -687,8 +690,10 @@ final class ChatMediaInputNode: ChatInputNode {
             return false
         }
         
-        self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
-        
+        self.panesBackgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
+
+        self.addSubnode(self.paneClippingContainer)
+        self.paneClippingContainer.addSubnode(panesBackgroundNode)
         self.collectionListPanel.addSubnode(self.listView)
         self.collectionListPanel.addSubnode(self.gifListView)
         self.gifListView.isHidden = true
@@ -1085,12 +1090,6 @@ final class ChatMediaInputNode: ChatInputNode {
         if self.theme !== theme || self.strings !== strings {
             self.theme = theme
             self.strings = strings
-            
-            if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-                self.collectionListPanel.color = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
-            } else {
-                self.collectionListPanel.color = theme.chat.inputPanel.panelBackgroundColor
-            }
             
             self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
             self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
@@ -1639,7 +1638,6 @@ final class ChatMediaInputNode: ChatInputNode {
         
         transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOffset), size: CGSize(width: width, height: max(0.0, 41.0 + UIScreenPixel))))
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: collectionListPanelOffset), size: CGSize(width: width, height: 41.0)))
-        collectionListPanel.update(size: self.collectionListPanel.bounds.size, transition: transition)
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + collectionListPanelOffset), size: CGSize(width: width, height: separatorHeight)))
         
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 41.0, height: width)
@@ -1672,11 +1670,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 case .gifs:
                     if self.gifPane.supernode == nil  {
                         if !displaySearch {
-                            if let searchContainerNode = self.searchContainerNode {
-                                self.insertSubnode(self.gifPane, belowSubnode: searchContainerNode)
-                            } else {
-                                self.insertSubnode(self.gifPane, belowSubnode: self.collectionListContainer)
-                            }
+                            self.paneClippingContainer.addSubnode(self.gifPane)
                             if self.searchContainerNode == nil {
                                 self.gifPane.frame = CGRect(origin: CGPoint(x: -width, y: 0.0), size: CGSize(width: width, height: panelHeight))
                             }
@@ -1688,11 +1682,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 case .stickers:
                     if self.stickerPane.supernode == nil {
-                        if let searchContainerNode = self.searchContainerNode {
-                            self.insertSubnode(self.stickerPane, belowSubnode: searchContainerNode)
-                        } else {
-                            self.insertSubnode(self.stickerPane, belowSubnode: self.collectionListContainer)
-                        }
+                        self.paneClippingContainer.addSubnode(self.stickerPane)
                         self.stickerPane.frame = CGRect(origin: CGPoint(x: width, y: 0.0), size: CGSize(width: width, height: panelHeight))
                     }
                     if self.stickerPane.frame != paneFrame {
@@ -1834,6 +1824,10 @@ final class ChatMediaInputNode: ChatInputNode {
                 self?.gifPane.initializeIfNeeded()
             })
         }
+
+        self.updatePaneClippingContainer(size: CGSize(width: width, height: panelHeight), offset: contentVerticalOffset, transition: transition)
+
+        transition.updateFrame(node: self.panesBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
         
         return (standardInputHeight, max(0.0, panelHeight - standardInputHeight))
     }
@@ -1974,10 +1968,16 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.updateAppearanceTransition(transition: transition)
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: collectionListPanelOffset), size: self.collectionListPanel.bounds.size))
-        collectionListPanel.update(size: self.collectionListPanel.bounds.size, transition: transition)
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + collectionListPanelOffset), size: self.collectionListSeparator.bounds.size))
         transition.updatePosition(node: self.listView, position: CGPoint(x: self.listView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))
         transition.updatePosition(node: self.gifListView, position: CGPoint(x: self.gifListView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))
+
+        self.updatePaneClippingContainer(size: self.paneClippingContainer.bounds.size, offset: collectionListPanelOffset, transition: transition)
+    }
+
+    private func updatePaneClippingContainer(size: CGSize, offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.paneClippingContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: offset + 41.0), size: size))
+        transition.updateSublayerTransformOffset(layer: self.paneClippingContainer.layer, offset: CGPoint(x: 0.0, y: -offset - 41.0))
     }
     
     private func fixPaneScroll(pane: ChatMediaInputPane, state: ChatMediaInputPaneScrollState) {
@@ -1996,7 +1996,6 @@ final class ChatMediaInputNode: ChatInputNode {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .spring)
         self.updateAppearanceTransition(transition: transition)
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: collectionListPanelOffset), size: self.collectionListPanel.bounds.size))
-        collectionListPanel.update(size: self.collectionListPanel.bounds.size, transition: transition)
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + collectionListPanelOffset), size: self.collectionListSeparator.bounds.size))
         transition.updatePosition(node: self.listView, position: CGPoint(x: self.listView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))
         transition.updatePosition(node: self.gifListView, position: CGPoint(x: self.gifListView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))

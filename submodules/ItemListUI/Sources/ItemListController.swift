@@ -444,11 +444,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
         |> map { ($0.presentationData, $1) }
         
-        let displayNode = ItemListControllerNode(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
-            if let strongSelf = self {
-                strongSelf.navigationOffset = offset
-            }
-        }, state: nodeState)
+        let displayNode = ItemListControllerNode(controller: self, navigationBar: self.navigationBar!, state: nodeState)
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
@@ -476,7 +472,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         
         self.validLayout = layout
         
-        (self.displayNode as! ItemListControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition, additionalInsets: self.additionalInsets)
+        (self.displayNode as! ItemListControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, transition: transition, additionalInsets: self.additionalInsets)
     }
 
     @objc func leftNavigationButtonPressed() {

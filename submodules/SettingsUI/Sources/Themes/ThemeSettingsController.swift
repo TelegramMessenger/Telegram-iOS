@@ -632,7 +632,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 effectiveWallpaper = wallpaper
             } else {
                 let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
-                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(nil, WallpaperSettings())
             }
             return (accentColor, effectiveWallpaper)
         }
@@ -643,7 +643,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                         return (accentColor, wallpaper)
                     } else {
-                        return (accentColor, .builtin(WallpaperSettings()))
+                        return (accentColor, .builtin(nil, WallpaperSettings()))
                     }
                 }
             } else {
@@ -833,7 +833,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 } else {
                     theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
                 }
-                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(nil, WallpaperSettings())
             }
             
             let wallpaperSignal: Signal<TelegramWallpaper, NoError>

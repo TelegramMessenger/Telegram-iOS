@@ -16,7 +16,7 @@ import TelegramUniversalVideoContent
 import ChatInterfaceState
 import FastBlur
 import ConfettiEffect
-import GradientBackground
+import WallpaperBackgroundNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -60,224 +60,6 @@ private struct ChatControllerNodeDerivedLayoutState {
     var upperInputPositionBound: CGFloat?
 }
 
-private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
-    private let context: AccountContext
-    private let backgroundNode: ASDisplayNode
-    private let statusBarBackgroundNode: ASDisplayNode
-    private let videoNode: OverlayUniversalVideoNode
-    private let disableInternalAnimationIn: Bool
-    private let isUIHiddenUpdated: () -> Void
-    private let unembedWhenPortrait: (OverlayMediaItemNode) -> Bool
-    
-    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
-    
-    private let dismissed: () -> Void
-    private let interactiveExtensionUpdated: (ContainedViewLayoutTransition) -> Void
-    
-    private(set) var interactiveExtension: CGFloat = 0.0
-    private var freezeInteractiveExtension = false
-    
-    private(set) var isUIHidden: Bool = false
-    
-    var unembedOnLeave: Bool = true
-    
-    init(context: AccountContext, videoNode: OverlayUniversalVideoNode, disableInternalAnimationIn: Bool, interactiveExtensionUpdated: @escaping (ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, isUIHiddenUpdated: @escaping () -> Void, unembedWhenPortrait: @escaping (OverlayMediaItemNode) -> Bool) {
-        self.dismissed = dismissed
-        self.interactiveExtensionUpdated = interactiveExtensionUpdated
-        self.isUIHiddenUpdated = isUIHiddenUpdated
-        self.unembedWhenPortrait = unembedWhenPortrait
-        self.disableInternalAnimationIn = disableInternalAnimationIn
-        
-        self.context = context
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = .black
-        
-        self.statusBarBackgroundNode = ASDisplayNode()
-        self.statusBarBackgroundNode.backgroundColor = .black
-        
-        self.videoNode = videoNode
-        
-        super.init()
-        
-        self.clipsToBounds = true
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.statusBarBackgroundNode)
-        
-        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
-        
-        self.videoNode.controlsAreShowingUpdated = { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.isUIHidden = !value
-            strongSelf.isUIHiddenUpdated()
-        }
-    }
-    
-    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
-        switch recognizer.state {
-        case .began:
-            break
-        case .changed:
-            let translation = recognizer.translation(in: self.view)
-            
-            func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
-                let bandedOffset = offset - bandingStart
-                let range: CGFloat = 600.0
-                let coefficient: CGFloat = 0.4
-                return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
-            }
-            
-            let offset = rubberBandingOffset(offset: translation.y, bandingStart: 0.0)
-            
-            if translation.y > 80.0 {
-                self.freezeInteractiveExtension = true
-                self.expandIntoPiP()
-            } else {
-                self.interactiveExtension = max(0.0, offset)
-                self.interactiveExtensionUpdated(.immediate)
-            }
-        case .cancelled, .ended:
-            if !freezeInteractiveExtension {
-                self.interactiveExtension = 0.0
-                self.interactiveExtensionUpdated(.animated(duration: 0.3, curve: .spring))
-            }
-        default:
-            break
-        }
-    }
-    
-    func calculateHeight(width: CGFloat) -> CGFloat {
-        return self.videoNode.content.dimensions.aspectFilled(CGSize(width: width, height: 16.0)).height
-    }
-    
-    func updateLayout(size: CGSize, actualHeight: CGFloat, topInset: CGFloat, interactiveExtension: CGFloat, transition: ContainedViewLayoutTransition, transitionSurface: ASDisplayNode?, navigationBar: NavigationBar?) {
-        let isFirstTime = self.validLayout == nil
-        
-        self.validLayout = (size, actualHeight, topInset, interactiveExtension)
-        let videoSize = CGSize(width: size.width, height: actualHeight)
-        
-        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset + interactiveExtension + floor((size.height - actualHeight) / 2.0)), size: CGSize(width: videoSize.width, height: videoSize.height - topInset - interactiveExtension))
-        
-        if isFirstTime, let transitionSurface = transitionSurface {
-            let sourceFrame = self.videoNode.view.convert(self.videoNode.bounds, to: transitionSurface.view)
-            let targetFrame = self.view.convert(videoFrame, to: transitionSurface.view)
-            
-            var navigationBarCopy: UIView?
-            var navigationBarContainer: UIView?
-            var nodeTransition = transition
-            if self.disableInternalAnimationIn {
-                nodeTransition = .immediate
-            } else {
-                self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
-                transitionSurface.addSubnode(self.videoNode)
-                
-                navigationBarCopy = navigationBar?.view.snapshotView(afterScreenUpdates: true)
-                let navigationBarContainerValue = UIView()
-                navigationBarContainer = navigationBarContainerValue
-                navigationBarContainerValue.frame = targetFrame
-                navigationBarContainerValue.clipsToBounds = true
-                transitionSurface.view.addSubview(navigationBarContainerValue)
-            }
-            
-            if !self.disableInternalAnimationIn {
-                navigationBarContainer?.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            
-            if !self.disableInternalAnimationIn {
-                if let navigationBar = navigationBar, let navigationBarCopy = navigationBarCopy {
-                    let navigationFrame = navigationBar.view.convert(navigationBar.bounds, to: transitionSurface.view)
-                    let navigationSourceFrame = navigationFrame.offsetBy(dx: -sourceFrame.minX, dy: -sourceFrame.minY)
-                    let navigationTargetFrame = navigationFrame.offsetBy(dx: -targetFrame.minX, dy: -targetFrame.minY)
-                    navigationBarCopy.frame = navigationTargetFrame
-                    navigationBarContainer?.addSubview(navigationBarCopy)
-                    
-                    navigationBarCopy.layer.animateFrame(from: navigationSourceFrame, to: navigationTargetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-                    navigationBarCopy.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-                }
-            }
-            
-            self.videoNode.updateRoundCorners(false, transition: nodeTransition)
-            if !self.disableInternalAnimationIn {
-                self.videoNode.showControls()
-            }
-            
-            self.videoNode.updateLayout(targetFrame.size, transition: nodeTransition)
-            self.videoNode.frame = targetFrame
-            if self.disableInternalAnimationIn {
-                self.insertSubnode(self.videoNode, belowSubnode: self.statusBarBackgroundNode)
-            } else {
-                self.videoNode.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    navigationBarContainer?.removeFromSuperview()
-                    strongSelf.insertSubnode(strongSelf.videoNode, belowSubnode: strongSelf.statusBarBackgroundNode)
-                    if let (size, actualHeight, topInset, interactiveExtension) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, actualHeight: actualHeight, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
-                    }
-                })
-                self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
-         
-            self.videoNode.customClose = { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.videoNode.customClose = nil
-                strongSelf.dismissed()
-            }
-        }
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.statusBarBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: topInset)))
-        
-        if self.videoNode.supernode == self {
-            self.videoNode.layer.transform = CATransform3DIdentity
-            transition.updateFrame(node: self.videoNode, frame: videoFrame)
-        }
-    }
-    
-    func expand(intoLandscape: Bool) {
-        if intoLandscape {
-            let unembedWhenPortrait = self.unembedWhenPortrait
-            self.videoNode.customUnembedWhenPortrait = { videoNode in
-                unembedWhenPortrait(videoNode)
-            }
-        }
-        self.videoNode.expand()
-    }
-    
-    func expandIntoPiP() {
-        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-        
-        self.videoNode.customExpand = nil
-        self.videoNode.customClose = nil
-        
-        let previousFrame = self.videoNode.frame
-        self.context.sharedContext.mediaManager.setOverlayVideoNode(self.videoNode)
-        self.videoNode.updateRoundCorners(true, transition: transition)
-        
-        if let targetSuperview = self.videoNode.view.superview {
-            let sourceFrame = self.view.convert(previousFrame, to: targetSuperview)
-            let targetFrame = self.videoNode.frame
-            self.videoNode.frame = sourceFrame
-            self.videoNode.updateLayout(sourceFrame.size, transition: .immediate)
-            
-            transition.updateFrame(node: self.videoNode, frame: targetFrame)
-            self.videoNode.updateLayout(targetFrame.size, transition: transition)
-        }
-        
-        self.dismissed()
-    }
-}
-
-enum ChatEmbeddedTitlePeekContent: Equatable {
-    case none
-    case peek
-}
-
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -285,8 +67,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var controller: ChatControllerImpl?
     
     let navigationBar: NavigationBar?
-    private let navigationBarBackroundNode: ASDisplayNode
-    private let navigationBarSeparatorNode: ASDisplayNode
     
     private var backgroundEffectNode: ASDisplayNode?
     private var containerBackgroundNode: ASImageNode?
@@ -301,7 +81,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
-    var gradientBackgroundNode: GradientBackgroundNode?
     let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
@@ -449,15 +228,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var displayVideoUnmuteTipDisposable: Disposable?
     
     private var onLayoutCompletions: [(ContainedViewLayoutTransition) -> Void] = []
-    
-    private var embeddedTitlePeekContent: ChatEmbeddedTitlePeekContent = .none
-    private var embeddedTitleContentNode: ChatEmbeddedTitleContentNode?
-    private var dismissedEmbeddedTitleContentNode: ChatEmbeddedTitleContentNode?
-    var hasEmbeddedTitleContent: Bool {
-        return self.embeddedTitleContentNode != nil
-    }
-    private var didProcessExperimentalEmbedUrl: String?
-    
+
     init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
         self.chatLocation = chatLocation
@@ -469,12 +240,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.backgroundNode = WallpaperBackgroundNode()
         self.backgroundNode.displaysAsynchronously = false
-
-        if chatPresentationInterfaceState.chatWallpaper.isBuiltin {
-            self.gradientBackgroundNode = createGradientBackgroundNode()
-        } else {
-            self.gradientBackgroundNode = nil
-        }
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
@@ -506,12 +271,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat)
         self.navigateButtons.accessibilityElementsHidden = true
-        
-        self.navigationBarBackroundNode = ASDisplayNode()
-        self.navigationBarBackroundNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.backgroundColor
-        
-        self.navigationBarSeparatorNode = ASDisplayNode()
-        self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
@@ -532,17 +291,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
 
         onTransitionEventImpl = { [weak self] transition in
-            guard let strongSelf = self, let gradientBackgroundNode = strongSelf.gradientBackgroundNode else {
+            guard let strongSelf = self else {
                 return
             }
-            gradientBackgroundNode.animateEvent(transition: transition)
+            strongSelf.backgroundNode.animateEvent(transition: transition)
         }
         
         self.controller?.presentationContext.topLevelSubview = { [weak self] in
             guard let strongSelf = self else {
                 return nil
             }
-            return strongSelf.titleAccessoryPanelContainer.view
+            return strongSelf.messageTransitionNode.view
         }
         
         self.setViewBlock({
@@ -604,39 +363,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.interactiveEmojis = emojis
             }
         })
-        
-        if case .gradient = chatPresentationInterfaceState.chatWallpaper {
-            self.backgroundNode.imageContentMode = .scaleToFill
-        } else {
-            self.backgroundNode.imageContentMode = .scaleAspectFill
-        }
-        self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
+
+        self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
 
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
         self.historyNode.enableExtractedBackgrounds = true
     
         self.addSubnode(self.backgroundNode)
-        if let gradientBackgroundNode = self.gradientBackgroundNode {
-            self.addSubnode(gradientBackgroundNode)
-        }
         self.addSubnode(self.historyNodeContainer)
         self.addSubnode(self.navigateButtons)
-        self.addSubnode(self.titleAccessoryPanelContainer)
-        
+
+        if let navigationBar = self.navigationBar {
+            self.addSubnode(navigationBar)
+        }
+
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
-        
+
         self.addSubnode(self.inputContextPanelContainer)
-                
-        self.addSubnode(self.navigationBarBackroundNode)
-        self.addSubnode(self.navigationBarSeparatorNode)
 
         self.addSubnode(self.messageTransitionNode)
 
-        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
-            self.navigationBarBackroundNode.isHidden = true
-            self.navigationBarSeparatorNode.isHidden = true
-        }
+        self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -798,8 +546,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputMediaNode?.simulateUpdateLayout(isVisible: isInFocus)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction:
-        (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat) -> Void) {
         let transition: ContainedViewLayoutTransition
         if let _ = self.scheduledAnimateInAsOverlayFromNode {
             transition = .immediate
@@ -847,9 +594,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.clipsToBounds = true
                 containerNode.cornerRadius = 15.0
                 containerNode.addSubnode(self.backgroundNode)
-                if let gradientBackgroundNode = self.gradientBackgroundNode {
-                    containerNode.addSubnode(gradientBackgroundNode)
-                }
                 containerNode.addSubnode(self.historyNodeContainer)
                 if let restrictedNode = self.restrictedNode {
                     containerNode.addSubnode(restrictedNode)
@@ -886,9 +630,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.containerNode = nil
                 containerNode.removeFromSupernode()
                 self.insertSubnode(self.backgroundNode, at: 0)
-                if let gradientBackgroundNode = self.gradientBackgroundNode {
-                    self.insertSubnode(gradientBackgroundNode, at: 1)
-                }
                 self.insertSubnode(self.historyNodeContainer, aboveSubnode: self.backgroundNode)
                 if let restrictedNode = self.restrictedNode {
                     self.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
@@ -952,6 +693,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
         var titleAccessoryPanelHeight: CGFloat?
+        var titleAccessoryPanelBackgroundHeight: CGFloat?
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
                  dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
@@ -960,7 +702,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.titleAccessoryPanelContainer.addSubnode(titleAccessoryPanelNode)
             }
             
-            titleAccessoryPanelHeight = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            let layoutResult = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            titleAccessoryPanelHeight = layoutResult.insetHeight
+            titleAccessoryPanelBackgroundHeight = layoutResult.backgroundHeight
         } else if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
             dismissedTitleAccessoryPanelNode = titleAccessoryPanelNode
             self.titleAccessoryPanelNode = nil
@@ -1052,134 +796,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let statusBarHeight = layout.insets(options: [.statusBar]).top
         
-        func extractExperimentalPlaylistUrl(_ text: String) -> String? {
-            let prefix = "stream: "
-            if text.hasPrefix(prefix) {
-                if let url = URL(string: String(text[text.index(text.startIndex, offsetBy: prefix.count)...])), url.absoluteString.hasSuffix(".m3u8") {
-                    return url.absoluteString
-                } else {
-                    return nil
-                }
-            } else {
-                return nil
-            }
-        }
-        
-        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.message.text), self.didProcessExperimentalEmbedUrl != url {
-            self.didProcessExperimentalEmbedUrl = url
-            let context = self.context
-            let baseNavigationController = self.controller?.navigationController as? NavigationController
-            let mediaManager = self.context.sharedContext.mediaManager
-            var expandImpl: (() -> Void)?
-            let content = PlatformVideoContent(id: .instantPage(MediaId(namespace: 0, id: 0), MediaId(namespace: 0, id: 0)), content: .url(url), streamVideo: true, loopVideo: false)
-            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, content: content, expand: {
-                expandImpl?()
-            }, close: { [weak mediaManager] in
-                mediaManager?.setOverlayVideoNode(nil)
-            })
-            self.embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: overlayNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.requestLayout(transition)
-            }, dismissed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
-                    strongSelf.embeddedTitleContentNode = nil
-                    strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
-                    strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
-                    strongSelf.updateHasEmbeddedTitleContent?()
-                }
-            }, isUIHiddenUpdated: { [weak self] in
-                self?.updateHasEmbeddedTitleContent?()
-            }, unembedWhenPortrait: { [weak self] itemNode in
-                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
-                    return false
-                }
-                strongSelf.unembedWhenPortrait(contentNode: itemNode)
-                return true
-            })
-            self.embeddedTitleContentNode?.unembedOnLeave = false
-            self.updateHasEmbeddedTitleContent?()
-            overlayNode.controlPlay()
-        }
-        
-        if self.chatPresentationInterfaceState.pinnedMessage == nil {
-            self.didProcessExperimentalEmbedUrl = nil
-        }
-        
-        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.supernode != nil {
-            if layout.size.width > layout.size.height {
-                self.embeddedTitleContentNode = nil
-                self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
-                embeddedTitleContentNode.expand(intoLandscape: true)
-                self.updateHasEmbeddedTitleContent?()
-            }
-        }
-        
-        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
-            let defaultEmbeddedSize = CGSize(width: layout.size.width, height: min(400.0, embeddedTitleContentNode.calculateHeight(width: layout.size.width)) + statusBarHeight + embeddedTitleContentNode.interactiveExtension)
-            
-            let embeddedSize: CGSize
-            if let inputHeight = layout.inputHeight, inputHeight > 100.0 {
-                embeddedSize = CGSize(width: defaultEmbeddedSize.width, height: floor(defaultEmbeddedSize.height * 0.6))
-            } else {
-                embeddedSize = defaultEmbeddedSize
-            }
-            
-            if embeddedTitleContentNode.supernode == nil {
-                self.insertSubnode(embeddedTitleContentNode, aboveSubnode: self.navigationBarBackroundNode)
-                
-                var previousTopInset = insets.top
-                if case .overlay = self.chatPresentationInterfaceState.mode {
-                    previousTopInset = 44.0
-                } else {
-                    previousTopInset += navigationBarHeight
-                }
-                
-                if case .peek = self.embeddedTitlePeekContent {
-                    previousTopInset += 32.0
-                }
-                
-                embeddedTitleContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: previousTopInset))
-                transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
-                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: .immediate, transitionSurface: self, navigationBar: self.navigationBar)
-            } else {
-                transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
-                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: transition, transitionSurface: self, navigationBar: self.navigationBar)
-            }
-            
-            insets.top += embeddedSize.height
+
+        if case .overlay = self.chatPresentationInterfaceState.mode {
+            insets.top = 44.0
         } else {
-            if case .overlay = self.chatPresentationInterfaceState.mode {
-                insets.top = 44.0
-            } else {
-                insets.top += navigationBarHeight
-            }
-            
-            if case .peek = self.embeddedTitlePeekContent {
-                insets.top += 32.0
-            }
+            insets.top += navigationBarHeight
         }
-        
-        if let dismissedEmbeddedTitleContentNode = self.dismissedEmbeddedTitleContentNode {
-            self.dismissedEmbeddedTitleContentNode = nil
-            if transition.isAnimated {
-                dismissedEmbeddedTitleContentNode.alpha = 0.0
-                dismissedEmbeddedTitleContentNode.layer.allowsGroupOpacity = true
-                dismissedEmbeddedTitleContentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { [weak dismissedEmbeddedTitleContentNode] _ in
-                    dismissedEmbeddedTitleContentNode?.removeFromSupernode()
-                })
-                transition.updateFrame(node: dismissedEmbeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: insets.top)))
-            } else {
-                dismissedEmbeddedTitleContentNode.removeFromSupernode()
-            }
-        }
-        
-        transition.updateFrame(node: self.navigationBarBackroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: insets.top)))
-        transition.updateFrame(node: self.navigationBarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         var wrappingInsets = UIEdgeInsets()
         if case .overlay = self.chatPresentationInterfaceState.mode {
@@ -1286,6 +908,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
         }
+
+        updateExtraNavigationBarBackgroundHeight(titleAccessoryPanelBackgroundHeight ?? 0.0)
         
         var importStatusPanelFrame: CGRect?
         if let _ = self.chatImportStatusPanel, let panelHeight = importStatusPanelHeight {
@@ -1301,11 +925,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
         self.backgroundNode.updateLayout(size: contentBounds.size, transition: transition)
-
-        if let gradientBackgroundNode = self.gradientBackgroundNode {
-            transition.updateFrame(node: gradientBackgroundNode, frame: contentBounds)
-            gradientBackgroundNode.updateLayout(size: contentBounds.size, transition: transition)
-        }
 
         transition.updateFrame(node: self.historyNodeContainer, frame: contentBounds)
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
@@ -1602,7 +1221,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
-        self.inputPanelBackgroundNode.update(size: apparentInputBackgroundFrame.size, transition: transition)
+        self.inputPanelBackgroundNode.update(size: CGSize(width: apparentInputBackgroundFrame.size.width, height: apparentInputBackgroundFrame.size.height + 41.0), transition: transition)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         
@@ -1922,7 +1541,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
             if abs(listBottomInset - previousListBottomInset) > 80.0 {
-                self.gradientBackgroundNode?.animateEvent(transition: transition)
+                self.backgroundNode.animateEvent(transition: transition)
             }
             //self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
         }
@@ -1974,23 +1593,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }))
                 self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-                if case .gradient = chatPresentationInterfaceState.chatWallpaper {
-                    self.backgroundNode.imageContentMode = .scaleToFill
-                } else {
-                    self.backgroundNode.imageContentMode = .scaleAspectFill
-                }
-                self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
-
-                if chatPresentationInterfaceState.chatWallpaper.isBuiltin {
-                    if self.gradientBackgroundNode == nil {
-                        let gradientBackgroundNode = createGradientBackgroundNode()
-                        self.gradientBackgroundNode = gradientBackgroundNode
-                        self.backgroundNode.supernode?.insertSubnode(gradientBackgroundNode, aboveSubnode: self.backgroundNode)
-                    }
-                } else if let gradientBackgroundNode = self.gradientBackgroundNode {
-                    self.gradientBackgroundNode = nil
-                    gradientBackgroundNode.removeFromSupernode()
-                }
+                self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
             }
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
@@ -2012,9 +1615,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 self.updatePlainInputSeparator(transition: .immediate)
                 self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
-                
-                self.navigationBarBackroundNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.backgroundColor
-                self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
             }
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
@@ -2545,6 +2145,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
                 self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
+            }, updateExtraNavigationBarBackgroundHeight: { _ in
             })
         }
     }
@@ -2802,124 +2403,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.insertSubview(ConfettiView(frame: self.view.bounds), aboveSubview: self.historyNode.view)
     }
     
-    func updateEmbeddedTitlePeekContent(content: NavigationControllerDropContent?) {
-        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
-            return
-        }
-        
-        guard let (_, navigationHeight) = self.validLayout else {
-            return
-        }
-        var peekContent: ChatEmbeddedTitlePeekContent = .none
-        if let content = content, let item = content.item as? VideoNavigationControllerDropContentItem, let _ = item.itemNode as? OverlayUniversalVideoNode {
-            if content.position.y < navigationHeight + 32.0 {
-                peekContent = .peek
-            }
-        }
-        if self.embeddedTitlePeekContent != peekContent {
-            self.embeddedTitlePeekContent = peekContent
-            self.requestLayout(.animated(duration: 0.3, curve: .spring))
-        }
-    }
-    
-    var isEmbeddedTitleContentHidden: Bool {
-        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
-            return embeddedTitleContentNode.isUIHidden
-        } else {
-            return false
-        }
-    }
-    
-    var updateHasEmbeddedTitleContent: (() -> Void)?
-    
-    func acceptEmbeddedTitlePeekContent(content: NavigationControllerDropContent) -> Bool {
-        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
-            return false
-        }
-        
-        guard let (_, navigationHeight) = self.validLayout else {
-            return false
-        }
-        if content.position.y >= navigationHeight + 32.0 {
-            return false
-        }
-        if let item = content.item as? VideoNavigationControllerDropContentItem, let itemNode = item.itemNode as? OverlayUniversalVideoNode {
-            let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: itemNode, disableInternalAnimationIn: false, interactiveExtensionUpdated: { [weak self] transition in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.requestLayout(transition)
-            }, dismissed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
-                    strongSelf.embeddedTitleContentNode = nil
-                    strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
-                    strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
-                    strongSelf.updateHasEmbeddedTitleContent?()
-                }
-            }, isUIHiddenUpdated: { [weak self] in
-                self?.updateHasEmbeddedTitleContent?()
-            }, unembedWhenPortrait: { [weak self] itemNode in
-                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
-                    return false
-                }
-                strongSelf.unembedWhenPortrait(contentNode: itemNode)
-                return true
-            })
-            self.embeddedTitleContentNode = embeddedTitleContentNode
-            self.embeddedTitlePeekContent = .none
-            self.updateHasEmbeddedTitleContent?()
-            DispatchQueue.main.async {
-                self.requestLayout(.animated(duration: 0.25, curve: .spring))
-            }
-            
-            return true
-        }
-        return false
-    }
-    
-    private func unembedWhenPortrait(contentNode: OverlayUniversalVideoNode) {
-        let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: contentNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.requestLayout(transition)
-        }, dismissed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
-                strongSelf.embeddedTitleContentNode = nil
-                strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
-                strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
-                strongSelf.updateHasEmbeddedTitleContent?()
-            }
-        }, isUIHiddenUpdated: { [weak self] in
-            self?.updateHasEmbeddedTitleContent?()
-        }, unembedWhenPortrait: { [weak self] itemNode in
-            guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
-                return false
-            }
-            strongSelf.unembedWhenPortrait(contentNode: itemNode)
-            return true
-        })
-        
-        self.embeddedTitleContentNode = embeddedTitleContentNode
-        self.embeddedTitlePeekContent = .none
-        self.updateHasEmbeddedTitleContent?()
-        self.requestLayout(.immediate)
-    }
-    
     func willNavigateAway() {
-        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.unembedOnLeave {
-            self.embeddedTitleContentNode = nil
-            self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
-            embeddedTitleContentNode.expandIntoPiP()
-            self.requestLayout(.animated(duration: 0.25, curve: .spring))
-            self.updateHasEmbeddedTitleContent?()
-        }
     }
     
     func updateIsBlurred(_ isBlurred: Bool) {

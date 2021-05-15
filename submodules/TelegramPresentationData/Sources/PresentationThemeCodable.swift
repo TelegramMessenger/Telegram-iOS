@@ -40,7 +40,7 @@ extension TelegramWallpaper: Codable {
         if let value = try? values.decode(String.self) {
             switch value.lowercased() {
                 case "builtin":
-                    self = .builtin(WallpaperSettings())
+                    self = .builtin(nil, WallpaperSettings())
                 default:
                     let optionKeys = ["motion", "blur"]
                     

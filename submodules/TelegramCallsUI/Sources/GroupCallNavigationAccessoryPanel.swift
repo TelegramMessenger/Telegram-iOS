@@ -131,7 +131,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private var audioLevelGenerators: [PeerId: FakeAudioLevelGenerator] = [:]
     private var audioLevelGeneratorTimer: SwiftSignalKit.Timer?
 
-    private let backgroundNode: NavigationBackgroundNode
+    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     
     private let membersDisposable = MetaDisposable()
@@ -176,7 +176,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
 
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode = ASDisplayNode()
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -284,8 +284,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
-        
-        self.backgroundNode.color = self.theme.rootController.navigationBar.backgroundColor
+
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isScheduled ? .white : presentationData.theme.chat.inputPanel.actionControlForegroundColor)
@@ -634,9 +633,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton.isHidden = self.currentData?.groupCall != nil
         self.micButton.isHidden = self.currentData?.groupCall == nil
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: panelHeight)))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
     }
     
     public func animateIn(_ transition: ContainedViewLayoutTransition) {
@@ -645,6 +643,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.animatePositionAdditive(node: self.separatorNode, offset: CGPoint(x: 0.0, y: size.height))
     }
     
     public func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -654,6 +658,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self?.clipsToBounds = false
             completion()
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
     }
     
     func rightButtonSnapshotViews() -> (background: UIView, foreground: UIView)? {

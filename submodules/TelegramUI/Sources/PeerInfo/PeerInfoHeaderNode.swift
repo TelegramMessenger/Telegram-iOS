@@ -1655,10 +1655,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
     var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
-    private let backgroundNode: ASDisplayNode
-    private let expandedBackgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
+    private let expandedBackgroundNode: NavigationBackgroundNode
     let separatorNode: ASDisplayNode
-    let navigationBackgroundNode: ASDisplayNode
+    let navigationBackgroundNode: NavigationBackgroundNode
     var navigationTitle: String?
     let navigationTitleNode: ImmediateTextNode
     let navigationSeparatorNode: ASDisplayNode
@@ -1720,7 +1720,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
         self.avatarOverlayNode.isUserInteractionEnabled = false
         
-        self.navigationBackgroundNode = ASDisplayNode()
+        self.navigationBackgroundNode = NavigationBackgroundNode(color: .clear)
+        self.navigationBackgroundNode.isHidden = true
         self.navigationBackgroundNode.isUserInteractionEnabled = false
         
         self.navigationTitleNode = ImmediateTextNode()
@@ -1729,10 +1730,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.navigationButtonContainer = PeerInfoHeaderNavigationButtonContainerNode()
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.expandedBackgroundNode = ASDisplayNode()
-        self.expandedBackgroundNode.isLayerBacked = true
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode.isHidden = true
+        self.backgroundNode.isUserInteractionEnabled = false
+        self.expandedBackgroundNode = NavigationBackgroundNode(color: .clear)
+        self.expandedBackgroundNode.isHidden = false
+        self.expandedBackgroundNode.isUserInteractionEnabled = false
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -1943,24 +1946,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var transitionSourceTitleFrame = CGRect()
         var transitionSourceSubtitleFrame = CGRect()
         
-        self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        self.expandedBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.color = presentationData.theme.rootController.navigationBar.backgroundColor
         
         if let navigationTransition = self.navigationTransition, let sourceAvatarNode = (navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode {
-            transitionSourceHeight = navigationTransition.sourceNavigationBar.bounds.height
+            transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
             transitionFraction = navigationTransition.fraction
             transitionSourceAvatarFrame = sourceAvatarNode.view.convert(sourceAvatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
-            
-            transition.updateAlpha(node: self.expandedBackgroundNode, alpha: transitionFraction)
+
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.backgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
             
             if self.isAvatarExpanded, case .animated = transition, transitionFraction == 1.0 {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
         } else {
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (112.0 + avatarSize)))
-            transition.updateAlpha(node: self.expandedBackgroundNode, alpha: backgroundTransitionFraction)
+
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.backgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
         }
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
@@ -1975,8 +1978,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - navigationTitleSize.width) / 2.0), y: navigationHeight - 44.0 + floorToScreenPixels((44.0 - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
         
         self.navigationBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
+        self.navigationBackgroundNode.update(size: self.navigationBackgroundNode.bounds.size, transition: .immediate)
         self.navigationSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: width, height: UIScreenPixel))
-        self.navigationBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationBackgroundNode.color = presentationData.theme.rootController.navigationBar.backgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         transition.updateAlpha(node: self.navigationBackgroundNode, alpha: state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -2531,11 +2535,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if additive {
             transition.updateFrameAdditive(node: self.backgroundNode, frame: backgroundFrame)
+            self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
             transition.updateFrameAdditive(node: self.expandedBackgroundNode, frame: backgroundFrame)
+            self.expandedBackgroundNode.update(size: self.expandedBackgroundNode.bounds.size, transition: transition)
             transition.updateFrameAdditive(node: self.separatorNode, frame: separatorFrame)
         } else {
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+            self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
             transition.updateFrame(node: self.expandedBackgroundNode, frame: backgroundFrame)
+            self.expandedBackgroundNode.update(size: self.expandedBackgroundNode.bounds.size, transition: transition)
             transition.updateFrame(node: self.separatorNode, frame: separatorFrame)
         }
         

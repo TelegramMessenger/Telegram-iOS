@@ -479,11 +479,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         suggestedWallpaper = .color(color.argb)
                         backgroundColors = (color, nil)
                     default:
-                        suggestedWallpaper = .builtin(WallpaperSettings())
+                        suggestedWallpaper = .builtin(nil, WallpaperSettings())
                 }
                 wallpaper = suggestedWallpaper
             } else {
-                wallpaper = state.initialWallpaper ?? .builtin(WallpaperSettings())
+                wallpaper = state.initialWallpaper ?? .builtin(nil, WallpaperSettings())
                 wallpaperImage = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
             }
             
@@ -701,7 +701,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
 
             self.colorPanelNode.updateState({ _ in
-                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation ?? 0, preview: false, simpleGradientGeneration: self.state.section == .messages)
+                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .index(0), firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation, preview: false, simpleGradientGeneration: self.state.section == .messages, multiColors: [])
             }, animated: animated)
             
             needsLayout = true
@@ -714,7 +714,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             self.colorPanelNode.updateState({ current in
                 var updated = current
-                updated.selection = colorPanelCollapsed ? .none : .first
+                updated.selection = colorPanelCollapsed ? .none : .index(0)
                 return updated
             }, animated: animated)
         }

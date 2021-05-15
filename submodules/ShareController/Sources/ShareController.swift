@@ -16,6 +16,7 @@ import UrlEscaping
 import StickerResources
 import SaveToCameraRoll
 import TelegramStringFormatting
+import WallpaperBackgroundNode
 
 public struct ShareControllerAction {
     let title: String
@@ -856,7 +857,7 @@ public final class ShareController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func saveToCameraRoll(messages: [Message]) {

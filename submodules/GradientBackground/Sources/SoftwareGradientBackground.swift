@@ -3,6 +3,17 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
+private func shiftArray(array: [CGPoint], offset: Int) -> [CGPoint] {
+    var newArray = array
+    var offset = offset
+    while offset > 0 {
+        let element = newArray.removeFirst()
+        newArray.append(element)
+        offset -= 1
+    }
+    return newArray
+}
+
 private func gatherPositions(_ list: [CGPoint]) -> [CGPoint] {
     var result: [CGPoint] = []
     for i in 0 ..< list.count / 2 {
@@ -110,10 +121,16 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
 
     private let contentView: UIImageView
     private var validPhase: Int?
+    private var invalidated: Bool = false
 
     private var validLayout: CGSize?
 
-    private var timer: Timer?
+    private var colors: [UIColor] = [
+        UIColor(rgb: 0x7FA381),
+        UIColor(rgb: 0xFFF5C5),
+        UIColor(rgb: 0x336F55),
+        UIColor(rgb: 0xFBE37D)
+    ]
 
     private struct PhaseTransitionKey: Hashable {
         var width: Int
@@ -133,73 +150,9 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
         self.view.addSubview(self.contentView)
 
         self.phase = 0
-
-        self.backgroundColor = .white
-
-        /*if #available(iOS 10.0, *) {
-            let timer = Timer(timeInterval: 1.0, repeats: true, block: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.phase += 1
-                if let size = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .spring))
-                }
-            })
-            self.timer = timer
-            RunLoop.main.add(timer, forMode: .common)
-        }*/
     }
 
     deinit {
-        self.timer?.invalidate()
-    }
-
-    private func generateAndCachePhaseTransition(key: PhaseTransitionKey) {
-        DispatchQueue.global().async { [weak self] in
-            let basePositions: [CGPoint] = [
-                CGPoint(x: 0.80, y: 0.10),
-                CGPoint(x: 0.60, y: 0.20),
-                CGPoint(x: 0.35, y: 0.25),
-                CGPoint(x: 0.25, y: 0.60),
-                CGPoint(x: 0.20, y: 0.90),
-                CGPoint(x: 0.40, y: 0.80),
-                CGPoint(x: 0.65, y: 0.75),
-                CGPoint(x: 0.75, y: 0.40)
-            ]
-
-            let colors: [UIColor] = [
-                UIColor(rgb: 0x7FA381),
-                UIColor(rgb: 0xFFF5C5),
-                UIColor(rgb: 0x336F55),
-                UIColor(rgb: 0xFBE37D)
-            ]
-
-            var images: [UIImage] = []
-
-            let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: key.fromPhase % 8))
-            let positions = gatherPositions(shiftArray(array: basePositions, offset: key.toPhase % 8))
-
-            let startTime = CFAbsoluteTimeGetCurrent()
-            for i in 0 ..< key.numberOfFrames {
-                let t = key.curve.solve(at: CGFloat(i) / CGFloat(key.numberOfFrames - 1))
-
-                let morphedPositions = Array(zip(previousPositions, positions).map { previous, current -> CGPoint in
-                    return interpolatePoints(previous, current, at: t)
-                })
-
-                images.append(generateGradient(size: CGSize(width: key.width, height: key.height), colors: colors, positions: morphedPositions))
-            }
-            print("Animation cached in \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-
-            DispatchQueue.main.async {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.cachedPhaseTransition.removeAll()
-                strongSelf.cachedPhaseTransition[key] = images
-            }
-        }
     }
 
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -219,40 +172,27 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
             CGPoint(x: 0.75, y: 0.40)
         ]
 
-        let colors: [UIColor] = [
-            UIColor(rgb: 0x7FA381),
-            UIColor(rgb: 0xFFF5C5),
-            UIColor(rgb: 0x336F55),
-            UIColor(rgb: 0xFBE37D)
-        ]
-
         let positions = gatherPositions(shiftArray(array: basePositions, offset: self.phase % 8))
 
         if let validPhase = self.validPhase {
-            if validPhase != self.phase {
+            if validPhase != self.phase || self.invalidated {
                 self.validPhase = self.phase
+                self.invalidated = false
 
                 let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: validPhase % 8))
 
                 if case let .animated(duration, curve) = transition {
                     var images: [UIImage] = []
 
-                    let cacheKey = PhaseTransitionKey(width: Int(imageSize.width), height: Int(imageSize.height), fromPhase: validPhase, toPhase: self.phase, numberOfFrames: Int(duration * 60), curve: curve)
-                    if let current = self.cachedPhaseTransition[cacheKey] {
-                        images = current
-                    } else {
-                        let startTime = CFAbsoluteTimeGetCurrent()
-                        let maxFrame = Int(duration * 30)
-                        for i in 0 ..< maxFrame {
-                            let t = curve.solve(at: CGFloat(i) / CGFloat(maxFrame - 1))
+                    let maxFrame = Int(duration * 30)
+                    for i in 0 ..< maxFrame {
+                        let t = curve.solve(at: CGFloat(i) / CGFloat(maxFrame - 1))
 
-                            let morphedPositions = Array(zip(previousPositions, positions).map { previous, current -> CGPoint in
-                                return interpolatePoints(previous, current, at: t)
-                            })
+                        let morphedPositions = Array(zip(previousPositions, positions).map { previous, current -> CGPoint in
+                            return interpolatePoints(previous, current, at: t)
+                        })
 
-                            images.append(generateGradient(size: imageSize, colors: colors, positions: morphedPositions))
-                        }
-                        print("Animation generated in \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                        images.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions))
                     }
 
                     self.contentView.image = images.last
@@ -271,6 +211,14 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
         }
 
         transition.updateFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
+    }
+
+    public func updateColors(colors: [UIColor]) {
+        self.colors = colors
+        self.invalidated = true
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: .immediate)
+        }
     }
 
     public func animateEvent(transition: ContainedViewLayoutTransition) {

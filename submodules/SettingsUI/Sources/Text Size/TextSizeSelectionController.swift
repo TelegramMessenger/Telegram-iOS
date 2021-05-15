@@ -13,6 +13,7 @@ import ChatListUI
 import WallpaperResources
 import LegacyComponents
 import ItemListUI
+import WallpaperBackgroundNode
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in
@@ -82,10 +83,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
         self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
-        self.chatBackgroundNode.motionEnabled = self.presentationData.chatWallpaper.settings?.motion ?? false
-        if case .gradient = self.presentationData.chatWallpaper {
-            self.chatBackgroundNode.imageContentMode = .scaleToFill
-        }
+        self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper)
                         
         self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)
                 
@@ -569,7 +567,7 @@ final class TextSizeSelectionController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 

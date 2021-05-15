@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/AccountContext:AccountContext",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
+        "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
     ],
     visibility = [
         "//visibility:public",
