@@ -155,12 +155,12 @@ class VoiceChatActionItemNode: ListViewItemNode {
             
             let titleFont = Font.regular(17.0)
             
-            var leftInset: CGFloat = 16.0 + params.leftInset
+            var leftInset: CGFloat = 8.0 + params.leftInset
             if case .generic = item.icon {
                 leftInset += 49.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(rgb: 0xffffff)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentHeight: CGFloat = 12.0 * 2.0 + titleLayout.size.height
             
@@ -182,9 +182,9 @@ class VoiceChatActionItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.08)
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: UIColor(rgb: 0xffffff))
+                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
                     } else if updatedContent {
-                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: UIColor(rgb: 0xffffff))
+                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
                     }
                     
                     let _ = titleApply()
@@ -192,7 +192,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
                     let titleOffset = leftInset
                     let hideBottomStripe: Bool = last
                     if let image = item.icon.image {
-                        let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0) - 1.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                         strongSelf.iconNode.frame = iconFrame
                     }
                 
@@ -208,7 +208,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset + 1.0, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
