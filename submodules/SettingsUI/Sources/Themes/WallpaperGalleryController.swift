@@ -96,6 +96,35 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
         
         itemNode.updateDismissTransition(value)
     }
+
+    override func didLoad() {
+        super.didLoad()
+
+        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+    }
+
+    @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.setControlsHidden(true, animated: false)
+
+            self.overlayNode?.alpha = 0.0
+
+            if let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                itemNode.updateDismissTransition(self.bounds.size.height)
+            }
+        case .ended, .cancelled:
+            self.setControlsHidden(false, animated: false)
+
+            self.overlayNode?.alpha = 1.0
+
+            if let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                itemNode.updateDismissTransition(0.0)
+            }
+        default:
+            break
+        }
+    }
 }
 
 private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
@@ -321,6 +350,8 @@ public class WallpaperGalleryController: ViewController {
         })
         self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
+
+        (self.displayNode as? WallpaperGalleryControllerNode)?.statusBar = self.statusBar
         
         self.galleryNode.navigationBar = self.navigationBar
         self.galleryNode.dismiss = { [weak self] in
