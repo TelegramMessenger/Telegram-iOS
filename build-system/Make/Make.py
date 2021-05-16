@@ -106,6 +106,15 @@ class BazelCommandLine:
     def set_build_number(self, build_number):
         self.build_number = build_number
 
+    def set_custom_target(self, target_name):
+        self.custom_target = target_name
+
+    def set_continue_on_error(self, continue_on_error):
+        self.continue_on_error = continue_on_error
+
+    def set_enable_sandbox(self, enable_sandbox):
+        self.enable_sandbox = enable_sandbox
+
     def set_split_swiftmodules(self, value):
         self.split_submodules = value
 
@@ -260,10 +269,18 @@ class BazelCommandLine:
             self.build_environment.bazel_path
         ]
         combined_arguments += self.get_startup_bazel_arguments()
-        combined_arguments += [
-            'build',
-            'Telegram/Telegram'
-        ]
+        combined_arguments += ['build']
+
+        if self.custom_target is not None:
+            combined_arguments += [self.custom_target]
+        else:
+            combined_arguments += ['Telegram/Telegram']
+
+        if self.continue_on_error:
+            combined_arguments += ['--keep_going']
+
+        if self.enable_sandbox:
+            combined_arguments += ['--spawn_strategy=sandboxed']
 
         if self.configuration_path is None:
             raise Exception('configuration_path is not defined')
@@ -386,6 +403,9 @@ def build(arguments):
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
+    bazel_command_line.set_custom_target(arguments.target)
+    bazel_command_line.set_continue_on_error(arguments.continueOnError)
+    bazel_command_line.set_enable_sandbox(arguments.sandbox)
 
     bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
 
@@ -539,6 +559,24 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core systems.'
+    )
+    buildParser.add_argument(
+        '--target',
+        type=str,
+        help='A custom bazel target name to build.',
+        metavar='target_name'
+    )
+    buildParser.add_argument(
+        '--continueOnError',
+        action='store_true',
+        default=False,
+        help='Continue build process after an error.',
+    )
+    buildParser.add_argument(
+        '--sandbox',
+        action='store_true',
+        default=False,
+        help='Enable sandbox.',
     )
 
     if len(sys.argv) < 2:
