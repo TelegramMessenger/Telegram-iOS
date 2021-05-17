@@ -949,7 +949,7 @@ open class NavigationBar: ASDisplayNode {
         let backButtonInset: CGFloat = leftInset + 27.0
         
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.additionalContentNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.additionalContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + additionalBackgroundHeight)))
         transition.updateFrame(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(), size: size))
         var expansionHeight: CGFloat = 0.0
         if let contentNode = self.contentNode {
@@ -1371,15 +1371,10 @@ open class NavigationBar: ASDisplayNode {
     }
     
     override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        /*if self.bounds.contains(point) {
-            if self.backButtonNode.supernode != nil && !self.backButtonNode.isHidden {
-                let effectiveBackButtonRect = CGRect(origin: CGPoint(), size: CGSize(width: self.backButtonNode.frame.maxX + 20.0, height: self.bounds.height))
-                if effectiveBackButtonRect.contains(point) {
-                    return self.backButtonNode.internalHitTest(self.view.convert(point, to: self.backButtonNode.view), with: event)
-                }
-            }
-        }*/
-        
+        if let result = self.additionalContentNode.view.hitTest(self.view.convert(point, to: self.additionalContentNode.view), with: event) {
+            return result
+        }
+
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
