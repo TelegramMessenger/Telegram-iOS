@@ -966,4 +966,11 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             return updated
         })
     }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = super.hitTest(point, with: event) {
+            return result
+        }
+        return nil
+    }
 }

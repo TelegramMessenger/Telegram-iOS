@@ -296,7 +296,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         }
 
         self.actionButtonPanelNode = ASDisplayNode()
-        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
 
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor

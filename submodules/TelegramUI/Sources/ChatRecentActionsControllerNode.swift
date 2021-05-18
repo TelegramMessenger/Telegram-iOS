@@ -23,6 +23,7 @@ import PeerInfoUI
 import InviteLinksUI
 import UndoUI
 import TelegramCallsUI
+import WallpaperBackgroundNode
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -57,8 +58,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var state: ChatRecentActionsControllerState
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
-    private let backgroundNode: ASDisplayNode
-    private let panelBackgroundNode: ASDisplayNode
+    private let backgroundNode: WallpaperBackgroundNode
+    private let panelBackgroundNode: NavigationBackgroundNode
     private let panelSeparatorNode: ASDisplayNode
     private let panelButtonNode: HighlightableButtonNode
     
@@ -98,18 +99,17 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode = WallpaperBackgroundNode(context: context)
+        self.backgroundNode.isUserInteractionEnabled = false
         
-        self.panelBackgroundNode = ASDisplayNode()
-        self.panelBackgroundNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
+        self.panelBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.chat.inputPanel.panelBackgroundColor)
         self.panelSeparatorNode = ASDisplayNode()
         self.panelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode = HighlightableButtonNode()
         self.panelButtonNode.setTitle(self.presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: self.presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
         
         self.listNode = ListView()
-        self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
+        self.listNode.dynamicBounceEnabled = false
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
@@ -121,13 +121,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.state = ChatRecentActionsControllerState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize)
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.chatFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations, largeEmoji: self.presentationData.largeEmoji, chatBubbleCorners: self.presentationData.chatBubbleCorners))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.chatFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: self.presentationData.largeEmoji, chatBubbleCorners: self.presentationData.chatBubbleCorners))
         
         self.eventLogContext = ChannelAdminEventLogContext(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peer.id)
         
         super.init()
         
-        self.backgroundNode.contents = chatControllerBackgroundImage(theme: self.state.theme, wallpaper: self.state.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)?.cgImage
+        self.backgroundNode.image = chatControllerBackgroundImage(theme: self.state.theme, wallpaper: self.state.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        self.backgroundNode.update(wallpaper: self.state.chatWallpaper)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)
@@ -610,7 +611,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
-                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)))
+                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)))
                 
                 strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
             }
@@ -629,7 +630,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.panelBackgroundNode.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        self.panelBackgroundNode.color = theme.chat.inputPanel.panelBackgroundColor
         self.panelSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: theme.chat.inputPanel.panelControlAccentColor, for: [])
     }
@@ -645,10 +646,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let cleanInsets = layout.insets(options: [])
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
         
         let intrinsicPanelHeight: CGFloat = 47.0
         let panelHeight = intrinsicPanelHeight + cleanInsets.bottom
         transition.updateFrame(node: self.panelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+        self.panelBackgroundNode.update(size: self.panelBackgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: intrinsicPanelHeight)))
         

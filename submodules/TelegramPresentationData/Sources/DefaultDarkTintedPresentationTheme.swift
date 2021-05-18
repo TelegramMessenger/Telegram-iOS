@@ -100,7 +100,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
                 secondaryTextColor: mainSecondaryColor,
                 controlColor: mainSecondaryColor,
                 accentTextColor: accentColor,
-                backgroundColor: mainBackgroundColor,
+                blurredBackgroundColor: mainBackgroundColor,
+                opaqueBackgroundColor: mainBackgroundColor,
                 separatorColor: mainSeparatorColor,
                 segmentedBackgroundColor: mainInputColor,
                 segmentedForegroundColor: mainBackgroundColor,
@@ -503,7 +504,8 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         secondaryTextColor: mainSecondaryColor,
         controlColor: mainSecondaryColor,
         accentTextColor: accentColor,
-        backgroundColor: mainBackgroundColor,
+        blurredBackgroundColor: mainBackgroundColor,
+        opaqueBackgroundColor: mainBackgroundColor,
         separatorColor: mainSeparatorColor,
         badgeBackgroundColor: UIColor(rgb: 0xef5b5b),
         badgeStrokeColor: UIColor(rgb: 0xef5b5b),
@@ -781,7 +783,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     
     let contextMenu = PresentationThemeContextMenu(
         dimColor: UIColor(rgb: 0x000000, alpha: 0.6),
-        backgroundColor: rootNavigationBar.backgroundColor.withAlphaComponent(0.78),
+        backgroundColor: rootNavigationBar.opaqueBackgroundColor.withAlphaComponent(0.78),
         itemSeparatorColor: UIColor(rgb: 0xffffff, alpha: 0.15),
         sectionSeparatorColor: UIColor(rgb: 0x000000, alpha: 0.2),
         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),

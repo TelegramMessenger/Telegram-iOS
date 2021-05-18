@@ -96,7 +96,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
 }
 
 class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
-    private let backgroundNode: WallpaperBackgroundNode
+    private var backgroundNode: WallpaperBackgroundNode?
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
@@ -110,8 +110,6 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     private let disposable = MetaDisposable()
     
     init() {
-        self.backgroundNode = WallpaperBackgroundNode()
-        
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         
@@ -221,32 +219,35 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node.frame.size), within: layoutSize)
                         topOffset += node.frame.size.height
                     }
+
+                    if strongSelf.backgroundNode == nil {
+                        let backgroundNode = WallpaperBackgroundNode(context: item.context)
+                        strongSelf.backgroundNode = backgroundNode
+                        strongSelf.insertSubnode(backgroundNode, at: 0)
+                    }
                     
                     if let updatedBackgroundSignal = updatedBackgroundSignal {
                         strongSelf.disposable.set((updatedBackgroundSignal
                         |> deliverOnMainQueue).start(next: { [weak self] image in
-                            if let strongSelf = self, let (image, final) = image {
+                            if let strongSelf = self, let (image, final) = image, let backgroundNode = strongSelf.backgroundNode {
                                 if final && !strongSelf.finalImage {
                                     let tempLayer = CALayer()
-                                    tempLayer.frame = strongSelf.backgroundNode.bounds
-                                    tempLayer.contentsGravity = strongSelf.backgroundNode.layer.contentsGravity
+                                    tempLayer.frame = backgroundNode.bounds
+                                    tempLayer.contentsGravity = backgroundNode.layer.contentsGravity
                                     tempLayer.contents = strongSelf.contents
                                     strongSelf.layer.addSublayer(tempLayer)
                                     tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
                                         tempLayer?.removeFromSuperlayer()
                                     })
                                 }
-                                strongSelf.backgroundNode.image = image
+                                backgroundNode.image = image
                                 strongSelf.finalImage = final
                             }
                         }))
                     }
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                    
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
+
                     if strongSelf.topStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
                     }
@@ -283,9 +284,11 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
-                    strongSelf.backgroundNode.update(wallpaper: item.wallpaper)
-                    strongSelf.backgroundNode.updateLayout(size: strongSelf.backgroundNode.bounds.size, transition: .immediate)
+                    if let backgroundNode = strongSelf.backgroundNode {
+                        backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
+                        backgroundNode.update(wallpaper: item.wallpaper)
+                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
+                    }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))

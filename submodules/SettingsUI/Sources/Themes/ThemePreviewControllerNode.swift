@@ -103,7 +103,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        self.instantChatBackgroundNode = WallpaperBackgroundNode()
+        self.instantChatBackgroundNode = WallpaperBackgroundNode(context: context)
         self.instantChatBackgroundNode.displaysAsynchronously = false
         
         let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper

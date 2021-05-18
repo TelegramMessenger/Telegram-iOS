@@ -1092,13 +1092,12 @@ final class ChatMediaInputNode: ChatInputNode {
             self.strings = strings
             
             self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
-            self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
+            self.panesBackgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
             
             self.searchContainerNode?.updateThemeAndStrings(theme: theme, strings: strings)
             
             self.stickerPane.updateThemeAndStrings(theme: theme, strings: strings)
             self.gifPane.updateThemeAndStrings(theme: theme, strings: strings)
-            //self.trendingPane.updateThemeAndStrings(theme: theme, strings: strings)
             
             self.themeAndStringsPromise.set(.single((theme, strings)))
         }
@@ -1999,6 +1998,8 @@ final class ChatMediaInputNode: ChatInputNode {
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 + collectionListPanelOffset), size: self.collectionListSeparator.bounds.size))
         transition.updatePosition(node: self.listView, position: CGPoint(x: self.listView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))
         transition.updatePosition(node: self.gifListView, position: CGPoint(x: self.gifListView.position.x, y: (41.0 - collectionListPanelOffset) / 2.0))
+
+        self.updatePaneClippingContainer(size: self.paneClippingContainer.bounds.size, offset: collectionListPanelOffset, transition: transition)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

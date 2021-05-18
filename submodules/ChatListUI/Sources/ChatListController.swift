@@ -186,7 +186,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             title = filter.title
         } else if self.groupId == .root {
             title = self.presentationData.strings.DialogList_Title
-            self.navigationBar?.item = nil
         } else {
             title = self.presentationData.strings.ChatList_ArchivedChatsTitle
         }

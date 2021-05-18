@@ -132,6 +132,8 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
 
+    private var validLayout: (CGSize, CGFloat)?
+
     public init(color: UIColor, enableBlur: Bool = true) {
         self._color = .clear
         self.enableBlur = enableBlur
@@ -183,7 +185,11 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                     }
                 }
 
-                effectView.frame = self.bounds
+                if let (size, cornerRadius) = self.validLayout {
+                    effectView.frame = CGRect(origin: CGPoint(), size: size)
+                    ContainedViewLayoutTransition.immediate.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius)
+                    effectView.clipsToBounds = !cornerRadius.isZero
+                }
                 self.effectView = effectView
                 self.view.insertSubview(effectView, at: 0)
             }
@@ -204,7 +210,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
     }
 
-    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
         let contentFrame = CGRect(origin: CGPoint(), size: size)
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
         if let effectView = self.effectView, effectView.frame != contentFrame {
@@ -214,6 +220,12 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                     transition.updateFrame(layer: sublayer, frame: contentFrame)
                 }
             }
+        }
+
+        transition.updateCornerRadius(node: self.backgroundNode, cornerRadius: cornerRadius)
+        if let effectView = self.effectView {
+            transition.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius)
+            effectView.clipsToBounds = !cornerRadius.isZero
         }
     }
 }
@@ -828,7 +840,7 @@ open class NavigationBar: ASDisplayNode {
         }
         self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
 
-        self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.backgroundColor)
+        self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.backgroundColor, enableBlur: self.presentationData.theme.enableBackgroundBlur)
         self.additionalContentNode = SparseNode()
         
         super.init()
@@ -962,7 +974,7 @@ open class NavigationBar: ASDisplayNode {
                 expansionHeight = contentNode.height
                 
                 let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? NavigationBar.defaultSecondaryContentHeight : 0.0
-                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - additionalContentHeight - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
+                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
                         contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight

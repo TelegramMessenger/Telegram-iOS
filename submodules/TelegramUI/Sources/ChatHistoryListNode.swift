@@ -167,45 +167,45 @@ struct ChatHistoryViewTransitionUpdateEntry {
 }
 
 struct ChatHistoryViewTransition {
-    let historyView: ChatHistoryView
-    let deleteItems: [ListViewDeleteItem]
-    let insertEntries: [ChatHistoryViewTransitionInsertEntry]
-    let updateEntries: [ChatHistoryViewTransitionUpdateEntry]
-    let options: ListViewDeleteAndInsertOptions
-    let scrollToItem: ListViewScrollToItem?
-    let stationaryItemRange: (Int, Int)?
-    let initialData: InitialMessageHistoryData?
-    let keyboardButtonsMessage: Message?
-    let cachedData: CachedPeerData?
-    let cachedDataMessages: [MessageId: Message]?
-    let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
-    let scrolledToIndex: MessageHistoryAnchorIndex?
-    let scrolledToSomeIndex: Bool
-    let animateIn: Bool
-    let reason: ChatHistoryViewTransitionReason
-    let flashIndicators: Bool
+    var historyView: ChatHistoryView
+    var deleteItems: [ListViewDeleteItem]
+    var insertEntries: [ChatHistoryViewTransitionInsertEntry]
+    var updateEntries: [ChatHistoryViewTransitionUpdateEntry]
+    var options: ListViewDeleteAndInsertOptions
+    var scrollToItem: ListViewScrollToItem?
+    var stationaryItemRange: (Int, Int)?
+    var initialData: InitialMessageHistoryData?
+    var keyboardButtonsMessage: Message?
+    var cachedData: CachedPeerData?
+    var cachedDataMessages: [MessageId: Message]?
+    var readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
+    var scrolledToIndex: MessageHistoryAnchorIndex?
+    var scrolledToSomeIndex: Bool
+    var animateIn: Bool
+    var reason: ChatHistoryViewTransitionReason
+    var flashIndicators: Bool
 }
 
 struct ChatHistoryListViewTransition {
-    let historyView: ChatHistoryView
-    let deleteItems: [ListViewDeleteItem]
-    let insertItems: [ListViewInsertItem]
-    let updateItems: [ListViewUpdateItem]
-    let options: ListViewDeleteAndInsertOptions
-    let scrollToItem: ListViewScrollToItem?
-    let stationaryItemRange: (Int, Int)?
-    let initialData: InitialMessageHistoryData?
-    let keyboardButtonsMessage: Message?
-    let cachedData: CachedPeerData?
-    let cachedDataMessages: [MessageId: Message]?
-    let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
-    let scrolledToIndex: MessageHistoryAnchorIndex?
-    let scrolledToSomeIndex: Bool
-    let peerType: MediaAutoDownloadPeerType
-    let networkType: MediaAutoDownloadNetworkType
-    let animateIn: Bool
-    let reason: ChatHistoryViewTransitionReason
-    let flashIndicators: Bool
+    var historyView: ChatHistoryView
+    var deleteItems: [ListViewDeleteItem]
+    var insertItems: [ListViewInsertItem]
+    var updateItems: [ListViewUpdateItem]
+    var options: ListViewDeleteAndInsertOptions
+    var scrollToItem: ListViewScrollToItem?
+    var stationaryItemRange: (Int, Int)?
+    var initialData: InitialMessageHistoryData?
+    var keyboardButtonsMessage: Message?
+    var cachedData: CachedPeerData?
+    var cachedDataMessages: [MessageId: Message]?
+    var readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
+    var scrolledToIndex: MessageHistoryAnchorIndex?
+    var scrolledToSomeIndex: Bool
+    var peerType: MediaAutoDownloadPeerType
+    var networkType: MediaAutoDownloadNetworkType
+    var animateIn: Bool
+    var reason: ChatHistoryViewTransitionReason
+    var flashIndicators: Bool
 }
 
 private func maxMessageIndexForEntries(_ view: ChatHistoryView, indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
@@ -485,7 +485,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var dequeuedInitialTransitionOnLayout = false
     private var enqueuedHistoryViewTransitions: [ChatHistoryListViewTransition] = []
     private var hasActiveTransition = false
-    var layoutActionOnViewTransition: ((ChatHistoryListViewTransition) -> (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?))?
+    var layoutActionOnViewTransition: ((ChatHistoryListViewTransition) -> (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?), Int64?)?
     
     public let historyState = ValuePromise<ChatHistoryNodeHistoryState>()
     public var currentHistoryState: ChatHistoryNodeHistoryState?
@@ -627,7 +627,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.mode = mode
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
+        self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
         
         self.chatPresentationDataPromise = Promise(self.currentPresentationData)
         
@@ -1138,12 +1138,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let animatedEmojiConfig = ChatHistoryAnimatedEmojiConfiguration.with(appConfiguration: appConfiguration)
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
                     let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
-                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: animatedEmojiConfig.scale)
+                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: animatedEmojiConfig.scale)
                     
                     strongSelf.currentPresentationData = chatPresentationData
-                    strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
+                    strongSelf.dynamicBounceEnabled = false
                     
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in
                         if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
@@ -1771,8 +1771,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
         
         let animated = transition.options.contains(.AnimateInsertion)
-        
-        let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
+
+        let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
                 strongSelf.historyView = transition.historyView
                 
@@ -1920,13 +1920,40 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        if let layoutActionOnViewTransition = self.layoutActionOnViewTransition {
-            self.layoutActionOnViewTransition = nil
+        if let (layoutActionOnViewTransition, layoutCorrelationId) = self.layoutActionOnViewTransition {
+            var foundCorrelationMessage = false
+            if let layoutCorrelationId = layoutCorrelationId {
+                itemSearch: for item in transition.insertItems {
+                    if let messageItem = item.item as? ChatMessageItem {
+                        for (message, _) in messageItem.content {
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                                    if attribute.correlationId == layoutCorrelationId {
+                                        foundCorrelationMessage = true
+                                        break itemSearch
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                foundCorrelationMessage = true
+            }
+
+            if foundCorrelationMessage {
+                self.layoutActionOnViewTransition = nil
+            }
+
             let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
-            
-            self.transaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
+
+            self.transaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
+                completion(true, result)
+            })
         } else {
-            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: { result in
+                completion(false, result)
+            })
         }
         
         if transition.flashIndicators {

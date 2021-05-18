@@ -732,7 +732,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
+                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                     controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
                                 window.rootViewController?.present(controller, animated: true)

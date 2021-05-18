@@ -300,10 +300,12 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
     let colors: [UIColor]
     let rotation: Int32?
     let preview: Bool
+    let customPatternColor: UIColor?
     
-    public init(colors: [UIColor], rotation: Int32?, preview: Bool = false) {
+    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false) {
         self.colors = colors
         self.rotation = rotation
+        self.customPatternColor = customPatternColor
         self.preview = preview
     }
     
@@ -405,7 +407,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
         prominent = true
     }
     
-    var scale: CGFloat = 0.0
+    let scale: CGFloat = 0.0
     
     return .single((thumbnailData, fullSizeData, fullSizeComplete))
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -446,8 +448,12 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                     c.setBlendMode(.copy)
                     
                     if colors.count == 1 {
-                        c.setFillColor(color.cgColor)
-                        c.fill(arguments.drawingRect)
+                        if customArguments.colors[0].alpha.isZero {
+                            c.clear(arguments.drawingRect)
+                        } else {
+                            c.setFillColor(color.cgColor)
+                            c.fill(arguments.drawingRect)
+                        }
                     } else {
                         let gradientColors = colors.map { $0.cgColor } as CFArray
                         let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
@@ -486,7 +492,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.clip(to: fittedRect, mask: image)
                        
                         if colors.count == 1 {
-                            c.setFillColor(patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
+                            c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
                             c.fill(arguments.drawingRect)
                         } else {
                             let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
@@ -777,7 +783,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
             break
     }
     
-    c.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+    c.setFillColor(theme.rootController.navigationBar.opaqueBackgroundColor.cgColor)
     c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
     
     c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)

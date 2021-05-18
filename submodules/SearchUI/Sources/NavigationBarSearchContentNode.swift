@@ -41,7 +41,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.placeholder = placeholder
         self.placeholderNode.accessibilityLabel = placeholder
         if let disabledOverlay = self.disabledOverlay {
-            disabledOverlay.backgroundColor = theme.rootController.navigationBar.backgroundColor.withAlphaComponent(0.5)
+            disabledOverlay.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor.withAlphaComponent(0.5)
         }
         if let validLayout = self.validLayout {
             self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate)
@@ -98,7 +98,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
                 }
             }
             if let disabledOverlay = self.disabledOverlay {
-                disabledOverlay.backgroundColor = self.theme?.rootController.navigationBar.backgroundColor.withAlphaComponent(0.4)
+                disabledOverlay.backgroundColor = self.theme?.rootController.navigationBar.opaqueBackgroundColor.withAlphaComponent(0.4)
                 
                 var disabledOverlayFrame = self.placeholderNode.frame
                 if let searchBarHeight = self.placeholderHeight {
@@ -130,7 +130,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
-        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
+        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.opaqueBackgroundColor ?? .clear, transition)
         searchBarApply()
         
         let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))

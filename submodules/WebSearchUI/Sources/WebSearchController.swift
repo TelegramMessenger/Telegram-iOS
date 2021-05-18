@@ -172,7 +172,7 @@ public final class WebSearchController: ViewController {
             self.interfaceState = self.interfaceState.withUpdatedQuery(query)
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.opaqueBackgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
