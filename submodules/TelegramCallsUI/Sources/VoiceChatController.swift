@@ -5843,6 +5843,7 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
             return
         }
         
+        let initialBottomInset = bottomInset
         var bottomInset = bottomInset
         if !sideInset.isZero {
             bottomInset = 14.0
@@ -5883,9 +5884,10 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         
         let unpinSize = self.pinButtonTitleNode.updateLayout(size)
         if let image = self.pinButtonIconNode.image {
-            transition.updateFrame(node: self.pinButtonIconNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width, y: 0.0), size: image.size))
-            transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - unpinSize.width + 4.0, y: 14.0), size: unpinSize))
-            transition.updateFrame(node: self.pinButtonNode, frame: CGRect(x: size.width - image.size.width - unpinSize.width, y: 0.0, width: unpinSize.width + image.size.width, height: 44.0))
+            let offset: CGFloat = sideInset.isZero ? 0.0 : initialBottomInset + 8.0
+            transition.updateFrame(node: self.pinButtonIconNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - offset, y: 0.0), size: image.size))
+            transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - unpinSize.width + 4.0 - offset, y: 14.0), size: unpinSize))
+            transition.updateFrame(node: self.pinButtonNode, frame: CGRect(x: size.width - image.size.width - unpinSize.width - offset, y: 0.0, width: unpinSize.width + image.size.width, height: 44.0))
         }
         
         transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 64.0)))
