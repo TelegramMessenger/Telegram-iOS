@@ -261,6 +261,26 @@ public extension CALayer {
         }
         self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
+
+    func animateWidth(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if from == to && !force {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.size.width", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
+    }
+
+    func animateHeight(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if from == to && !force {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.size.height", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
+    }
     
     func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.x", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)

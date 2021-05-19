@@ -345,7 +345,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
-        blurredBackgroundColor: UIColor(rgb: 0xf7f7f7, alpha: 0.86),
+        blurredBackgroundColor: UIColor(rgb: 0xf2f2f2, alpha: 0.8),
         opaqueBackgroundColor: UIColor(rgb: 0xf7f7f7).mixedWith(.white, alpha: 0.14),
         separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
@@ -374,7 +374,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
         backgroundColor: UIColor(rgb: 0xffffff),
         accentColor: UIColor(rgb: 0x007ee5),
-        inputFillColor: UIColor(rgb: 0xe9e9e9),
+        inputFillColor: UIColor(rgb: 0x000000, alpha: 0.06),
         inputTextColor: UIColor(rgb: 0x000000),
         inputPlaceholderTextColor: UIColor(rgb: 0x8e8e93),
         inputIconColor: UIColor(rgb: 0x8e8e93),

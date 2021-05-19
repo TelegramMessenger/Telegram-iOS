@@ -622,7 +622,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 accessoryButtonsWidth += button.buttonWidth
             }
             
-            textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right + accessoryButtonsWidth), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
+            textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
         }
         
         self.textInputBackgroundNode.isUserInteractionEnabled = false
@@ -671,7 +671,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
-            let measuredHeight = textInputNode.measure(CGSize(width: width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude))
+            let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right
+            let measuredHeight = textInputNode.measure(CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude))
             let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight.height))
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
@@ -1311,7 +1312,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateAlpha(node: self.textInputContainer, alpha: audioRecordingItemsAlpha)
         
         if let textInputNode = self.textInputNode {
-            let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right + accessoryButtonsWidth), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
+            let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
             let shouldUpdateLayout = textFieldFrame.size != textInputNode.frame.size
             transition.updateFrame(node: textInputNode, frame: textFieldFrame)
             if shouldUpdateLayout {
@@ -2222,7 +2223,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return ChatMessageTransitionNode.Source.TextInput(
             backgroundView: backgroundView,
             contentView: contentView,
-            sourceRect: self.view.convert(self.bounds, to: nil)
+            sourceRect: self.view.convert(self.bounds, to: nil),
+            scrollOffset: textInputNode.textView.contentOffset.y
         )
     }
 }
