@@ -300,13 +300,13 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
-            if let videoNode = sourceNode.videoNode {
+            if false, let videoNode = sourceNode.videoNode {
                 videoNode.updateLayout(size: targetSize, isLandscape: true, transition: transition)
                 transition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
                 transition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
             }
-            self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
+//            self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
             
 //            if let snapshotView = sourceNode.infoNode.view.snapshotView(afterScreenUpdates: false) {
 //                self.videoFadeNode.image = sourceNode.fadeNode.image
@@ -327,7 +327,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
             self.avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: initialRect.center), to: NSValue(cgPoint: self.avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, completion: { [weak self] _ in
                 if let strongSelf = self {
-                    strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
+//                    strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
                 }
             })
             
@@ -444,7 +444,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
 //                self.videoFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
 //            }
             
-            if let videoNode = targetNode.videoNode {
+            if false, let videoNode = targetNode.videoNode {
                 videoNode.updateLayout(size: targetRect.size, isLandscape: true, transition: transition)
                 transition.updateFrame(node: videoNode, frame: targetRect)
                 transition.updateFrame(node: targetNode.videoContainerNode, frame: targetRect)
