@@ -283,7 +283,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.0)
                 transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
                 transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
-                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -40.0))
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -50.0))
             } else {
                 transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.0)
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.0)

@@ -403,8 +403,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        let buttonOffset: CGFloat = 120.0
-
+        var buttonOffset: CGFloat = 60.0
+        if let _ = self.broadcastPickerView {
+            buttonOffset *= 2.0
+        }
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
@@ -457,6 +459,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: screenButtonHeight))
         if let broadcastPickerView = self.broadcastPickerView {
             broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+        } else {
+            self.screenButton.isHidden = true
         }
        
         let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
