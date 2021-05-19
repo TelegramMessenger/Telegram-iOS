@@ -72,6 +72,7 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     let context: AccountContext
     let peer: Peer
     let icon: Icon
+    let text: VoiceChatParticipantItem.ParticipantText
     let color: Color
     let isLandscape: Bool
     let active: Bool
@@ -83,12 +84,13 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, icon: Icon, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
+    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.nameDisplayOrder = nameDisplayOrder
         self.context = context
         self.peer = peer
         self.icon = icon
+        self.text = text
         self.color = color
         self.isLandscape = isLandscape
         self.active = active
@@ -157,6 +159,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     let avatarNode: AvatarNode
     let contentWrapperNode: ASDisplayNode
     private let titleNode: TextNode
+    private let statusNode: VoiceChatParticipantStatusNode
     private var credibilityIconNode: ASImageNode?
         
     private let actionContainerNode: ASDisplayNode
@@ -174,6 +177,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     private var layoutParams: (VoiceChatFullscreenParticipantItem, ListViewItemLayoutParams, Bool, Bool)?
     private var isExtracted = false
     private var animatingExtraction = false
+    private var animatingSelection = false
     private var wavesColor: UIColor?
     
     let videoContainerNode: ASDisplayNode
@@ -183,13 +187,13 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     private var videoReadyDelayed = false
     private var videoReady = false
     
+    private var profileNode: VoiceChatPeerProfileNode?
+    
     private var raiseHandTimer: SwiftSignalKit.Timer?
     
     var item: VoiceChatFullscreenParticipantItem? {
         return self.layoutParams?.0
     }
-    
-    private var currentTitle: String?
     
     init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -231,6 +235,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
+        
+        self.statusNode = VoiceChatParticipantStatusNode()
     
         self.actionContainerNode = ASDisplayNode()
         self.actionButtonNode = HighlightableButtonNode()
@@ -256,7 +262,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
                 
         self.containerNode.shouldBegin = { [weak self] location in
-            guard let strongSelf = self else {
+            guard let _ = self else {
                 return false
             }
             return true
@@ -267,6 +273,12 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 return
             }
             contextAction(strongSelf.contextSourceNode, gesture)
+        }
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            strongSelf.updateIsExtracted(isExtracted, transition: transition)
         }
         
 //        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
@@ -575,9 +587,15 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.layoutParams?.0.action?(self.contextSourceNode)
     }
     
-    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, animate: Bool = true) {
+    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, transition: ContainedViewLayoutTransition, animate: Bool = true) {
         guard let item = self.item else {
             return
+        }
+        var duration: Double = 0.2
+        var timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        if case let .animated(transitionDuration, curve) = transition {
+            duration = transitionDuration
+            timingFunction = curve.timingFunction
         }
         
         let initialAnimate = animate
@@ -602,12 +620,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.videoContainerNode.insertSubnode(videoNode, at: 0)
  
                 if animate {
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                     videoNode.updateLayout(size: videoSize, isLandscape: true, transition: transition)
                      
                     let scale = sourceNode.bounds.width / videoSize.width
-                    self.videoContainerNode.layer.animateScale(from: sourceNode.bounds.width / videoSize.width, to: tileSize.width / videoSize.width, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                    self.videoContainerNode.layer.animate(from: backgroundCornerRadius * (1.0 / scale) as NSNumber, to: videoCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    self.videoContainerNode.layer.animateScale(from: sourceNode.bounds.width / videoSize.width, to: tileSize.width / videoSize.width, duration: duration, timingFunction: timingFunction)
+                    self.videoContainerNode.layer.animate(from: backgroundCornerRadius * (1.0 / scale) as NSNumber, to: videoCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: timingFunction, duration: duration, removeOnCompletion: false, completion: { _ in
                     })
                     
                     self.videoFadeNode.alpha = 1.0
@@ -625,7 +642,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.contextSourceNode.position = targetContainerPosition
                 containerNode.addSubnode(self.contextSourceNode)
 
-                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: duration, timingFunction: timingFunction, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.contextSourceNode.position = initialPosition
                         strongSelf.containerNode.addSubnode(strongSelf.contextSourceNode)
@@ -634,16 +651,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
 
                 if item.active {
                     self.borderImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.borderImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    self.borderImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
                 }
 
-                self.backgroundImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                self.backgroundImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             } else if !initialAnimate {
-                self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             }
         } else if let sourceNode = sourceNode as? VoiceChatParticipantItemNode, let _ = sourceNode.item {
             var startContainerPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
@@ -662,8 +679,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.contextSourceNode.position = targetContainerPosition
                 containerNode.addSubnode(self.contextSourceNode)
 
-                let timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
-                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: 0.2, timingFunction: timingFunction, completion: { [weak self, weak sourceNode] _ in
+                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: duration, timingFunction: timingFunction, completion: { [weak self, weak sourceNode] _ in
                     if let strongSelf = self {
                         sourceNode?.avatarNode.alpha = 1.0
                         strongSelf.contextSourceNode.position = initialPosition
@@ -676,24 +692,56 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     self.borderImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
                 }
                 
-                self.avatarNode.layer.animateScale(from: 0.8, to: 1.0, duration: 0.2)
+                self.avatarNode.layer.animateScale(from: 0.8, to: 1.0, duration: duration, timingFunction: timingFunction)
 
-                self.backgroundImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
-                self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, timingFunction: timingFunction)
-                self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
-                self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: timingFunction)
+                self.backgroundImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             }
         }
     }
+    private func updateIsExtracted(_ isExtracted: Bool, transition: ContainedViewLayoutTransition) {
+        guard self.isExtracted != isExtracted,  let extractedRect = self.extractedRect, let nonExtractedRect = self.nonExtractedRect, let item = self.item else {
+            return
+        }
+        self.isExtracted = isExtracted
         
+        if isExtracted {
+            let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
+                self?.contextSourceNode.requestDismiss?()
+            })
+            profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
+            self.profileNode = profileNode
+            self.contextSourceNode.contentNode.addSubnode(profileNode)
+
+            profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
+            
+            self.contextSourceNode.contentNode.customHitTest = { [weak self] point in
+                if let strongSelf = self, let profileNode = strongSelf.profileNode {
+                    if profileNode.avatarListWrapperNode.frame.contains(point) {
+                        return profileNode.avatarListNode.view
+                    }
+                }
+                return nil
+            }
+        } else if let profileNode = self.profileNode {
+            self.profileNode = nil
+            profileNode.animateOut(to: self, targetRect: nonExtractedRect, transition: transition)
+            
+            self.contextSourceNode.contentNode.customHitTest = nil
+        }
+    }
+    
     func asyncLayout() -> (_ item: VoiceChatFullscreenParticipantItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeStatusLayout = self.statusNode.asyncLayout()
         
         let currentItem = self.layoutParams?.0
         let hasVideo = self.videoNode != nil
         
         return { item, params, first, last in
-            let titleFont = Font.semibold(12.0)
+            let titleFont = Font.semibold(13.0)
             var titleAttributedString: NSAttributedString?
             
             var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
@@ -760,6 +808,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             let constrainedWidth = params.width - 24.0 - 10.0
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         
+            let availableWidth = params.availableHeight
+            let (statusLayout, _) = makeStatusLayout(CGSize(width: availableWidth - 30.0, height: CGFloat.greatestFiniteMagnitude), item.text, true)
+            
             let contentSize = tileSize
             let insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: !last ? 6.0 : 0.0, right: 0.0)
                             
@@ -769,7 +820,6 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     let hadItem = strongSelf.layoutParams?.0 != nil
                     strongSelf.layoutParams = (item, params, first, last)
-                    strongSelf.currentTitle = titleAttributedString?.string
                     strongSelf.wavesColor = wavesColor
                     
                     let videoNode = item.getVideo()
@@ -794,28 +844,15 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     animationSize = CGSize(width: 36.0, height: 36.0)
                     animationScale = 0.66667
-                    animationFrame = CGRect(x: layout.size.width - 29.0, y: 54.0, width: 24.0, height: 24.0)
+                    animationFrame = CGRect(x: layout.size.width - 29.0, y: 55.0, width: 24.0, height: 24.0)
                     titleFrame = CGRect(origin: CGPoint(x: 8.0, y: 63.0), size: titleLayout.size)
                                     
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
-                    var extractedHeight = extractedRect.height
-                    var extractedVerticalOffset: CGFloat = 0.0
-                    if item.peer.smallProfileImage != nil || strongSelf.videoNode != nil {
-                        extractedVerticalOffset = extractedRect.width
-                        extractedHeight += extractedVerticalOffset
-                    }
-
-                    extractedRect.size.height = extractedHeight
-                    
-                    strongSelf.extractedVerticalOffset = extractedVerticalOffset
+                    let extractedWidth = availableWidth
+                    let extractedRect = CGRect(x: 0.0, y: 0.0, width: extractedWidth, height: extractedWidth + statusLayout.height + 39.0)
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
                     if strongSelf.isExtracted {
-                        var extractedRect = extractedRect
-                        if !extractedVerticalOffset.isZero {
-                            extractedRect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
-                        }
                         strongSelf.backgroundImageNode.frame = extractedRect
                     } else {
                         strongSelf.backgroundImageNode.frame = nonExtractedRect
@@ -877,7 +914,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)
                     
-                    let blobFrame = avatarFrame.insetBy(dx: -14.0, dy: -14.0)
+                    let blobFrame = avatarFrame.insetBy(dx: -18.0, dy: -18.0)
                     if let getAudioLevel = item.getAudioLevel {
                         if !strongSelf.didSetupAudioLevel || currentItem?.peer.id != item.peer.id {
                             strongSelf.audioLevelView?.frame = blobFrame
@@ -902,7 +939,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     playbackMaskLayer.frame = maskRect
                                     playbackMaskLayer.fillRule = .evenOdd
                                     let maskPath = UIBezierPath()
-                                    maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 14, dy: 14), cornerRadius: 22))
+                                    maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 18, dy: 18), cornerRadius: 22))
                                     maskPath.append(UIBezierPath(rect: maskRect))
                                     playbackMaskLayer.path = maskPath.cgPath
                                     audioLevelView.layer.mask = playbackMaskLayer
@@ -912,6 +949,10 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
+                                    
+                                    if let item = strongSelf.item, strongSelf.videoNode != nil || item.active {
+                                        audioLevelView.alpha = 0.0
+                                    }
                                 }
                                 
                                 let level = min(1.0, max(0.0, CGFloat(value)))
@@ -926,12 +967,13 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                             audioLevelView.setColor(wavesColor, animated: true)
                                         }
                                     } else {
-                                        audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
                                     
-                                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
-                                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: strongSelf.isExtracted ? 1.0 : avatarScale, beginWithCurrentState: true)
+                                    if !strongSelf.animatingSelection {
+                                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+                                        transition.updateTransformScale(node: strongSelf.avatarNode, scale: strongSelf.isExtracted ? 1.0 : avatarScale, beginWithCurrentState: true)
+                                    }
                                 }
                             }))
                         }
@@ -1073,19 +1115,27 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                         strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: 0.2)
                                         strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
                                         strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: 0.2, additive: true)
+                                        strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
                                     }
                                     transition.updateAlpha(node: videoNode, alpha: 0.0)
                                     transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
                                     transition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
+                                    if let audioLevelView = strongSelf.audioLevelView {
+                                        transition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
+                                    }
                                 } else {
                                     if !strongSelf.avatarNode.alpha.isZero {
                                         strongSelf.videoContainerNode.layer.animateScale(from: 0.001, to: videoContainerScale, duration: 0.2)
                                         strongSelf.avatarNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
+                                        strongSelf.audioLevelView?.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
                                         strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -9.0), to: CGPoint(), duration: 0.2, additive: true)
                                     }
                                     transition.updateAlpha(node: videoNode, alpha: 1.0)
                                     transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 1.0)
                                     transition.updateAlpha(node: strongSelf.avatarNode, alpha: 0.0)
+                                    if let audioLevelView = strongSelf.audioLevelView {
+                                        transition.updateAlpha(layer: audioLevelView.layer, alpha: 0.0)
+                                    }
                                 }
                             } else {
                                 if item.active {

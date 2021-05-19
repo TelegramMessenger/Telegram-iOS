@@ -146,7 +146,6 @@
     {
         _context = context;
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
-        _standaloneEditingContext = [[TGMediaEditingContext alloc] init];
         
         self.automaticallyManageScrollViewInsets = false;
         self.autoManageStatusBarBackground = false;
@@ -2182,10 +2181,14 @@
 
 - (TGMediaEditingContext *)editingContext
 {
-    if (_editingContext)
+    if (_editingContext) {
         return _editingContext;
-    else
+    } else {
+        if (_standaloneEditingContext == nil) {
+            _standaloneEditingContext = [[TGMediaEditingContext alloc] init];
+        }
         return _standaloneEditingContext;
+    }
 }
 
 - (void)doneButtonLongPressed:(UIButton *)sender

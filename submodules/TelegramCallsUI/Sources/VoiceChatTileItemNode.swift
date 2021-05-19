@@ -35,11 +35,13 @@ final class VoiceChatTileItem: Equatable {
     
     let peer: Peer
     let videoEndpointId: String
-    let icon: Icon
     let strings: PresentationStrings
     let nameDisplayOrder: PresentationPersonNameOrder
+    let icon: Icon
+    let text: VoiceChatParticipantItem.ParticipantText
     let speaking: Bool
     let action: () -> Void
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let getVideo: () -> GroupVideoNode?
     let getAudioLevel: (() -> Signal<Float, NoError>)?
     
@@ -47,14 +49,16 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(peer: Peer, videoEndpointId: String, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, action:  @escaping () -> Void, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(peer: Peer, videoEndpointId: String, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.peer = peer
         self.videoEndpointId = videoEndpointId
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
         self.icon = icon
+        self.text = text
         self.speaking = speaking
         self.action = action
+        self.contextAction = contextAction
         self.getVideo = getVideo
         self.getAudioLevel = getAudioLevel
     }
@@ -93,16 +97,25 @@ final class VoiceChatTileItemNode: ASDisplayNode {
   
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
-    private let backgroundNode: ASDisplayNode
+    let contentNode: ASDisplayNode
+    let backgroundNode: ASDisplayNode
+    var videoContainerNode: ASDisplayNode
     var videoNode: GroupVideoNode?
-    private let fadeNode: ASImageNode
+    let infoNode: ASDisplayNode
+    let fadeNode: ASImageNode
     private let titleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: VoiceChatMicrophoneNode?
     private var highlightNode: ASImageNode
+    private let statusNode: VoiceChatParticipantStatusNode
     
-    private var validLayout: CGSize?
+    private var profileNode: VoiceChatPeerProfileNode?
+    private var extractedRect: CGRect?
+    private var nonExtractedRect: CGRect?
+    
+    private var validLayout: (CGSize, CGFloat)?
     var item: VoiceChatTileItem?
+    private var isExtracted = false
     
     private let audioLevelDisposable = MetaDisposable()
     
@@ -111,9 +124,18 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
-                
+        
+        self.contentNode = ASDisplayNode()
+        self.contentNode.clipsToBounds = true
+        self.contentNode.cornerRadius = 11.0
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = panelBackgroundColor
+        
+        self.videoContainerNode = ASDisplayNode()
+        self.videoContainerNode.clipsToBounds = true
+        
+        self.infoNode = ASDisplayNode()
         
         self.fadeNode = ASImageNode()
         self.fadeNode.displaysAsynchronously = false
@@ -122,6 +144,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.fadeNode.image = fadeImage
         
         self.titleNode = ImmediateTextNode()
+        self.statusNode = VoiceChatParticipantStatusNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
@@ -136,18 +159,38 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.clipsToBounds = true
         
-        self.contextSourceNode.contentNode.clipsToBounds = true
-        self.contextSourceNode.contentNode.cornerRadius = 11.0
-        
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         
-        self.contextSourceNode.contentNode.addSubnode(self.backgroundNode)
-        self.contextSourceNode.contentNode.addSubnode(self.fadeNode)
-        self.contextSourceNode.contentNode.addSubnode(self.titleNode)
-        self.contextSourceNode.contentNode.addSubnode(self.iconNode)
-        self.contextSourceNode.contentNode.addSubnode(self.highlightNode)
+        self.contextSourceNode.contentNode.addSubnode(self.contentNode)
+        self.contentNode.addSubnode(self.backgroundNode)
+        self.contentNode.addSubnode(self.videoContainerNode)
+        self.contentNode.addSubnode(self.fadeNode)
+        self.contentNode.addSubnode(self.infoNode)
+        self.infoNode.addSubnode(self.titleNode)
+        self.infoNode.addSubnode(self.iconNode)
+        self.contentNode.addSubnode(self.highlightNode)
+        
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let _ = self else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.contextSourceNode, gesture)
+        }
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            strongSelf.updateIsExtracted(isExtracted, transition: transition)
+        }
     }
     
     deinit {
@@ -164,10 +207,44 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.item?.action()
     }
     
-    func update(size: CGSize, item: VoiceChatTileItem, transition: ContainedViewLayoutTransition) {
-        guard self.validLayout != size || self.item != item else {
+    private func updateIsExtracted(_ isExtracted: Bool, transition: ContainedViewLayoutTransition) {
+        guard self.isExtracted != isExtracted, let extractedRect = self.extractedRect, let nonExtractedRect = self.nonExtractedRect, let item = self.item else {
             return
         }
+        self.isExtracted = isExtracted
+        
+        if isExtracted {
+            let profileNode = VoiceChatPeerProfileNode(context: self.context, size: extractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
+                self?.contextSourceNode.requestDismiss?()
+            })
+            profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
+            self.profileNode = profileNode
+            self.contextSourceNode.contentNode.addSubnode(profileNode)
+
+            profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
+            
+            self.contextSourceNode.contentNode.customHitTest = { [weak self] point in
+                if let strongSelf = self, let profileNode = strongSelf.profileNode {
+                    if profileNode.avatarListWrapperNode.frame.contains(point) {
+                        return profileNode.avatarListNode.view
+                    }
+                }
+                return nil
+            }
+        } else if let profileNode = self.profileNode {
+            self.profileNode = nil
+            profileNode.animateOut(to: self, targetRect: nonExtractedRect, transition: transition)
+            
+            self.contextSourceNode.contentNode.customHitTest = nil
+        }
+    }
+    
+    func update(size: CGSize, availableWidth: CGFloat, item: VoiceChatTileItem, transition: ContainedViewLayoutTransition) {
+        guard self.validLayout?.0 != size || self.validLayout?.1 != availableWidth || self.item != item else {
+            return
+        }
+        
+        self.validLayout = (size, availableWidth)
         
         var itemTransition = transition
         if self.item != item {
@@ -206,7 +283,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 if let videoNode = item.getVideo() {
                     itemTransition = .immediate
                     self.videoNode = videoNode
-                    self.contextSourceNode.contentNode.insertSubnode(videoNode, at: 1)
+                    self.videoContainerNode.addSubnode(videoNode)
                 }
             }
             
@@ -248,7 +325,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 } else {
                     animationNode = VoiceChatMicrophoneNode()
                     self.animationNode = animationNode
-                    self.contextSourceNode.contentNode.addSubnode(animationNode)
+                    self.infoNode.addSubnode(animationNode)
                 }
                 animationNode.alpha = 1.0
                 animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: UIColor.white), animated: true)
@@ -259,33 +336,55 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         }
         
         let bounds = CGRect(origin: CGPoint(), size: size)
+        self.contentNode.frame = bounds
         self.containerNode.frame = bounds
         self.contextSourceNode.frame = bounds
         self.contextSourceNode.contentNode.frame = bounds
         
-        if let videoNode = self.videoNode {
-            transition.updateFrame(node: videoNode, frame: bounds)
-            videoNode.updateLayout(size: size, isLandscape: true, transition: itemTransition)
+        let extractedWidth = availableWidth
+        let makeStatusLayout = self.statusNode.asyncLayout()
+        let (statusLayout, _) = makeStatusLayout(CGSize(width: availableWidth - 30.0, height: CGFloat.greatestFiniteMagnitude), item.text, true)
+                
+        let extractedRect = CGRect(x: 0.0, y: 0.0, width: extractedWidth, height: extractedWidth + statusLayout.height + 39.0)
+        let nonExtractedRect = bounds
+        self.extractedRect = extractedRect
+        self.nonExtractedRect = nonExtractedRect
+        
+        self.contextSourceNode.contentRect = extractedRect
+        
+        if self.videoContainerNode.supernode === self.contentNode {
+            if let videoNode = self.videoNode {
+                transition.updateFrame(node: videoNode, frame: bounds)
+                videoNode.updateLayout(size: size, isLandscape: true, transition: itemTransition)
+            }
+            transition.updateFrame(node: self.videoContainerNode, frame: bounds)
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: bounds)
         transition.updateFrame(node: self.highlightNode, frame: bounds)
+        transition.updateFrame(node: self.infoNode, frame: bounds)
         transition.updateFrame(node: self.fadeNode, frame: CGRect(x: 0.0, y: size.height - fadeHeight, width: size.width, height: fadeHeight))
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 50.0, height: size.height))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 11.0, y: size.height - titleSize.height - 8.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 30.0, y: size.height - titleSize.height - 8.0), size: titleSize)
         
         if let animationNode = self.animationNode {
             let animationSize = CGSize(width: 36.0, height: 36.0)
             animationNode.bounds = CGRect(origin: CGPoint(), size: animationSize)
             animationNode.transform = CATransform3DMakeScale(0.66667, 0.66667, 1.0)
-            transition.updatePosition(node: animationNode, position: CGPoint(x: size.width - 19.0, y: size.height - 15.0))
+            transition.updatePosition(node: animationNode, position: CGPoint(x: 16.0, y: size.height - 15.0))
         }
     }
     
-    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, animate: Bool = true) {
+    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, transition: ContainedViewLayoutTransition, animate: Bool = true) {
         guard let _ = self.item else {
             return
+        }
+        var duration: Double = 0.2
+        var timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        if case let .animated(transitionDuration, curve) = transition {
+            duration = transitionDuration + 0.05
+            timingFunction = curve.timingFunction
         }
         
         if let sourceNode = sourceNode as? VoiceChatFullscreenParticipantItemNode, let _ = sourceNode.item {
@@ -301,7 +400,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 sourceNode.videoNode = nil
                 videoNode.alpha = 1.0
                 self.videoNode = videoNode
-                self.contextSourceNode.contentNode.insertSubnode(videoNode, at: 1)
+                self.videoContainerNode.addSubnode(videoNode)
  
                 if animate {
 //                    self.videoContainerNode.layer.animateScale(from: sourceNode.bounds.width / videoSize.width, to: tileSize.width / videoSize.width, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
@@ -311,7 +410,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             }
             
             sourceNode.isHidden = true
-            Queue.mainQueue().after(0.25) {
+            Queue.mainQueue().after(0.4) {
                 sourceNode.isHidden = false
             }
             
@@ -322,15 +421,14 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 self.contextSourceNode.position = targetContainerPosition
                 containerNode.addSubnode(self.contextSourceNode)
 
-                self.contextSourceNode.layer.animateScale(from: 0.467, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, completion: { [weak self] _ in
+                self.contextSourceNode.layer.animateScale(from: 0.467, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: duration, timingFunction: timingFunction, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.contextSourceNode.position = initialPosition
                         strongSelf.containerNode.addSubnode(strongSelf.contextSourceNode)
                     }
                 })
                 
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                 self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: transition)
                 self.videoNode?.frame = self.bounds
             } else if !initialAnimate {

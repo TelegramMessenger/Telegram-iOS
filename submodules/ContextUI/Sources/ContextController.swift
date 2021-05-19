@@ -1390,6 +1390,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     } else {
                         overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
+                        
+                        if contentContainerFrame.maxX > layout.size.width {
+                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentContainerFrame.width) / 2.0), y: contentContainerFrame.minY), size: contentContainerFrame.size)
+                        }
                     }
                     
                     if case let .extracted(source) = self.source, source.centerVertically {

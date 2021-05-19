@@ -23,12 +23,12 @@ final class VoiceChatCameraPreviewController: ViewController {
     private var animatedIn = false
 
     private let cameraNode: GroupVideoNode
-    private let shareCamera: (ASDisplayNode) -> Void
+    private let shareCamera: (ASDisplayNode, Bool) -> Void
     private let switchCamera: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode) -> Void, switchCamera: @escaping () -> Void) {
+    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode, Bool) -> Void, switchCamera: @escaping () -> Void) {
         self.context = context
         self.cameraNode = cameraNode
         self.shareCamera = shareCamera
@@ -60,9 +60,9 @@ final class VoiceChatCameraPreviewController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = VoiceChatCameraPreviewControllerNode(controller: self, context: self.context, cameraNode: self.cameraNode)
-        self.controllerNode.shareCamera = { [weak self] in
+        self.controllerNode.shareCamera = { [weak self] unmuted in
             if let strongSelf = self {
-                strongSelf.shareCamera(strongSelf.cameraNode)
+                strongSelf.shareCamera(strongSelf.cameraNode, unmuted)
                 strongSelf.dismiss()
             }
         }
@@ -121,6 +121,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private var broadcastPickerView: UIView?
     private let cancelButton: SolidRoundedButtonNode
     
+    private let microphoneButton: HighlightTrackingButtonNode
+    private let microphoneEffectView: UIVisualEffectView
+    private let microphoneIconNode: VoiceChatMicrophoneNode
+    
     private let switchCameraButton: HighlightTrackingButtonNode
     private let switchCameraEffectView: UIVisualEffectView
     private let switchCameraIconNode: ASImageNode
@@ -129,7 +133,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
     private var applicationStateDisposable: Disposable?
     
-    var shareCamera: (() -> Void)?
+    var shareCamera: ((Bool) -> Void)?
     var switchCamera: (() -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
@@ -196,6 +200,16 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.previewContainerNode.cornerRadius = 11.0
         self.previewContainerNode.backgroundColor = .black
         
+        self.microphoneButton = HighlightTrackingButtonNode()
+        self.microphoneButton.isSelected = true
+        self.microphoneEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+        self.microphoneEffectView.clipsToBounds = true
+        self.microphoneEffectView.layer.cornerRadius = 24.0
+        self.microphoneEffectView.isUserInteractionEnabled = false
+        
+        self.microphoneIconNode = VoiceChatMicrophoneNode()
+        self.microphoneIconNode.update(state: .init(muted: false, filled: true, color: .white), animated: false)
+        
         self.switchCameraButton = HighlightTrackingButtonNode()
         self.switchCameraEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         self.switchCameraEffectView.clipsToBounds = true
@@ -234,18 +248,34 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.contentContainerNode.addSubnode(self.previewContainerNode)
         
         self.previewContainerNode.addSubnode(self.cameraNode)
+        self.previewContainerNode.addSubnode(self.microphoneButton)
+        self.microphoneButton.view.addSubview(self.microphoneEffectView)
+        self.microphoneButton.addSubnode(self.microphoneIconNode)
         self.previewContainerNode.addSubnode(self.switchCameraButton)
         self.switchCameraButton.view.addSubview(self.switchCameraEffectView)
         self.switchCameraButton.addSubnode(self.switchCameraIconNode)
         
         self.cameraButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.shareCamera?()
+                strongSelf.shareCamera?(strongSelf.microphoneButton.isSelected)
             }
         }
         self.cancelButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.cancel?()
+            }
+        }
+        
+        self.microphoneButton.addTarget(self, action: #selector(self.microphonePressed), forControlEvents: .touchUpInside)
+        self.microphoneButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 0.9)
+                } else {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 1.0)
+                }
             }
         }
         
@@ -261,6 +291,11 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
                 }
             }
         }
+    }
+    
+    @objc private func microphonePressed() {
+        self.microphoneButton.isSelected = !self.microphoneButton.isSelected
+        self.microphoneIconNode.update(state: .init(muted: !self.microphoneButton.isSelected, filled: true, color: .white), animated: true)
     }
     
     @objc private func switchCameraPressed() {
@@ -368,8 +403,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        let buttonOffset: CGFloat = 120.0
-
+        var buttonOffset: CGFloat = 60.0
+        if let _ = self.broadcastPickerView {
+            buttonOffset *= 2.0
+        }
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
@@ -403,6 +440,12 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
         self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
         
+        let microphoneFrame = CGRect(x: 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
+        transition.updateFrame(node: self.microphoneButton, frame: microphoneFrame)
+        transition.updateFrame(view: self.microphoneEffectView, frame: CGRect(origin: CGPoint(), size: microphoneFrame.size))
+        transition.updateFrameAsPositionAndBounds(node: self.microphoneIconNode, frame: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: microphoneFrame.size).insetBy(dx: 6.0, dy: 6.0))
+        self.microphoneIconNode.transform = CATransform3DMakeScale(1.2, 1.2, 1.0)
+        
         let switchCameraFrame = CGRect(x: previewSize.width - 48.0 - 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.switchCameraButton, frame: switchCameraFrame)
         transition.updateFrame(view: self.switchCameraEffectView, frame: CGRect(origin: CGPoint(), size: switchCameraFrame.size))
@@ -416,6 +459,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: screenButtonHeight))
         if let broadcastPickerView = self.broadcastPickerView {
             broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+        } else {
+            self.screenButton.isHidden = true
         }
        
         let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
