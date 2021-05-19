@@ -660,7 +660,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         var duration: Double = 0.2
         var timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue
         if case let .animated(transitionDuration, curve) = transition {
-            duration = transitionDuration
+            duration = transitionDuration + 0.08
             timingFunction = curve.timingFunction
         }
         
@@ -690,6 +690,10 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             sourceNode.backgroundImageNode.layer.animatePosition(from: startContainerBackgroundPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
+                    Queue.mainQueue().after(0.1, {
+                        sourceNode.backgroundImageNode.layer.removeAllAnimations()
+                        sourceNode.contentWrapperNode.layer.removeAllAnimations()
+                    })
                     sourceNode.backgroundImageNode.alpha = 1.0
                     sourceNode.borderImageNode.alpha = 1.0
                     sourceNode.backgroundImageNode.position = initialBackgroundPosition
@@ -717,9 +721,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             })
 
             sourceNode.backgroundImageNode.layer.animateScale(from: 1.0, to: 0.001, duration: duration, timingFunction: timingFunction)
-            sourceNode.backgroundImageNode.layer.animateAlpha(from: sourceNode.backgroundImageNode.alpha, to: 0.0, duration: duration, timingFunction: timingFunction)
+            sourceNode.backgroundImageNode.layer.animateAlpha(from: sourceNode.backgroundImageNode.alpha, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
             sourceNode.contentWrapperNode.layer.animateScale(from: 1.0, to: 0.001, duration: duration, timingFunction: timingFunction)
-            sourceNode.contentWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction)
+            sourceNode.contentWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         }
     }
         

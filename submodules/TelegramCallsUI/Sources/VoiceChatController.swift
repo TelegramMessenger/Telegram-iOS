@@ -3128,7 +3128,7 @@ public final class VoiceChatController: ViewController {
             if !self.mainStageNode.animating {
                 transition.updateFrame(node: self.mainStageNode, frame: CGRect(origin: CGPoint(), size: videoFrame.size))
             }
-            self.mainStageNode.update(size: videoFrame.size, bottomInset: bottomInset, isLandscape: true, transition: transition)
+            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: true, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             
@@ -5414,7 +5414,7 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     private let microphoneNode: VoiceChatMicrophoneNode
     
-    private var validLayout: (CGSize, CGFloat, Bool)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, Bool)?
     
     var tapped: (() -> Void)?
     var back: (() -> Void)?
@@ -5571,7 +5571,7 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
     
     var animating = false
     fileprivate func animateTransitionIn(from sourceNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
-        guard let sourceNode = sourceNode as? VoiceChatTileItemNode, let _ = sourceNode.item, let (_, bottomInset, _) = self.validLayout else {
+        guard let sourceNode = sourceNode as? VoiceChatTileItemNode, let _ = sourceNode.item, let (_, sideInset, bottomInset, _) = self.validLayout else {
             return
         }
                 
@@ -5583,21 +5583,21 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         alphaTransition.updateAlpha(node: self.microphoneNode, alpha: 1.0)
         alphaTransition.updateAlpha(node: self.headerNode, alpha: 1.0)
         
-        sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1)
+        sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
         
         self.animating = true
         let targetFrame = self.frame
         let startLocalFrame = sourceNode.view.convert(sourceNode.bounds, to: self.supernode?.view)
-        self.update(size: startLocalFrame.size, bottomInset: bottomInset, isLandscape: true, force: true, transition: .immediate)
+        self.update(size: startLocalFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: true, force: true, transition: .immediate)
         self.frame = startLocalFrame
-        self.update(size: targetFrame.size, bottomInset: bottomInset, isLandscape: true, force: true, transition: transition)
+        self.update(size: targetFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: true, force: true, transition: transition)
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
             self?.animating = false
         })
     }
     
     fileprivate func animateTransitionOut(to targetNode: ASDisplayNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        guard let (_, bottomInset, _) = self.validLayout else {
+        guard let (_, sideInset, bottomInset, _) = self.validLayout else {
             return
         }
         
@@ -5620,14 +5620,14 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         self.animating = true
         let initialFrame = self.frame
         let targetFrame = targetNode.view.convert(targetNode.bounds, to: self.supernode?.view)
-        self.update(size: targetFrame.size, bottomInset: bottomInset, isLandscape: true, force: true, transition: transition)
+        self.update(size: targetFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: true, force: true, transition: transition)
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
             if let strongSelf = self {
                 completion()
                 
                 strongSelf.animating = false
                 strongSelf.frame = initialFrame
-                strongSelf.update(size: initialFrame.size, bottomInset: bottomInset, isLandscape: true, transition: .immediate)
+                strongSelf.update(size: initialFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: true, transition: .immediate)
             }
         })
     }
@@ -5651,8 +5651,8 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
                 previousAvatarNode.removeFromSupernode()
             }
             self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
-            if let (size, bottomInset, isLandscape) = self.validLayout {
-                self.update(size: size, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+            if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
             }
         }
         
@@ -5774,8 +5774,8 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
                             }
                             strongSelf.currentVideoNode = videoNode
                             strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
-                            if let (size, bottomInset, isLandscape) = strongSelf.validLayout {
-                                strongSelf.update(size: size, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+                            if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
+                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                             }
                             
                             if waitForFullSize {
@@ -5815,11 +5815,16 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, bottomInset: CGFloat, isLandscape: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, bottomInset, isLandscape)
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isLandscape: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, sideInset, bottomInset, isLandscape)
         
         if self.animating && !force {
             return
+        }
+        
+        var bottomInset = bottomInset
+        if !sideInset.isZero {
+            bottomInset = 30.0
         }
         
         if let currentVideoNode = self.currentVideoNode {
@@ -5838,9 +5843,9 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         
         let animationSize = CGSize(width: 36.0, height: 36.0)
         let titleSize = self.titleNode.updateLayout(size)
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 12.0 + animationSize.width, y: size.height - bottomInset - titleSize.height - 16.0), size: titleSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: sideInset + 12.0 + animationSize.width, y: size.height - bottomInset - titleSize.height - 16.0), size: titleSize))
         
-        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: 7.0, y: size.height - bottomInset - animationSize.height - 6.0), size: animationSize))
+        transition.updateFrame(node: self.microphoneNode, frame: CGRect(origin: CGPoint(x: sideInset + 7.0, y: size.height - bottomInset - animationSize.height - 6.0), size: animationSize))
         
         var fadeHeight: CGFloat = 50.0
         if size.width < size.height {

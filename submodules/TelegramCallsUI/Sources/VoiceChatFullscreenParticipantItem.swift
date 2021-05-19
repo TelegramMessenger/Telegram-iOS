@@ -711,6 +711,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
                 self?.contextSourceNode.requestDismiss?()
             })
+            profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
             self.profileNode = profileNode
             self.contextSourceNode.contentNode.addSubnode(profileNode)
 
@@ -740,7 +741,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         let hasVideo = self.videoNode != nil
         
         return { item, params, first, last in
-            let titleFont = Font.semibold(12.0)
+            let titleFont = Font.semibold(13.0)
             var titleAttributedString: NSAttributedString?
             
             var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
@@ -843,28 +844,15 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     animationSize = CGSize(width: 36.0, height: 36.0)
                     animationScale = 0.66667
-                    animationFrame = CGRect(x: layout.size.width - 29.0, y: 54.0, width: 24.0, height: 24.0)
+                    animationFrame = CGRect(x: layout.size.width - 29.0, y: 55.0, width: 24.0, height: 24.0)
                     titleFrame = CGRect(origin: CGPoint(x: 8.0, y: 63.0), size: titleLayout.size)
                                     
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
-                    var extractedHeight = extractedRect.height
-                    var extractedVerticalOffset: CGFloat = 0.0
-                    if item.peer.smallProfileImage != nil || strongSelf.videoNode != nil {
-                        extractedVerticalOffset = extractedRect.width
-                        extractedHeight += extractedVerticalOffset
-                    }
-
-                    extractedRect.size.height = extractedHeight
-                    
-                    strongSelf.extractedVerticalOffset = extractedVerticalOffset
+                    let extractedWidth = availableWidth
+                    let extractedRect = CGRect(x: 0.0, y: 0.0, width: extractedWidth, height: extractedWidth + statusLayout.height + 39.0)
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
                     if strongSelf.isExtracted {
-                        var extractedRect = extractedRect
-                        if !extractedVerticalOffset.isZero {
-                            extractedRect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
-                        }
                         strongSelf.backgroundImageNode.frame = extractedRect
                     } else {
                         strongSelf.backgroundImageNode.frame = nonExtractedRect

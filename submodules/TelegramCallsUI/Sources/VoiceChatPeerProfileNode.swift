@@ -335,7 +335,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.infoNode.alpha = 0.0
             self.infoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         } else if let targetNode = targetNode as? VoiceChatFullscreenParticipantItemNode {
-            
+            self.removeFromSupernode()
         }
     }
 }

@@ -384,7 +384,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         var duration: Double = 0.2
         var timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue
         if case let .animated(transitionDuration, curve) = transition {
-            duration = transitionDuration
+            duration = transitionDuration + 0.05
             timingFunction = curve.timingFunction
         }
         
@@ -411,7 +411,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             }
             
             sourceNode.isHidden = true
-            Queue.mainQueue().after(0.25) {
+            Queue.mainQueue().after(0.4) {
                 sourceNode.isHidden = false
             }
             
