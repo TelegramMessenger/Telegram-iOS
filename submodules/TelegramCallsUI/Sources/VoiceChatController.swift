@@ -5604,7 +5604,7 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
-        alphaTransition.updateAlpha(node: self.bottomFadeNode, alpha: 0.0)
+//        alphaTransition.updateAlpha(node: self.bottomFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.microphoneNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.headerNode, alpha: 0.0)
@@ -5613,6 +5613,8 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
             completion()
             return
         }
+        
+        targetNode.fadeNode.isHidden = true
         
         targetNode.isHidden = false
         targetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -5624,6 +5626,9 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
             if let strongSelf = self {
                 completion()
+                
+                strongSelf.bottomFadeNode.alpha = 0.0
+                targetNode.fadeNode.isHidden = false
                 
                 strongSelf.animating = false
                 strongSelf.frame = initialFrame

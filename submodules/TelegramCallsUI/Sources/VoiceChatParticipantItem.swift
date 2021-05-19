@@ -1036,6 +1036,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                             audioLevelView.setColor(wavesColor, animated: true)
                                         }
                                     } else {
+                                        audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
                                     
