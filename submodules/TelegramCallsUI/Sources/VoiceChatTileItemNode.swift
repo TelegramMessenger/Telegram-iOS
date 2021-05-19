@@ -112,7 +112,6 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     private var profileNode: VoiceChatPeerProfileNode?
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
-    private var extractedVerticalOffset: CGFloat?
     
     private var validLayout: (CGSize, CGFloat)?
     var item: VoiceChatTileItem?

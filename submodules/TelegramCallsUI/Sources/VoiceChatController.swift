@@ -833,13 +833,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private var effectiveDisplayMode: DisplayMode {
-            let currentDisplayMode = self.displayMode
-            switch currentDisplayMode {
-                case .modal:
-                    return self.isLandscape ? .fullscreen(controlsHidden: false) : currentDisplayMode
-                case .fullscreen:
-                    return currentDisplayMode
-            }
+            return self.displayMode
         }
         
         private var isExpanded: Bool {
@@ -2075,6 +2069,13 @@ public final class VoiceChatController: ViewController {
                         self?.presentShare(inviteLinks)
                     })))
                 }
+                
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_VideoPreviewShareScreen, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.default)
+
+                })))
 
                 if canManageCall {
                     if let recordingStartTimestamp = strongSelf.callState?.recordingStartTimestamp {
@@ -3119,7 +3120,7 @@ public final class VoiceChatController: ViewController {
                 }
                 bottomEdgeInset = 154.0
             }
-            transition.updateAlpha(node: self.bottomGradientNode, alpha: isFullscreen ? 0.0 : 1.0)
+            transition.updateAlpha(node: self.bottomGradientNode, alpha: isFullscreen || self.isLandscape ? 0.0 : 1.0)
             
             let videoTopEdgeY = isLandscape ? 0.0 : layoutTopInset
             let videoBottomEdgeY = self.isLandscape ? layout.size.height : layout.size.height - layout.intrinsicInsets.bottom - 84.0
@@ -3454,27 +3455,19 @@ public final class VoiceChatController: ViewController {
             }
             
             let isLandscape = self.isLandscape
-            let effectiveDisplayMode = self.effectiveDisplayMode
+
             
             if previousIsLandscape != isLandscape {
+                if case .modal = self.effectiveDisplayMode {
+                    self.displayMode = .modal(isExpanded: true, isFilled: true)
+                }
                 self.updateDecorationsColors()
                 self.updateDecorationsLayout(transition: transition)
                 self.updateMembers()
             }
-//
-//            if let videoIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.mainStageVideoClippingNode }), let listIndex = self.contentContainer.subnodes?.firstIndex(where: { $0 === self.listNode }) {
-//                switch effectiveDisplayMode {
-//                    case .modal:
-//                        if listIndex < videoIndex {
-//                            self.bringVideoToBackOnCompletion = true
-//                        }
-//                    case .fullscreen:
-//                        if listIndex > videoIndex {
-//                            self.contentContainer.insertSubnode(self.mainStageVideoClippingNode, belowSubnode: self.fullscreenListNode)
-//                        }
-//                }
-//            }
-//
+            
+            let effectiveDisplayMode = self.effectiveDisplayMode
+
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentWidth) / 2.0), y: 10.0), size: CGSize(width: contentWidth, height: 44.0)))
             self.updateTitle(transition: transition)
             
@@ -3616,11 +3609,31 @@ public final class VoiceChatController: ViewController {
             let smallButtons: Bool
             switch effectiveDisplayMode {
                 case .modal:
-                    smallButtons = false
-                    firstButtonFrame = CGRect(origin: CGPoint(x: floor(leftButtonFrame.midX - cameraButtonSize.width / 2.0), y: leftButtonFrame.minY - upperButtonDistance - cameraButtonSize.height), size: cameraButtonSize)
-                    secondButtonFrame = leftButtonFrame
-                    thirdButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - centralButtonSize.width) / 2.0), y: floor((self.effectiveBottomAreaHeight - centralButtonSize.height) / 2.0) - 3.0), size: centralButtonSize)
-                    forthButtonFrame = rightButtonFrame
+                    if isLandscape {
+                        smallButtons = true
+                        let sideInset: CGFloat
+                        let buttonsCount: Int
+                        if false {
+                            sideInset = 42.0
+                            buttonsCount = 3
+                        } else {
+                            sideInset = 26.0
+                            buttonsCount = 4
+                        }
+                        let spacing = floor((layout.size.height - sideInset * 2.0 - sideButtonSize.height * CGFloat(buttonsCount)) / (CGFloat(buttonsCount - 1)))
+                        let x = floor((fullscreenBottomAreaHeight - sideButtonSize.width) / 2.0)
+                        forthButtonFrame = CGRect(origin: CGPoint(x: x, y: sideInset), size: sideButtonSize)
+                        let thirdButtonPreFrame = CGRect(origin: CGPoint(x: x, y: sideInset + sideButtonSize.height + spacing), size: sideButtonSize)
+                        thirdButtonFrame = CGRect(origin: CGPoint(x: floor(thirdButtonPreFrame.midX - centralButtonSize.width / 2.0), y: floor(thirdButtonPreFrame.midY - centralButtonSize.height / 2.0)), size: centralButtonSize)
+                        secondButtonFrame = CGRect(origin: CGPoint(x: x, y: thirdButtonPreFrame.maxY + spacing), size: sideButtonSize)
+                        firstButtonFrame = CGRect(origin: CGPoint(x: x, y: layout.size.height - sideInset - sideButtonSize.height), size: sideButtonSize)
+                    } else {
+                        smallButtons = false
+                        firstButtonFrame = CGRect(origin: CGPoint(x: floor(leftButtonFrame.midX - cameraButtonSize.width / 2.0), y: leftButtonFrame.minY - upperButtonDistance - cameraButtonSize.height), size: cameraButtonSize)
+                        secondButtonFrame = leftButtonFrame
+                        thirdButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - centralButtonSize.width) / 2.0), y: floor((self.effectiveBottomAreaHeight - centralButtonSize.height) / 2.0) - 3.0), size: centralButtonSize)
+                        forthButtonFrame = rightButtonFrame
+                    }
                 case let .fullscreen(controlsHidden):
                     smallButtons = true
                     
@@ -3635,7 +3648,7 @@ public final class VoiceChatController: ViewController {
                             buttonsCount = 4
                         }
                         let spacing = floor((layout.size.height - sideInset * 2.0 - sideButtonSize.height * CGFloat(buttonsCount)) / (CGFloat(buttonsCount - 1)))
-                        let x = controlsHidden ? fullscreenBottomAreaHeight + layout.safeInsets.right + 30.0: floor((fullscreenBottomAreaHeight - sideButtonSize.width) / 2.0)
+                        let x = controlsHidden ? fullscreenBottomAreaHeight + layout.safeInsets.right + 30.0 : floor((fullscreenBottomAreaHeight - sideButtonSize.width) / 2.0)
                         forthButtonFrame = CGRect(origin: CGPoint(x: x, y: sideInset), size: sideButtonSize)
                         let thirdButtonPreFrame = CGRect(origin: CGPoint(x: x, y: sideInset + sideButtonSize.height + spacing), size: sideButtonSize)
                         thirdButtonFrame = CGRect(origin: CGPoint(x: floor(thirdButtonPreFrame.midX - centralButtonSize.width / 2.0), y: floor(thirdButtonPreFrame.midY - centralButtonSize.height / 2.0)), size: centralButtonSize)
@@ -4547,7 +4560,10 @@ public final class VoiceChatController: ViewController {
                             if self.isScheduling {
                                 self.dismissScheduled()
                             } else {
-                                self.controller?.dismiss(closing: false, manual: true)
+                                if case .fullscreen = self.effectiveDisplayMode {
+                                } else {
+                                    self.controller?.dismiss(closing: false, manual: true)
+                                }
                             }
                             dismissing = true
                         } else if !self.isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
@@ -5829,7 +5845,7 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         
         var bottomInset = bottomInset
         if !sideInset.isZero {
-            bottomInset = 30.0
+            bottomInset = 14.0
         }
         
         if let currentVideoNode = self.currentVideoNode {
@@ -5861,9 +5877,9 @@ final class VoiceChatMainStageContainerNode: ASDisplayNode {
         
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))
         if let image = self.backButtonArrowNode.image {
-            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: 9.0, y: 12.0), size: image.size))
+            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: sideInset + 9.0, y: 12.0), size: image.size))
         }
-        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: 28.0, y: 13.0), size: backSize))
+        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: sideInset + 28.0, y: 13.0), size: backSize))
         
         let unpinSize = self.pinButtonTitleNode.updateLayout(size)
         if let image = self.pinButtonIconNode.image {

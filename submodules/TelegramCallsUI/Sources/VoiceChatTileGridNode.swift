@@ -200,7 +200,6 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                     let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.4, curve: .spring)
                     let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), items: item.tiles, transition: transition)
                     if currentItem == nil {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: 0.0)
                         strongSelf.backgroundNode.frame = tileGridNode.frame
                     } else {
