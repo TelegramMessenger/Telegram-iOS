@@ -408,13 +408,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
 //                    })
                 }
             }
-            
-            sourceNode.isHidden = true
-            Queue.mainQueue().after(0.4) {
-                sourceNode.isHidden = false
-            }
-            
+                        
             if animate {
+                sourceNode.isHidden = true
+                Queue.mainQueue().after(0.4) {
+                    sourceNode.isHidden = false
+                }
+                
                 let initialPosition = self.contextSourceNode.position
                 let targetContainerPosition = self.contextSourceNode.view.convert(self.contextSourceNode.bounds, to: containerNode.view).center
 
@@ -434,6 +434,11 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             } else if !initialAnimate {
                 self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: .immediate)
                 self.videoNode?.frame = self.bounds
+                
+                sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak sourceNode] _ in
+                    sourceNode?.layer.removeAllAnimations()
+                })
+                sourceNode.layer.animateScale(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction)
             }
             
             self.fadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
