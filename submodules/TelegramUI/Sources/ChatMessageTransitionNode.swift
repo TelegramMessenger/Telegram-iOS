@@ -238,21 +238,23 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
-                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
                 if abs(targetAbsoluteRect.minY - 691.6666666666666) > 0.1 {
                     assert(true)
                 }
-                let sourceBackgroundAbsoluteRect = initialTextInput.backgroundView.frame.offsetBy(dx: initialTextInput.sourceRect.minX, dy: initialTextInput.sourceRect.minY)
+
+                let sourceRect = self.view.convert(initialTextInput.sourceRect, from: nil)
+                let sourceBackgroundAbsoluteRect = initialTextInput.backgroundView.frame.offsetBy(dx: sourceRect.minX, dy: sourceRect.minY)
                 let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.minX, y: sourceBackgroundAbsoluteRect.maxY - self.contextSourceNode.contentRect.height), size: self.contextSourceNode.contentRect.size)
 
-                let textInput = ChatMessageTransitionNode.Source.TextInput(backgroundView: initialTextInput.backgroundView, contentView: initialTextInput.contentView, sourceRect: initialTextInput.sourceRect)
+                let textInput = ChatMessageTransitionNode.Source.TextInput(backgroundView: initialTextInput.backgroundView, contentView: initialTextInput.contentView, sourceRect: sourceRect)
 
                 textInput.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: sourceAbsoluteRect.height - sourceBackgroundAbsoluteRect.height), size: textInput.backgroundView.bounds.size)
                 textInput.contentView.frame = textInput.contentView.frame.offsetBy(dx: 0.0, dy: sourceAbsoluteRect.height - sourceBackgroundAbsoluteRect.height)
 
                 var sourceReplyPanel: ReplyPanel?
                 if let replyPanel = replyPanel, let replyPanelParentView = replyPanel.view.superview {
-                    var replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanel.originalFrameBeforeDismissed ?? replyPanel.frame, to: nil)
+                    var replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanel.originalFrameBeforeDismissed ?? replyPanel.frame, to: self.view)
                     replySourceAbsoluteFrame.origin.x -= sourceAbsoluteRect.minX - self.contextSourceNode.contentRect.minX
                     replySourceAbsoluteFrame.origin.y -= sourceAbsoluteRect.minY - self.contextSourceNode.contentRect.minY
 
@@ -305,23 +307,23 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 switch stickerMediaInput {
                 case let .inputPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: sourceItemNode.placeholderNode, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: nil)
+                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: self.view)
                 case let .mediaPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: sourceItemNode.placeholderNode, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: nil)
+                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: self.view)
                 case let .inputPanelSearch(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: nil)
+                    sourceAbsoluteRect = sourceItemNode.view.convert(stickerSource.imageNode.frame, to: self.view)
                 case let .emptyPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.stickerNode.imageNode, animationNode: sourceItemNode.stickerNode.animationNode, placeholderNode: nil, relativeSourceRect: sourceItemNode.stickerNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.stickerNode.view.convert(sourceItemNode.stickerNode.imageNode.frame, to: nil)
+                    sourceAbsoluteRect = sourceItemNode.stickerNode.view.convert(sourceItemNode.stickerNode.imageNode.frame, to: self.view)
                 }
 
-                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
 
                 var sourceReplyPanel: ReplyPanel?
                 if let replyPanel = replyPanel, let replyPanelParentView = replyPanel.view.superview {
-                    var replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanel.originalFrameBeforeDismissed ?? replyPanel.frame, to: nil)
+                    var replySourceAbsoluteFrame = replyPanelParentView.convert(replyPanel.originalFrameBeforeDismissed ?? replyPanel.frame, to: self.view)
                     replySourceAbsoluteFrame.origin.x -= sourceAbsoluteRect.midX - self.contextSourceNode.contentRect.midX
                     replySourceAbsoluteFrame.origin.y -= sourceAbsoluteRect.midY - self.contextSourceNode.contentRect.midY
 
@@ -371,7 +373,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 if let (container, localRect) = audioMicInput.micButton.contentContainer {
                     let snapshotView = container.snapshotView(afterScreenUpdates: false)
                     if let snapshotView = snapshotView {
-                        let sourceAbsoluteRect = container.convert(localRect, to: nil)
+                        let sourceAbsoluteRect = container.convert(localRect, to: self.view)
                         snapshotView.frame = sourceAbsoluteRect
 
                         container.isHidden = true
@@ -382,7 +384,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                             if let contextContainer = itemNode.animateFromMicInput(micInputNode: snapshotView, transition: transition) {
                                 self.containerNode.addSubnode(contextContainer.contentNode)
 
-                                let targetAbsoluteRect = contextContainer.view.convert(contextContainer.contentRect, to: nil)
+                                let targetAbsoluteRect = contextContainer.view.convert(contextContainer.contentRect, to: self.view)
 
                                 self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -contextContainer.contentRect.minX, dy: -contextContainer.contentRect.minY)
                                 contextContainer.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
@@ -418,7 +420,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                     self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
                     let sourceAbsoluteRect = videoMessage.view.frame
-                    let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                    let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
 
                     videoMessage.view.frame = videoMessage.view.frame.offsetBy(dx: targetAbsoluteRect.midX - sourceAbsoluteRect.midX, dy: targetAbsoluteRect.midY - sourceAbsoluteRect.midY)
 
@@ -445,7 +447,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                         self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
-                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: nil)
+                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
                         let sourceBackgroundAbsoluteRect = snapshotView.frame
                         let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
 

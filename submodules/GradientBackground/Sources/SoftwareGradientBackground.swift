@@ -181,7 +181,7 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
 
                 let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: validPhase % 8))
 
-                if case let .animated(duration, curve) = transition {
+                if case let .animated(duration, curve) = transition, duration > 0.001 {
                     var images: [UIImage] = []
 
                     let maxFrame = Int(duration * 30)
@@ -200,7 +200,9 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
                     animation.values = images.map { $0.cgImage! }
                     animation.duration = duration * UIView.animationDurationFactor()
                     animation.calculationMode = .linear
-                    self.contentView.layer.add(animation, forKey: "image")
+                    animation.isRemovedOnCompletion = true
+                    self.contentView.layer.removeAnimation(forKey: "contents")
+                    self.contentView.layer.add(animation, forKey: "contents")
                 } else {
                     self.contentView.image = generateGradient(size: imageSize, colors: colors, positions: positions)
                 }
@@ -222,6 +224,10 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
     }
 
     public func animateEvent(transition: ContainedViewLayoutTransition) {
+        guard case let .animated(duration, _) = transition, duration > 0.001 else {
+            return
+        }
+        
         if self.phase == 0 {
             self.phase = 7
         } else {

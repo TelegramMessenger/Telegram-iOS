@@ -546,8 +546,6 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatHistoryNavigationButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.historyNavigation.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
                 context.setLineWidth(0.5)
                 context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
                 context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))

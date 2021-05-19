@@ -15,6 +15,11 @@ swift_library(
         "//submodules/GradientBackground:GradientBackground",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/Postbox:Postbox",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/WallpaperResources:WallpaperResources",
     ],
     visibility = [
         "//visibility:public",

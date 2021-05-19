@@ -686,7 +686,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         self.resendCodeAction = resendCodeAction
         
         self.navigationBackgroundNode = ASDisplayNode()
-        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationBackgroundNode.alpha = 0.0
         self.navigationSeparatorNode = ASDisplayNode()
         self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor

@@ -226,7 +226,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.openInfo = openInfo
         self.emptyStateUpdated = emptyStateUpdated
         
-        self.currentState = CallListNodeState(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations, editing: false, messageIdWithRevealedOptions: nil)
+        self.currentState = CallListNodeState(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: true, editing: false, messageIdWithRevealedOptions: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.listNode = ListView()
@@ -633,7 +633,7 @@ final class CallListControllerNode: ASDisplayNode {
     }
     
     func updateThemeAndStrings(presentationData: PresentationData) {
-        if presentationData.theme !== self.currentState.presentationData.theme || presentationData.strings !== self.currentState.presentationData.strings || presentationData.disableAnimations != self.currentState.disableAnimations {
+        if presentationData.theme !== self.currentState.presentationData.theme || presentationData.strings !== self.currentState.presentationData.strings {
             self.presentationData = presentationData
             
             self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -652,7 +652,7 @@ final class CallListControllerNode: ASDisplayNode {
             self.updateEmptyPlaceholder(theme: presentationData.theme, strings: presentationData.strings, type: self.currentLocationAndType.type, isHidden: self.emptyTextNode.alpha.isZero)
             
             self.updateState {
-                return $0.withUpdatedPresentationData(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
+                return $0.withUpdatedPresentationData(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: true)
             }
             
             self.listNode.forEachItemHeaderNode({ itemHeaderNode in

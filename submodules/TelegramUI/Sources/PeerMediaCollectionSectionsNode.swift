@@ -35,7 +35,7 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
         
         self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
             self?.indexUpdated?(index)
@@ -57,7 +57,7 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
-            self.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
         }
         

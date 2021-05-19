@@ -167,7 +167,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
     var dismissUrlPreview: () -> Void = { }
-    var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
+    var setupSendActionOnViewUpdate: (@escaping () -> Void, Int64?) -> Void = { _, _ in }
     var requestLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     var dismissAsOverlay: () -> Void = { }
     
@@ -178,6 +178,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var dropDimNode: ASDisplayNode?
 
     let messageTransitionNode: ChatMessageTransitionNode
+
+    private let presentationContextMarker = ASDisplayNode()
     
     private var containerLayoutAndNavigationBarHeight: (ContainerViewLayout, CGFloat)?
     
@@ -238,7 +240,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar = navigationBar
         self.controller = controller
         
-        self.backgroundNode = WallpaperBackgroundNode()
+        self.backgroundNode = WallpaperBackgroundNode(context: context)
         self.backgroundNode.displaysAsynchronously = false
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
@@ -294,6 +296,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self else {
                 return
             }
+            if (strongSelf.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
+                return
+            }
             strongSelf.backgroundNode.animateEvent(transition: transition)
         }
         
@@ -301,7 +306,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self else {
                 return nil
             }
-            return strongSelf.messageTransitionNode.view
+            return strongSelf.presentationContextMarker.view
         }
         
         self.setViewBlock({
@@ -383,6 +388,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.inputContextPanelContainer)
 
         self.addSubnode(self.messageTransitionNode)
+        self.addSubnode(self.presentationContextMarker)
 
         self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)
         
@@ -1541,6 +1547,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
             if abs(listBottomInset - previousListBottomInset) > 80.0 {
+                if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
+                    return
+                }
                 self.backgroundNode.animateEvent(transition: transition)
             }
             //self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
@@ -2323,21 +2332,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
-                    self.setupSendActionOnViewUpdate({ [weak self] in
-                        if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
-                            strongSelf.ignoreUpdateHeight = true
-                            textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
-                            strongSelf.ignoreUpdateHeight = false
-                        }
-                    })
-                    completion()
                     
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
                             messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
                         }
                     }
+
+                    var usedCorrelationId: Int64?
 
                     if !messages.isEmpty, case .message = messages[messages.count - 1] {
                         let correlationId = Int64.random(in: 0 ..< Int64.max)
@@ -2348,11 +2350,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             replyPanel = accessoryPanelNode
                         }
                         if self.shouldAnimateMessageTransition, let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode, let textInput = inputPanelNode.makeSnapshotForTransition() {
+                            usedCorrelationId = correlationId
                             let source: ChatMessageTransitionNode.Source = .textInput(textInput: textInput, replyPanel: replyPanel)
                             self.messageTransitionNode.add(correlationId: correlationId, source: source, initiated: {
                             })
                         }
                     }
+
+                    self.setupSendActionOnViewUpdate({ [weak self] in
+                        if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
+                            strongSelf.ignoreUpdateHeight = true
+                            textInputPanelNode.text = ""
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.ignoreUpdateHeight = false
+                        }
+                    }, usedCorrelationId)
+                    completion()
                     
                     self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
                 }
@@ -2442,6 +2455,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
 
     var shouldAnimateMessageTransition: Bool {
+        if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
+            return false
+        }
+
         switch self.historyNode.visibleContentOffset() {
         case let .known(value) where value < 20.0:
             return true

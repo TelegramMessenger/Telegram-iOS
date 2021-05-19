@@ -407,6 +407,7 @@ extension PresentationThemeRootNavigationBar: Codable {
         case segmentedDivider
         case clearButtonBackground
         case clearButtonForeground
+        case opaqueBackground
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -419,7 +420,8 @@ extension PresentationThemeRootNavigationBar: Codable {
             secondaryTextColor: try decodeColor(values, .secondaryText),
             controlColor: try decodeColor(values, .control),
             accentTextColor: try decodeColor(values, .accentText),
-            backgroundColor: try decodeColor(values, .background),
+            blurredBackgroundColor: try decodeColor(values, .background),
+            opaqueBackgroundColor: try decodeColor(values, .opaqueBackground, fallbackKey: "root.navBar.background"),
             separatorColor: try decodeColor(values, .separator),
             badgeBackgroundColor: try decodeColor(values, .badgeFill),
             badgeStrokeColor: try decodeColor(values, .badgeStroke),
@@ -441,7 +443,8 @@ extension PresentationThemeRootNavigationBar: Codable {
         try encodeColor(&values, self.secondaryTextColor, .secondaryText)
         try encodeColor(&values, self.controlColor, .control)
         try encodeColor(&values, self.accentTextColor, .accentText)
-        try encodeColor(&values, self.backgroundColor, .background)
+        try encodeColor(&values, self.blurredBackgroundColor, .background)
+        try encodeColor(&values, self.opaqueBackgroundColor, .opaqueBackground)
         try encodeColor(&values, self.separatorColor, .separator)
         try encodeColor(&values, self.badgeBackgroundColor, .badgeFill)
         try encodeColor(&values, self.badgeStrokeColor, .badgeStroke)

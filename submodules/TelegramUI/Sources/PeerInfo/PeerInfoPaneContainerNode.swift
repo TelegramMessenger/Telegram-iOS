@@ -692,7 +692,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        self.coveringBackgroundNode.color = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.coveringBackgroundNode.color = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.tabsSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         

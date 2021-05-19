@@ -102,7 +102,7 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
     override func didLoad() {
         super.didLoad()
 
-        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+        //self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
     }
 
     @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
@@ -199,7 +199,8 @@ public class WallpaperGalleryController: ViewController {
     private var toolbarNode: WallpaperGalleryToolbarNode?
     private var patternPanelNode: WallpaperPatternPanelNode?
     private var colorsPanelNode: WallpaperColorPanelNode?
-    
+
+    private var patternInitialWallpaper: TelegramWallpaper?
     private var patternPanelEnabled = false
     private var colorsPanelEnabled = false
     
@@ -341,6 +342,17 @@ public class WallpaperGalleryController: ViewController {
         }
         return GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: updateItems, focusOnItem: self.galleryNode.pager.centralItemNode()?.index, synchronous: false)
     }
+
+    private func updateCurrentEntryTransaction(entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) -> GalleryPagerTransaction {
+        var updateItems: [GalleryPagerUpdateItem] = []
+        for index in 0 ..< self.entries.count {
+            if index == self.centralEntryIndex {
+                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source))
+                updateItems.append(item)
+            }
+        }
+        return GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: updateItems, focusOnItem: self.galleryNode.pager.centralItemNode()?.index, synchronous: false)
+    }
     
     override public func loadDisplayNode() {
         let controllerInteraction = GalleryControllerInteraction(presentController: { [weak self] controller, arguments in
@@ -432,7 +444,7 @@ public class WallpaperGalleryController: ViewController {
                                 
                                 let completion: (TelegramWallpaper) -> Void = { wallpaper in
                                     let baseSettings = wallpaper.settings
-                                    let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, bottomColor: baseSettings?.bottomColor, intensity: baseSettings?.intensity)
+                                    let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, bottomColor: baseSettings?.bottomColor, additionalColors: baseSettings?.additionalColors ?? [], intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
                                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
@@ -597,14 +609,22 @@ public class WallpaperGalleryController: ViewController {
             node.action = { [weak self] in
                 self?.actionPressed()
             }
-            node.requestPatternPanel = { [weak self] enabled in
+            node.requestPatternPanel = { [weak self] enabled, initialWallpaper in
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+                    strongSelf.colorsPanelEnabled = false
+
+                    strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     strongSelf.patternPanelEnabled = enabled
                     strongSelf.galleryNode.scrollView.isScrollEnabled = !enabled
                     if enabled {
                         strongSelf.patternPanelNode?.didAppear()
                     } else {
-                        strongSelf.updateEntries(pattern: .color(0), preview: false)
+                        switch initialWallpaper {
+                        case .color:
+                            strongSelf.updateEntries(pattern: .color(0), preview: false)
+                        default:
+                            break
+                        }
                     }
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
@@ -612,6 +632,7 @@ public class WallpaperGalleryController: ViewController {
 
             node.requestColorsPanel = { [weak self] colors in
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+                    strongSelf.patternPanelEnabled = false
                     strongSelf.colorsPanelEnabled = colors != nil
                     strongSelf.galleryNode.scrollView.isScrollEnabled = colors == nil
                     if let colors = colors {
@@ -671,6 +692,25 @@ public class WallpaperGalleryController: ViewController {
         
         self.galleryNode.pager.transaction(self.updateTransaction(entries: entries, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: false, patternEnabled: self.patternPanelEnabled)))
     }
+
+    private func updateEntries(wallpaper: TelegramWallpaper, preview: Bool = false) {
+        guard self.validLayout != nil, let centralEntryIndex = self.galleryNode.pager.centralItemNode()?.index else {
+            return
+        }
+
+        var entries = self.entries
+        var currentEntry = entries[centralEntryIndex]
+        switch currentEntry {
+            case .wallpaper:
+                currentEntry = .wallpaper(wallpaper, nil)
+            default:
+                break
+        }
+        entries[centralEntryIndex] = currentEntry
+        self.entries = entries
+
+        self.galleryNode.pager.transaction(self.updateCurrentEntryTransaction(entry: currentEntry, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: false, patternEnabled: self.patternPanelEnabled)))
+    }
     
     private func updateEntries(pattern: TelegramWallpaper?, intensity: Int32? = nil, preview: Bool = false) {
         var updatedEntries: [WallpaperGalleryEntry] = []
@@ -715,8 +755,6 @@ public class WallpaperGalleryController: ViewController {
         self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         var bottomInset = layout.intrinsicInsets.bottom + 49.0
-        let standardInputHeight = layout.deviceMetrics.keyboardHeight(inLandscape: false)
-        let height = max(standardInputHeight, layout.inputHeight ?? 0.0) - bottomInset + 47.0
         
         let currentPatternPanelNode: WallpaperPatternPanelNode
         if let patternPanelNode = self.patternPanelNode {
@@ -724,8 +762,22 @@ public class WallpaperGalleryController: ViewController {
         } else {
             let patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: presentationData.theme, strings: presentationData.strings)
             patternPanelNode.patternChanged = { [weak self] pattern, intensity, preview in
-                if let strongSelf = self, strongSelf.validLayout != nil {
-                    strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
+                if let strongSelf = self, strongSelf.validLayout != nil, let patternInitialWallpaper = strongSelf.patternInitialWallpaper {
+                    switch patternInitialWallpaper {
+                    case .color:
+                        strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
+                    case let .builtin(gradient, _):
+                        if let pattern = pattern, case let .file(file) = pattern {
+                            var gradientColors = gradient?.colors ?? defaultBuiltinWallpaperGradientColors.map({ $0.rgb })
+
+                            let newSettings = WallpaperSettings(blur: false, motion: false, color: gradientColors[0], bottomColor: gradientColors[1], additionalColors: Array(gradientColors.dropFirst(2)), intensity: intensity)
+                            let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
+
+                            strongSelf.updateEntries(wallpaper: newWallpaper, preview: preview)
+                        }
+                    default:
+                        break
+                    }
                 }
             }
             patternPanelNode.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil, nil) : nil
@@ -747,10 +799,19 @@ public class WallpaperGalleryController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                guard let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode else {
+                guard let entry = strongSelf.currentEntry(), case let .wallpaper(currentWallpaper, _) = entry else {
                     return
                 }
-                centralItemNode.updateColors(colors: colors)
+
+                var wallpaper: TelegramWallpaper = .builtin(TelegramWallpaper.Gradient(colors: colors.map {
+                    $0.rgb
+                }), WallpaperSettings(blur: false, motion: false, color: nil, bottomColor: nil, intensity: nil, rotation: nil))
+
+                if case .file = currentWallpaper {
+                    wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, color: colors[0].rgb, bottomColor: colors[1].rgb, additionalColors: colors.dropFirst(2).map({ $0.rgb }), intensity: nil, rotation: nil))
+                }
+
+                strongSelf.updateEntries(wallpaper: wallpaper)
             }
         }
         

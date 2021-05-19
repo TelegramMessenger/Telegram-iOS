@@ -522,7 +522,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
     entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, presentationData.largeEmoji))
-    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.disableAnimations))
+    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.reduceMotion))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
     return entries
@@ -598,9 +598,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedLargeEmoji(largeEmoji)
         }).start()
-    }, disableAnimations: { disableAnimations in
+    }, disableAnimations: { reduceMotion in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedDisableAnimations(disableAnimations)
+            return current.withUpdatedReduceMotion(reduceMotion)
         }).start()
     }, selectAppIcon: { name in
         currentAppIconName.set(name)
@@ -1016,17 +1016,10 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             presentInGlobalOverlayImpl?(contextController, nil)
         })
     })
-    
-    let previousThemeReference = Atomic<PresentationThemeReference?>(value: nil)
-    let previousAccentColor = Atomic<PresentationThemeAccentColor?>(value: nil)
-    
+
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get())
         |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
-        
-        let dateTimeFormat = presentationData.dateTimeFormat
-        let largeEmoji = presentationData.largeEmoji
-        let disableAnimations = presentationData.disableAnimations
     
         let themeReference: PresentationThemeReference
         if presentationData.autoNightModeTriggered {
@@ -1034,8 +1027,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         } else {
             themeReference = settings.theme
         }
-        
-        let accentColor = settings.themeSpecificAccentColors[themeReference.index]
         
         let rightNavigationButton = ItemListNavigationButton(content: .icon(.add), style: .regular, enabled: true, action: {
             moreImpl?()
@@ -1304,7 +1295,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     }
                 }
                 
-                return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
             }).start()
             
             presentCrossfadeControllerImpl?(true)

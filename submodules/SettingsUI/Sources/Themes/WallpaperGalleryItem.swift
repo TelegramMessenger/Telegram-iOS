@@ -114,13 +114,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let status = Promise<MediaResourceStatus>(.Local)
     let actionButton = Promise<UIBarButtonItem?>(nil)
     var action: (() -> Void)?
-    var requestPatternPanel: ((Bool) -> Void)?
+    var requestPatternPanel: ((Bool, TelegramWallpaper) -> Void)?
     var requestColorsPanel: (([UIColor]?) -> Void)?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var validOffset: CGFloat?
 
-    private var gradientColors: [UIColor]?
+    private var initialWallpaper: TelegramWallpaper?
     
     init(context: AccountContext) {
         self.context = context
@@ -129,7 +129,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
-        self.nativeNode = WallpaperBackgroundNode()
+        self.nativeNode = WallpaperBackgroundNode(context: context)
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
@@ -222,18 +222,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 return nil
         }
     }
-
-    func updateColors(colors: [UIColor]) {
-        if self.gradientColors == nil {
-            return
-        }
-        self.gradientColors = colors
-        self.nativeNode.update(wallpaper: .builtin(TelegramWallpaper.Gradient(colors: colors.map {
-            $0.rgb
-        }), WallpaperSettings(blur: false, motion: false, color: nil, bottomColor: nil, intensity: nil, rotation: nil)))
-
-        self.colorsButtonNode.colors = colors
-    }
     
     override func ready() -> Signal<Void, NoError> {
         return self._ready.get()
@@ -283,16 +271,32 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let progressAction = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
             
             var isBlurrable = true
+
+            switch entry {
+            case let .wallpaper(wallpaper, _):
+                if case .builtin = wallpaper {
+                    self.nativeNode.isHidden = false
+                    self.nativeNode.update(wallpaper: wallpaper)
+                } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern, !settings.additionalColors.isEmpty {
+                    self.nativeNode.isHidden = false
+                    self.nativeNode.update(wallpaper: wallpaper)
+                } else {
+                    self.nativeNode.isHidden = true
+                }
+            default:
+                self.nativeNode.isHidden = true
+            }
             
             switch entry {
                 case let .wallpaper(wallpaper, message):
+                    self.initialWallpaper = wallpaper
+
                     switch wallpaper {
                         case let .builtin(gradient, _):
-                            if self.gradientColors == nil {
-                                self.gradientColors = gradient?.colors.map({ color in
-                                    return UIColor(rgb: color)
-                                }) ?? defaultBuiltinWallpaperGradientColors
-                            }
+                            let gradientColors = self.calculateGradientColors() ?? defaultBuiltinWallpaperGradientColors
+
+                            self.colorsButtonNode.colors = gradientColors
+
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
                             signal = settingsBuiltinWallpaperImage(account: self.context.account)
@@ -322,6 +326,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
                         case let .file(file):
+                            let gradientColors = self.calculateGradientColors() ?? defaultBuiltinWallpaperGradientColors
+
+                            self.colorsButtonNode.colors = gradientColors
+
                             let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
                             contentSize = dimensions.cgSize
                             displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
@@ -372,8 +380,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 }
                                 
                                 self.colorPreview = self.arguments.colorPreview
-                                
-                                signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+
+                                if !file.settings.additionalColors.isEmpty {
+                                    signal = .single({ _ in nil })
+                                } else {
+                                    signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+                                }
                                 colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
@@ -532,18 +544,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             } else {
                 self.imageNode.contentMode = .scaleToFill
             }
-
-            switch entry {
-            case let .wallpaper(wallpaper, _):
-                if case .builtin = wallpaper {
-                    self.nativeNode.isHidden = false
-                    self.nativeNode.update(wallpaper: wallpaper)
-                } else {
-                    self.nativeNode.isHidden = true
-                }
-            default:
-                self.nativeNode.isHidden = true
-            }
             
             self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
@@ -658,7 +658,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
 
     var colors: [UInt32]? {
-        return self.gradientColors?.map({ $0.rgb })
+        return self.calculateGradientColors()?.map({ $0.rgb })
     }
     
     @objc func toggleBlur() {
@@ -728,14 +728,49 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     @objc private func togglePattern() {
+        guard let initialWallpaper = self.initialWallpaper else {
+            return
+        }
+
         let value = !self.patternButtonNode.isSelected
         self.patternButtonNode.setSelected(value, animated: false)
         
-        self.requestPatternPanel?(value)
+        self.requestPatternPanel?(value, initialWallpaper)
+    }
+
+    func calculateGradientColors() -> [UIColor]? {
+        guard let entry = self.entry else {
+            return nil
+        }
+        switch entry {
+        case let .wallpaper(wallpaper, _):
+            switch wallpaper {
+            case let .builtin(gradient, _):
+                let gradientColors = gradient?.colors.map({ color in
+                    return UIColor(rgb: color)
+                }) ?? defaultBuiltinWallpaperGradientColors
+                return gradientColors
+            case let .file(_, _, _, _, _, _, _, _, settings):
+                if let topColor = settings.color, let bottomColor = settings.bottomColor, settings.additionalColors.count == 2 {
+                    return [
+                        UIColor(rgb: topColor),
+                        UIColor(rgb: bottomColor),
+                        UIColor(rgb: settings.additionalColors[0]),
+                        UIColor(rgb: settings.additionalColors[1])
+                    ]
+                } else {
+                    return nil
+                }
+            default:
+                return nil
+            }
+        default:
+            return nil
+        }
     }
 
     @objc private func toggleColors() {
-        guard let currentGradientColors = self.gradientColors else {
+        guard let currentGradientColors = self.calculateGradientColors() else {
             return
         }
         let value = !self.colorsButtonNode.isSelected
@@ -862,17 +897,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case let .wallpaper(wallpaper, _):
                     switch wallpaper {
                         case let .builtin(gradient, _):
-                            self.colorsButtonNode.colors = self.gradientColors
+                            self.colorsButtonNode.colors = self.calculateGradientColors()
 
-                            motionAlpha = 1.0
-                            if self.motionButtonNode.isSelected {
-                                motionFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
-                                colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
-                                playAlpha = 1.0
-                            } else {
-                                motionFrame = leftButtonFrame
-                                playAlpha = 0.0
-                            }
+                            motionAlpha = 0.0
+                            patternAlpha = 1.0
+
+                            patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
+                            colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                            playAlpha = 1.0
+
                             colorsAlpha = 1.0
                         case .color:
                             patternAlpha = 1.0
@@ -889,20 +922,33 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .gradient:
                             motionAlpha = 1.0
                         case let .file(file):
-                            if wallpaper.isPattern {
-                                motionAlpha = 1.0
-                                if self.arguments.isColorsList {
-                                    patternAlpha = 1.0
-                                    if self.patternButtonNode.isSelected {
-                                        patternFrame = leftButtonFrame
+                            if !file.settings.additionalColors.isEmpty {
+                                self.colorsButtonNode.colors = self.calculateGradientColors()
+
+                                motionAlpha = 0.0
+                                patternAlpha = 1.0
+
+                                patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
+                                colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                                playAlpha = 1.0
+
+                                colorsAlpha = 1.0
+                            } else {
+                                if wallpaper.isPattern {
+                                    motionAlpha = 1.0
+                                    if self.arguments.isColorsList {
+                                        patternAlpha = 1.0
+                                        if self.patternButtonNode.isSelected {
+                                            patternFrame = leftButtonFrame
+                                        }
+                                        motionFrame = rightButtonFrame
                                     }
+                                } else {
+                                    blurAlpha = 1.0
+                                    blurFrame = leftButtonFrame
+                                    motionAlpha = 1.0
                                     motionFrame = rightButtonFrame
                                 }
-                            } else {
-                                blurAlpha = 1.0
-                                blurFrame = leftButtonFrame
-                                motionAlpha = 1.0
-                                motionFrame = rightButtonFrame
                             }
                     }
             }

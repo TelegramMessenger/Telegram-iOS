@@ -620,8 +620,8 @@ public final class SearchBarNodeTheme: Equatable {
     }
     
     public init(theme: PresentationTheme, hasBackground: Bool = true, hasSeparator: Bool = true) {
-        self.background = hasBackground ? theme.rootController.navigationBar.backgroundColor : .clear
-        self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
+        self.background = hasBackground ? theme.rootController.navigationBar.blurredBackgroundColor : .clear
+        self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.blurredBackgroundColor
         self.inputFill = theme.rootController.navigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.navigationSearchBar.inputPlaceholderTextColor
         self.primaryText = theme.rootController.navigationSearchBar.inputTextColor

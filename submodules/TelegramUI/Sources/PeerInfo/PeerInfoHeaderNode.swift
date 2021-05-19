@@ -1946,7 +1946,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var transitionSourceTitleFrame = CGRect()
         var transitionSourceSubtitleFrame = CGRect()
         
-        self.backgroundNode.color = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.color = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
         
         if let navigationTransition = self.navigationTransition, let sourceAvatarNode = (navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
@@ -1955,7 +1955,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
 
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.backgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
             
             if self.isAvatarExpanded, case .animated = transition, transitionFraction == 1.0 {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
@@ -1963,7 +1963,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (112.0 + avatarSize)))
 
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.backgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
         }
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
@@ -1980,7 +1980,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
         self.navigationBackgroundNode.update(size: self.navigationBackgroundNode.bounds.size, transition: .immediate)
         self.navigationSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: width, height: UIScreenPixel))
-        self.navigationBackgroundNode.color = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationBackgroundNode.color = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         transition.updateAlpha(node: self.navigationBackgroundNode, alpha: state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor

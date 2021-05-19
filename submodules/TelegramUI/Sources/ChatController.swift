@@ -998,7 +998,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                     })
                 }
-            })
+            }, nil)
             var attributes: [MessageAttribute] = []
             let entities = generateTextEntities(text, enabledTypes: .all)
             if !entities.isEmpty {
@@ -1014,29 +1014,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode, sourceRect)
                 return false
             }
-                
-            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                        var current = current
-                        current = current.updatedInterfaceState { interfaceState in
-                            var interfaceState = interfaceState
-                            interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
-                            if clearInput {
-                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
-                            }
-                            return interfaceState
-                        }.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                return .media(mode: mode, expanded: nil)
-                            }
-                            return current
-                        }
-                        
-                        return current
-                    })
-                }
-            })
             
             var attributes: [MessageAttribute] = []
             if let query = query {
@@ -1054,6 +1031,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if sourceNode is ChatEmptyNodeStickerContentNode {
                 shouldAnimateMessageTransition = true
             }
+
+            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                        var current = current
+                        current = current.updatedInterfaceState { interfaceState in
+                            var interfaceState = interfaceState
+                            interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                            if clearInput {
+                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
+                            }
+                            return interfaceState
+                        }.updatedInputMode { current in
+                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                return .media(mode: mode, expanded: nil)
+                            }
+                            return current
+                        }
+
+                        return current
+                    })
+                }
+            }, shouldAnimateMessageTransition ? correlationId : nil)
+
             if shouldAnimateMessageTransition {
                 if let sourceNode = sourceNode as? ChatMediaInputStickerGridItemNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
@@ -1101,7 +1102,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         })
                     }
-                })
+                }, nil)
                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)])
             }
             return true
@@ -1433,7 +1434,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, sendBotCommand: { [weak self] messageId, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({}, nil)
                 var postAsReply = false
                 if !command.contains("@") {
                     switch strongSelf.chatLocation {
@@ -1459,7 +1460,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
                         })
                     }
-                })
+                }, nil)
                 var attributes: [MessageAttribute] = []
                 let entities = generateTextEntities(command, enabledTypes: .all)
                 if !entities.isEmpty {
@@ -4512,8 +4513,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.requestLayout(transition: transition)
         }
         
-        self.chatDisplayNode.setupSendActionOnViewUpdate = { [weak self] f in
-            self?.chatDisplayNode.historyNode.layoutActionOnViewTransition = { [weak self] transition in
+        self.chatDisplayNode.setupSendActionOnViewUpdate = { [weak self] f, messageCorrelationId in
+            //print("setup layoutActionOnViewTransition")
+
+            self?.chatDisplayNode.historyNode.layoutActionOnViewTransition = ({ [weak self] transition in
                 f()
                 if let strongSelf = self, let validLayout = strongSelf.validLayout {
                     var mappedTransition: (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?)?
@@ -4524,7 +4527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.3, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .spring), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.18, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .easeInOut), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -4570,11 +4573,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 return (transition, nil)
-            }
+            }, messageCorrelationId)
         }
         
         self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned in
             if let strongSelf = self {
+                var correlationIds: [Int64] = []
+                for message in messages {
+                    switch message {
+                    case let .message(_, _, _, _, _, correlationId):
+                        if let correlationId = correlationId {
+                            correlationIds.append(correlationId)
+                        }
+                    default:
+                        break
+                    }
+                }
+                //print("sendMessages \(correlationIds)")
                 let peerId = strongSelf.chatLocation.peerId
                 strongSelf.commitPurposefulAction()
                 
@@ -5411,7 +5426,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
                             })
                         }
-                    })
+                    }, nil)
                     var attributes: [MessageAttribute] = []
                     let entities = generateTextEntities(messageText, enabledTypes: .all)
                     if !entities.isEmpty {
@@ -8720,7 +8735,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                     })
                                                 }
-                                            })
+                                            }, nil)
                                             strongSelf.sendMessages(messages)
                                         }
                                     }
@@ -8947,7 +8962,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                             })
                         }
-                    })
+                    }, nil)
                     strongSelf.sendMessages([message])
                 })
                 strongSelf.effectiveNavigationController?.pushViewController(controller)
@@ -8994,7 +9009,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                     })
                                 }
-                            })
+                            }, nil)
                             let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
                             enqueueMessages.append(message)
                         }
@@ -9053,7 +9068,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                         })
                                     }
-                                })
+                                }, nil)
                                 let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
                                 strongSelf.sendMessages([message])
                             } else {
@@ -9071,7 +9086,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                 })
                                             }
-                                        })
+                                        }, nil)
                                         let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
                                         strongSelf.sendMessages([message])
                                     }
@@ -9391,7 +9406,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
-                })
+                }, nil)
                 strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageId)])
             }))
         }
@@ -9535,6 +9550,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 var completionImpl: (() -> Void)? = completion
 
+                var usedCorrelationId: Int64?
+
                 var mappedMessages: [EnqueueMessage] = []
                 for item in items {
                     var message = item.message
@@ -9543,6 +9560,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         message = message.withUpdatedCorrelationId(correlationId)
 
                         if items.count == 1, let getAnimatedTransitionSource = getAnimatedTransitionSource {
+                            usedCorrelationId = correlationId
                             completionImpl = nil
                             strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
                                 return getAnimatedTransitionSource(uniqueId)
@@ -9563,7 +9581,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     }
                     completionImpl?()
-                })
+                }, usedCorrelationId)
 
                 strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) })
             }
@@ -9627,7 +9645,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
-                })
+                }, nil)
                 strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
             }
         }))
@@ -9643,7 +9661,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
-                })
+                }, nil)
                 strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
             }
         }))
@@ -9671,7 +9689,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
-                })
+                }, nil)
                 strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
             }
         }))
@@ -9702,7 +9720,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state
                     })
                 }
-            })
+            }, nil)
             self.sendMessages([message.withUpdatedReplyToMessageId(replyMessageId)])
         }
     }
@@ -9780,19 +9798,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
 
                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                            if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                                })
-                            }
-                        })
                         let correlationId = Int64.random(in: 0 ..< Int64.max)
                         let updatedMessage = message
                             .withUpdatedReplyToMessageId(replyMessageId)
                             .withUpdatedCorrelationId(correlationId)
 
+                        var usedCorrelationId = false
+
                         if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                            usedCorrelationId = true
                             strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNode.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController] in
                                 videoController?.hideVideoSnapshot()
                                 guard let strongSelf = self else {
@@ -9803,6 +9817,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             strongSelf.videoRecorder.set(.single(nil))
                         }
+
+                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                })
+                            }
+                        }, usedCorrelationId ? correlationId : nil)
 
                         strongSelf.sendMessages([updatedMessage])
                     }
@@ -9892,18 +9914,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let waveform = data.waveform {
                                     waveformBuffer = MemoryBuffer(data: waveform)
                                 }
-                                
-                                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                                    if let strongSelf = self {
-                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                                        })
-                                    }
-                                })
 
                                 let correlationId = Int64.random(in: 0 ..< Int64.max)
+                                var usedCorrelationId = false
 
                                 if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
+                                    usedCorrelationId = true
                                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNode.Source.AudioMicInput(micButton: micButton)), initiated: {
                                         guard let strongSelf = self else {
                                             return
@@ -9913,6 +9929,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else {
                                     strongSelf.audioRecorder.set(.single(nil))
                                 }
+
+                                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                        })
+                                    }
+                                }, usedCorrelationId ? correlationId : nil)
                                 
                                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: correlationId)])
                                 
@@ -10006,7 +10030,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         $0.updatedRecordedMediaPreview(nil).updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                     })
                 }
-            })
+            }, nil)
             
             let messages: [EnqueueMessage] = [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)]
             
@@ -11523,7 +11547,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+                                    controller.preferredBarTintColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                     controller.preferredControlTintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
                                 return (controller, sourceRect)

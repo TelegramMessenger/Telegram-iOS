@@ -5,14 +5,16 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
     public var motion: Bool
     public var color: UInt32?
     public var bottomColor: UInt32?
+    public var additionalColors: [UInt32]
     public var intensity: Int32?
     public var rotation: Int32?
     
-    public init(blur: Bool = false, motion: Bool = false, color: UInt32? = nil, bottomColor: UInt32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
+    public init(blur: Bool = false, motion: Bool = false, color: UInt32? = nil, bottomColor: UInt32? = nil, additionalColors: [UInt32] = [], intensity: Int32? = nil, rotation: Int32? = nil) {
         self.blur = blur
         self.motion = motion
         self.color = color
         self.bottomColor = bottomColor
+        self.additionalColors = additionalColors
         self.intensity = intensity
         self.rotation = rotation
     }
@@ -22,6 +24,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         self.motion = decoder.decodeInt32ForKey("m", orElse: 0) != 0
         self.color = decoder.decodeOptionalInt32ForKey("c").flatMap { UInt32(bitPattern: $0) }
         self.bottomColor = decoder.decodeOptionalInt32ForKey("bc").flatMap { UInt32(bitPattern: $0) }
+        self.additionalColors = decoder.decodeInt32ArrayForKey("additionalColors").map { UInt32(bitPattern: $0) }
         self.intensity = decoder.decodeOptionalInt32ForKey("i")
         self.rotation = decoder.decodeOptionalInt32ForKey("r")
     }
@@ -39,6 +42,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "bc")
         }
+        encoder.encodeInt32Array(self.additionalColors.map(Int32.init(bitPattern:)), forKey: "additionalColors")
         if let intensity = self.intensity {
             encoder.encodeInt32(intensity, forKey: "i")
         } else {
@@ -62,6 +66,9 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
             return false
         }
         if lhs.bottomColor != rhs.bottomColor {
+            return false
+        }
+        if lhs.additionalColors != rhs.additionalColors {
             return false
         }
         if lhs.intensity != rhs.intensity {

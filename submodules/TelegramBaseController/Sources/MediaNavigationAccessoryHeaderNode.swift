@@ -226,7 +226,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.rightMaskNode = ASImageNode()
         self.rightMaskNode.contentMode = .scaleToFill
         
-        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.opaqueBackgroundColor)
         self.leftMaskNode.image = maskImage
         self.rightMaskNode.image = maskImage
         
@@ -355,7 +355,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.nameDisplayOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
         
-        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.opaqueBackgroundColor)
         self.leftMaskNode.image = maskImage
         self.rightMaskNode.image = maskImage
         

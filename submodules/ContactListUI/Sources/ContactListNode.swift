@@ -884,7 +884,7 @@ public final class ContactListNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.listNode = ListView()
-        self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
+        self.listNode.dynamicBounceEnabled = false
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
         }
@@ -1338,8 +1338,6 @@ public final class ContactListNode: ASDisplayNode {
                             animation = .insertion
                         } else if hadPermissionInfo != hasPermissionInfo {
                             animation = .insertion
-                        } else if let previous = previous, !presentationData.disableAnimations, (entries.count - previous.count) < 20 {
-                            animation = .default
                         } else {
                             animation = .none
                         }
@@ -1366,11 +1364,10 @@ public final class ContactListNode: ASDisplayNode {
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
-                let previousDisableAnimations = strongSelf.presentationData.disableAnimations
                 
                 strongSelf.presentationData = presentationData
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousDisableAnimations != presentationData.disableAnimations {
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
                     strongSelf.listNode.verticalScrollIndicatorColor = presentationData.theme.list.scrollIndicatorColor
                     strongSelf.presentationDataPromise.set(.single(presentationData))
@@ -1385,7 +1382,7 @@ public final class ContactListNode: ASDisplayNode {
                     strongSelf.authorizationNode.isHidden = authorizationPreviousHidden
                     strongSelf.addSubnode(strongSelf.authorizationNode)
                     
-                    strongSelf.listNode.dynamicBounceEnabled = !presentationData.disableAnimations
+                    strongSelf.listNode.dynamicBounceEnabled = false
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {
