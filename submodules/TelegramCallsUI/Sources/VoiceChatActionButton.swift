@@ -247,9 +247,14 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
 
         self.labelContainerNode.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
-        self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
-
+        let titleLabelFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
+        let subtitleLabelFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleLabelFrame.maxY + 1.0), size: subtitleSize)
+    
+        self.titleLabel.bounds = CGRect(origin: CGPoint(), size: titleLabelFrame.size)
+        self.titleLabel.position = titleLabelFrame.center
+        self.subtitleLabel.bounds = CGRect(origin: CGPoint(), size: subtitleLabelFrame.size)
+        self.subtitleLabel.position = subtitleLabelFrame.center
+        
         self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
@@ -283,13 +288,17 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.0)
                 transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
                 transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
-                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -50.0))
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -43.0))
+                transition.updateTransformScale(node: self.titleLabel, scale: 0.8)
+                transition.updateTransformScale(node: self.subtitleLabel, scale: 0.8)
             } else {
                 transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.0)
                 transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.0)
                 transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
                 transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
                 transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint())
+                transition.updateTransformScale(node: self.titleLabel, scale: 1.0)
+                transition.updateTransformScale(node: self.subtitleLabel, scale: 1.0)
             }
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }

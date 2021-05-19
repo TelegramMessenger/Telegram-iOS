@@ -261,11 +261,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.removePlaceholder(animated: false)
                     } else {
                         strongSelf.imageNode.alpha = 0.0
-                        strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        strongSelf.removePlaceholder(animated: true)
                     }
                 } else {
-                    strongSelf.removePlaceholder(animated: true)
+                    if strongSelf.setupTimestamp == nil {
+                        strongSelf.removePlaceholder(animated: true)
+                    }
                 }
                 firstTime = false
             }
@@ -389,6 +389,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private var setupTimestamp: Double?
     private func setupNode(item: ChatMessageItem) {
         guard self.animationNode == nil else {
             return
@@ -421,6 +422,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             animationNode.started = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.imageNode.alpha = 0.0
+                    if !strongSelf.enableSynchronousImageApply {
+                        let current = CACurrentMediaTime()
+                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                            strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            strongSelf.removePlaceholder(animated: true)
+                        } else {
+                            strongSelf.removePlaceholder(animated: false)
+                        }
+                    }
                     
                     if let item = strongSelf.item {
                         if let _ = strongSelf.emojiFile {
@@ -511,6 +521,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
+                if isPlaying && self.setupTimestamp == nil {
+                    self.setupTimestamp = CACurrentMediaTime()
+                }
                 animationNode.visibility = isPlaying
                 
                 if self.didSetUpAnimationNode && alreadySeen {
