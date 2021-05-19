@@ -40,12 +40,15 @@ final class GroupVideoNode: ASDisplayNode {
             self.backdropVideoViewContainer.addSubview(backdropVideoView.view)
             self.view.addSubview(self.backdropVideoViewContainer)
             
+            let effect: UIVisualEffect
             if #available(iOS 13.0, *) {
-                let backdropEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterialDark))
-                self.view.addSubview(backdropEffectView)
-                self.backdropEffectView = backdropEffectView
+                effect = UIBlurEffect(style: .systemThinMaterialDark)
             } else {
+                effect = UIBlurEffect(style: .dark)
             }
+            let backdropEffectView = UIVisualEffectView(effect: effect)
+            self.view.addSubview(backdropEffectView)
+            self.backdropEffectView = backdropEffectView
         }
         
         self.videoViewContainer.addSubview(self.videoView.view)
@@ -131,10 +134,15 @@ final class GroupVideoNode: ASDisplayNode {
         }
     }
     
+    var aspectRatio: CGFloat {
+        return self.videoView.getAspect()
+    }
+    
     func updateLayout(size: CGSize, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, isLandscape)
-        transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrameAsPositionAndBounds(layer: self.backdropVideoViewContainer.layer, frame: CGRect(origin: CGPoint(), size: size))
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: bounds)
+        transition.updateFrameAsPositionAndBounds(layer: self.backdropVideoViewContainer.layer, frame: bounds)
         
         let orientation = self.videoView.getOrientation()
         var aspect = self.videoView.getAspect()
@@ -194,9 +202,6 @@ final class GroupVideoNode: ASDisplayNode {
         let transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
-        let transition: ContainedViewLayoutTransition = .immediate
-        transition.updateTransformRotation(view: self.videoView.view, angle: angle)
-
         if let backdropVideoView = self.backdropVideoView {
             rotatedVideoSize = filledSize
             var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
@@ -217,11 +222,16 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if let backdropEffectView = self.backdropEffectView {
-            transition.updateFrame(view: backdropEffectView, frame: self.bounds)
+            let maxSide = max(bounds.width, bounds.height)
+            let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.width - maxSide) / 2.0, width: maxSide, height: maxSide)
+            transition.updateFrame(view: backdropEffectView, frame: squareBounds)
         }
         
+        let transition: ContainedViewLayoutTransition = .immediate
+        transition.updateTransformRotation(view: self.videoView.view, angle: angle)
+        
         if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: self.bounds)
+             transition.updateFrame(view: effectView, frame: bounds)
         }
         
         // TODO: properly fix the issue

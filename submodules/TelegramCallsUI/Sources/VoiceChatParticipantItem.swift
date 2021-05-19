@@ -138,7 +138,7 @@ private let accentColor: UIColor = UIColor(rgb: 0x007aff)
 private let constructiveColor: UIColor = UIColor(rgb: 0x34c759)
 private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
-private class VoiceChatParticipantStatusNode: ASDisplayNode {
+class VoiceChatParticipantStatusNode: ASDisplayNode {
     private var iconNodes: [ASImageNode]
     private let textNode: TextNode
     
@@ -156,10 +156,10 @@ private class VoiceChatParticipantStatusNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ size: CGSize, _ text: VoiceChatParticipantItem.ParticipantText, _ transparent: Bool) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (_ size: CGSize, _ text: VoiceChatParticipantItem.ParticipantText, _ expanded: Bool) -> (CGSize, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        return { size, text,  transparent in
+        return { size, text, expanded in
             let statusFont = Font.regular(14.0)
             
             var attributedString: NSAttributedString?
@@ -184,9 +184,6 @@ private class VoiceChatParticipantStatusNode: ASDisplayNode {
                     case .destructive:
                         textColorValue = destructiveColor
                     }
-                    if transparent {
-                        textColorValue = UIColor(rgb: 0xffffff, alpha: 0.65)
-                    }
                     color = textColorValue
                     attributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
                 default:
@@ -207,7 +204,7 @@ private class VoiceChatParticipantStatusNode: ASDisplayNode {
                 icons.append(image)
             }
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width - (iconSize.width + spacing) * CGFloat(icons.count), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: expanded ? 4 : 1, truncationType: .end, constrainedSize: CGSize(width: size.width - (iconSize.width + spacing) * CGFloat(icons.count), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             var contentSize = textLayout.size
             contentSize.width += (iconSize.width + spacing) * CGFloat(icons.count)
             
@@ -388,7 +385,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             
             strongSelf.isExtracted = isExtracted
             
-            let inset: CGFloat = 12.0
+            let inset: CGFloat = 0.0
             if isExtracted {
                 strongSelf.contextSourceNode.contentNode.customHitTest = { [weak self] point in
                     if let strongSelf = self {
@@ -492,8 +489,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.avatarNode.isHidden = true
                             avatarListWrapperNode.contentNode.addSubnode(transitionNode)
                             
-                       
-                            
                             strongSelf.avatarTransitionNode = transitionNode
     
                             let avatarListContainerNode = ASDisplayNode()
@@ -503,8 +498,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             avatarListContainerNode.cornerRadius = targetRect.width / 2.0
                             
                             avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-                            avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: avatarInitialRect.center), to: NSValue(cgPoint: avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, completion: { [weak self] _ in
-                            })
+                            avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: avatarInitialRect.center), to: NSValue(cgPoint: avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
                             
                             radiusTransition.updateCornerRadius(node: avatarListContainerNode, cornerRadius: 0.0)
                             
@@ -576,10 +570,10 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     alphaTransition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
                     
                     let offsetInitialSublayerTransform = strongSelf.offsetContainerNode.layer.sublayerTransform
-                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -33 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
+                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -43 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
                     
                     let actionInitialSublayerTransform = strongSelf.actionContainerNode.layer.sublayerTransform
-                    strongSelf.actionContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? 21.0 : 0.0, 0.0, 0.0)
+                    strongSelf.actionContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? 43.0 : 0.0, 0.0, 0.0)
                     
                     let initialBackgroundPosition = strongSelf.backgroundImageNode.position
                     strongSelf.backgroundImageNode.layer.position = rect.center
@@ -636,7 +630,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0)
                     
                     transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
-                    transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))
+                    transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -inset * 2.0 : 0.0, y: 0.0))
                     
                     transition.updateAlpha(node: strongSelf.backgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
                         if !isExtracted {
@@ -659,11 +653,17 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.layoutParams?.0.action?(self.contextSourceNode)
     }
     
-    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode) {
+    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
         guard let _ = self.item, let sourceNode = sourceNode as? VoiceChatFullscreenParticipantItemNode, let _ = sourceNode.item else {
             return
         }
-
+        var duration: Double = 0.2
+        var timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        if case let .animated(transitionDuration, curve) = transition {
+            duration = transitionDuration
+            timingFunction = curve.timingFunction
+        }
+        
         let startContainerAvatarPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
         var animate = true
         if startContainerAvatarPosition.x < -tileSize.width || startContainerAvatarPosition.x > containerNode.frame.width + tileSize.width {
@@ -673,13 +673,13 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             sourceNode.avatarNode.alpha = 0.0
 
             let initialAvatarPosition = self.avatarNode.position
-            let targetContainerAvatarPosition = self.avatarNode.view.convert(self.avatarNode.bounds, to: containerNode.view).center
-
+            let initialBackgroundPosition = sourceNode.backgroundImageNode.position
+            let initialContentPosition = sourceNode.contentWrapperNode.position
+            
             let startContainerBackgroundPosition = sourceNode.backgroundImageNode.view.convert(sourceNode.backgroundImageNode.bounds, to: containerNode.view).center
             let startContainerContentPosition = sourceNode.contentWrapperNode.view.convert(sourceNode.contentWrapperNode.bounds, to: containerNode.view).center
 
-            let initialBackgroundPosition = sourceNode.backgroundImageNode.position
-            let initialContentPosition = sourceNode.contentWrapperNode.position
+            let targetContainerAvatarPosition = self.avatarNode.view.convert(self.avatarNode.bounds, to: containerNode.view).center
 
             sourceNode.backgroundImageNode.position = targetContainerAvatarPosition
             sourceNode.contentWrapperNode.position = targetContainerAvatarPosition
@@ -687,9 +687,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             containerNode.addSubnode(sourceNode.contentWrapperNode)
 
             sourceNode.borderImageNode.alpha = 0.0
-
-            let timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
-            sourceNode.backgroundImageNode.layer.animatePosition(from: startContainerBackgroundPosition, to: targetContainerAvatarPosition, duration: 0.2, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
+            
+            sourceNode.backgroundImageNode.layer.animatePosition(from: startContainerBackgroundPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
                     sourceNode.backgroundImageNode.alpha = 1.0
                     sourceNode.borderImageNode.alpha = 1.0
@@ -698,7 +697,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 }
             })
 
-            sourceNode.contentWrapperNode.layer.animatePosition(from: startContainerContentPosition, to: targetContainerAvatarPosition, duration: 0.2, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
+            sourceNode.contentWrapperNode.layer.animatePosition(from: startContainerContentPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
                     sourceNode.avatarNode.alpha = 1.0
                     sourceNode.contentWrapperNode.position = initialContentPosition
@@ -709,19 +708,18 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             self.avatarNode.position = targetContainerAvatarPosition
             containerNode.addSubnode(self.avatarNode)
             
-            self.avatarNode.layer.animateScale(from: 1.25, to: 1.0, duration: 0.2, timingFunction: timingFunction)
-
-            self.avatarNode.layer.animatePosition(from: startContainerAvatarPosition, to: targetContainerAvatarPosition, duration: 0.2, timingFunction: timingFunction, completion: { [weak self] _ in
+            self.avatarNode.layer.animateScale(from: 1.25, to: 1.0, duration: duration, timingFunction: timingFunction)
+            self.avatarNode.layer.animatePosition(from: startContainerAvatarPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.avatarNode.position = initialAvatarPosition
                     strongSelf.offsetContainerNode.addSubnode(strongSelf.avatarNode)
                 }
             })
 
-            sourceNode.backgroundImageNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, timingFunction: timingFunction)
-            sourceNode.backgroundImageNode.layer.animateAlpha(from: sourceNode.backgroundImageNode.alpha, to: 0.0, duration: 0.35, timingFunction: timingFunction)
-            sourceNode.contentWrapperNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, timingFunction: timingFunction)
-            sourceNode.contentWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, timingFunction: timingFunction)
+            sourceNode.backgroundImageNode.layer.animateScale(from: 1.0, to: 0.001, duration: duration, timingFunction: timingFunction)
+            sourceNode.backgroundImageNode.layer.animateAlpha(from: sourceNode.backgroundImageNode.alpha, to: 0.0, duration: duration, timingFunction: timingFunction)
+            sourceNode.contentWrapperNode.layer.animateScale(from: 1.0, to: 0.001, duration: duration, timingFunction: timingFunction)
+            sourceNode.contentWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction)
         }
     }
         
@@ -819,7 +817,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (statusLayout, statusApply) = makeStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), item.text, false)
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), item.expandedText ?? item.text, false)
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), item.expandedText ?? item.text, true)
             
             let titleSpacing: CGFloat = statusLayout.height == 0.0 ? 0.0 : 1.0
             
@@ -861,7 +859,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     animationFrame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset + verticalOffset), size: titleLayout.size)
                                        
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset, dy: 0.0)
                     var extractedHeight = extractedRect.height + expandedStatusLayout.height - statusLayout.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.peer.smallProfileImage != nil {
@@ -996,7 +994,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     return
                                 }
                                 
-                                if false, strongSelf.audioLevelView == nil, value > 0.0 {
+                                if strongSelf.audioLevelView == nil, value > 0.0 {
                                     let audioLevelView = VoiceBlobView(
                                         frame: blobFrame,
                                         maxLevel: 1.5,
@@ -1034,7 +1032,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                             audioLevelView.setColor(wavesColor, animated: true)
                                         }
                                     } else {
-                                        audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
                                     }
                                     

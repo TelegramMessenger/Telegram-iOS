@@ -48,12 +48,12 @@ final class VoiceChatTileGridNode: ASDisplayNode {
             var wasAdded = false
             if let current = self.itemNodes[item.id] {
                 itemNode = current
-                current.update(size: itemSize, item: item, transition: transition)
+                current.update(size: itemSize, availableWidth: size.width, item: item, transition: transition)
             } else {
                 wasAdded = true
                 let addedItemNode = VoiceChatTileItemNode(context: self.context)
                 itemNode = addedItemNode
-                addedItemNode.update(size: itemSize, item: item, transition: .immediate)
+                addedItemNode.update(size: itemSize, availableWidth: size.width, item: item, transition: .immediate)
                 self.itemNodes[self.items[i].id] = addedItemNode
                 self.addSubnode(addedItemNode)
             }
@@ -197,15 +197,12 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.tileGridNode = tileGridNode
                     }
 
-                    let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.3, curve: .spring)
+                    let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.4, curve: .spring)
                     let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), items: item.tiles, transition: transition)
                     if currentItem == nil {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: 0.0)
-//                        transition.updateFrame(node: tileGridNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))
-                        
                         strongSelf.backgroundNode.frame = tileGridNode.frame
-//                        transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))
                     } else {
                         transition.updateFrame(node: tileGridNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))
                         transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))

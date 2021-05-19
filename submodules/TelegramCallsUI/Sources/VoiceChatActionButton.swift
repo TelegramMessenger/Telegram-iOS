@@ -61,6 +61,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatActionButtonIconNode
+    private let labelContainerNode: ASDisplayNode
     let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     private let buttonTitleLabel: ImmediateTextNode
@@ -138,6 +139,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatActionButtonIconNode(isColored: false)
         
+        self.labelContainerNode = ASDisplayNode()
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
         self.buttonTitleLabel = ImmediateTextNode()
@@ -147,9 +149,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         super.init()
     
         self.addSubnode(self.bottomNode)
-        self.addSubnode(self.titleLabel)
-        self.addSubnode(self.subtitleLabel)
-
+        self.labelContainerNode.addSubnode(self.titleLabel)
+        self.labelContainerNode.addSubnode(self.subtitleLabel)
+        self.addSubnode(self.labelContainerNode)
+        
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
@@ -242,6 +245,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
+        self.labelContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+        
         self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
         self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
 
@@ -272,17 +277,19 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             if small {
-                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.05)
-                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.05)
+                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.0)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.0)
                 transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
                 transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -40.0))
             } else {
-                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.05)
-                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.0)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.0)
                 transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
                 transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint())
             }
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }

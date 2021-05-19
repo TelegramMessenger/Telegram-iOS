@@ -657,7 +657,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.temporaryJoinTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
 
-        self.isVideoEnabled = accountContext.sharedContext.immediateExperimentalUISettings.demoVideoChats
+        self.isVideoEnabled = true
         self.hasVideo = false
         self.hasScreencast = false
         
