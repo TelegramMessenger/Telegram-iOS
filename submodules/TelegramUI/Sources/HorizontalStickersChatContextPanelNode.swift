@@ -178,9 +178,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                             var menuItems: [ContextMenuItem] = []
                             menuItems = [
                                 .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                f(.default)
+                                    f(.default)
                                 
-                                let _ = controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
                                 })),
                                 .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                     f(.default)

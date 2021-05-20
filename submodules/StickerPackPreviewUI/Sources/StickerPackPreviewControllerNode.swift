@@ -89,6 +89,8 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
+    private weak var peekController: PeekController?
+    
     init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
         self.context = context
         self.openShare = openShare
@@ -208,10 +210,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             var menuItems: [ContextMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                        }
                                         f(.default)
-                                        
-//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
                                     })))
                                 }
                                 menuItems.append(.action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -244,6 +247,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                         strongSelf.contentGridNode.forceHidden = visible
                     }
                 }
+                strongSelf.peekController = controller
                 strongSelf.presentInGlobalOverlay?(controller, nil)
                 return controller
             }

@@ -219,7 +219,7 @@ public final class VoiceChatController: ViewController {
             let togglePeerVideo: (PeerId) -> Void
             let openInvite: () -> Void
             let peerContextAction: (VoiceChatPeerEntry, ASDisplayNode, ContextGesture?) -> Void
-            let getPeerVideo: (String, Bool) -> GroupVideoNode?
+            let getPeerVideo: (String, GroupVideoNode.Position) -> GroupVideoNode?
             var isExpanded: Bool = false
             
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
@@ -232,7 +232,7 @@ public final class VoiceChatController: ViewController {
                 togglePeerVideo: @escaping (PeerId) -> Void,
                 openInvite: @escaping () -> Void,
                 peerContextAction: @escaping (VoiceChatPeerEntry, ASDisplayNode, ContextGesture?) -> Void,
-                getPeerVideo: @escaping (String, Bool) -> GroupVideoNode?
+                getPeerVideo: @escaping (String, GroupVideoNode.Position) -> GroupVideoNode?
             ) {
                 self.updateIsMuted = updateIsMuted
                 self.switchToPeer = switchToPeer
@@ -446,7 +446,7 @@ public final class VoiceChatController: ViewController {
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture)
                 }, getVideo: {
-                    return interaction.getPeerVideo(videoEndpointId, false)
+                    return interaction.getPeerVideo(videoEndpointId, .tile)
                 }, getAudioLevel: {
                     return interaction.getAudioLevel(peerEntry.peer.id)
                 })
@@ -532,7 +532,7 @@ public final class VoiceChatController: ViewController {
                         
                         return VoiceChatFullscreenParticipantItem(presentationData: ItemListPresentationData(presentationData), nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peerEntry.peer, icon: icon, text: text, color: color, isLandscape: peerEntry.isLandscape, active: peerEntry.active, getAudioLevel: { return interaction.getAudioLevel(peerEntry.peer.id) }, getVideo: {
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
-                                return interaction.getPeerVideo(endpointId, true)
+                                return interaction.getPeerVideo(endpointId, .list)
                             } else {
                                 return nil
                             }
@@ -1602,17 +1602,17 @@ public final class VoiceChatController: ViewController {
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(source), items: items, reactionItems: [], gesture: gesture)
                 contextController.useComplexItemsTransitionAnimation = true
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
-            }, getPeerVideo: { [weak self] endpointId, tile in
+            }, getPeerVideo: { [weak self] endpointId, position in
                 guard let strongSelf = self else {
                     return nil
                 }
-                var skip = false
+                var ignore = false
                 if case .fullscreen = strongSelf.displayMode {
-                    skip = !tile
+                    ignore = ![.mainstage, .list].contains(position)
                 } else {
-                    skip = tile
+                    ignore = position != .tile
                 }
-                if skip {
+                if ignore {
                     return nil
                 }
                 for (listEndpointId, videoNode) in strongSelf.videoNodes {
@@ -1814,9 +1814,11 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                if let (peerId, _) = maxLevelWithVideo {
-                    strongSelf.currentDominantSpeaker = peerId
-                    strongSelf.updateMainVideo(waitForFullSize: false)
+                if case .fullscreen = strongSelf.displayMode {
+                    if let (peerId, _) = maxLevelWithVideo {
+                        strongSelf.currentDominantSpeaker = peerId
+                        strongSelf.updateMainVideo(waitForFullSize: false)
+                    }
                 }
                 
                 strongSelf.itemInteraction?.updateAudioLevels(levels)
@@ -3138,7 +3140,7 @@ public final class VoiceChatController: ViewController {
             if !self.mainStageNode.animating {
                 transition.updateFrame(node: self.mainStageNode, frame: CGRect(origin: CGPoint(), size: videoFrame.size))
             }
-            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: true, transition: transition)
+            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: self.isLandscape, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             
@@ -4995,9 +4997,9 @@ public final class VoiceChatController: ViewController {
                 isFullscreen = true
             }
             
+            self.displayMode = displayMode
+            
             let completion = {
-                self.displayMode = displayMode
-                
                 self.updateDecorationsColors()
                 
                 self.mainStageContainerNode.isHidden = false

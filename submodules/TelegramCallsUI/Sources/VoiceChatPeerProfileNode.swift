@@ -222,7 +222,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
             if let videoNode = sourceNode.videoNode {
-                videoNode.updateLayout(size: targetSize, isLandscape: true, transition: transition)
+                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: transition)
                 transition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
                 transition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
@@ -301,7 +301,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
             if false, let videoNode = sourceNode.videoNode {
-                videoNode.updateLayout(size: targetSize, isLandscape: true, transition: transition)
+                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: transition)
                 transition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
                 transition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
@@ -392,7 +392,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             }
             
             if let videoNode = targetNode.videoNode {
-                videoNode.updateLayout(size: targetRect.size, isLandscape: true, transition: transition)
+                videoNode.updateLayout(size: targetRect.size, layoutMode: .fillOrFitToSquare, transition: transition)
                 transition.updateFrame(node: videoNode, frame: targetRect)
                 transition.updateFrame(node: targetNode.videoContainerNode, frame: targetRect)
             }
@@ -445,7 +445,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
 //            }
             
             if false, let videoNode = targetNode.videoNode {
-                videoNode.updateLayout(size: targetRect.size, isLandscape: true, transition: transition)
+                videoNode.updateLayout(size: targetRect.size, layoutMode: .fillOrFitToSquare, transition: transition)
                 transition.updateFrame(node: videoNode, frame: targetRect)
                 transition.updateFrame(node: targetNode.videoContainerNode, frame: targetRect)
             }

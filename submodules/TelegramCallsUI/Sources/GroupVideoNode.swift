@@ -6,6 +6,18 @@ import SwiftSignalKit
 import AccountContext
 
 final class GroupVideoNode: ASDisplayNode {
+    enum Position {
+        case tile
+        case list
+        case mainstage
+    }
+    
+    enum LayoutMode {
+        case fillOrFitToSquare
+        case fillHorizontal
+        case fillVertical
+    }
+    
     private let videoViewContainer: UIView
     private let videoView: PresentationCallVideoView
     
@@ -16,7 +28,7 @@ final class GroupVideoNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
     
-    private var validLayout: (CGSize, Bool)?
+    private var validLayout: (CGSize, LayoutMode)?
     
     var tapped: (() -> Void)?
     
@@ -62,8 +74,8 @@ final class GroupVideoNode: ASDisplayNode {
                     return
                 }
                 strongSelf.readyPromise.set(true)
-                if let (size, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
+                if let (size, layoutMode) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, layoutMode: layoutMode, transition: .immediate)
                 }
             }
         })
@@ -73,8 +85,8 @@ final class GroupVideoNode: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                if let (size, isLandscape) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, transition: .immediate)
+                if let (size, layoutMode) = strongSelf.validLayout {
+                    strongSelf.updateLayout(size: size, layoutMode: layoutMode, transition: .immediate)
                 }
             }
         })
@@ -138,8 +150,9 @@ final class GroupVideoNode: ASDisplayNode {
         return self.videoView.getAspect()
     }
     
-    func updateLayout(size: CGSize, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, isLandscape)
+    var keepBackdropSize = false
+    func updateLayout(size: CGSize, layoutMode: LayoutMode, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, layoutMode)
         let bounds = CGRect(origin: CGPoint(), size: size)
         transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: bounds)
         transition.updateFrameAsPositionAndBounds(layer: self.backdropVideoViewContainer.layer, frame: bounds)
@@ -182,13 +195,25 @@ final class GroupVideoNode: ASDisplayNode {
         
         let fittedSize = rotatedVideoSize.aspectFitted(containerSize)
         let filledSize = rotatedVideoSize.aspectFilled(containerSize)
+        let filledToSquareSize = rotatedVideoSize.aspectFilled(CGSize(width: containerSize.height, height: containerSize.height))
         
-        if isLandscape {
-            rotatedVideoSize = fittedSize
-        } else {
-            rotatedVideoSize = filledSize
+        switch layoutMode {
+            case .fillOrFitToSquare:
+                rotatedVideoSize = filledToSquareSize
+            case .fillHorizontal:
+                if rotatedVideoSize.width > rotatedVideoSize.height {
+                    rotatedVideoSize = filledSize
+                } else {
+                    rotatedVideoSize = fittedSize
+                }
+            case .fillVertical:
+                if rotatedVideoSize.width < rotatedVideoSize.height {
+                    rotatedVideoSize = filledSize
+                } else {
+                    rotatedVideoSize = fittedSize
+                }
         }
-
+        
         var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
         rotatedVideoFrame.origin.x = floor(rotatedVideoFrame.origin.x)
         rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
@@ -224,7 +249,9 @@ final class GroupVideoNode: ASDisplayNode {
         if let backdropEffectView = self.backdropEffectView {
             let maxSide = max(bounds.width, bounds.height)
             let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.width - maxSide) / 2.0, width: maxSide, height: maxSide)
-            transition.updateFrame(view: backdropEffectView, frame: squareBounds)
+            transition.animateView {
+                backdropEffectView.frame = squareBounds
+            }
         }
         
         let transition: ContainedViewLayoutTransition = .immediate
@@ -233,9 +260,5 @@ final class GroupVideoNode: ASDisplayNode {
         if let effectView = self.effectView {
              transition.updateFrame(view: effectView, frame: bounds)
         }
-        
-        // TODO: properly fix the issue
-        // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
-        self.videoView.view.alpha = 0.995
     }
 }

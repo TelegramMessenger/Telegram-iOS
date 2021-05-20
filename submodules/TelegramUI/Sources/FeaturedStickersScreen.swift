@@ -213,6 +213,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     private var searchNode: FeaturedPaneSearchContentNode?
     
+    private weak var peekController: PeekController?
+    
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
         return self._ready
@@ -464,9 +466,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 var menuItems: [ContextMenuItem] = []
                                 menuItems = [
                                     .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                        }
                                         f(.default)
-                                        
-//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
                                     })),
                                     .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                         f(.default)
@@ -527,9 +530,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                         var menuItems: [ContextMenuItem] = []
                         menuItems = [
                             .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                    let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                }
                                 f(.default)
-                                
-//                                        let _ = strongSelf.sendSticker?(.standalone(media: item.file), node, rect)
                             })),
                             .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                 f(.default)
@@ -581,6 +585,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
+                strongSelf.peekController = controller
                 strongSelf.controller?.presentInGlobalOverlay(controller)
                 return controller
             }

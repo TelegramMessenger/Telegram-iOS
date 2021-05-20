@@ -438,7 +438,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.previewContainerNode, frame: CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize))
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
-        self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
+        self.cameraNode.updateLayout(size: previewSize, layoutMode: .fillVertical, transition: .immediate)
         
         let microphoneFrame = CGRect(x: 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.microphoneButton, frame: microphoneFrame)

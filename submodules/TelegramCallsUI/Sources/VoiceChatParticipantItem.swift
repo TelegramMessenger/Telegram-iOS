@@ -287,6 +287,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var wavesColor: UIColor?
         
     private var raiseHandTimer: SwiftSignalKit.Timer?
+    private var silenceTimer: SwiftSignalKit.Timer?
     
     var item: VoiceChatParticipantItem? {
         return self.layoutParams?.0
@@ -646,6 +647,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     deinit {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
+        self.silenceTimer?.invalidate()
     }
     
     override func selected() {
@@ -1035,9 +1037,21 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                         if let wavesColor = strongSelf.wavesColor {
                                             audioLevelView.setColor(wavesColor, animated: true)
                                         }
+                                        
+                                        if let silenceTimer = strongSelf.silenceTimer {
+                                            silenceTimer.invalidate()
+                                            strongSelf.silenceTimer = nil
+                                        }
                                     } else {
-                                        audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
+                                        if strongSelf.silenceTimer == nil {
+                                            let silenceTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+                                                self?.audioLevelView?.stopAnimating(duration: 0.5)
+                                                self?.silenceTimer = nil
+                                            }, queue: Queue.mainQueue())
+                                            strongSelf.silenceTimer = silenceTimer
+                                            silenceTimer.start()
+                                        }
                                     }
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)

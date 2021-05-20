@@ -1133,8 +1133,8 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_SendSilently, icon: { theme in
                                                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
                                                     }, action: { _, f in
+//                                                        strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), nil, false, node, rect)
                                                         f(.default)
-
                                                     })))
                                                 }
                                             
@@ -1147,7 +1147,6 @@ final class ChatMediaInputNode: ChatInputNode {
                                             }
                                         }
                                     }
-                                    
                                     menuItems.append(
                                         .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                             f(.default)
@@ -1189,8 +1188,6 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    
-
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
                                     return nil

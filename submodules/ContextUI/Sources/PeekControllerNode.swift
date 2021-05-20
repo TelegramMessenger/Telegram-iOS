@@ -23,7 +23,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
     private var validLayout: ContainerViewLayout?
     
     private var content: PeekControllerContent
-    private var contentNode: PeekControllerContentNode & ASDisplayNode
+    var contentNode: PeekControllerContentNode & ASDisplayNode
     private var contentNodeHasValidLayout = false
     
     private var topAccessoryNode: ASDisplayNode?

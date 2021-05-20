@@ -127,8 +127,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.contentNode = ASDisplayNode()
         self.contentNode.clipsToBounds = true
-        self.contentNode.cornerRadius = 11.0
-        
+        self.contentNode.cornerRadius = backgroundCornerRadius
+        if #available(iOS 13.0, *) {
+            self.contentNode.layer.cornerCurve = .continuous
+        }
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = panelBackgroundColor
         
@@ -355,7 +357,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if self.videoContainerNode.supernode === self.contentNode {
             if let videoNode = self.videoNode {
                 transition.updateFrame(node: videoNode, frame: bounds)
-                videoNode.updateLayout(size: size, isLandscape: true, transition: itemTransition)
+                videoNode.updateLayout(size: size, layoutMode: .fillOrFitToSquare, transition: itemTransition)
             }
             transition.updateFrame(node: self.videoContainerNode, frame: bounds)
         }
@@ -429,10 +431,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                     }
                 })
                 
-                self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: transition)
+                self.videoNode?.updateLayout(size: self.bounds.size, layoutMode: .fillOrFitToSquare, transition: transition)
                 self.videoNode?.frame = self.bounds
             } else if !initialAnimate {
-                self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: .immediate)
+                self.videoNode?.updateLayout(size: self.bounds.size, layoutMode: .fillOrFitToSquare, transition: .immediate)
                 self.videoNode?.frame = self.bounds
                 
                 sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak sourceNode] _ in

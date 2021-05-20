@@ -65,13 +65,13 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     }
 }
 
-private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
+public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
     private let account: Account
     private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
     private var imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    public var animationNode: AnimatedStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -115,7 +115,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
         
         if let dimensitons = self.item.file.dimensions {
