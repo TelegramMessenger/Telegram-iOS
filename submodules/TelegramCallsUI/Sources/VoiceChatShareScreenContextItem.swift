@@ -40,7 +40,6 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
     private let highlightedBackgroundNode: ASDisplayNode
     private let textNode: ImmediateTextNode
     private let iconNode: ASImageNode
-    private let buttonNode: HighlightTrackingButtonNode
     
     private var timer: SwiftSignalKit.Timer?
     
@@ -70,12 +69,15 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.attributedText = NSAttributedString(string: item.text, font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
-        
         self.textNode.maximumNumberOfLines = 1
     
-        self.buttonNode = HighlightTrackingButtonNode()
-        self.buttonNode.isAccessibilityElement = true
-        self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
+        if #available(iOS 12.0, *) {
+            let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
+            broadcastPickerView.alpha = 0.02
+            broadcastPickerView.preferredExtension = "\(item.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
+            broadcastPickerView.showsMicrophoneButton = false
+            self.broadcastPickerView = broadcastPickerView
+        }
         
         self.iconNode = ASImageNode()
         self.iconNode.isAccessibilityElement = false
@@ -84,38 +86,15 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         self.iconNode.isUserInteractionEnabled = false
         self.iconNode.image = item.icon(presentationData.theme)
         
-        if #available(iOS 12.0, *) {
-            let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
-            broadcastPickerView.alpha = 0.05
-            broadcastPickerView.preferredExtension = "\(item.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
-            broadcastPickerView.showsMicrophoneButton = false
-            self.broadcastPickerView = broadcastPickerView
-        }
-        
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.highlightedBackgroundNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.buttonNode)
-        
         if let broadcastPickerView = self.broadcastPickerView {
             self.view.addSubview(broadcastPickerView)
         }
-        
-        self.buttonNode.highligthedChanged = { [weak self] highligted in
-            guard let strongSelf = self else {
-                return
-            }
-            if highligted {
-                strongSelf.highlightedBackgroundNode.alpha = 1.0
-            } else {
-                strongSelf.highlightedBackgroundNode.alpha = 0.0
-                strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            }
-        }
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.iconNode)
     }
     
     deinit {
@@ -125,16 +104,6 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
     
     override func didLoad() {
         super.didLoad()
-        
-        self.pointerInteraction = PointerInteraction(node: self.buttonNode, style: .hover, willEnter: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.highlightedBackgroundNode.alpha = 0.75
-            }
-        }, willExit: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.highlightedBackgroundNode.alpha = 0.0
-            }
-        })
         
         self.applicationStateDisposable = (self.item.context.sharedContext.applicationBindings.applicationIsActive
         |> filter { !$0 }
@@ -167,7 +136,6 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         let verticalSpacing: CGFloat = 2.0
         let combinedTextHeight = textSize.height + verticalSpacing
         return (CGSize(width: textSize.width + sideInset + rightTextInset, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
-            let hadLayout = self.validLayout != nil
             self.validLayout = size
             
             let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
@@ -180,7 +148,6 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
             
             transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
             transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
-            transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
             
             if let broadcastPickerView = self.broadcastPickerView {
                 broadcastPickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
