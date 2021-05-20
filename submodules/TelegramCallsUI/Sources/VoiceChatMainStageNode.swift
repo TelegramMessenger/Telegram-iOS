@@ -253,12 +253,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             transition.updateFrame(view: snapshotView, frame: infoFrame)
         }
         
+        sourceNode.alpha = 0.0
+        
         self.animatingIn = true
         let startLocalFrame = sourceNode.view.convert(sourceNode.bounds, to: self.supernode?.view)
         self.update(size: startLocalFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, force: true, transition: .immediate)
         self.frame = startLocalFrame
         self.update(size: targetFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, force: true, transition: transition)
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
+            sourceNode.alpha = 1.0
             self?.animatingIn = false
         })
     }
@@ -300,12 +303,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             transition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(), size: targetFrame.size))
         }
         
+        targetNode.alpha = 0.0
+        
         self.update(size: targetFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, force: true, transition: transition)
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
             if let strongSelf = self {
                 completion()
                 
                 infoView?.removeFromSuperview()
+                targetNode.alpha = 1.0
                 strongSelf.animatingOut = false
                 strongSelf.frame = initialFrame
                 strongSelf.update(size: initialFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)

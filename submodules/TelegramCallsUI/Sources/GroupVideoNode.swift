@@ -147,7 +147,23 @@ final class GroupVideoNode: ASDisplayNode {
     }
     
     var aspectRatio: CGFloat {
-        return self.videoView.getAspect()
+        let orientation = self.videoView.getOrientation()
+        var aspect = self.videoView.getAspect()
+        if aspect <= 0.01 {
+            aspect = 3.0 / 4.0
+        }
+        let rotatedAspect: CGFloat
+        switch orientation {
+        case .rotation0:
+            rotatedAspect = 1.0 / aspect
+        case .rotation90:
+            rotatedAspect = aspect
+        case .rotation180:
+            rotatedAspect = 1.0 / aspect
+        case .rotation270:
+            rotatedAspect = aspect
+        }
+        return rotatedAspect
     }
     
     var keepBackdropSize = false
@@ -247,7 +263,7 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if let backdropEffectView = self.backdropEffectView {
-            let maxSide = max(bounds.width, bounds.height)
+            let maxSide = max(bounds.width, bounds.height) * 2.0
             let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.width - maxSide) / 2.0, width: maxSide, height: maxSide)
             transition.animateView {
                 backdropEffectView.frame = squareBounds

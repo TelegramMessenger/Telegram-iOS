@@ -701,8 +701,9 @@ public final class VoiceChatController: ViewController {
         fileprivate let actionButton: VoiceChatActionButton
         private let leftBorderNode: ASDisplayNode
         private let rightBorderNode: ASDisplayNode
-        private let mainStageNode: VoiceChatMainStageNode
         private let mainStageContainerNode: ASDisplayNode
+        private let mainStageBackgroundNode: ASDisplayNode
+        private let mainStageNode: VoiceChatMainStageNode
         private let transitionContainerNode: ASDisplayNode
         
         private var isScheduling = false
@@ -807,7 +808,7 @@ public final class VoiceChatController: ViewController {
         private var endpointToPeerId: [String: PeerId] = [:]
         private var peerIdToEndpoint: [PeerId: String] = [:]
                 
-        private var currentDominantSpeaker: PeerId?
+        private var currentDominantSpeaker: (PeerId, Double)?
         private var currentForcedSpeaker: PeerId?
         private var effectiveSpeaker: (PeerId, String?)?
         
@@ -969,12 +970,17 @@ public final class VoiceChatController: ViewController {
             self.rightBorderNode.isUserInteractionEnabled = false
             self.rightBorderNode.clipsToBounds = false
             
-            self.mainStageNode = VoiceChatMainStageNode(context: self.context, call: self.call)
-            
             self.mainStageContainerNode = ASDisplayNode()
             self.mainStageContainerNode.clipsToBounds = true
             self.mainStageContainerNode.isUserInteractionEnabled = false
             self.mainStageContainerNode.isHidden = true
+            
+            self.mainStageBackgroundNode = ASDisplayNode()
+//            self.mainStageBackgroundNode.backgroundColor = .black
+            self.mainStageBackgroundNode.alpha = 0.0
+            self.mainStageBackgroundNode.isUserInteractionEnabled = false
+            
+            self.mainStageNode = VoiceChatMainStageNode(context: self.context, call: self.call)
             
             self.transitionContainerNode = ASDisplayNode()
             self.transitionContainerNode.clipsToBounds = true
@@ -1032,13 +1038,13 @@ public final class VoiceChatController: ViewController {
             }, switchToPeer: { [weak self] peerId, videoEndpointId, expand in
                 if let strongSelf = self {
                     if expand, let videoEndpointId = videoEndpointId {
-                        strongSelf.currentDominantSpeaker = peerId
+                        strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
                         strongSelf.effectiveSpeaker = (peerId, videoEndpointId)
                         strongSelf.updateDisplayMode(.fullscreen(controlsHidden: false))
                     } else {
                         strongSelf.currentForcedSpeaker = nil
-                        if peerId != strongSelf.currentDominantSpeaker {
-                            strongSelf.currentDominantSpeaker = peerId
+                        if peerId != strongSelf.currentDominantSpeaker?.0 {
+                            strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
                         }
                         strongSelf.updateMainVideo(waitForFullSize: false, updateMembers: true, force: true)
                     }
@@ -1657,6 +1663,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.fullscreenListNode)
             self.addSubnode(self.transitionContainerNode)
             
+            self.mainStageContainerNode.addSubnode(self.mainStageBackgroundNode)
             self.mainStageContainerNode.addSubnode(self.mainStageNode)
             
             self.updateDecorationsColors()
@@ -1801,7 +1808,7 @@ public final class VoiceChatController: ViewController {
                 
                 if maxLevelWithVideo == nil {
                     if let peerId = strongSelf.currentDominantSpeaker {
-                        maxLevelWithVideo = (peerId, 0.0)
+                        maxLevelWithVideo = (peerId.0, 0.0)
                     } else if strongSelf.peerIdToEndpoint.count > 0 {
                         for entry in strongSelf.currentEntries {
                             if case let .peer(peerEntry) = entry {
@@ -1816,7 +1823,10 @@ public final class VoiceChatController: ViewController {
                 
                 if case .fullscreen = strongSelf.displayMode {
                     if let (peerId, _) = maxLevelWithVideo {
-                        strongSelf.currentDominantSpeaker = peerId
+                        if let peer = strongSelf.currentDominantSpeaker, CACurrentMediaTime() - peer.1 < 5.0 {
+                        } else {
+                            strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
+                        }
                         strongSelf.updateMainVideo(waitForFullSize: false)
                     }
                 }
@@ -1962,7 +1972,7 @@ public final class VoiceChatController: ViewController {
             self.mainStageNode.togglePin = { [weak self] in
                 if let strongSelf = self {
                     if let peerId = strongSelf.currentForcedSpeaker {
-                        strongSelf.currentDominantSpeaker = peerId
+                        strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
                         strongSelf.currentForcedSpeaker = nil
                     } else {
                         strongSelf.currentForcedSpeaker = strongSelf.effectiveSpeaker?.0
@@ -3137,6 +3147,7 @@ public final class VoiceChatController: ViewController {
             let videoBottomEdgeY = self.isLandscape ? layout.size.height : layout.size.height - layout.intrinsicInsets.bottom - 84.0
             let videoFrame = CGRect(x: 0.0, y: videoTopEdgeY, width: isLandscape ? layout.size.width - layout.safeInsets.right - 84.0 : layout.size.width, height: videoBottomEdgeY - videoTopEdgeY)
             transition.updateFrame(node: self.mainStageContainerNode, frame: videoFrame)
+            transition.updateFrame(node: self.mainStageBackgroundNode, frame: CGRect(origin: CGPoint(), size: videoFrame.size))
             if !self.mainStageNode.animating {
                 transition.updateFrame(node: self.mainStageNode, frame: CGRect(origin: CGPoint(), size: videoFrame.size))
             }
@@ -4331,26 +4342,12 @@ public final class VoiceChatController: ViewController {
                 if !validSources.contains(videoEndpointId) {
                     self.videoNodes[videoEndpointId] = nil
                     self.readyVideoDisposables.set(nil, forKey: videoEndpointId)
-                    
-//                    loop: for j in 0 ..< self.currentFullscreenEntries.count {
-//                        let fullscreenEntry = self.currentFullscreenEntries[j]
-//                        switch fullscreenEntry {
-//                        case let .peer(peerEntry):
-//                            if peerEntry.effectiveVideoEndpointId == videoEndpointId {
-//                                let presentationData = self.presentationData.withUpdated(theme: self.darkTheme)
-//                                self.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: j, previousIndex: j, item: fullscreenEntry.item(context: self.context, presentationData: presentationData, interaction: self.itemInteraction!), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
-//                                break loop
-//                            }
-//                        default:
-//                            break
-//                        }
-//                    }
                 }
             }
         }
         
         private func updateMainVideo(waitForFullSize: Bool, updateMembers: Bool = true, force: Bool = false, completion: (() -> Void)? = nil) {
-            let effectiveMainSpeaker = self.currentForcedSpeaker ?? self.currentDominantSpeaker
+            let effectiveMainSpeaker = self.currentForcedSpeaker ?? self.currentDominantSpeaker?.0
             guard effectiveMainSpeaker != self.effectiveSpeaker?.0 || force else {
                 return
             }
@@ -4473,42 +4470,46 @@ public final class VoiceChatController: ViewController {
                     if self.isScheduled && translation < 0.0 {
                         return
                     }
-    
-                    if case let .modal(isExpanded, previousIsFilled) = self.effectiveDisplayMode {
-                        var topInset: CGFloat = 0.0
-                        if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
-                            topInset = currentTopInset
-                            
-                            if case let .known(value) = contentOffset, value <= 0.5 {
+                    
+                    switch self.effectiveDisplayMode {
+                        case let .modal(isExpanded, previousIsFilled):
+                            var topInset: CGFloat = 0.0
+                            if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
+                                topInset = currentTopInset
+                                
+                                if case let .known(value) = contentOffset, value <= 0.5 {
+                                } else {
+                                    translation = currentPanOffset
+                                    if self.isExpanded {
+                                        recognizer.setTranslation(CGPoint(), in: self.contentContainer.view)
+                                    }
+                                }
+                                
+                                self.panGestureArguments = (currentTopInset, translation)
+                            }
+                        
+                            let currentOffset = topInset + translation
+                        
+                            var isFilled = previousIsFilled
+                            if currentOffset < 20.0 {
+                                isFilled = true
+                            } else if currentOffset > 40.0 {
+                                isFilled = false
+                            }
+                            if isFilled != previousIsFilled {
+                                self.displayMode = .modal(isExpanded: isExpanded, isFilled: isFilled)
+                                self.updateDecorationsColors()
+                            }
+                             
+                            if self.isExpanded {
                             } else {
-                                translation = currentPanOffset
-                                if self.isExpanded {
-                                    recognizer.setTranslation(CGPoint(), in: self.contentContainer.view)
+                                if currentOffset > 0.0 {
+                                    self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
                                 }
                             }
+                        case let .fullscreen(controlsHidden):
+                            break
                             
-                            self.panGestureArguments = (currentTopInset, translation)
-                        }
-                    
-                        let currentOffset = topInset + translation
-                    
-                        var isFilled = previousIsFilled
-                        if currentOffset < 20.0 {
-                            isFilled = true
-                        } else if currentOffset > 40.0 {
-                            isFilled = false
-                        }
-                        if isFilled != previousIsFilled {
-                            self.displayMode = .modal(isExpanded: isExpanded, isFilled: isFilled)
-                            self.updateDecorationsColors()
-                        }
-                         
-                        if self.isExpanded {
-                        } else {
-                            if currentOffset > 0.0 {
-                                self.listNode.scroller.panGestureRecognizer.setTranslation(CGPoint(), in: self.listNode.scroller)
-                            }
-                        }
                     }
                     
                     if let (layout, navigationHeight) = self.validLayout {
@@ -5051,6 +5052,9 @@ public final class VoiceChatController: ViewController {
                         let effectiveSpeakerPeerId = self.effectiveSpeaker?.0
                         if let effectiveSpeakerPeerId = effectiveSpeakerPeerId, let otherItemNode = verticalItemNodes[effectiveSpeakerPeerId] {
                             self.mainStageNode.animateTransitionIn(from: otherItemNode, transition: transition)
+                            
+                            self.mainStageBackgroundNode.alpha = 1.0
+                            self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                         
                         self.fullscreenListNode.forEachItemNode { itemNode in
@@ -5125,6 +5129,8 @@ public final class VoiceChatController: ViewController {
                             self?.mainStageContainerNode.isHidden = true
                         })
                         
+                        self.mainStageBackgroundNode.alpha = 0.0
+                        self.mainStageBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                         
                         if let (layout, navigationHeight) = self.validLayout {
                             self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
