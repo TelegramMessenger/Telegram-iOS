@@ -1019,7 +1019,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             displayLeave = false
         }
         result.append(.mute)
-        if hasVoiceChat {
+        if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
         if hasDiscussion {
@@ -1038,7 +1038,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        if !canReport && !canViewStats && !canStartVoiceChat {
+        if !canReport && !canViewStats {
             displayMore = false
         }
         if displayMore {
@@ -1051,9 +1051,17 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var isPublic = false
         var isCreator = false
         var hasVoiceChat = false
+        var canStartVoiceChat = false
         
         if group.flags.contains(.hasVoiceChat) {
             hasVoiceChat = true
+        }
+        if !hasVoiceChat {
+            if case .creator = group.role {
+                canStartVoiceChat = true
+            } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canManageCalls) {
+                canStartVoiceChat = true
+            }
         }
         
         if case .creator = group.role {
@@ -1073,13 +1081,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if !group.hasBannedPermission(.banAddMembers) {
             canAddMembers = true
         }
-        
         if canAddMembers {
             result.append(.addMember)
         }
-        
         result.append(.mute)
-        if hasVoiceChat {
+        if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
         result.append(.search)

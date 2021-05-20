@@ -184,10 +184,15 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
             messagePeers[source.id] = source
         }
     }
+
+    var hasher = Hasher()
+    hasher.combine(id.id)
+    hasher.combine(id.peerId)
     
-    var hash: Int32 = id.id
-    hash = hash &* 31 &+ id.peerId.id
-    let stableId = UInt32(clamping: hash)
+    let hashValue = Int64(hasher.finalize())
+    let first = UInt32((hashValue >> 32) & 0xffffffff)
+    let second = UInt32(hashValue & 0xffffffff)
+    let stableId = first &+ second
     
     return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
 }

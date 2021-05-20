@@ -32,8 +32,8 @@ public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> Telegr
 
 private let progressiveRangeMap: [(Int, [Int])] = [
     (100, [0]),
-    (400, [1]),
-    (600, [2, 3]),
+    (400, [3]),
+    (600, [4]),
     (Int(Int32.max), [2, 3, 4])
 ]
 
@@ -565,7 +565,7 @@ public func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReferenc
     }
 }
 
-public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false, highQuality: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
     |> map { _, _, generate in
         return generate
@@ -684,7 +684,7 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
                 return context
             }
             
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)

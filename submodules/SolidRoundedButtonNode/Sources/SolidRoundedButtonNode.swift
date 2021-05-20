@@ -3,8 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
-private let textFont: UIFont = Font.regular(16.0)
-
 public final class SolidRoundedButtonTheme {
     public let backgroundColor: UIColor
     public let foregroundColor: UIColor

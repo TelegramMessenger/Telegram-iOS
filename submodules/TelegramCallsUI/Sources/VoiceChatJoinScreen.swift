@@ -144,8 +144,8 @@ public final class VoiceChatJoinScreen: ViewController {
                     } else if let cachedData = cachedData as? CachedGroupData {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     }
-                                    
-                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title)
+                    
+                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
                         strongSelf.join(activeCall)

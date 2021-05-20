@@ -234,7 +234,7 @@ public func updateSelectiveAccountPrivacySettings(account: Account, type: Update
                     rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(transaction: transaction, peerIds: enablePeers.users)))
                 }
                 if !enablePeers.groups.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(chats: enablePeers.groups.map({ $0.id })))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(chats: enablePeers.groups.map({ $0.id._internalGetInt32Value() })))
                 }
                 
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowAll)
@@ -246,14 +246,14 @@ public func updateSelectiveAccountPrivacySettings(account: Account, type: Update
                     rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: apiInputUsers(transaction: transaction, peerIds: enablePeers.users)))
                 }
                 if !enablePeers.groups.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(chats: enablePeers.groups.map({ $0.id })))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(chats: enablePeers.groups.map({ $0.id._internalGetInt32Value() })))
                 }
                 
                 if !disablePeers.users.isEmpty {
                     rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(transaction: transaction, peerIds: disablePeers.users)))
                 }
                 if !disablePeers.groups.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(chats: disablePeers.groups.map({ $0.id })))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(chats: disablePeers.groups.map({ $0.id._internalGetInt32Value() })))
                 }
             
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowContacts)
@@ -264,7 +264,7 @@ public func updateSelectiveAccountPrivacySettings(account: Account, type: Update
                     rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: apiInputUsers(transaction: transaction, peerIds: disablePeers.users)))
                 }
                 if !disablePeers.groups.isEmpty {
-                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(chats: disablePeers.groups.map({ $0.id })))
+                    rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(chats: disablePeers.groups.map({ $0.id._internalGetInt32Value() })))
                 }
 
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowAll)

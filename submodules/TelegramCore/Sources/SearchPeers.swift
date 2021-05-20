@@ -61,15 +61,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                     
                     var renderedMyPeers: [FoundPeer] = []
                     for result in myResults {
-                        let peerId: PeerId
-                        switch result {
-                            case let .peerUser(userId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            case let .peerChat(chatId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                            case let .peerChannel(channelId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        }
+                        let peerId: PeerId = result.peerId
                         if let peer = peers[peerId] {
                             if let group = peer as? TelegramGroup, group.migrationReference != nil {
                                 continue
@@ -80,15 +72,7 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                     
                     var renderedPeers: [FoundPeer] = []
                     for result in results {
-                        let peerId: PeerId
-                        switch result {
-                            case let .peerUser(userId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            case let .peerChat(chatId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                            case let .peerChannel(channelId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        }
+                        let peerId: PeerId = result.peerId
                         if let peer = peers[peerId] {
                             if let group = peer as? TelegramGroup, group.migrationReference != nil {
                                 continue

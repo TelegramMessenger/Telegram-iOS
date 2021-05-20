@@ -219,6 +219,7 @@ swift_library(
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/Speak:Speak",
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
+        "//submodules/DebugSettingsUI:DebugSettingsUI",
     ],
     visibility = [
         "//visibility:public",

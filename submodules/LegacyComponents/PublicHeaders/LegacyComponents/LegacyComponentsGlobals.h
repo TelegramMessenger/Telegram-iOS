@@ -75,6 +75,7 @@ typedef enum {
 
 - (TGNavigationBarPallete *)navigationBarPallete;
 - (TGMenuSheetPallete *)menuSheetPallete;
+- (TGMenuSheetPallete *)darkMenuSheetPallete;
 - (TGMediaAssetsPallete *)mediaAssetsPallete;
 - (TGCheckButtonPallete *)checkButtonPallete;
 

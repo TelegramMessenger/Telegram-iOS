@@ -96,7 +96,7 @@ public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {
                         return nil
                     }
                     
-                    return ParsedSecureIdUrl(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce)
+                    return ParsedSecureIdUrl(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce)
                 }
             }
         }
@@ -451,7 +451,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 if case .chat = urlContext {
                                     return
                                 }
-                                let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
+                                let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                                 
                                 if let navigationController = navigationController {
                                     context.sharedContext.applicationBindings.dismissNativeController()
@@ -478,7 +478,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         
                         if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
                             let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(idValue)))
                             }
                             |> deliverOnMainQueue).start(next: { peer in
                                 if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {

@@ -354,7 +354,7 @@ final class AuthorizedApplicationContext {
                             
                             if inAppNotificationSettings.displayPreviews {
                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
+                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
                                     if let strongSelf = self {
                                         var foundOverlay = false
                                         strongSelf.mainWindow.forEachViewController({ controller in

@@ -327,6 +327,8 @@ public final class ShareController: ViewController {
             }
         }
     }
+
+    public var debugAction: (() -> Void)?
     
     public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil) {
         self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, fromForeignApp: fromForeignApp, segmentedValues: segmentedValues, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId, forceTheme: forceTheme, forcedActionTitle: forcedActionTitle)
@@ -815,6 +817,9 @@ public final class ShareController: ViewController {
             ])
             strongSelf.view.endEditing(true)
             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }
+        self.controllerNode.debugAction = { [weak self] in
+            self?.debugAction?()
         }
         self.displayNodeDidLoad()
         

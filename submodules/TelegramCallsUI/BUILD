@@ -44,6 +44,7 @@ swift_library(
         "//submodules/TemporaryCachedPeerDataManager:TemporaryCachedPeerDataManager",
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
         "//submodules/WebSearchUI:WebSearchUI",
+        "//submodules/MapResourceToAvatarSizes:MapResourceToAvatarSizes",
     ],
     visibility = [
         "//visibility:public",

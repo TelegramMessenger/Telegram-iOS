@@ -104,9 +104,8 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
-"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
-"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
-"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_FILES_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_FILES_any" = "%1$@|sent you %2$d files";
 
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
@@ -2552,7 +2551,6 @@ Unused sets are archived when you add more.";
 "Message.ForwardedMessageShort" = "Forwarded From\n%@";
 
 "Checkout.LiabilityAlertTitle" = "Warning";
-"Checkout.LiabilityAlert" = "Neither Telegram, nor %1$@ will have access to your credit card information. Credit card details will be handled only by the payment system, %2$@.\n\nPayments will go directly to the developer of %1$@. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of %1$@ or your bank.";
 
 "Settings.AppLanguage" = "Language";
 "Settings.AppLanguage.Unofficial" = "UNOFFICIAL";
@@ -5775,6 +5773,8 @@ Sorry for the inconvenience.";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
 "VoiceChat.CreateNewVoiceChatStart" = "Start";
+"VoiceChat.CreateNewVoiceChatStartNow" = "Start Now";
+"VoiceChat.CreateNewVoiceChatSchedule" = "Schedule";
 
 "PUSH_CHAT_VOICECHAT_START" = "%2$@|%1$@ started a voice chat";
 "PUSH_CHAT_VOICECHAT_INVITE" = "%2$@|%1$@ invited %3$@ to the voice chat";
@@ -6294,6 +6294,7 @@ Sorry for the inconvenience.";
 "VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
 "VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
 "VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+"VoiceChat.LeaveAndCancelVoiceChat" = "Abort Voice Chat";
 
 "VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
 "VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
@@ -6318,9 +6319,133 @@ Sorry for the inconvenience.";
 "VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
 "VoiceChat.EditBioPlaceholder" = "Bio";
 "VoiceChat.EditBioSave" = "Save";
+"VoiceChat.EditBioSuccess" = "Your bio is changed.";
+
+"VoiceChat.EditDescription" = "Edit Description";
+"VoiceChat.EditDescriptionTitle" = "Description";
+"VoiceChat.EditDescriptionText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditDescriptionPlaceholder" = "Description";
+"VoiceChat.EditDescriptionSave" = "Save";
+"VoiceChat.EditDescriptionSuccess" = "Description is changed.";
 
 "VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
 "VoiceChat.SendPublicLinkSend" = "Send";
+
+"VoiceChat.TapToAddPhotoOrBio" = "tap to add photo or bio";
+"VoiceChat.TapToAddPhoto" = "tap to add photo";
+"VoiceChat.TapToAddBio" = "tap to add bio";
+"VoiceChat.ImproveYourProfileText" = "You can improve your profile by adding missing information.";
+
+"VoiceChat.AddPhoto" = "Add Photo";
+"VoiceChat.AddBio" = "Add Bio";
+"VoiceChat.ChangeName" = "Change Name";
+"VoiceChat.ChangeNameTitle" = "Change Name";
+"VoiceChat.EditNameSuccess" = "Your name is changed.";
+
+"VoiceChat.Video" = "video";
+
+"VoiceChat.PinVideo" = "Pin Video";
+"VoiceChat.UnpinVideo" = "Unpin Video";
+
+"Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
+"Notification.VoiceChatScheduled" = "%1$@ scheduled a voice chat for %2$@";
+
+"Notification.VoiceChatScheduledTodayChannel" = "Voice chat scheduled for today at %@";
+"Notification.VoiceChatScheduledToday" = "%1$@ scheduled a voice chat for today at %2$@";
+
+"Notification.VoiceChatScheduledTomorrowChannel" = "Voice chat scheduled for tomorrow at %@";
+"Notification.VoiceChatScheduledTomorrow" = "%1$@ scheduled a voice chat for tomorrow at %2$@";
+
+"VoiceChat.StartsIn" = "Starts in";
+"VoiceChat.LateBy" = "Late by";
+
+"VoiceChat.StatusStartsIn" = "starts in %@";
+"VoiceChat.StatusLateBy" = "late by %@";
+
+"VoiceChat.Scheduled" = "Scheduled";
+
+"VoiceChat.StartNow" = "Start Now";
+"VoiceChat.SetReminder" = "Set Reminder";
+"VoiceChat.CancelReminder" = "Cancel Reminder";
+
+"VoiceChat.ShareShort" = "share";
+"VoiceChat.TapToEditTitle" = "Tap to edit title";
+
+"ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
+
+"ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
+"ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
+
+"ScheduleVoiceChat.ScheduleToday" = "Start today at %@";
+"ScheduleVoiceChat.ScheduleTomorrow" = "Start tomorrow at %@";
+"ScheduleVoiceChat.ScheduleOn" = "Start on %@ at %@";
+
+"Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
+
+"Conversation.ScheduledVoiceChatStartsOn" = "Voice chat starts on %@";
+"Conversation.ScheduledVoiceChatStartsOnShort" = "Starts on %@";
+"Conversation.ScheduledVoiceChatStartsToday" = "Voice chat starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTodayShort" = "Starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrow" = "Voice chat starts tomorrow at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrowShort" = "Starts tomorrow at %@";
+
+"VoiceChat.CancelVoiceChat" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationTitle" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationText" = "Do you want to abort the scheduled voice chat?";
+"VoiceChat.CancelConfirmationEnd" = "Abort";
+
+"ScheduledIn.Seconds_1" = "%@ second";
+"ScheduledIn.Seconds_2" = "%@ seconds";
+"ScheduledIn.Seconds_3_10" = "%@ seconds";
+"ScheduledIn.Seconds_any" = "%@ seconds";
+"ScheduledIn.Seconds_many" = "%@ seconds";
+"ScheduledIn.Seconds_0" = "%@ seconds";
+"ScheduledIn.Minutes_1" = "%@ minute";
+"ScheduledIn.Minutes_2" = "%@ minutes";
+"ScheduledIn.Minutes_3_10" = "%@ minutes";
+"ScheduledIn.Minutes_any" = "%@ minutes";
+"ScheduledIn.Minutes_many" = "%@ minutes";
+"ScheduledIn.Minutes_0" = "%@ minutes";
+"ScheduledIn.Hours_1" = "%@ hour";
+"ScheduledIn.Hours_2" = "%@ hours";
+"ScheduledIn.Hours_3_10" = "%@ hours";
+"ScheduledIn.Hours_any" = "%@ hours";
+"ScheduledIn.Hours_many" = "%@ hours";
+"ScheduledIn.Hours_0" = "%@ hours";
+"ScheduledIn.Days_1" = "%@ day";
+"ScheduledIn.Days_2" = "%@ days";
+"ScheduledIn.Days_3_10" = "%@ days";
+"ScheduledIn.Days_any" = "%@ days";
+"ScheduledIn.Days_many" = "%@ days";
+"ScheduledIn.Days_0" = "%@ days";
+"ScheduledIn.Weeks_1" = "%@ week";
+"ScheduledIn.Weeks_2" = "%@ weeks";
+"ScheduledIn.Weeks_3_10" = "%@ weeks";
+"ScheduledIn.Weeks_any" = "%@ weeks";
+"ScheduledIn.Weeks_many" = "%@ weeks";
+"ScheduledIn.Weeks_0" = "%@ weeks";
+"ScheduledIn.Months_1" = "%@ month";
+"ScheduledIn.Months_2" = "%@ months";
+"ScheduledIn.Months_3_10" = "%@ months";
+"ScheduledIn.Months_any" = "%@ months";
+"ScheduledIn.Months_many" = "%@ months";
+"ScheduledIn.Months_0" = "%@ months";
+"ScheduledIn.Years_1" = "%@ year";
+"ScheduledIn.Years_2" = "%@ years";
+"ScheduledIn.Years_3_10" = "%@ years";
+"ScheduledIn.Years_any" = "%@ years";
+"ScheduledIn.Months_many" = "%@ years";
+
+"Checkout.PaymentLiabilityAlert" = "Neither Telegram, nor {target} will have access to your credit card information. Credit card details will be handled only by the payment system, {payment_system}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
+
+"Checkout.OptionalTipItem" = "Tip (Optional)";
+"Checkout.TipItem" = "Tip";
+"Checkout.OptionalTipItemPlaceholder" = "Enter Custom";
+
+"VoiceChat.ReminderNotify" = "We will notify you when it starts.";
+
+"Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
 
 "DoubleBottom.Settings.Text" = "Double Bottom";
 "DoubleBottom.HideAccount.Title" = "Double Bottom";

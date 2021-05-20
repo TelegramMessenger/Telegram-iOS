@@ -952,8 +952,10 @@ public final class ContactListNode: ASDisplayNode {
         }, openPeer: { [weak self] peer, action in
             if let strongSelf = self {
                 if multipleSelection {
+                    var updated = false
                     strongSelf.updateSelectionState({ state in
                         if let state = state {
+                            updated = true
                             var selectedPeerMap = state.selectedPeerMap
                             selectedPeerMap[peer.id] = peer
                             return state.withToggledPeerId(peer.id).withSelectedPeerMap(selectedPeerMap)
@@ -961,6 +963,9 @@ public final class ContactListNode: ASDisplayNode {
                             return nil
                         }
                     })
+                    if !updated {
+                        strongSelf.openPeer?(peer, action)
+                    }
                 } else {
                     strongSelf.openPeer?(peer, action)
                 }

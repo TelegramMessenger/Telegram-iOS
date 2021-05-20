@@ -612,7 +612,13 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         inputClearButtonColor: mainSecondaryColor,
         itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: mainSecondaryTextColor.withAlphaComponent(0.5), color3: accentColor.withMultiplied(hue: 1.038, saturation: 0.329, brightness: 0.33)),
-        itemInputField: PresentationInputFieldTheme(backgroundColor: mainInputColor, strokeColor: mainInputColor, placeholderColor: mainSecondaryColor, primaryColor: UIColor(rgb: 0xffffff), controlColor: mainSecondaryColor)
+        itemInputField: PresentationInputFieldTheme(backgroundColor: mainInputColor, strokeColor: mainInputColor, placeholderColor: mainSecondaryColor, primaryColor: UIColor(rgb: 0xffffff), controlColor: mainSecondaryColor),
+        paymentOption: PresentationThemeList.PaymentOption(
+            inactiveFillColor: UIColor(rgb: 0x00A650).withMultipliedAlpha(0.3),
+            inactiveForegroundColor: UIColor(rgb: 0x00A650),
+            activeFillColor: UIColor(rgb: 0x00A650),
+            activeForegroundColor: UIColor(rgb: 0xffffff)
+        )
     )
     
     let chatList = PresentationThemeChatList(

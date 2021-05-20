@@ -17,7 +17,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private let interactiveImageNode: ChatMessageInteractiveMediaNode
-    private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var selectionNode: GridMessageSelectionNode?
     private var highlightedState: Bool = false
     
@@ -32,7 +31,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     required init() {
         self.interactiveImageNode = ChatMessageInteractiveMediaNode()
-        self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init()
         
@@ -54,6 +52,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+
+        self.interactiveImageNode.activatePinch = { [weak self] sourceNode in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            strongSelf.item?.controllerInteraction.activateMessagePinch(sourceNode)
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -62,7 +67,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let interactiveImageLayout = self.interactiveImageNode.asyncLayout()
-        let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         return { item, layoutConstants, preparePosition, selection, constrainedSize in
             var selectedMedia: Media?
@@ -142,8 +146,81 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     bubbleInsets = UIEdgeInsets()
                     sizeCalculation = .unconstrained
             }
+
+            var edited = false
+            if item.attributes.updatingMedia != nil {
+                edited = true
+            }
+            var viewCount: Int?
+            var dateReplies = 0
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? EditedMessageAttribute {
+                    if case .mosaic = preparePosition {
+                    } else {
+                        edited = !attribute.isHidden
+                    }
+                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                    viewCount = attribute.count
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
+                    if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        dateReplies = Int(attribute.count)
+                    }
+                }
+            }
+
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
+
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+
+            let statusType: ChatMessageDateAndStatusType?
+            switch preparePosition {
+                case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
+                    if item.message.effectivelyIncoming(item.context.account.peerId) {
+                        statusType = .ImageIncoming
+                    } else {
+                        if item.message.flags.contains(.Failed) {
+                            statusType = .ImageOutgoing(.Failed)
+                        } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
+                            statusType = .ImageOutgoing(.Sending)
+                        } else {
+                            statusType = .ImageOutgoing(.Sent(read: item.read))
+                        }
+                    }
+                case .mosaic:
+                    statusType = nil
+                default:
+                    statusType = nil
+            }
+
+            var isReplyThread = false
+            if case .replyThread = item.chatLocation {
+                isReplyThread = true
+            }
+
+            let dateAndStatus = statusType.flatMap { statusType -> ChatMessageDateAndStatus in
+                ChatMessageDateAndStatus(
+                    type: statusType,
+                    edited: edited,
+                    viewCount: viewCount,
+                    dateReplies: dateReplies,
+                    dateReactions: dateReactions,
+                    isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
+                    dateText: dateText
+                )
+            }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.presentationData.dateTimeFormat, item.message, item.attributes, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData, item.presentationData.dateTimeFormat, item.message, item.attributes, selectedMedia!, dateAndStatus, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
@@ -169,82 +246,9 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 return (refinedWidth + bubbleInsets.left + bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - bubbleInsets.left - bubbleInsets.right)
                     
-                    var edited = false
-                    if item.attributes.updatingMedia != nil {
-                        edited = true
-                    }
-                    var viewCount: Int?
-                    var dateReplies = 0
-                    for attribute in item.message.attributes {
-                        if let attribute = attribute as? EditedMessageAttribute {
-                            if case .mosaic = preparePosition {
-                            } else {
-                                edited = !attribute.isHidden
-                            }
-                        } else if let attribute = attribute as? ViewCountMessageAttribute {
-                            viewCount = attribute.count
-                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
-                            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                dateReplies = Int(attribute.count)
-                            }
-                        }
-                    }
-                    
-                    var dateReactions: [MessageReaction] = []
-                    var dateReactionCount = 0
-                    if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                        for reaction in reactionsAttribute.reactions {
-                            if reaction.isSelected {
-                                dateReactions.insert(reaction, at: 0)
-                            } else {
-                                dateReactions.append(reaction)
-                            }
-                            dateReactionCount += Int(reaction.count)
-                        }
-                    }
-                    
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
-                    
-                    let statusType: ChatMessageDateAndStatusType?
-                    switch position {
-                        case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
-                            if item.message.effectivelyIncoming(item.context.account.peerId) {
-                                statusType = .ImageIncoming
-                            } else {
-                                if item.message.flags.contains(.Failed) {
-                                    statusType = .ImageOutgoing(.Failed)
-                                } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
-                                    statusType = .ImageOutgoing(.Sending)
-                                } else {
-                                    statusType = .ImageOutgoing(.Sent(read: item.read))
-                                }
-                            }
-                        case .mosaic:
-                            statusType = nil
-                        default:
-                            statusType = nil
-                    }
-                    
                     let imageLayoutSize = CGSize(width: imageSize.width + bubbleInsets.left + bubbleInsets.right, height: imageSize.height + bubbleInsets.top + bubbleInsets.bottom)
                     
-                    var statusSize = CGSize()
-                    var statusApply: ((Bool) -> Void)?
-                    
-                    if let statusType = statusType {
-                        var isReplyThread = false
-                        if case .replyThread = item.chatLocation {
-                            isReplyThread = true
-                        }
-                        
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                        statusSize = size
-                        statusApply = apply
-                    }
-                    
-                    var layoutWidth = imageLayoutSize.width
-                    if case .constrained = sizeCalculation {
-                        layoutWidth = max(layoutWidth, statusSize.width + bubbleInsets.left + bubbleInsets.right + layoutConstants.image.statusInsets.left + layoutConstants.image.statusInsets.right)
-                    }
+                    let layoutWidth = imageLayoutSize.width
                     
                     let layoutSize = CGSize(width: layoutWidth, height: imageLayoutSize.height)
                     
@@ -261,24 +265,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             transition.updateFrame(node: strongSelf.interactiveImageNode, frame: imageFrame)
-                            
-                            if let statusApply = statusApply {
-                                if strongSelf.dateAndStatusNode.supernode == nil {
-                                    strongSelf.interactiveImageNode.addSubnode(strongSelf.dateAndStatusNode)
-                                }
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
- 
-                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: layoutSize.width - bubbleInsets.right - layoutConstants.image.statusInsets.right - statusSize.width, y: layoutSize.height -  bubbleInsets.bottom - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
-                                
-                                strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
-                                strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)
-                            } else if strongSelf.dateAndStatusNode.supernode != nil {
-                                strongSelf.dateAndStatusNode.removeFromSupernode()
-                            }
                             
                             imageApply(transition, synchronousLoads)
                             
@@ -310,14 +296,14 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
-                                strongSelf.dateAndStatusNode.pressed = {
+                                strongSelf.interactiveImageNode.dateAndStatusNode.pressed = {
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.interactiveImageNode.dateAndStatusNode)
                                 }
                             } else {
-                                strongSelf.dateAndStatusNode.pressed = nil
+                                strongSelf.interactiveImageNode.dateAndStatusNode.pressed = nil
                             }
                         }
                     })
@@ -356,7 +342,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveImageNode.isHidden = mediaHidden
         self.interactiveImageNode.updateIsHidden(mediaHidden)
         
-        if let automaticPlayback = self.automaticPlayback {
+        /*if let automaticPlayback = self.automaticPlayback {
             if !automaticPlayback {
                 self.dateAndStatusNode.isHidden = false
             } else if self.dateAndStatusNode.isHidden != mediaHidden {
@@ -367,7 +353,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
-        }
+        }*/
         
         return mediaHidden
     }
@@ -416,9 +402,9 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        if !self.dateAndStatusNode.isHidden {
+        /*if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
-        }
+        }*/
         return nil
     }
 }

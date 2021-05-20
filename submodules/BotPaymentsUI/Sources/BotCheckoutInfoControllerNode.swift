@@ -338,7 +338,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     func verify() {
         self.isVerifying = true
         let formInfo = self.collectFormInfo()
-        self.verifyDisposable.set((validateBotPaymentForm(network: self.context.account.network, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.verifyDisposable.set((validateBotPaymentForm(account: self.context.account, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.formInfoUpdated(formInfo, result)
             }

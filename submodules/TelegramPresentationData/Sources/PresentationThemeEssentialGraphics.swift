@@ -521,12 +521,14 @@ public final class PrincipalThemeAdditionalGraphics {
     public let chatBubbleActionButtonIncomingShareIconImage: UIImage
     public let chatBubbleActionButtonIncomingPhoneIconImage: UIImage
     public let chatBubbleActionButtonIncomingLocationIconImage: UIImage
+    public let chatBubbleActionButtonIncomingPaymentIconImage: UIImage
     
     public let chatBubbleActionButtonOutgoingMessageIconImage: UIImage
     public let chatBubbleActionButtonOutgoingLinkIconImage: UIImage
     public let chatBubbleActionButtonOutgoingShareIconImage: UIImage
     public let chatBubbleActionButtonOutgoingPhoneIconImage: UIImage
     public let chatBubbleActionButtonOutgoingLocationIconImage: UIImage
+    public let chatBubbleActionButtonOutgoingPaymentIconImage: UIImage
     
     public let chatEmptyItemLockIcon: UIImage
     public let emptyChatListCheckIcon: UIImage
@@ -565,11 +567,13 @@ public final class PrincipalThemeAdditionalGraphics {
         self.chatBubbleActionButtonIncomingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonIncomingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonIncomingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonIncomingPaymentIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPayment"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingPaymentIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPayment"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         
         self.chatEmptyItemLockIcon = generateImage(CGSize(width: 9.0, height: 13.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))

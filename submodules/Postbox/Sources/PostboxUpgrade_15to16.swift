@@ -211,10 +211,8 @@ func postboxUpgrade_15to16(metadataTable: MetadataTable, valueBox: ValueBox, pro
     
     valueBox.scanInt64(chatListIndexTable, values: { key, value in
         let peerId = PeerId(key)
-        if peerId.namespace != Int32.max {
-            if parseInclusionIndex(peerId: peerId, value: value) {
-                includedPeerIds.append(peerId)
-            }
+        if parseInclusionIndex(peerId: peerId, value: value) {
+            includedPeerIds.append(peerId)
         }
         return true
     })

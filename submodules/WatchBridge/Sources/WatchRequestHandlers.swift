@@ -404,7 +404,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 if let imageData = imageData {
                                     return imageData
                                     |> map { data -> UIImage? in
-                                        if let data = data, let image = generateImage(targetSize, contextGenerator: { size, context -> Void in
+                                        if let (data, _) = data, let image = generateImage(targetSize, contextGenerator: { size, context -> Void in
                                             if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                                                 context.setBlendMode(.copy)
                                                 context.draw(dataImage, in: CGRect(origin: CGPoint(), size: targetSize))
