@@ -514,15 +514,17 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     }
                                     
                                     let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
-                                    if let currentVideoNode = strongSelf.currentVideoNode {
-                                        strongSelf.currentVideoNode = nil
-                                        
-                                        currentVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak currentVideoNode] _ in
-                                            currentVideoNode?.removeFromSupernode()
-                                        })
-                                    }
+                                    let previousVideoNode = strongSelf.currentVideoNode
                                     strongSelf.currentVideoNode = videoNode
                                     strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
+                                    if let previousVideoNode = previousVideoNode {
+                                        Queue.mainQueue().after(0.03) {
+                                            previousVideoNode.removeFromSupernode()
+                                        }
+//                                        currentVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak currentVideoNode] _ in
+//                                            currentVideoNode?.removeFromSupernode()
+//                                        })
+                                    }
                                     if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
                                         strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                     }
@@ -619,15 +621,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))
         if let image = self.backButtonArrowNode.image {
-            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: sideInset + 9.0, y: 12.0), size: image.size))
+            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: sideInset + 8.0, y: 11.0), size: image.size))
         }
-        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: sideInset + 28.0, y: 13.0), size: backSize))
+        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: sideInset + 27.0, y: 12.0), size: backSize))
         
         let unpinSize = self.pinButtonTitleNode.updateLayout(size)
         if let image = self.pinButtonIconNode.image {
             let offset: CGFloat = sideInset.isZero ? 0.0 : initialBottomInset + 8.0
             transition.updateFrame(node: self.pinButtonIconNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - offset, y: 0.0), size: image.size))
-            transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - unpinSize.width + 4.0 - offset, y: 14.0), size: unpinSize))
+            transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - unpinSize.width + 4.0 - offset, y: 12.0), size: unpinSize))
             transition.updateFrame(node: self.pinButtonNode, frame: CGRect(x: size.width - image.size.width - unpinSize.width - offset, y: 0.0, width: unpinSize.width + image.size.width, height: 44.0))
         }
         

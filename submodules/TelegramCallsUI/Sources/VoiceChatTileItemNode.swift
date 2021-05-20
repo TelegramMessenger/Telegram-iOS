@@ -413,7 +413,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                         
             if animate {
                 sourceNode.isHidden = true
-                Queue.mainQueue().after(0.4) {
+                Queue.mainQueue().after(0.6) {
                     sourceNode.isHidden = false
                 }
                 

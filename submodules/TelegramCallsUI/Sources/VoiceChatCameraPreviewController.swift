@@ -186,7 +186,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
         if #available(iOS 12.0, *) {
             let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
-            broadcastPickerView.alpha = 0.1
+            broadcastPickerView.alpha = 0.05
             broadcastPickerView.preferredExtension = "\(self.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
             broadcastPickerView.showsMicrophoneButton = false
             self.broadcastPickerView = broadcastPickerView
@@ -291,6 +291,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
                 }
             }
         }
+    }
+    
+    deinit {
+        self.applicationStateDisposable?.dispose()
     }
     
     @objc private func microphonePressed() {
