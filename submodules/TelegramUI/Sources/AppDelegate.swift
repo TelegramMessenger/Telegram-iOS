@@ -2453,7 +2453,7 @@ private func accountIdFromNotification(_ notification: [AnyHashable : Any], shar
                 |> take(1)
                 |> map { _, accounts, _ -> AccountRecordId? in
                     for (_, account, _) in accounts {
-                        if Int(account.peerId.id) == userId {
+                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
                             return account.id
                         }
                     }

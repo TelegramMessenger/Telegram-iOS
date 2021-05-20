@@ -730,6 +730,6 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
 }
 
 public func fetchAccountPeer(account: Account) {
-    let messageId = MessageId(peerId: PeerId(namespace: PeerId.Namespace(Int32.max), id: 0), namespace: 0, id: 1)
+    let messageId = MessageId(peerId: PeerId(namespace: PeerId.Namespace.max, id: PeerId.Id._internalFromInt32Value(0)), namespace: 0, id: 1)
     fetchChatListHole(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, groupId: .root, hole: ChatListHole(index: MessageIndex(id: messageId, timestamp: Int32.max - 1))).start()
 }
