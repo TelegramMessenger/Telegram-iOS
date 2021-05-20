@@ -234,7 +234,7 @@ class ChatMessageBackground: ASDisplayNode {
         self.outlineImageNode.image = outlineImage
     }
 
-    func animateFrom(sourceView: UIView, transition: ContainedViewLayoutTransition) {
+    func animateFrom(sourceView: UIView, transition: CombinedTransition) {
         if transition.isAnimated {
             self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             self.outlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -245,9 +245,9 @@ class ChatMessageBackground: ASDisplayNode {
                 sourceView?.removeFromSuperview()
             })
 
-            transition.animateFrame(node: self.imageNode, from: sourceView.frame)
-            transition.animateFrame(node: self.outlineImageNode, from: sourceView.frame)
-            transition.updateFrame(view: sourceView, frame: CGRect(origin: self.imageNode.frame.origin, size: CGSize(width: self.imageNode.frame.width - 7.0, height: self.imageNode.frame.height)))
+            transition.animateFrame(layer: self.imageNode.layer, from: sourceView.frame)
+            transition.animateFrame(layer: self.outlineImageNode.layer, from: sourceView.frame)
+            transition.updateFrame(layer: sourceView.layer, frame: CGRect(origin: self.imageNode.frame.origin, size: CGSize(width: self.imageNode.frame.width - 7.0, height: self.imageNode.frame.height)))
         }
     }
 }

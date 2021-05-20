@@ -394,6 +394,21 @@ public extension ContainedViewLayoutTransition {
                 })
         }
     }
+
+    func animateFrame(layer: CALayer, from frame: CGRect, to toFrame: CGRect? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+            case .immediate:
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                layer.animateFrame(from: frame, to: toFrame ?? layer.frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+        }
+    }
     
     func animateBounds(layer: CALayer, from bounds: CGRect, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         switch self {
@@ -407,6 +422,36 @@ public extension ContainedViewLayoutTransition {
                         completion(result)
                     }
                 })
+        }
+    }
+
+    func animateWidthAdditive(layer: CALayer, value: CGFloat, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            layer.animateWidth(from: value, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+
+    func animateHeightAdditive(layer: CALayer, value: CGFloat, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            layer.animateHeight(from: value, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
         }
     }
     
@@ -425,6 +470,17 @@ public extension ContainedViewLayoutTransition {
                 break
             case let .animated(duration, curve):
                 node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { _ in
+                    completion?()
+                })
+        }
+    }
+
+    func animateHorizontalOffsetAdditive(layer: CALayer, offset: CGFloat, completion: (() -> Void)? = nil) {
+        switch self {
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { _ in
                     completion?()
                 })
         }
@@ -470,13 +526,13 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animatePositionAdditive(layer: CALayer, offset: CGPoint, to toOffset: CGPoint = CGPoint(), removeOnCompletion: Bool = true, completion: (() -> Void)? = nil) {
+    func animatePositionAdditive(layer: CALayer, offset: CGPoint, to toOffset: CGPoint = CGPoint(), removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         switch self {
             case .immediate:
-                completion?()
+                completion?(true)
             case let .animated(duration, curve):
-                layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
-                    completion?()
+                layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { result in
+                    completion?(result)
                 })
         }
     }
@@ -1177,7 +1233,92 @@ public extension ContainedViewLayoutTransition {
     }
 }
 
-#if os(iOS)
+public struct CombinedTransition {
+    public var horizontal: ContainedViewLayoutTransition
+    public var vertical: ContainedViewLayoutTransition
+
+    public var isAnimated: Bool {
+        return self.horizontal.isAnimated || self.vertical.isAnimated
+    }
+
+    public init(horizontal: ContainedViewLayoutTransition, vertical: ContainedViewLayoutTransition) {
+        self.horizontal = horizontal
+        self.vertical = vertical
+    }
+
+    public func animateFrame(layer: CALayer, from fromFrame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        //self.horizontal.animateFrame(layer: layer, from: fromFrame, completion: completion)
+        //return;
+
+        let toFrame = layer.frame
+
+        enum Keys: CaseIterable {
+            case positionX, positionY
+            case sizeWidth, sizeHeight
+        }
+        var remainingKeys = Keys.allCases
+        var completedValue = true
+        let completeKey: (Keys, Bool) -> Void = { key, completed in
+            remainingKeys.removeAll(where: { $0 == key })
+            if !completed {
+                completedValue = false
+            }
+            if remainingKeys.isEmpty {
+                completion?(completedValue)
+            }
+        }
+
+        self.horizontal.animatePositionAdditive(layer: layer, offset: CGPoint(x: fromFrame.midX - toFrame.midX, y: 0.0), completion: { result in
+            completeKey(.positionX, result)
+        })
+        self.vertical.animatePositionAdditive(layer: layer, offset: CGPoint(x: 0.0, y: fromFrame.midY - toFrame.midY), completion: { result in
+            completeKey(.positionY, result)
+        })
+
+        //self.horizontal.animateHorizontalOffsetAdditive(layer: layer, offset: (fromFrame.width - toFrame.width) / 4.0)
+        //self.vertical.animateOffsetAdditive(layer: layer, offset: (fromFrame.height - toFrame.height) / 2.0)
+
+        self.horizontal.animateWidthAdditive(layer: layer, value: fromFrame.width - toFrame.width, completion: { result in
+            completeKey(.sizeWidth, result)
+        })
+        self.vertical.animateHeightAdditive(layer: layer, value: fromFrame.height - toFrame.height, completion: { result in
+            completeKey(.sizeHeight, result)
+        })
+    }
+
+    public func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        let fromFrame = layer.frame
+        layer.frame = frame
+        self.animateFrame(layer: layer, from: fromFrame, completion: completion)
+    }
+
+    public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        let fromPosition = layer.position
+        layer.position = position
+
+        enum Keys: CaseIterable {
+            case positionX, positionY
+        }
+        var remainingKeys = Keys.allCases
+        var completedValue = true
+        let completeKey: (Keys, Bool) -> Void = { key, completed in
+            remainingKeys.removeAll(where: { $0 == key })
+            if !completed {
+                completedValue = false
+            }
+            if remainingKeys.isEmpty {
+                completion?(completedValue)
+            }
+        }
+
+        self.horizontal.animatePositionAdditive(layer: layer, offset: CGPoint(x: fromPosition.x - position.x, y: 0.0), completion: { result in
+            completeKey(.positionX, result)
+        })
+        self.vertical.animatePositionAdditive(layer: layer, offset: CGPoint(x: 0.0, y: fromPosition.y - position.y), completion: { result in
+            completeKey(.positionY, result)
+        })
+    }
+}
     
 public extension ContainedViewLayoutTransition {
     func animateView(_ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
@@ -1192,5 +1333,3 @@ public extension ContainedViewLayoutTransition {
         }
     }
 }
-    
-#endif

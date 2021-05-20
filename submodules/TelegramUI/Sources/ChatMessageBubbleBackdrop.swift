@@ -162,7 +162,16 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         })
     }
 
-    func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: ContainedViewLayoutTransition) {
+    func updateFrame(_ value: CGRect, transition: CombinedTransition, completion: @escaping () -> Void = {}) {
+        if let maskView = self.maskView {
+            transition.updateFrame(layer: maskView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
+        }
+        transition.updateFrame(layer: self.layer, frame: value, completion: { _ in
+            completion()
+        })
+    }
+
+    func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: CombinedTransition) {
         if transition.isAnimated {
             let previousFrame = self.frame
             self.updateFrame(CGRect(origin: CGPoint(x: previousFrame.minX, y: sourceView.frame.minY), size: sourceView.frame.size), transition: .immediate)

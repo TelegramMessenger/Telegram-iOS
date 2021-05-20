@@ -117,11 +117,13 @@ final class ChatMessageTransitionNode: ASDisplayNode {
             let backgroundView: UIView
             let contentView: UIView
             let sourceRect: CGRect
+            let scrollOffset: CGFloat
 
-            init(backgroundView: UIView, contentView: UIView, sourceRect: CGRect) {
+            init(backgroundView: UIView, contentView: UIView, sourceRect: CGRect, scrollOffset: CGFloat) {
                 self.backgroundView = backgroundView
                 self.contentView = contentView
                 self.sourceRect = sourceRect
+                self.scrollOffset = scrollOffset
             }
         }
 
@@ -239,15 +241,12 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
                 let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
-                if abs(targetAbsoluteRect.minY - 691.6666666666666) > 0.1 {
-                    assert(true)
-                }
 
                 let sourceRect = self.view.convert(initialTextInput.sourceRect, from: nil)
                 let sourceBackgroundAbsoluteRect = initialTextInput.backgroundView.frame.offsetBy(dx: sourceRect.minX, dy: sourceRect.minY)
                 let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.minX, y: sourceBackgroundAbsoluteRect.maxY - self.contextSourceNode.contentRect.height), size: self.contextSourceNode.contentRect.size)
 
-                let textInput = ChatMessageTransitionNode.Source.TextInput(backgroundView: initialTextInput.backgroundView, contentView: initialTextInput.contentView, sourceRect: sourceRect)
+                let textInput = ChatMessageTransitionNode.Source.TextInput(backgroundView: initialTextInput.backgroundView, contentView: initialTextInput.contentView, sourceRect: sourceRect, scrollOffset: initialTextInput.scrollOffset)
 
                 textInput.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: sourceAbsoluteRect.height - sourceBackgroundAbsoluteRect.height), size: textInput.backgroundView.bounds.size)
                 textInput.contentView.frame = textInput.contentView.frame.offsetBy(dx: 0.0, dy: sourceAbsoluteRect.height - sourceBackgroundAbsoluteRect.height)
@@ -266,8 +265,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 let transition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
                 let verticalTransition: ContainedViewLayoutTransition = .animated(duration: verticalDuration, curve: .custom(0.33, 0.0, 0.0, 1.0))
 
+                let combinedTransition = CombinedTransition(horizontal: transition, vertical: verticalTransition)
+
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                    itemNode.animateContentFromTextInputField(textInput: textInput, horizontalTransition: transition, verticalTransition: verticalTransition)
+                    itemNode.animateContentFromTextInputField(textInput: textInput, transition: combinedTransition)
                     if let sourceReplyPanel = sourceReplyPanel {
                         itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, horizontalTransition: transition, verticalTransition: verticalTransition)
                     }
