@@ -248,7 +248,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 snapshotView?.removeFromSuperview()
             })
             var infoFrame = snapshotView.frame
-            infoFrame.origin.y = targetFrame.height - infoFrame.height - bottomInset
+            infoFrame.origin.x = sideInset
+            infoFrame.origin.y = targetFrame.height - infoFrame.height - (sideInset.isZero ? bottomInset : 14.0)
             transition.updateFrame(view: snapshotView, frame: infoFrame)
         }
         
@@ -294,7 +295,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.view.addSubview(snapshotView)
             snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false)
             var infoFrame = snapshotView.frame
-            infoFrame.origin.y = initialFrame.height - infoFrame.height - bottomInset
+            infoFrame.origin.y = initialFrame.height - infoFrame.height - (sideInset.isZero ? bottomInset : 14.0)
             snapshotView.frame = infoFrame
             transition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(), size: targetFrame.size))
         }
@@ -525,7 +526,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                         |> filter { $0 }
                                         |> take(1)
                                         |> deliverOnMainQueue).start(next: { _ in
-                                            Queue.mainQueue().after(0.01) {
+                                            Queue.mainQueue().after(0.07) {
                                                 completion?()
                                             }
                                         }))

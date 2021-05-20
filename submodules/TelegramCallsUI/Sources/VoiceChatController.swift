@@ -4997,9 +4997,8 @@ public final class VoiceChatController: ViewController {
                 isFullscreen = true
             }
             
-            self.displayMode = displayMode
-            
             let completion = {
+                self.displayMode = displayMode
                 self.updateDecorationsColors()
                 
                 self.mainStageContainerNode.isHidden = false
