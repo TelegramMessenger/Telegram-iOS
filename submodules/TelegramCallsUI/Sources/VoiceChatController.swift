@@ -4798,6 +4798,28 @@ public final class VoiceChatController: ViewController {
                     self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
                         self.animatingExpansion = false
                     })
+                    
+                    if case .fullscreen = self.displayMode {
+                        self.isPanning = false
+                        self.mainStageBackgroundNode.alpha = 1.0
+                        self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { [weak self] _ in
+                            self?.attachFullscreenVideos()
+                        })
+                        self.mainStageNode.setControlsHidden(false, animated: true)
+                        
+                        self.fullscreenListNode.alpha = 1.0
+                        self.fullscreenListNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.15)
+                        
+                        var bounds = self.mainStageContainerNode.bounds
+                        let previousBounds = bounds
+                        bounds.origin.y = 0.0
+                        self.mainStageContainerNode.bounds = bounds
+                        self.mainStageContainerNode.layer.animateBounds(from: previousBounds, to: self.mainStageContainerNode.bounds, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+                            if let strongSelf = self {
+                                strongSelf.contentContainer.insertSubnode(strongSelf.mainStageContainerNode, belowSubnode: strongSelf.transitionContainerNode)
+                            }
+                        })
+                    }
                 default:
                     break
             }
