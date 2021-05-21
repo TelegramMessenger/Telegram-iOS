@@ -432,6 +432,8 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     }
 }
 
+private let fadeWidth: CGFloat = 70.0
+
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
     public var peer: Peer?
@@ -442,8 +444,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let shadowNode: ASImageNode
     
     public let contentNode: ASDisplayNode
-    let leftHighlightNode: ASImageNode
-    let rightHighlightNode: ASImageNode
+    let leftHighlightNode: ASDisplayNode
+    let rightHighlightNode: ASDisplayNode
     var highlightedSide: Bool?
     public let stripContainerNode: ASDisplayNode
     public let highlightContainerNode: ASDisplayNode
@@ -564,11 +566,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         self.contentNode = ASDisplayNode()
         
-        self.leftHighlightNode = ASImageNode()
+        self.leftHighlightNode = ASDisplayNode()
         self.leftHighlightNode.displaysAsynchronously = false
-        self.leftHighlightNode.displayWithoutProcessing = true
-        self.leftHighlightNode.contentMode = .scaleToFill
-        self.leftHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
+        self.leftHighlightNode.backgroundColor = generateImage(CGSize(width: fadeWidth, height: 24.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
             let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
@@ -581,14 +581,12 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
             
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        })
+        }).flatMap { UIColor(patternImage: $0) }
         self.leftHighlightNode.alpha = 0.0
         
-        self.rightHighlightNode = ASImageNode()
+        self.rightHighlightNode = ASDisplayNode()
         self.rightHighlightNode.displaysAsynchronously = false
-        self.rightHighlightNode.displayWithoutProcessing = true
-        self.rightHighlightNode.contentMode = .scaleToFill
-        self.rightHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
+        self.rightHighlightNode.backgroundColor = generateImage(CGSize(width: fadeWidth, height: 24.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
             let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
@@ -601,7 +599,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
             
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: 0.0), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        })
+        }).flatMap { UIColor(patternImage: $0) }
         self.rightHighlightNode.alpha = 0.0
         
         self.stripContainerNode = ASDisplayNode()
@@ -963,8 +961,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if !isExpanded && previousExpanded {
             self.isCollapsing = true
         }
-        self.leftHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width * 1.0 / 5.0), height: size.height))
-        self.rightHighlightNode.frame = CGRect(origin: CGPoint(x: size.width - floor(size.width * 1.0 / 5.0), y: 0.0), size: CGSize(width: floor(size.width * 1.0 / 5.0), height: size.height))
+        self.leftHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: fadeWidth, height: size.height))
+        self.rightHighlightNode.frame = CGRect(origin: CGPoint(x: size.width - fadeWidth, y: 0.0), size: CGSize(width: fadeWidth, height: size.height))
         
         if let peer = peer, !self.initializedList {
             self.initializedList = true

@@ -133,6 +133,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
     private var applicationStateDisposable: Disposable?
     
+    private let hapticFeedback = HapticFeedback()
+    
     var shareCamera: ((Bool) -> Void)?
     var switchCamera: (() -> Void)?
     var dismiss: (() -> Void)?
@@ -298,11 +300,13 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     }
     
     @objc private func microphonePressed() {
+        self.hapticFeedback.impact(.light)
         self.microphoneButton.isSelected = !self.microphoneButton.isSelected
         self.microphoneIconNode.update(state: .init(muted: !self.microphoneButton.isSelected, filled: true, color: .white), animated: true)
     }
     
     @objc private func switchCameraPressed() {
+        self.hapticFeedback.impact(.light)
         self.switchCamera?()
         
         let springDuration: Double = 0.7

@@ -2512,15 +2512,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func requestScreencast() {
-        if self.screencastCallContext != nil {
+        guard let callInfo = self.internalState.callInfo, self.screencastCallContext == nil else {
             return
         }
-
-        let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
-
-        guard let callInfo = maybeCallInfo else {
-            return
-        }
+        
+        self.hasScreencast = true
 
         let screencastCallContext = OngoingGroupCallContext(video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, audioStreamData: nil, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false)
         self.screencastCallContext = screencastCallContext
@@ -2553,109 +2549,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }))
         }))
-
-        /*if self.screencastIpcContext != nil {
-            return
-        }
-
-        let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
-
-        guard let callInfo = maybeCallInfo else {
-            return
-        }
-
-        let screencastIpcContext = IpcGroupCallAppContext(basePath: self.accountContext.sharedContext.basePath + "/broadcast-coordination")
-        self.screencastIpcContext = screencastIpcContext
-        self.hasScreencast = true
-
-        self.screencastJoinDisposable.set((screencastIpcContext.joinPayload
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
-            guard let strongSelf = self else {
-                return
-            }
-
-            strongSelf.requestDisposable.set((joinGroupCallAsScreencast(
-                account: strongSelf.account,
-                peerId: strongSelf.peerId,
-                callId: callInfo.id,
-                accessHash: callInfo.accessHash,
-                joinPayload: joinPayload
-            )
-            |> deliverOnMainQueue).start(next: { joinCallResult in
-                guard let strongSelf = self, let screencastIpcContext = strongSelf.screencastIpcContext else {
-                    return
-                }
-                let clientParams = joinCallResult.jsonParams
-
-                screencastIpcContext.setJoinResponsePayload(clientParams)
-
-                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
-            }, error: { error in
-                guard let _ = self else {
-                    return
-                }
-            }))
-        }))
-
-        /*if self.screenCapturer == nil {
-            let screenCapturer = OngoingCallVideoCapturer()
-            self.screenCapturer = screenCapturer
-        }
-
-        let screencastCallContext = OngoingGroupCallContext(
-            video: self.screenCapturer,
-            requestMediaChannelDescriptions: { _, completion in
-                completion([])
-                return EmptyDisposable
-            },
-            audioStreamData: nil,
-            rejoinNeeded: {},
-            outgoingAudioBitrateKbit: nil,
-            videoContentType: .screencast,
-            enableNoiseSuppression: false
-        )
-
-        self.screencastCallContext = screencastCallContext
-
-        self.screencastJoinDisposable.set((screencastCallContext.joinPayload
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if lhs.0 != rhs.0 {
-                return false
-            }
-            if lhs.1 != rhs.1 {
-                return false
-            }
-            return true
-        })
-        |> deliverOnMainQueue).start(next: { [weak self] joinPayload, _ in
-            guard let strongSelf = self else {
-                return
-            }
-
-            strongSelf.requestDisposable.set((joinGroupCallAsScreencast(
-                account: strongSelf.account,
-                peerId: strongSelf.peerId,
-                callId: callInfo.id,
-                accessHash: callInfo.accessHash,
-                joinPayload: joinPayload
-            )
-            |> deliverOnMainQueue).start(next: { joinCallResult in
-                guard let strongSelf = self, let screencastCallContext = strongSelf.screencastCallContext else {
-                    return
-                }
-                let clientParams = joinCallResult.jsonParams
-
-                screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
-                screencastCallContext.setJoinResponse(payload: clientParams)
-
-                strongSelf.genericCallContext?.setIgnoreVideoEndpointIds(endpointIds: [joinCallResult.endpointId])
-            }, error: { error in
-                guard let _ = self else {
-                    return
-                }
-            }))
-        }))*/*/
     }
 
     public func disableScreencast() {

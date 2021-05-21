@@ -130,11 +130,11 @@ final class GroupVideoNode: ASDisplayNode {
         }
         UIView.transition(with: withBackground ? self.videoViewContainer : self.view, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
             UIView.performWithoutAnimation {
-                self.updateIsBlurred(isBlurred: true, light: true, animated: false)
+                self.updateIsBlurred(isBlurred: true, light: false, animated: false)
             }
         }) { finished in
             self.backgroundColor = nil
-            Queue.mainQueue().after(0.5) {
+            Queue.mainQueue().after(0.4) {
                 self.updateIsBlurred(isBlurred: false)
             }
         }
@@ -202,7 +202,8 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         var rotatedVideoSize = CGSize(width: 100.0, height: rotatedAspect * 100.0)
-    
+        let videoSize = rotatedVideoSize
+        
         var containerSize = size
         if switchOrientation {
             rotatedVideoSize = CGSize(width: rotatedVideoSize.height, height: rotatedVideoSize.width)
@@ -217,13 +218,13 @@ final class GroupVideoNode: ASDisplayNode {
             case .fillOrFitToSquare:
                 rotatedVideoSize = filledToSquareSize
             case .fillHorizontal:
-                if rotatedVideoSize.width > rotatedVideoSize.height {
+                if videoSize.width > videoSize.height {
                     rotatedVideoSize = filledSize
                 } else {
                     rotatedVideoSize = fittedSize
                 }
             case .fillVertical:
-                if rotatedVideoSize.width < rotatedVideoSize.height {
+                if videoSize.width < videoSize.height {
                     rotatedVideoSize = filledSize
                 } else {
                     rotatedVideoSize = fittedSize
@@ -236,11 +237,11 @@ final class GroupVideoNode: ASDisplayNode {
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
         
-        let videoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
+        let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
-        transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
+        transition.updateBounds(layer: self.videoView.view.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
         
-        let transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
+        let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
         if let backdropVideoView = self.backdropVideoView {
@@ -251,11 +252,11 @@ final class GroupVideoNode: ASDisplayNode {
             rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
             rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
             
-            let videoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
+            let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
             transition.updatePosition(layer: backdropVideoView.view.layer, position: rotatedVideoFrame.center)
-            transition.updateBounds(layer: backdropVideoView.view.layer, bounds: CGRect(origin: CGPoint(), size: videoSize))
+            transition.updateBounds(layer: backdropVideoView.view.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
             
-            let transformScale: CGFloat = rotatedVideoFrame.width / videoSize.width
+            let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
             transition.updateTransformScale(layer: self.backdropVideoViewContainer.layer, scale: transformScale)
             
             let transition: ContainedViewLayoutTransition = .immediate
@@ -263,10 +264,26 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if let backdropEffectView = self.backdropEffectView {
-            let maxSide = max(bounds.width, bounds.height) * 2.0
-            let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.width - maxSide) / 2.0, width: maxSide, height: maxSide)
-            transition.animateView {
-                backdropEffectView.frame = squareBounds
+            let maxSide = max(bounds.width, bounds.height) + 32.0
+            let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.height - maxSide) / 2.0, width: maxSide, height: maxSide)
+            
+            if case let .animated(duration, .spring) = transition {
+                if false, #available(iOS 10.0, *) {
+                    let timing = UISpringTimingParameters(mass: 3.0, stiffness: 1000.0, damping: 500.0, initialVelocity: CGVector(dx: 0.0, dy: 0.0))
+                    let animator = UIViewPropertyAnimator(duration: 0.34, timingParameters: timing)
+                    animator.addAnimations {
+                        backdropEffectView.frame = squareBounds
+                    }
+                    animator.startAnimation()
+                } else {
+                    UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 500.0, initialSpringVelocity: 0.0, options: .layoutSubviews, animations: {
+                        backdropEffectView.frame = squareBounds
+                    })
+                }
+            } else {
+                transition.animateView {
+                    backdropEffectView.frame = squareBounds
+                }
             }
         }
         

@@ -42,15 +42,20 @@ private let borderImage = generateImage(CGSize(width: tileSize.width, height: ti
     context.strokePath()
 })
 
-private let fadeImage = generateImage(CGSize(width: 1.0, height: 30.0), rotatedContext: { size, context in
-    let bounds = CGRect(origin: CGPoint(), size: size)
-    context.clear(bounds)
-    
-    let colorsArray = [UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 0.7).cgColor] as CFArray
-    var locations: [CGFloat] = [0.0, 1.0]
-    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
-    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-})
+private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
+private let fadeHeight: CGFloat = 50.0
+
+private var fadeImage: UIImage? = {
+    return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
+        var locations: [CGFloat] = [1.0, 0.0]
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    })
+}()
 
 final class VoiceChatFullscreenParticipantItem: ListViewItem {
     enum Icon {
@@ -168,7 +173,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     private var raiseHandNode: VoiceChatRaiseHandNode?
     private var actionButtonNode: HighlightableButtonNode
     
-    private var audioLevelView: VoiceBlobView?
+    var audioLevelView: VoiceBlobView?
     private let audioLevelDisposable = MetaDisposable()
     private var didSetupAudioLevel = false
     
@@ -181,7 +186,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     private var wavesColor: UIColor?
     
     let videoContainerNode: ASDisplayNode
-    private let videoFadeNode: ASImageNode
+    private let videoFadeNode: ASDisplayNode
     var videoNode: GroupVideoNode?
     private let videoReadyDisposable = MetaDisposable()
     private var videoReadyDelayed = false
@@ -225,12 +230,12 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.videoContainerNode = ASDisplayNode()
         self.videoContainerNode.clipsToBounds = true
         
-        self.videoFadeNode = ASImageNode()
+        self.videoFadeNode = ASDisplayNode()
         self.videoFadeNode.displaysAsynchronously = false
-        self.videoFadeNode.displayWithoutProcessing = true
-        self.videoFadeNode.contentMode = .scaleToFill
-        self.videoFadeNode.image = fadeImage
-        self.videoContainerNode.addSubnode(videoFadeNode)
+        if let image = fadeImage {
+            self.videoFadeNode.backgroundColor = UIColor(patternImage: image)
+        }
+        self.videoContainerNode.addSubnode(self.videoFadeNode)
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -310,7 +315,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         if let sourceNode = sourceNode as? VoiceChatTileItemNode {
             var startContainerPosition = sourceNode.view.convert(sourceNode.bounds, to: containerNode.view).center
             var animate = initialAnimate
-            if startContainerPosition.y > containerNode.frame.height - 238.0 {
+            if startContainerPosition.y < -tileHeight || startContainerPosition.y > containerNode.frame.height + tileHeight {
                 animate = false
             }
             
@@ -373,13 +378,14 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         } else if let sourceNode = sourceNode as? VoiceChatParticipantItemNode, let _ = sourceNode.item {
             var startContainerPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
             var animate = true
-            if startContainerPosition.y > containerNode.frame.height - 238.0 {
+            if startContainerPosition.y > containerNode.frame.height {
                 animate = false
             }
             startContainerPosition = startContainerPosition.offsetBy(dx: 0.0, dy: 9.0)
 
             if animate {
                 sourceNode.avatarNode.alpha = 0.0
+                sourceNode.audioLevelView?.alpha = 0.0
 
                 let initialPosition = self.contextSourceNode.position
                 let targetContainerPosition = self.contextSourceNode.view.convert(self.contextSourceNode.bounds, to: containerNode.view).center
@@ -388,8 +394,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 containerNode.addSubnode(self.contextSourceNode)
 
                 self.contextSourceNode.layer.animatePosition(from: startContainerPosition, to: targetContainerPosition, duration: duration, timingFunction: timingFunction, completion: { [weak self, weak sourceNode] _ in
-                    if let strongSelf = self {
-                        sourceNode?.avatarNode.alpha = 1.0
+                    if let strongSelf = self, let sourceNode = sourceNode {
+                        sourceNode.avatarNode.alpha = 1.0
+                        sourceNode.audioLevelView?.alpha = 1.0
                         strongSelf.contextSourceNode.position = initialPosition
                         strongSelf.containerNode.addSubnode(strongSelf.contextSourceNode)
                     }
@@ -668,7 +675,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.updateLevel(CGFloat(value))
                                     
                                     let avatarScale: CGFloat
-                                    if value > 0.0 {
+                                    if value > 0.02 {
                                         audioLevelView.startAnimating()
                                         avatarScale = 1.03 + level * 0.13
                                         if let wavesColor = strongSelf.wavesColor {
@@ -683,7 +690,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                         avatarScale = 1.0
                                         if strongSelf.silenceTimer == nil {
                                             let silenceTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
-                                                self?.audioLevelView?.stopAnimating(duration: 0.5)
+                                                self?.audioLevelView?.stopAnimating(duration: 0.75)
                                                 self?.silenceTimer = nil
                                             }, queue: Queue.mainQueue())
                                             strongSelf.silenceTimer = silenceTimer
@@ -810,7 +817,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     let videoContainerScale = tileSize.width / videoSize.width
                     
                     if !strongSelf.isExtracted && !strongSelf.animatingExtraction {
-                        strongSelf.videoFadeNode.frame = CGRect(x: 0.0, y: videoSize.height - 75.0, width: videoSize.width, height: 75.0)
+                        strongSelf.videoFadeNode.frame = CGRect(x: 0.0, y: videoSize.height - fadeHeight, width: videoSize.width, height: fadeHeight)
                         strongSelf.videoContainerNode.bounds = CGRect(origin: CGPoint(), size: videoSize)
 
                         if let videoNode = strongSelf.videoNode {

@@ -6,7 +6,7 @@ import SwiftSignalKit
 import AccountContext
 
 private let tileSpacing: CGFloat = 4.0
-private let tileHeight: CGFloat = 180.0
+let tileHeight: CGFloat = 180.0
 
 final class VoiceChatTileGridNode: ASDisplayNode {
     private let context: AccountContext
@@ -31,6 +31,11 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         let halfWidth = floorToScreenPixels((size.width - tileSpacing) / 2.0)
         let lastItemIsWide = items.count % 2 != 0
 
+        let isFirstTime = self.isFirstTime
+        if isFirstTime {
+            self.isFirstTime = false
+        }
+        
         for i in 0 ..< self.items.count {
             let item = self.items[i]
             let isLast = i == self.items.count - 1
@@ -60,10 +65,8 @@ final class VoiceChatTileGridNode: ASDisplayNode {
             if let itemNode = itemNode {
                 if wasAdded {
                     itemNode.frame = itemFrame
-                    if self.isFirstTime {
-                        self.isFirstTime = false
-                    } else {
-                        itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                    if !isFirstTime {
+                        itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.3)
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 } else {
@@ -80,7 +83,10 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         }
         for id in removeIds {
             if let itemNode = self.itemNodes.removeValue(forKey: id) {
-                itemNode.removeFromSupernode()
+                itemNode.layer.animateScale(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                    itemNode?.removeFromSupernode()
+                })
             }
         }
         
@@ -202,7 +208,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.tileGridNode = tileGridNode
                     }
 
-                    let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.4, curve: .spring)
+                    let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.3, curve: .easeInOut)
                     let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), items: item.tiles, transition: transition)
                     if currentItem == nil {
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: 0.0)

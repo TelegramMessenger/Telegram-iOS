@@ -70,15 +70,18 @@ func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
 }
 
 private func decorationBottomGradientImage(dark: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 1.0, height: bottomGradientHeight), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 24.0, height: bottomGradientHeight), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
         let color = dark ? fullscreenBackgroundColor : panelBackgroundColor
         let colorsArray = [color.withAlphaComponent(0.0).cgColor, color.cgColor] as CFArray
-        var locations: [CGFloat] = [0.0, 1.0]
+        var locations: [CGFloat] = [1.0, 0.0]
         let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+//
+//        context.setFillColor(UIColor.red.cgColor)
+//        context.fill(bounds)
     })
 }
 
@@ -676,9 +679,8 @@ public final class VoiceChatController: ViewController {
         private let closeButton: VoiceChatHeaderButton
         private let topCornersNode: ASImageNode
         private let videoBottomCornersNode: ASImageNode
-        private let bottomPanelCoverNode: ASDisplayNode
         fileprivate let bottomPanelNode: ASDisplayNode
-        private let bottomGradientNode: ASImageNode
+        private let bottomGradientNode: ASDisplayNode
         private let bottomPanelBackgroundNode: ASDisplayNode
         private let bottomCornersNode: ASImageNode
         fileprivate let audioButton: CallControllerButtonItemNode
@@ -693,8 +695,10 @@ public final class VoiceChatController: ViewController {
         private let mainStageNode: VoiceChatMainStageNode
        
         private let transitionMaskView: UIView
+        private let transitionMaskTopFillLayer: CALayer
         private let transitionMaskFillLayer: CALayer
-        private let transitionMaskFillGradientLayer: CAGradientLayer
+        private let transitionMaskGradientLayer: CAGradientLayer
+        private let transitionMaskBottomFillLayer: CALayer
         private let transitionContainerNode: ASDisplayNode
         
         private var isScheduling = false
@@ -791,10 +795,10 @@ public final class VoiceChatController: ViewController {
         private var requestedVideoChannels: [PresentationGroupCallRequestedVideo] = []
 
         private var videoNodes: [String: GroupVideoNode] = [:]
+        private var wideVideoNodes = Set<String>()
+        private var videoOrder: [String] = []
         private var readyVideoNodes = Set<String>()
         private var readyVideoDisposables = DisposableDict<String>()
-        private var wideVideoNodes = Set<String>()
-        private var videoNodesOrder: [String] = []
         
         private var endpointToPeerId: [String: PeerId] = [:]
         private var peerIdToEndpoint: [PeerId: String] = [:]
@@ -906,9 +910,6 @@ public final class VoiceChatController: ViewController {
             self.topCornersNode.displaysAsynchronously = false
             self.topCornersNode.displayWithoutProcessing = true
             self.topCornersNode.image = decorationCornersImage(top: true, bottom: false, dark: false)
-            
-            self.bottomPanelCoverNode = ASDisplayNode()
-            self.bottomPanelCoverNode.backgroundColor = fullscreenBackgroundColor
                 
             self.bottomPanelNode = ASDisplayNode()
             self.bottomPanelNode.clipsToBounds = false
@@ -917,10 +918,9 @@ public final class VoiceChatController: ViewController {
             self.bottomPanelBackgroundNode.backgroundColor = panelBackgroundColor
             self.bottomPanelBackgroundNode.isUserInteractionEnabled = false
             
-            self.bottomGradientNode = ASImageNode()
+            self.bottomGradientNode = ASDisplayNode()
             self.bottomGradientNode.displaysAsynchronously = false
-            self.bottomGradientNode.contentMode = .scaleToFill
-            self.bottomGradientNode.image = decorationBottomGradientImage(dark: false)
+            self.bottomGradientNode.backgroundColor = decorationBottomGradientImage(dark: false).flatMap { UIColor(patternImage: $0) }
             
             self.bottomCornersNode = ASImageNode()
             self.bottomCornersNode.displaysAsynchronously = false
@@ -935,7 +935,7 @@ public final class VoiceChatController: ViewController {
             self.videoBottomCornersNode.isUserInteractionEnabled = false
             
             self.audioButton = CallControllerButtonItemNode()
-            self.cameraButton = CallControllerButtonItemNode()
+            self.cameraButton = CallControllerButtonItemNode(largeButtonSize: sideButtonSize.width)
             self.switchCameraButton = CallControllerButtonItemNode()
             self.switchCameraButton.alpha = 0.0
             self.switchCameraButton.isUserInteractionEnabled = false
@@ -967,24 +967,34 @@ public final class VoiceChatController: ViewController {
             self.mainStageContainerNode.isHidden = true
             
             self.mainStageBackgroundNode = ASDisplayNode()
-//            self.mainStageBackgroundNode.backgroundColor = .black
+            self.mainStageBackgroundNode.backgroundColor = .black
             self.mainStageBackgroundNode.alpha = 0.0
             self.mainStageBackgroundNode.isUserInteractionEnabled = false
             
             self.mainStageNode = VoiceChatMainStageNode(context: self.context, call: self.call)
             
             self.transitionMaskView = UIView()
+            self.transitionMaskTopFillLayer = CALayer()
+            self.transitionMaskTopFillLayer.backgroundColor = UIColor.white.cgColor
+            self.transitionMaskTopFillLayer.opacity = 0.0
+            
             self.transitionMaskFillLayer = CALayer()
             self.transitionMaskFillLayer.backgroundColor = UIColor.white.cgColor
+                        
+            self.transitionMaskGradientLayer = CAGradientLayer()
+            self.transitionMaskGradientLayer.colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0.0).cgColor]
+            self.transitionMaskGradientLayer.locations = [0.0, 1.0]
+            self.transitionMaskGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            self.transitionMaskGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
             
-            self.transitionMaskFillGradientLayer = CAGradientLayer()
-            self.transitionMaskFillGradientLayer.colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0.0).cgColor]
-            self.transitionMaskFillGradientLayer.locations = [0.0, 1.0]
-            self.transitionMaskFillGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
-            self.transitionMaskFillGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+            self.transitionMaskBottomFillLayer = CALayer()
+            self.transitionMaskBottomFillLayer.backgroundColor = UIColor.white.cgColor
+            self.transitionMaskBottomFillLayer.opacity = 0.0
             
+            self.transitionMaskView.layer.addSublayer(self.transitionMaskTopFillLayer)
             self.transitionMaskView.layer.addSublayer(self.transitionMaskFillLayer)
-            self.transitionMaskView.layer.addSublayer(self.transitionMaskFillGradientLayer)
+            self.transitionMaskView.layer.addSublayer(self.transitionMaskGradientLayer)
+            self.transitionMaskView.layer.addSublayer(self.transitionMaskBottomFillLayer)
             
             self.transitionContainerNode = ASDisplayNode()
             self.transitionContainerNode.clipsToBounds = true
@@ -1657,19 +1667,15 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.topPanelNode)
             self.contentContainer.addSubnode(self.leftBorderNode)
             self.contentContainer.addSubnode(self.rightBorderNode)
-//            self.contentContainer.addSubnode(self.bottomPanelCoverNode)
             self.contentContainer.addSubnode(self.bottomCornersNode)
             self.contentContainer.addSubnode(self.bottomGradientNode)
             self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
+            self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
-            self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.timerNode)
             self.contentContainer.addSubnode(self.scheduleTextNode)
             self.contentContainer.addSubnode(self.fullscreenListNode)
-            
-                
-
             
             self.mainStageContainerNode.addSubnode(self.mainStageBackgroundNode)
             self.mainStageContainerNode.addSubnode(self.mainStageNode)
@@ -1715,6 +1721,7 @@ public final class VoiceChatController: ViewController {
                 
                 if strongSelf.callState != state {
                     strongSelf.callState = state
+                    strongSelf.mainStageNode.callState = state
                     
                     if let muteState = state.muteState, !muteState.canUnmute {
                         if strongSelf.pushingToTalk {
@@ -1829,10 +1836,10 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                if case .fullscreen = strongSelf.displayMode {
+                if case .fullscreen = strongSelf.displayMode, !strongSelf.mainStageNode.animating {
                     if let (peerId, _) = maxLevelWithVideo {
                         if let peer = strongSelf.currentDominantSpeaker, CACurrentMediaTime() - peer.1 < 2.5 {
-                        } else {
+                        } else if strongSelf.currentDominantSpeaker?.0 != peerId {
                             strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
                             strongSelf.updateMainVideo(waitForFullSize: false)
                         }
@@ -1878,7 +1885,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.currentContentOffset = offset
-                    if !(strongSelf.animatingExpansion || strongSelf.animatingInsertion || strongSelf.animatingAppearance) && strongSelf.panGestureArguments == nil {
+                    if !(strongSelf.animatingExpansion || strongSelf.animatingInsertion || strongSelf.animatingAppearance) && (strongSelf.panGestureArguments == nil || strongSelf.isExpanded) {
                         strongSelf.updateDecorationsLayout(transition: transition)
                     }
                 }
@@ -2098,9 +2105,19 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 if #available(iOS 12.0, *) {
-                    items.append(.custom(VoiceChatShareScreenContextItem(context: strongSelf.context, text: strongSelf.presentationData.strings.VoiceChat_VideoPreviewShareScreen, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, _ in }), false))
+                    if strongSelf.call.hasScreencast {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StopScreenSharing, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.default)
+
+                            self?.call.disableScreencast()
+                        })))
+                    } else {
+                        items.append(.custom(VoiceChatShareScreenContextItem(context: strongSelf.context, text: strongSelf.presentationData.strings.VoiceChat_ShareScreen, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, _ in }), false))
+                    }
                 }
 
                 if canManageCall {
@@ -2989,6 +3006,7 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func cameraPressed() {
+            self.hapticFeedback.impact(.light)
             if self.call.hasVideo || self.call.hasScreencast {
                 self.call.disableVideo()
                 self.call.disableScreencast()
@@ -3014,7 +3032,9 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                     }, switchCamera: { [weak self] in
-                        self?.call.switchVideoCamera()
+                        Queue.mainQueue().after(0.1) {
+                            self?.call.switchVideoCamera()
+                        }
                     })
                     strongSelf.controller?.present(controller, in: .window(.root))
                 }
@@ -3022,7 +3042,24 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func switchCameraPressed() {
-            self.call.switchVideoCamera()
+            self.hapticFeedback.impact(.light)
+            Queue.mainQueue().after(0.1) {
+                self.call.switchVideoCamera()
+            }
+            
+            if let callState = self.callState {
+                for entry in self.currentFullscreenEntries {
+                    if case let .peer(peerEntry, _) = entry {
+                        if peerEntry.peer.id == callState.myPeerId {
+                            if let videoEndpointId = peerEntry.videoEndpointId, let videoNode = self.videoNodes[videoEndpointId] {
+                                videoNode.flip(withBackground: false)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+            self.mainStageNode.flipVideoIfNeeded()
             
             let springDuration: Double = 0.7
             let springDamping: CGFloat = 100.0
@@ -3132,22 +3169,21 @@ public final class VoiceChatController: ViewController {
             
             let sideInset: CGFloat = 14.0
             
-            
             let bottomPanelCoverHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
             let bottomGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomGradientHeight))
             
-            let topEdgeY = topPanelFrame.maxY
-            var bottomEdgeY = self.isFullscreen ? layout.size.height - (self.isLandscape ? 0.0 : effectiveBottomAreaHeight) : bottomGradientFrame.maxY
-            if case .modal(_, true) = self.effectiveDisplayMode {
-                bottomEdgeY += 36.0
-            }
-                        
-            let transitionContainerFrame = CGRect(x: sideInset, y: topEdgeY, width: layout.size.width - sideInset * 2.0, height: max(0.0, bottomEdgeY - topEdgeY))
+            let additionalMaskHeight: CGFloat = 62.0
+            let topEdgeY = isLandscape ? 0.0 : layoutTopInset
+            let bottomEdgeY = (self.isLandscape ? layout.size.height + bottomGradientHeight : bottomGradientFrame.maxY) + additionalMaskHeight
+            
+            let transitionContainerFrame = CGRect(x: 0.0, y: topEdgeY, width: layout.size.width, height: max(0.0, bottomEdgeY - topEdgeY))
             transition.updateFrame(node: self.transitionContainerNode, frame: transitionContainerFrame)
             transition.updateFrame(view: self.transitionMaskView, frame: CGRect(x: 0.0, y: 0.0, width: transitionContainerFrame.width, height: transitionContainerFrame.height))
             let updateMaskLayers = {
-                transition.updateFrame(layer: self.transitionMaskFillLayer, frame: CGRect(x: 0.0, y: 0.0, width: transitionContainerFrame.width, height: transitionContainerFrame.height - bottomGradientHeight))
-                transition.updateFrame(layer: self.transitionMaskFillGradientLayer, frame: CGRect(x: 0.0, y: transitionContainerFrame.height - bottomGradientHeight, width: transitionContainerFrame.width, height: bottomGradientHeight))
+                transition.updateFrame(layer: self.transitionMaskTopFillLayer, frame: CGRect(x: 0.0, y: 0.0, width: transitionContainerFrame.width, height: topPanelFrame.height))
+                transition.updateFrame(layer: self.transitionMaskFillLayer, frame: CGRect(x: 0.0, y: topPanelFrame.height, width: transitionContainerFrame.width, height: transitionContainerFrame.height - bottomGradientHeight - additionalMaskHeight - topPanelFrame.height))
+                transition.updateFrame(layer: self.transitionMaskGradientLayer, frame: CGRect(x: 0.0, y: transitionContainerFrame.height - bottomGradientHeight - additionalMaskHeight, width: transitionContainerFrame.width, height: bottomGradientHeight))
+                transition.updateFrame(layer: self.transitionMaskBottomFillLayer, frame: CGRect(x: 0.0, y: transitionContainerFrame.height - bottomGradientHeight - additionalMaskHeight, width: transitionContainerFrame.width, height: bottomGradientHeight + additionalMaskHeight))
             }
             if transition.isAnimated {
                 updateMaskLayers()
@@ -3336,7 +3372,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 UIView.transition(with: self.bottomGradientNode.view, duration: 0.3, options: [.transitionCrossDissolve, .curveLinear]) {
-                    self.bottomGradientNode.image = decorationBottomGradientImage(dark: isFullscreen)
+                    self.bottomGradientNode.backgroundColor = decorationBottomGradientImage(dark: isFullscreen).flatMap { UIColor(patternImage: $0) }
                 } completion: { _ in
                 }
 
@@ -3476,7 +3512,7 @@ public final class VoiceChatController: ViewController {
                     buttonsTitleAlpha = 0.0
             }
             
-            let hasVideo = self.call.hasVideo || self.call.hasScreencast
+            let hasVideo = self.call.hasVideo
             self.cameraButton.update(size: hasVideo ? sideButtonSize : videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: hasVideo ? activeButtonAppearance : normalButtonAppearance, image: hasVideo ? .cameraOn : .cameraOff), text: self.presentationData.strings.VoiceChat_Video, transition: transition)
             
             self.switchCameraButton.update(size: videoButtonSize, content: CallControllerButtonItemNode.Content(appearance: normalButtonAppearance, image: .flipCamera), text: "", transition: transition)
@@ -3627,13 +3663,11 @@ public final class VoiceChatController: ViewController {
             
             var bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight))
             let bottomPanelCoverHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
-            let bottomPanelCoverFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomPanelCoverHeight))
             if isLandscape {
                 bottomPanelFrame = CGRect(origin: CGPoint(x: layout.size.width - fullscreenBottomAreaHeight - layout.safeInsets.right, y: 0.0), size: CGSize(width: fullscreenBottomAreaHeight + layout.safeInsets.right, height: layout.size.height))
             }
             let bottomGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomGradientHeight))
             transition.updateAlpha(node: self.optionsButton, alpha: self.optionsButton.isUserInteractionEnabled ? 1.0 : 0.0)
-            transition.updateFrame(node: self.bottomPanelCoverNode, frame: bottomPanelCoverFrame)
             transition.updateFrame(node: self.bottomGradientNode, frame: bottomGradientFrame)
             transition.updateFrame(node: self.bottomPanelNode, frame: bottomPanelFrame)
             
@@ -4155,8 +4189,8 @@ public final class VoiceChatController: ViewController {
                 var isTile = false
                 if let interaction = self.itemInteraction {
                     if let videoEndpointId = member.presentationEndpointId, self.readyVideoNodes.contains(videoEndpointId) {
-                        if !self.videoNodesOrder.contains(videoEndpointId) {
-                            self.videoNodesOrder.append(videoEndpointId)
+                        if !self.videoOrder.contains(videoEndpointId) {
+                            self.videoOrder.append(videoEndpointId)
                         }
                         if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId) {
                             isTile = true
@@ -4167,8 +4201,8 @@ public final class VoiceChatController: ViewController {
                         }
                     }
                     if let videoEndpointId = member.videoEndpointId, self.readyVideoNodes.contains(videoEndpointId) {
-                        if !self.videoNodesOrder.contains(videoEndpointId) {
-                            self.videoNodesOrder.append(videoEndpointId)
+                        if !self.videoOrder.contains(videoEndpointId) {
+                            self.videoOrder.append(videoEndpointId)
                         }
                         if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId) {
                             isTile = true
@@ -4204,18 +4238,18 @@ public final class VoiceChatController: ViewController {
             }
             
             var preList: [String] = []
-            for tileVideoEndpoint in self.videoNodesOrder {
+            for tileVideoEndpoint in self.videoOrder {
                 if let _ = tileByVideoEndpoint[tileVideoEndpoint] {
                     preList.append(tileVideoEndpoint)
                 }
             }
             
             if (tileByVideoEndpoint.count % 2) != 0, let last = preList.last, !self.wideVideoNodes.contains(last), let latestWide = latestWideVideo {
-                self.videoNodesOrder.removeAll(where: { $0 == latestWide })
-                self.videoNodesOrder.append(latestWide)
+                self.videoOrder.removeAll(where: { $0 == latestWide })
+                self.videoOrder.append(latestWide)
             }
             
-            for tileVideoEndpoint in self.videoNodesOrder {
+            for tileVideoEndpoint in self.videoOrder {
                 if let tileItem = tileByVideoEndpoint[tileVideoEndpoint] {
                     tileItems.append(tileItem)
                     if let fullscreenEntry = entryByPeerId[tileItem.peer.id] {
@@ -4352,13 +4386,16 @@ public final class VoiceChatController: ViewController {
                                     strongSelf.readyVideoDisposables.set((videoNode.ready
                                     |> filter { $0 }
                                     |> take(1)
+                                    |> deliverOnMainQueue
                                     ).start(next: { [weak self, weak videoNode] _ in
                                         if let strongSelf = self, let videoNode = videoNode {
-                                            strongSelf.readyVideoNodes.insert(channel.endpointId)
-                                            if videoNode.aspectRatio > 1.25 {
-                                                strongSelf.wideVideoNodes.insert(channel.endpointId)
+                                            Queue.mainQueue().after(0.1) {
+                                                strongSelf.readyVideoNodes.insert(channel.endpointId)
+                                                if videoNode.aspectRatio <= 0.77 {
+                                                    strongSelf.wideVideoNodes.insert(channel.endpointId)
+                                                }
+                                                strongSelf.updateMembers()
                                             }
-                                            strongSelf.updateMembers()
                                         }
                                     }), forKey: channel.endpointId)
                                     strongSelf.videoNodes[channel.endpointId] = videoNode
@@ -4386,6 +4423,8 @@ public final class VoiceChatController: ViewController {
             for (videoEndpointId, _) in self.videoNodes {
                 if !validSources.contains(videoEndpointId) {
                     self.videoNodes[videoEndpointId] = nil
+                    self.videoOrder.removeAll(where: { $0 == videoEndpointId })
+                    self.readyVideoNodes.remove(videoEndpointId)
                     self.readyVideoDisposables.set(nil, forKey: videoEndpointId)
                 }
             }
@@ -4637,7 +4676,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             }
                         } else if !self.isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
-                            if velocity.y > -1500.0 && !self.isFullscreen {
+                            if velocity.y > -2200.0 && !self.isFullscreen {
                                 DispatchQueue.main.async {
                                     self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                                 }
@@ -5057,20 +5096,20 @@ public final class VoiceChatController: ViewController {
                     
                     self.updateDecorationsLayout(transition: .immediate)
                     
-                    var minimalVisiblePeerid: (PeerId, CGFloat)?
+                    var minimalVisiblePeerid: (PeerId, CGPoint)?
                     var verticalItemNodes: [PeerId: ASDisplayNode] = [:]
                     self.listNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                             for tileNode in itemNode.tileNodes {
                                 let convertedFrame = tileNode.view.convert(tileNode.bounds, to: self.transitionContainerNode.view)
                                 if let item = tileNode.item {
-                                    if let (_, y) = minimalVisiblePeerid {
-                                        if convertedFrame.minY >= 0.0 && convertedFrame.minY < y {
-                                            minimalVisiblePeerid = (item.peer.id, convertedFrame.minY)
+                                    if let (_, point) = minimalVisiblePeerid {
+                                        if convertedFrame.minY >= 0.0 && (convertedFrame.minY < point.y || (convertedFrame.minY == point.y && convertedFrame.minX < point.x)) {
+                                            minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                         }
                                     } else {
                                         if convertedFrame.minY >= 0.0 {
-                                            minimalVisiblePeerid = (item.peer.id, convertedFrame.minY)
+                                            minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                         }
                                     }
                                     verticalItemNodes[item.peer.id] = tileNode
@@ -5078,13 +5117,13 @@ public final class VoiceChatController: ViewController {
                             }
                         } else if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item {
                             let convertedFrame = itemNode.view.convert(itemNode.bounds, to: self.transitionContainerNode.view)
-                            if let (_, y) = minimalVisiblePeerid {
-                                if convertedFrame.minY >= 0.0 && convertedFrame.minY < y {
-                                    minimalVisiblePeerid = (item.peer.id, convertedFrame.minY)
+                            if let (_, point) = minimalVisiblePeerid {
+                                if convertedFrame.minY >= 0.0 && convertedFrame.minY < point.y {
+                                    minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                 }
                             } else {
                                 if convertedFrame.minY >= 0.0 {
-                                    minimalVisiblePeerid = (item.peer.id, convertedFrame.minY)
+                                    minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                 }
                             }
                             verticalItemNodes[item.peer.id] = itemNode
@@ -5104,30 +5143,44 @@ public final class VoiceChatController: ViewController {
                         
                         self.fullscreenListNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item, let otherItemNode = verticalItemNodes[item.peer.id] {
-                                itemNode.animateTransitionIn(from: otherItemNode, containerNode: self, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                                itemNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
                             }
                         }
+                        
+                        self.transitionMaskBottomFillLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+                            Queue.mainQueue().after(0.2) {
+                                self?.transitionMaskBottomFillLayer.removeAllAnimations()
+                            }
+                        })
                                                 
                         if let (layout, navigationHeight) = self.validLayout {
                             self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
                             self.updateDecorationsLayout(transition: transition)
                         }
                     }
-                    if false, let (peerId, _) = minimalVisiblePeerid {
+//                    if let (peerId, _) = minimalVisiblePeerid {
+                        let effectiveSpeakerPeerId = self.effectiveSpeaker?.0
                         var index = 0
-                        for item in self.currentEntries {
-                            if case let .peer(entry, _) = item, entry.peer.id == peerId {
+                        for item in self.currentFullscreenEntries {
+                            if case let .peer(entry, _) = item, entry.peer.id == effectiveSpeakerPeerId {
                                 break
                             } else {
                                 index += 1
                             }
                         }
-                        self.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
+                        let position: ListViewScrollPosition
+                        if index > self.currentFullscreenEntries.count - 3 {
+                            index = self.currentFullscreenEntries.count - 1
+                            position = .bottom(0.0)
+                        } else {
+                            position = .center(.bottom)
+                        }
+                        self.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: position, animated: false, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
                             completion()
                         })
-                    } else {
-                        completion()
-                    }
+//                    } else {
+//                        completion()
+//                    }
                 } else if case .fullscreen = previousDisplayMode, case .modal = self.displayMode {
                     var minimalVisiblePeerid: (PeerId, CGFloat)?
                     var fullscreenItemNodes: [PeerId: VoiceChatFullscreenParticipantItemNode] = [:]
@@ -5151,6 +5204,8 @@ public final class VoiceChatController: ViewController {
                         let effectiveSpeakerPeerId = self.effectiveSpeaker?.0
                         var targetTileNode: VoiceChatTileItemNode?
                         
+                        self.transitionContainerNode.addSubnode(self.mainStageNode)
+                        
                         self.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                                 for tileNode in itemNode.tileNodes {
@@ -5168,14 +5223,24 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         self.mainStageNode.animateTransitionOut(to: targetTileNode, transition: transition, completion: { [weak self] in
-                            self?.effectiveSpeaker = nil
-                            self?.mainStageNode.update(peer: nil, waitForFullSize: false)
-                            self?.fullscreenListNode.isHidden = true
-                            self?.mainStageContainerNode.isHidden = true
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.effectiveSpeaker = nil
+                            strongSelf.mainStageNode.update(peer: nil, waitForFullSize: false)
+                            strongSelf.fullscreenListNode.isHidden = true
+                            strongSelf.mainStageContainerNode.isHidden = true
+                            strongSelf.mainStageContainerNode.addSubnode(strongSelf.mainStageNode)
                         })
                         
                         self.mainStageBackgroundNode.alpha = 0.0
                         self.mainStageBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                        
+                        self.transitionMaskTopFillLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+                            Queue.mainQueue().after(0.2) {
+                                self?.transitionMaskTopFillLayer.removeAllAnimations()
+                            }
+                        })
                         
                         if let (layout, navigationHeight) = self.validLayout {
                             self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
