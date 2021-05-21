@@ -607,28 +607,32 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     let previousVideoNode = strongSelf.currentVideoNode
                                     strongSelf.currentVideoNode = videoNode
                                     strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
-                                    if let previousVideoNode = previousVideoNode {
-                                        Queue.mainQueue().after(0.03) {
-                                            previousVideoNode.removeFromSupernode()
-                                        }
-//                                        currentVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak currentVideoNode] _ in
-//                                            currentVideoNode?.removeFromSupernode()
-//                                        })
-                                    }
-                                    if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
-                                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
-                                    }
                                     
                                     if waitForFullSize {
                                         strongSelf.videoReadyDisposable.set((videoNode.ready
                                         |> filter { $0 }
                                         |> take(1)
-                                        |> deliverOnMainQueue).start(next: { _ in
+                                        |> deliverOnMainQueue).start(next: { [weak self] _ in
                                             Queue.mainQueue().after(0.07) {
                                                 completion?()
+                                                
+                                                if let strongSelf = self {
+                                                    if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
+                                                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+                                                    }
+                                                }
+                                                if let previousVideoNode = previousVideoNode {
+                                                    previousVideoNode.removeFromSupernode()
+                                                }
                                             }
                                         }))
                                     } else {
+                                        if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
+                                            strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+                                        }
+                                        if let previousVideoNode = previousVideoNode {
+                                            previousVideoNode.removeFromSupernode()
+                                        }
                                         strongSelf.videoReadyDisposable.set(nil)
                                         completion?()
                                     }

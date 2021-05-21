@@ -1057,7 +1057,7 @@ public final class VoiceChatController: ViewController {
                         if peerId != strongSelf.currentDominantSpeaker?.0 {
                             strongSelf.currentDominantSpeaker = (peerId, CACurrentMediaTime())
                         }
-                        strongSelf.updateMainVideo(waitForFullSize: false, updateMembers: true, force: true)
+                        strongSelf.updateMainVideo(waitForFullSize: true, updateMembers: true, force: true)
                     }
                 }
             }, openInvite: { [weak self] in
