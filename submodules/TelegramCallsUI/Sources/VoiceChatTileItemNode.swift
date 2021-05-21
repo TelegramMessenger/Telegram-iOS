@@ -450,6 +450,125 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     }
 }
 
-private class VoiceChatTileHighlightNode: ASDisplayNode {
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
+private let green = UIColor(rgb: 0x33c659)
+private let activeBlue = UIColor(rgb: 0x00a0b9)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
+
+class VoiceChatTileHighlightNode: ASDisplayNode {
+    enum Gradient {
+        case speaking
+        case active
+        case connecting
+        case muted
+    }
     
+    private let maskView: UIView
+    private let maskLayer = CAShapeLayer()
+    
+    private let foregroundGradientLayer = CAGradientLayer()
+    
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
+    
+    private var audioLevel: CGFloat = 0.0
+    private var presentationAudioLevel: CGFloat = 0.0
+    
+    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+    
+    override init() {
+        self.maskView = UIView()
+        self.maskView.layer.addSublayer(self.maskLayer)
+        
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
+        super.init()
+        
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.updateAnimations()
+            }
+        }
+        
+        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.mask = self.maskView
+    }
+    
+    func updateAnimations() {
+        if !self.isCurrentlyInHierarchy {
+            self.foregroundGradientLayer.removeAllAnimations()
+            return
+        }
+        self.setupGradientAnimations()
+    }
+    
+    func updateLevel(_ level: CGFloat) {
+        self.audioLevel = level
+    }
+    
+    private func setupGradientAnimations() {
+        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
+        } else {
+            let previousValue = self.foregroundGradientLayer.startPoint
+            let newValue: CGPoint
+            if self.presentationAudioLevel > 0.22 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.15 ..< 0.35))
+            } else if self.presentationAudioLevel > 0.01 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.57 ..< 0.85), y: CGFloat.random(in: 0.15 ..< 0.45))
+            } else {
+                newValue = CGPoint(x: CGFloat.random(in: 0.6 ..< 0.75), y: CGFloat.random(in: 0.25 ..< 0.45))
+            }
+            self.foregroundGradientLayer.startPoint = newValue
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "startPoint")
+            animation.duration = Double.random(in: 0.8 ..< 1.4)
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            
+            CATransaction.setCompletionBlock { [weak self] in
+                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                    self?.setupGradientAnimations()
+                }
+            }
+            
+            self.foregroundGradientLayer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
+    }
+    
+    func updateGlowAndGradientAnimations(type: Gradient, animated: Bool = true) {
+        let initialColors = self.foregroundGradientLayer.colors
+        let targetColors: [CGColor]
+        switch type {
+            case .speaking:
+                targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
+            case .active:
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .connecting:
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .muted:
+                targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
+        }
+        self.foregroundGradientLayer.colors = targetColors
+        if animated {
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        }
+    }
 }

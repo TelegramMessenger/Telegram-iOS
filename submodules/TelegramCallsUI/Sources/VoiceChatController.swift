@@ -3194,7 +3194,10 @@ public final class VoiceChatController: ViewController {
             let sideInset: CGFloat = 14.0
             
             let bottomPanelCoverHeight = bottomAreaHeight + layout.intrinsicInsets.bottom
-            let bottomGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomGradientHeight))
+            var bottomGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelCoverHeight), size: CGSize(width: size.width, height: bottomGradientHeight))
+            if isLandscape {
+                bottomGradientFrame.origin.y = layout.size.height
+            }
             
             let transitionContainerFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             transition.updateFrame(node: self.transitionContainerNode, frame: transitionContainerFrame)
@@ -3203,7 +3206,7 @@ public final class VoiceChatController: ViewController {
                 transition.updateFrame(layer: self.transitionMaskTopFillLayer, frame: CGRect(x: 0.0, y: 0.0, width: transitionContainerFrame.width, height: topPanelFrame.maxY))
                 transition.updateFrame(layer: self.transitionMaskFillLayer, frame: CGRect(x: 0.0, y: topPanelFrame.maxY, width: transitionContainerFrame.width, height: bottomGradientFrame.minY - topPanelFrame.maxY))
                 transition.updateFrame(layer: self.transitionMaskGradientLayer, frame: CGRect(x: 0.0, y: bottomGradientFrame.minY, width: transitionContainerFrame.width, height: bottomGradientFrame.height))
-                transition.updateFrame(layer: self.transitionMaskBottomFillLayer, frame: CGRect(x: 0.0, y: bottomGradientFrame.minY, width: transitionContainerFrame.width, height: transitionContainerFrame.height - bottomGradientFrame.minY))
+                transition.updateFrame(layer: self.transitionMaskBottomFillLayer, frame: CGRect(x: 0.0, y: bottomGradientFrame.minY, width: transitionContainerFrame.width, height: max(0.0, transitionContainerFrame.height - bottomGradientFrame.minY)))
             }
             if transition.isAnimated {
                 updateMaskLayers()
@@ -3214,11 +3217,9 @@ public final class VoiceChatController: ViewController {
                 CATransaction.commit()
             }
             
-            var isFullscreen = false
             var bottomInset: CGFloat = 0.0
             var bottomEdgeInset: CGFloat = 0.0
             if case let .fullscreen(controlsHidden) = self.effectiveDisplayMode {
-                isFullscreen = true
                 if !controlsHidden {
                     bottomInset = 80.0
                 }

@@ -13,7 +13,7 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     private var displayLinkAnimator: ConstantDisplayLinkAnimator?
     
     private var audioLevel: CGFloat = 0
-    private var presentationAudioLevel: CGFloat = 0
+    public var presentationAudioLevel: CGFloat = 0
     
     private(set) var isAnimating = false
     
@@ -104,11 +104,17 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func startAnimating() {
+        self.startAnimating(immediately: false)
+    }
+    
+    public func startAnimating(immediately: Bool = false) {
         guard !isAnimating else { return }
         isAnimating = true
         
-        mediumBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
-        bigBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+        if !immediately {
+            mediumBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+            bigBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+        }
         
         updateBlobsState()
         

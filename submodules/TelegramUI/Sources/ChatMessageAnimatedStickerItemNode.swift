@@ -302,10 +302,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func removePlaceholder(animated: Bool) {
+        self.placeholderNode.alpha = 0.0
         if !animated {
             self.placeholderNode.removeFromSupernode()
         } else {
-            self.placeholderNode.alpha = 0.0
             self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
                 self?.placeholderNode.removeFromSupernode()
             })
@@ -425,8 +425,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if !strongSelf.enableSynchronousImageApply {
                         let current = CACurrentMediaTime()
                         if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
-                            strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            strongSelf.removePlaceholder(animated: true)
+                            if !strongSelf.placeholderNode.alpha.isZero {
+                                strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                strongSelf.removePlaceholder(animated: true)
+                            }
                         } else {
                             strongSelf.removePlaceholder(animated: false)
                         }

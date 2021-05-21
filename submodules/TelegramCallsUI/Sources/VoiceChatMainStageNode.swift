@@ -399,7 +399,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 strongSelf.speakingContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 strongSelf.speakingContainerNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 
-                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -7.0, dy: -7.0)
+                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -10.0, dy: -10.0)
                 strongSelf.speakingAudioLevelDisposable.set((getAudioLevel(peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] value in
                     guard let strongSelf = self else {
@@ -427,7 +427,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                         
                         let avatarScale: CGFloat
                         if value > 0.02 {
-                            audioLevelView.startAnimating()
+                            audioLevelView.startAnimating(immediately: true)
                             avatarScale = 1.03 + level * 0.13
                             audioLevelView.setColor(wavesColor, animated: true)
                         } else {
@@ -528,7 +528,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     
                     let avatarScale: CGFloat
                     if value > 0.02 {
-                        audioLevelView.startAnimating()
+                        audioLevelView.startAnimating(immediately: true)
                         avatarScale = 1.03 + level * 0.13
                         audioLevelView.setColor(wavesColor, animated: true)
                         
@@ -744,7 +744,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.speakingEffectView?.frame = CGRect(origin: CGPoint(), size: speakingContainerSize)
         self.speakingAvatarNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: speakingAvatarSize)
         self.speakingTitleNode.frame = CGRect(origin: CGPoint(x: 4.0 + speakingAvatarSize.width + 14.0, y: floorToScreenPixels((38.0 - speakingTitleSize.height) / 2.0)), size: speakingTitleSize)
-        transition.updateFrame(node: self.speakingContainerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - speakingContainerSize.width) / 2.0), y: size.height - bottomInset - speakingContainerSize.height - 44.0), size: speakingContainerSize))
+        transition.updateFrame(node: self.speakingContainerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - speakingContainerSize.width) / 2.0), y: 46.0), size: speakingContainerSize))
     }
     
     func flipVideoIfNeeded() {
@@ -752,5 +752,138 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             return
         }
         self.currentVideoNode?.flip(withBackground: false)
+    }
+}
+
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
+private let green = UIColor(rgb: 0x33c659)
+private let activeBlue = UIColor(rgb: 0x00a0b9)
+private let purple = UIColor(rgb: 0x3252ef)
+private let pink = UIColor(rgb: 0xef436c)
+
+class VoiceChatBlobNode: ASDisplayNode {
+    enum Gradient {
+        case speaking
+        case active
+        case connecting
+        case muted
+    }
+    private let size: CGSize
+    
+    private let blobView: VoiceBlobView
+    private let foregroundGradientLayer = CAGradientLayer()
+    
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
+    
+    init(size: CGSize) {
+        self.size = size
+        self.blobView = VoiceBlobView(
+            frame: CGRect(origin: CGPoint(), size: size),
+            maxLevel: 1.5,
+            smallBlobRange: (0, 0),
+            mediumBlobRange: (0.69, 0.87),
+            bigBlobRange: (0.71, 1.0)
+        )
+        self.blobView.setColor(.white)
+        
+        self.foregroundGradientLayer.type = .radial
+        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.locations = [0.0, 0.55, 1.0]
+        self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
+        self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+        
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
+        super.init()
+        
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.updateAnimations()
+            }
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.mask = self.blobView
+        self.layer.addSublayer(self.foregroundGradientLayer)
+    }
+        
+    func updateAnimations() {
+        if !self.isCurrentlyInHierarchy {
+            self.foregroundGradientLayer.removeAllAnimations()
+            self.blobView.stopAnimating()
+            return
+        }
+        self.setupGradientAnimations()
+        self.blobView.startAnimating(immediately: true)
+    }
+    
+    func updateLevel(_ level: CGFloat) {
+        self.blobView.updateLevel(level)
+    }
+    
+    private func setupGradientAnimations() {
+        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
+        } else {
+            let previousValue = self.foregroundGradientLayer.startPoint
+            let newValue: CGPoint
+            if self.blobView.presentationAudioLevel > 0.22 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.9 ..< 1.0), y: CGFloat.random(in: 0.15 ..< 0.35))
+            } else if self.blobView.presentationAudioLevel > 0.01 {
+                newValue = CGPoint(x: CGFloat.random(in: 0.57 ..< 0.85), y: CGFloat.random(in: 0.15 ..< 0.45))
+            } else {
+                newValue = CGPoint(x: CGFloat.random(in: 0.6 ..< 0.75), y: CGFloat.random(in: 0.25 ..< 0.45))
+            }
+            self.foregroundGradientLayer.startPoint = newValue
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "startPoint")
+            animation.duration = Double.random(in: 0.8 ..< 1.4)
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            
+            CATransaction.setCompletionBlock { [weak self] in
+                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                    self?.setupGradientAnimations()
+                }
+            }
+            
+            self.foregroundGradientLayer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
+    }
+    
+    func updateGlowAndGradientAnimations(type: Gradient, animated: Bool = true) {
+        let initialColors = self.foregroundGradientLayer.colors
+        let targetColors: [CGColor]
+        switch type {
+            case .speaking:
+                targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
+            case .active:
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .connecting:
+                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .muted:
+                targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
+        }
+        self.foregroundGradientLayer.colors = targetColors
+        if animated {
+            self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.blobView.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: self.bounds.height)
     }
 }
