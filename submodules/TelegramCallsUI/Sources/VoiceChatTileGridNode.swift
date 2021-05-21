@@ -213,10 +213,11 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                     if currentItem == nil {
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: 0.0)
                         strongSelf.backgroundNode.frame = tileGridNode.frame
-                        strongSelf.cornersNode.frame = CGRect(x: 14.0, y: 0.0, width: tileGridSize.width, height: 50.0)
+                        strongSelf.cornersNode.frame = CGRect(x: params.leftInset, y: layout.size.height, width: tileGridSize.width, height: 50.0)
                     } else {
                         transition.updateFrame(node: tileGridNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))
                         transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: tileGridSize))
+                        strongSelf.cornersNode.frame = CGRect(x: params.leftInset, y: layout.size.height, width: tileGridSize.width, height: 50.0)
                     }
                 }
             })
