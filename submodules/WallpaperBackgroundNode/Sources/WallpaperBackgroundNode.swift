@@ -51,12 +51,6 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
     }
-        
-    public var image: UIImage? {
-        didSet {
-            self.contentNode.contents = self.image?.cgImage
-        }
-    }
     
     public var rotation: CGFloat = 0.0 {
         didSet {
@@ -99,6 +93,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.clipsToBounds = true
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
+        self.addSubnode(self.patternImageNode)
     }
 
     deinit {
@@ -112,50 +107,69 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
         self.wallpaper = wallpaper
 
-        if case let .builtin(gradient, _) = wallpaper {
+        var gradientColors: [UInt32] = []
+        var gradientAngle: Int32 = 0
+
+        if case let .color(color) = wallpaper {
+            gradientColors = [color]
+        } else if case let .gradient(colors, settings) = wallpaper {
+            gradientColors = colors
+            gradientAngle = settings.rotation ?? 0
+        } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
+            gradientColors = settings.colors
+            gradientAngle = settings.rotation ?? 0
+        }
+
+        if gradientColors.count >= 3 {
             if self.gradientBackgroundNode == nil {
                 let gradientBackgroundNode = createGradientBackgroundNode()
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.addSubnode(self.patternImageNode)
             }
-            self.gradientBackgroundNode?.updateColors(colors: gradient?.colors.map({ color -> UIColor in
+            self.gradientBackgroundNode?.updateColors(colors: gradientColors.map { color -> UIColor in
                 return UIColor(rgb: color)
-            }) ?? defaultBuiltinWallpaperGradientColors)
-            self.contentNode.isHidden = true
-        } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern, !settings.additionalColors.isEmpty {
-            if self.gradientBackgroundNode == nil {
-                let gradientBackgroundNode = createGradientBackgroundNode()
-                self.gradientBackgroundNode = gradientBackgroundNode
-                self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
-                gradientBackgroundNode.addSubnode(self.patternImageNode)
-            }
-            var colors: [UInt32] = []
-            colors.append(settings.color ?? 0)
-            colors.append(settings.bottomColor ?? 0)
-            colors.append(contentsOf: settings.additionalColors)
-            self.gradientBackgroundNode?.updateColors(colors: colors.map({ color -> UIColor in
-                return UIColor(rgb: color)
-            }))
-            self.contentNode.isHidden = true
+            })
+
+            self.contentNode.backgroundColor = nil
+            self.contentNode.contents = nil
+            self.motionEnabled = false
         } else {
             if let gradientBackgroundNode = self.gradientBackgroundNode {
                 self.gradientBackgroundNode = nil
                 gradientBackgroundNode.removeFromSupernode()
+                self.insertSubnode(self.patternImageNode, aboveSubnode: self.contentNode)
             }
 
-            if case .gradient = wallpaper {
-                self.imageContentMode = .scaleToFill
-            } else {
-                self.imageContentMode = .scaleAspectFill
-            }
             self.motionEnabled = wallpaper.settings?.motion ?? false
 
-            self.contentNode.isHidden = false
+            if gradientColors.count >= 2 {
+                self.contentNode.backgroundColor = nil
+                self.contentNode.contents = generateImage(CGSize(width: 100.0, height: 200.0), rotatedContext: { size, context in
+                    let gradientColors = [UIColor(rgb: gradientColors[0]).cgColor, UIColor(rgb: gradientColors[1]).cgColor] as CFArray
+
+                    var locations: [CGFloat] = [0.0, 1.0]
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.rotate(by: CGFloat(gradientAngle) * CGFloat.pi / 180.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+
+                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                })?.cgImage
+            } else if gradientColors.count >= 1 {
+                self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
+                self.contentNode.contents = nil
+            } else {
+                self.contentNode.backgroundColor = .white
+                self.contentNode.contents = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false)?.cgImage
+                self.contentNode.isHidden = false
+            }
         }
 
         switch wallpaper {
-        case let .file(id, _, _, _, isPattern, _, _, file, settings):
+        case let .file(id, _, _, _, isPattern, _, _, file, settings) where isPattern:
             var updated = true
             if let previousWallpaper = previousWallpaper {
                 switch previousWallpaper {

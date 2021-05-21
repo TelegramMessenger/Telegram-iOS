@@ -987,7 +987,6 @@ final class MessageStoryRenderer {
         
         self.instantChatBackgroundNode = WallpaperBackgroundNode(context: context)
         self.instantChatBackgroundNode.displaysAsynchronously = false
-        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true

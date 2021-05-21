@@ -5,9 +5,9 @@ import SyncCore
 import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
-public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: nil, bubbleColors: nil, wallpaper: nil)
+public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: [], bubbleColors: nil, wallpaper: nil)
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -82,11 +82,11 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     var defaultWallpaper: TelegramWallpaper?
     if let forcedWallpaper = forcedWallpaper {
         defaultWallpaper = forcedWallpaper
-    } else if let backgroundColors = backgroundColors {
-        if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
+    } else if !backgroundColors.isEmpty {
+        if backgroundColors.count >= 2 {
+            defaultWallpaper = .gradient(backgroundColors, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(backgroundColors.0.argb)
+            defaultWallpaper = .color(backgroundColors[0])
         }
     }
     

@@ -4527,7 +4527,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? 0.5 : 0.18, curve: strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? .custom(0.33, 0.0, 0.0, 1.0) : .easeInOut), listViewTransaction: { updateSizeAndInsets, _, _, _ in
+                    let duration: Double = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.animationDuration : 0.18
+                    let curve: ContainedViewLayoutTransitionCurve = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.verticalAnimationCurve : .easeInOut
+                    let controlPoints: (Float, Float, Float, Float) = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.verticalAnimationControlPoints : (0.5, 0.33, 0.0, 0.0)
+                    
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationLayout(layout: validLayout).navigationFrame.maxY, transition: .animated(duration: duration, curve: curve), listViewTransaction: { updateSizeAndInsets, _, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -4553,9 +4557,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var scrollToItem: ListViewScrollToItem?
                         if isScheduledMessages, let insertedIndex = insertedIndex {
-                            scrollToItem = ListViewScrollToItem(index: insertedIndex, position: .visible, animated: true, curve: .Custom(duration: 0.5, 0.33, 0.0, 0.0, 1.0), directionHint: .Down)
+                            scrollToItem = ListViewScrollToItem(index: insertedIndex, position: .visible, animated: true, curve: .Custom(duration: duration, controlPoints.0, controlPoints.1, controlPoints.2, controlPoints.3), directionHint: .Down)
                         } else if transition.historyView.originalView.laterId == nil {
-                            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Custom(duration: 0.5, 0.33, 0.0, 0.0, 1.0), directionHint: .Up)
+                            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Custom(duration: duration, controlPoints.0, controlPoints.1, controlPoints.2, controlPoints.3), directionHint: .Up)
                         }
                         
                         var stationaryItemRange: (Int, Int)?
@@ -11557,48 +11561,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         return nil
-    }
-    
-    func previewingCommit(_ viewControllerToCommit: UIViewController) {
-        if let gallery = viewControllerToCommit as? AvatarGalleryController {
-            self.chatDisplayNode.dismissInput()
-            gallery.setHintWillBePresentedInPreviewingContext(false)
-            self.present(gallery, in: .window(.root), with: AvatarGalleryControllerPresentationArguments(animated: false, transitionArguments: { _ in
-                return nil
-            }))
-        } else if let gallery = viewControllerToCommit as? GalleryController {
-            self.chatDisplayNode.dismissInput()
-            gallery.setHintWillBePresentedInPreviewingContext(false)
-            
-            self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(animated: false, transitionArguments: { [weak self] messageId, media in
-                if let strongSelf = self {
-                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView {
-                            if let result = itemNode.transitionNode(id: messageId, media: media) {
-                                selectedTransitionNode = result
-                            }
-                        }
-                    }
-                    if let selectedTransitionNode = selectedTransitionNode {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: { view in
-                            if let strongSelf = self {
-                                strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
-                            }
-                        })
-                    }
-                }
-                return nil
-            }))
-        }
-        
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if let safariController = viewControllerToCommit as? SFSafariViewController {
-                if let window = self.effectiveNavigationController?.view.window {
-                    window.rootViewController?.present(safariController, animated: true)
-                }
-            }
-        }
     }
     
     private func presentBanMessageOptions(accountPeerId: PeerId, author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {

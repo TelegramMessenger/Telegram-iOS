@@ -1045,7 +1045,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             separatorCompleted = true
             intermediateCompletion()
         })
-        
+
+        self.textBackgroundNode.isHidden = true
+
         self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { _ in
             textBackgroundCompleted = true
             intermediateCompletion()
@@ -1057,7 +1059,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         transitionBackgroundNode.backgroundColor = node.backgroundNode.backgroundColor
         transitionBackgroundNode.cornerRadius = node.backgroundNode.cornerRadius
         self.insertSubnode(transitionBackgroundNode, aboveSubnode: self.textBackgroundNode)
-        transitionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0, removeOnCompletion: false)
+        //transitionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0, removeOnCompletion: false)
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let textFieldFrame = self.textField.frame

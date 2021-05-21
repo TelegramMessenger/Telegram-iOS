@@ -40,7 +40,7 @@ extension TelegramWallpaper: Codable {
         if let value = try? values.decode(String.self) {
             switch value.lowercased() {
                 case "builtin":
-                    self = .builtin(nil, WallpaperSettings())
+                    self = .builtin(WallpaperSettings())
                 default:
                     let optionKeys = ["motion", "blur"]
                     
@@ -65,7 +65,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
+                            self = .gradient([topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
                             var color: UInt32?
@@ -104,7 +104,14 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
+                                var colors: [UInt32] = []
+                                if let color = color {
+                                    colors.append(color)
+                                }
+                                if let bottomColor = bottomColor {
+                                    colors.append(bottomColor)
+                                }
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -123,10 +130,11 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(topColor, bottomColor, settings):
+            case let .gradient(colors, settings):
                 var components: [String] = []
-                components.append(String(format: "%06x", topColor))
-                components.append(String(format: "%06x", bottomColor))
+                for color in colors {
+                    components.append(String(format: "%06x", color))
+                }
                 if let rotation = settings.rotation {
                     components.append("\(rotation)")
                 }
@@ -141,14 +149,14 @@ extension TelegramWallpaper: Codable {
                 var components: [String] = []
                 components.append(file.slug)
                 if self.isPattern {
-                    if let color = file.settings.color {
-                        components.append(String(format: "%06x", color))
+                    if file.settings.colors.count >= 1 {
+                        components.append(String(format: "%06x", file.settings.colors[0]))
                     }
                     if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
                     }
-                    if let bottomColor = file.settings.bottomColor {
-                        components.append(String(format: "%06x", bottomColor))
+                    if file.settings.colors.count >= 2 {
+                        components.append(String(format: "%06x", file.settings.colors[1]))
                     }
                     if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")

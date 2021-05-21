@@ -833,7 +833,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
 
-    func animateFromSnapshot(snapshotView: UIView, transition: ContainedViewLayoutTransition) {
+    func animateFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
         guard let videoFrame = self.videoFrame else {
             return
         }
@@ -844,11 +844,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
 
         self.view.addSubview(snapshotView)
 
-        transition.updateAlpha(layer: snapshotView.layer, alpha: 0.0, completion: { [weak snapshotView] _ in
+        transition.horizontal.updateAlpha(layer: snapshotView.layer, alpha: 0.0, completion: { [weak snapshotView] _ in
             snapshotView?.removeFromSuperview()
         })
 
-        transition.animateTransformScale(node: self, from: 1.0 / scale)
+        transition.horizontal.animateTransformScale(node: self, from: 1.0 / scale)
 
         self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
         if let durationNode = self.durationNode {

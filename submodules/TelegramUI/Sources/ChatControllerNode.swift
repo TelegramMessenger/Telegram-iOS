@@ -81,7 +81,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
-    let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
     let reactionContainerNode: ReactionSelectionParentNode
@@ -352,12 +351,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundImageDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, accountMediaBox: context.account.postbox.mediaBox).start(next: { [weak self] image in
-            if let strongSelf = self, let (image, _) = image {
-                strongSelf.backgroundNode.image = image
-            }
-        }))
-        
         self.interactiveEmojisDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { preferencesView -> InteractiveEmojiConfiguration in
             let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
@@ -436,7 +429,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     deinit {
-        self.backgroundImageDisposable.dispose()
         self.interactiveEmojisDisposable?.dispose()
         self.openStickersDisposable?.dispose()
         self.displayVideoUnmuteTipDisposable?.dispose()
@@ -1596,12 +1588,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundImageDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox).start(next: { [weak self] image in
-                    if let strongSelf = self, let (image, final) = image {
-                        strongSelf.backgroundNode.image = image
-                    }
-                }))
-                self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
                 self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
             }
             

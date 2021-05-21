@@ -116,7 +116,23 @@ private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoi
     return context.generateImage()!
 }
 
-final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNode {
+public final class GradientBackgroundNode: ASDisplayNode {
+    private static let basePositions: [CGPoint] = [
+        CGPoint(x: 0.80, y: 0.10),
+        CGPoint(x: 0.60, y: 0.20),
+        CGPoint(x: 0.35, y: 0.25),
+        CGPoint(x: 0.25, y: 0.60),
+        CGPoint(x: 0.20, y: 0.90),
+        CGPoint(x: 0.40, y: 0.80),
+        CGPoint(x: 0.65, y: 0.75),
+        CGPoint(x: 0.75, y: 0.40)
+    ]
+
+    public static func generatePreview(size: CGSize, colors: [UIColor]) -> UIImage {
+        let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: 0))
+        return generateGradient(size: size, colors: colors, positions: positions)
+    }
+
     private var phase: Int = 0
 
     private let contentView: UIImageView
@@ -161,25 +177,14 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
 
         let imageSize = size.fitted(CGSize(width: 80.0, height: 80.0)).integralFloor
 
-        let basePositions: [CGPoint] = [
-            CGPoint(x: 0.80, y: 0.10),
-            CGPoint(x: 0.60, y: 0.20),
-            CGPoint(x: 0.35, y: 0.25),
-            CGPoint(x: 0.25, y: 0.60),
-            CGPoint(x: 0.20, y: 0.90),
-            CGPoint(x: 0.40, y: 0.80),
-            CGPoint(x: 0.65, y: 0.75),
-            CGPoint(x: 0.75, y: 0.40)
-        ]
-
-        let positions = gatherPositions(shiftArray(array: basePositions, offset: self.phase % 8))
+        let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: self.phase % 8))
 
         if let validPhase = self.validPhase {
             if validPhase != self.phase || self.invalidated {
                 self.validPhase = self.phase
                 self.invalidated = false
 
-                let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: validPhase % 8))
+                let previousPositions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: validPhase % 8))
 
                 if case let .animated(duration, curve) = transition, duration > 0.001 {
                     var images: [UIImage] = []

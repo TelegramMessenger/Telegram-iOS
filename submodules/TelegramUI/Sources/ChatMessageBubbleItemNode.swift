@@ -690,14 +690,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
-            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, horizontalTransition: horizontalTransition, verticalTransition: verticalTransition)
+            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, unclippedTransitionNode: self.mainContextSourceNode.contentNode, localRect: localRect, transition: transition)
         }
     }
 
-    func animateFromMicInput(micInputNode: UIView, transition: ContainedViewLayoutTransition) -> ContextExtractedContentContainingNode? {
+    func animateFromMicInput(micInputNode: UIView, transition: CombinedTransition) -> ContextExtractedContentContainingNode? {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
                 if let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode {
@@ -706,11 +706,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
                     statusContainerNode.contentNode.view.addSubview(micInputNode)
 
-                    transition.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
+                    transition.horizontal.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
                         micInputNode?.removeFromSuperview()
                     })
 
-                    transition.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
+                    transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
 
                     return statusContainerNode
                 }
@@ -719,7 +719,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         return nil
     }
 
-    func animateContentFromMediaInput(snapshotView: UIView, horizontalTransition: ContainedViewLayoutTransition, verticalTransition: ContainedViewLayoutTransition) {
+    func animateContentFromMediaInput(snapshotView: UIView, transition: CombinedTransition) {
         self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
@@ -2429,7 +2429,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.replyInfoNode = replyInfoNode
             var animateFrame = true
             if replyInfoNode.supernode == nil {
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(replyInfoNode)
+                strongSelf.clippingNode.addSubnode(replyInfoNode)
                 animateFrame = false
             }
             let previousReplyInfoNodeFrame = replyInfoNode.frame

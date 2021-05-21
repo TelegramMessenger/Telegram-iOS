@@ -1318,6 +1318,30 @@ public struct CombinedTransition {
             completeKey(.positionY, result)
         })
     }
+
+    public func animatePositionAdditive(layer: CALayer, offset: CGPoint, to toOffset: CGPoint = CGPoint(), removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        enum Keys: CaseIterable {
+            case positionX, positionY
+        }
+        var remainingKeys = Keys.allCases
+        var completedValue = true
+        let completeKey: (Keys, Bool) -> Void = { key, completed in
+            remainingKeys.removeAll(where: { $0 == key })
+            if !completed {
+                completedValue = false
+            }
+            if remainingKeys.isEmpty {
+                completion?(completedValue)
+            }
+        }
+
+        self.horizontal.animatePositionAdditive(layer: layer, offset: CGPoint(x: offset.x, y: 0.0), to: CGPoint(x: toOffset.x, y: 0.0), completion: { result in
+            completeKey(.positionX, result)
+        })
+        self.vertical.animatePositionAdditive(layer: layer, offset: CGPoint(x: 0.0, y: offset.y), to: CGPoint(x: 0.0, y: toOffset.y), completion: { result in
+            completeKey(.positionY, result)
+        })
+    }
 }
     
 public extension ContainedViewLayoutTransition {

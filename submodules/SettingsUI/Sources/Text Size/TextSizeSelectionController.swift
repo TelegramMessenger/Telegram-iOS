@@ -82,7 +82,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
         self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper)
                         
         self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)

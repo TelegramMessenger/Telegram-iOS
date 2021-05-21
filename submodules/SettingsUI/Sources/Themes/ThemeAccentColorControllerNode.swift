@@ -12,6 +12,7 @@ import ChatListUI
 import AccountContext
 import WallpaperResources
 import PresentationDataUtils
+import WallpaperBackgroundNode
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in
@@ -41,7 +42,7 @@ struct ThemeColorState {
     
     var accentColor: UIColor
     var initialWallpaper: TelegramWallpaper?
-    var backgroundColors: (UIColor, UIColor?)?
+    var backgroundColors: [UInt32]
     
     fileprivate var preview: Bool
     fileprivate var previousPatternWallpaper: TelegramWallpaper?
@@ -60,7 +61,7 @@ struct ThemeColorState {
         self.displayPatternPanel = false
         self.accentColor = .clear
         self.initialWallpaper = nil
-        self.backgroundColors = nil
+        self.backgroundColors = []
         self.preview = false
         self.previousPatternWallpaper = nil
         self.patternWallpaper = nil
@@ -71,7 +72,7 @@ struct ThemeColorState {
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: (UIColor, UIColor?)?, patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, motion: Bool, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?, rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, motion: Bool, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?, rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
@@ -104,20 +105,10 @@ struct ThemeColorState {
         if self.rotation != otherState.rotation {
             return false
         }
-        if let lhsBackgroundColors = self.backgroundColors, let rhsBackgroundColors = otherState.backgroundColors {
-            if lhsBackgroundColors.0 != rhsBackgroundColors.0 {
-                return false
-            }
-            if let lhsSecondColor = lhsBackgroundColors.1, let rhsSecondColor = rhsBackgroundColors.1 {
-                if lhsSecondColor != rhsSecondColor {
-                    return false
-                }
-            } else if (lhsBackgroundColors.1 == nil) != (rhsBackgroundColors.1 == nil) {
-                return false
-            }
-        } else if (self.backgroundColors == nil) != (otherState.backgroundColors == nil) {
+        if self.backgroundColors != otherState.backgroundColors {
             return false
         }
+
         if let lhsMessagesColors = self.messagesColors, let rhsMessagesColors = otherState.messagesColors {
             if lhsMessagesColors.0 != rhsMessagesColors.0 {
                 return false
@@ -137,11 +128,11 @@ struct ThemeColorState {
 }
 
 private func calcPatternColors(for state: ThemeColorState) -> [UIColor] {
-    if let backgroundColors = state.backgroundColors {
+    if state.backgroundColors.count >= 1 {
         let patternIntensity = CGFloat(state.patternIntensity) / 100.0
-        let topPatternColor = backgroundColors.0.withAlphaComponent(patternIntensity)
-        if let bottomColor = backgroundColors.1 {
-            let bottomPatternColor = bottomColor.withAlphaComponent(patternIntensity)
+        let topPatternColor = UIColor(rgb: state.backgroundColors[0]).withAlphaComponent(patternIntensity)
+        if state.backgroundColors.count >= 2 {
+            let bottomPatternColor = UIColor(rgb: state.backgroundColors[1]).withAlphaComponent(patternIntensity)
             return [topPatternColor, bottomPatternColor]
         } else {
             return [topPatternColor, topPatternColor]
@@ -175,8 +166,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let maskNode: ASImageNode
     private let backgroundContainerNode: ASDisplayNode
     private let backgroundWrapperNode: ASDisplayNode
-    private let immediateBackgroundNode: ASImageNode
-    private let signalBackgroundNode: TransformImageNode
+    private let backgroundNode: WallpaperBackgroundNode
     private let messagesContainerNode: ASDisplayNode
     private var dateHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
@@ -193,7 +183,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var currentBackgroundColors: (UIColor, UIColor?, Int32?)?
+    private var currentBackgroundColors: ([UInt32], Int32?)?
     private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
     
     private var patternWallpaper: TelegramWallpaper?
@@ -252,9 +242,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.backgroundContainerNode = ASDisplayNode()
         self.backgroundContainerNode.clipsToBounds = true
         self.backgroundWrapperNode = ASDisplayNode()
-        self.immediateBackgroundNode = ASImageNode()
-        self.signalBackgroundNode = TransformImageNode()
-        self.signalBackgroundNode.displaysAsynchronously = false
+        self.backgroundNode = WallpaperBackgroundNode(context: context)
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true
@@ -303,20 +291,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode.addSubnode(self.messagesContainerNode)
         
         self.backgroundContainerNode.addSubnode(self.backgroundWrapperNode)
-        self.backgroundWrapperNode.addSubnode(self.immediateBackgroundNode)
-        self.backgroundWrapperNode.addSubnode(self.signalBackgroundNode)
-        
-        self.signalBackgroundNode.imageUpdated = { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.ready.set(.single(true))
-                strongSelf.signalBackgroundNode.contentAnimations = []
-            }
-        }
+        self.backgroundWrapperNode.addSubnode(self.backgroundNode)
         
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
                
-        self.colorPanelNode.colorAdded = { [weak self] in
+        /*self.colorPanelNode.colorAdded = { [weak self] in
             if let strongSelf = self {
                 strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
             }
@@ -326,27 +306,23 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             if let strongSelf = self {
                 strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
             }
-        }
+        }*/
         
-        self.colorPanelNode.colorsChanged = { [weak self] firstColor, secondColor, ended in
+        self.colorPanelNode.colorsChanged = { [weak self] colors, ended in
             if let strongSelf = self, let section = strongSelf.state.section {
                 strongSelf.updateState({ current in
                     var updated = current
                     updated.preview = !ended
                     switch section {
                         case .accent:
-                            if let firstColor = firstColor {
-                                updated.accentColor = firstColor
+                            if let firstColor = colors.first {
+                                updated.accentColor = UIColor(rgb: firstColor)
                             }
                         case .background:
-                            if let firstColor = firstColor {
-                                updated.backgroundColors = (firstColor, secondColor)
-                            } else {
-                                updated.backgroundColors = nil
-                            }
+                            updated.backgroundColors = colors
                         case .messages:
-                            if let firstColor = firstColor {
-                                updated.messagesColors = (firstColor, secondColor)
+                            if colors.count >= 1 {
+                                updated.messagesColors = (UIColor(rgb: colors[0]), colors.count >= 2 ? UIColor(rgb: colors[1]) : nil)
                             } else {
                                 updated.messagesColors = nil
                             }
@@ -423,47 +399,38 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 }
             }
         }
-        
+
         self.stateDisposable = (self.statePromise.get()
         |> deliverOn(self.queue)
         |> mapToThrottled { next -> Signal<ThemeColorState, NoError> in
             return .single(next) |> then(.complete() |> delay(0.0166667, queue: self.queue))
         }
-        |> map { [weak self] state -> (PresentationTheme?, (TelegramWallpaper, UIImage?, Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, (() -> Void)?), UIColor, (UIColor, UIColor?)?, PatternWallpaperArguments, Bool) in
+        |> map { [weak self] state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], PatternWallpaperArguments, Bool) in
             let accentColor = state.accentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
-            
-            var wallpaper: TelegramWallpaper
-            var wallpaperImage: UIImage?
-            var wallpaperSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
 
-            var singleBackgroundColor: UIColor?
-            
+            var wallpaper: TelegramWallpaper
+
             var updateOnlyWallpaper = false
             if state.section == .background && state.preview {
                 updateOnlyWallpaper = true
             }
-            
-            if let backgroundColors = backgroundColors {
+
+            if !backgroundColors.isEmpty {
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper {
-                    let color = backgroundColors.0.argb
-                    let bottomColor = backgroundColors.1.flatMap { $0.argb }
-                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
-                    
+                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, colors: backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                     for representation in file.file.previewRepresentations {
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(wallpaper: .slug(file.slug), resource: representation.resource)))
                     }
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
-                    
-                    wallpaperSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                } else if let bottomColor = backgroundColors.1 {
-                    wallpaper = .gradient(backgroundColors.0.argb, bottomColor.argb, WallpaperSettings(rotation: state.rotation))
-                    wallpaperSignal = gradientImage([backgroundColors.0, bottomColor], rotation: state.rotation)
+                } else if backgroundColors.count >= 2 {
+                    wallpaper = .gradient(backgroundColors, WallpaperSettings(rotation: state.rotation))
                 } else {
-                    wallpaper = .color(backgroundColors.0.argb)
+                    wallpaper = .color(backgroundColors.first ?? 0xffffff)
                 }
             } else if let themeReference = mode.themeReference, case let .builtin(theme) = themeReference, state.initialWallpaper == nil {
                 var suggestedWallpaper: TelegramWallpaper
@@ -471,25 +438,23 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .dayClassic:
                         let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                        suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
-                        wallpaperSignal = gradientImage([topColor, bottomColor], rotation: state.rotation)
-                        backgroundColors = (topColor, bottomColor)
+                        suggestedWallpaper = .gradient([topColor.rgb, bottomColor.rgb], WallpaperSettings())
+                        backgroundColors = [topColor.rgb, bottomColor.rgb]
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                        suggestedWallpaper = .color(color.argb)
-                        backgroundColors = (color, nil)
+                        suggestedWallpaper = .color(color.rgb)
+                        backgroundColors = [color.rgb]
                     default:
-                        suggestedWallpaper = .builtin(nil, WallpaperSettings())
+                        suggestedWallpaper = .builtin(WallpaperSettings())
                 }
                 wallpaper = suggestedWallpaper
             } else {
-                wallpaper = state.initialWallpaper ?? .builtin(nil, WallpaperSettings())
-                wallpaperImage = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+                wallpaper = state.initialWallpaper ?? .builtin(WallpaperSettings())
             }
-            
-            let serviceBackgroundColor = serviceColor(for: (wallpaper, wallpaperImage))
+
+            let serviceBackgroundColor = serviceColor(for: (wallpaper, nil))
             let updatedTheme: PresentationTheme?
-            
+
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
                     updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
@@ -498,29 +463,22 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 } else {
                     updatedTheme = theme
                 }
-            
+
                 let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: updatedTheme!, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
             } else {
                 updatedTheme = nil
             }
-            
+
             let patternArguments = PatternWallpaperArguments(colors: calcPatternColors(for: state), rotation: wallpaper.settings?.rotation ?? 0, preview: state.preview)
-            
-            var wallpaperApply: (() -> Void)?
-            if let strongSelf = self, wallpaper.isPattern, let (layout, _, _) = strongSelf.validLayout {
-                let makeImageLayout = strongSelf.signalBackgroundNode.asyncLayout()
-                wallpaperApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: wallpaper.dimensions ?? layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))
-            }
-            
-            return (updatedTheme, (wallpaper, wallpaperImage, wallpaperSignal, wallpaperApply), serviceBackgroundColor, backgroundColors, patternArguments, state.preview)
+
+            return (updatedTheme, wallpaper, serviceBackgroundColor, backgroundColors, patternArguments, state.preview)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaperImageAndSignal, serviceBackgroundColor, backgroundColors, patternArguments, preview in
+        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaper, serviceBackgroundColor, backgroundColors, patternArguments, preview in
             guard let strongSelf = self else {
                 return
             }
-            let (wallpaper, wallpaperImage, wallpaperSignal, wallpaperApply) = wallpaperImageAndSignal
-            
-            if let theme = theme  {
+
+            if let theme = theme {
                 strongSelf.theme = theme
                 strongSelf.themeUpdated?(theme)
                 strongSelf.themePromise.set(.single(theme))
@@ -529,55 +487,25 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.chatListBackgroundNode.backgroundColor = theme.chatList.backgroundColor
                 strongSelf.maskNode.image = generateMaskImage(color: theme.chatList.backgroundColor)
             }
-            
+
             strongSelf.serviceBackgroundColor = serviceBackgroundColor
             strongSelf.serviceBackgroundColorPromise.set(.single(serviceBackgroundColor))
-            
-            if case let .color(value) = wallpaper {
-                strongSelf.backgroundColor = UIColor(rgb: value)
-                strongSelf.immediateBackgroundNode.backgroundColor = UIColor(rgb: value)
-                strongSelf.immediateBackgroundNode.image = nil
-                strongSelf.signalBackgroundNode.isHidden = true
-                strongSelf.signalBackgroundNode.contentAnimations = []
-                strongSelf.signalBackgroundNode.reset()
-                strongSelf.patternWallpaper = nil
-                strongSelf.ready.set(.single(true) )
-            } else if let wallpaperImage = wallpaperImage {
-                strongSelf.immediateBackgroundNode.image = wallpaperImage
-                strongSelf.signalBackgroundNode.isHidden = true
-                strongSelf.signalBackgroundNode.contentAnimations = []
-                strongSelf.signalBackgroundNode.reset()
-                strongSelf.patternWallpaper = nil
-                strongSelf.ready.set(.single(true) )
-            } else if let wallpaperSignal = wallpaperSignal {
-                strongSelf.signalBackgroundNode.contentMode = .scaleToFill
-                strongSelf.signalBackgroundNode.isHidden = false
-                
-                if case let .file(file) = wallpaper, let (layout, _, _) = strongSelf.validLayout {
-                    wallpaperApply?()
-                    
-                    if let previousWallpaper = strongSelf.patternWallpaper, case let .file(previousFile) = previousWallpaper, file.id == previousFile.id {
-                    } else {
-                        strongSelf.signalBackgroundNode.setSignal(wallpaperSignal)
-                        strongSelf.patternWallpaper = wallpaper
-                    }
-                } else {
-                    strongSelf.signalBackgroundNode.setSignal(wallpaperSignal)
-                    strongSelf.patternWallpaper = nil
-                }
-            }
+
+            strongSelf.backgroundNode.update(wallpaper: wallpaper)
+            strongSelf.ready.set(.single(true))
+
             strongSelf.wallpaper = wallpaper
             strongSelf.patternArguments = patternArguments
-            
+
             if !preview {
-                if let backgroundColors = backgroundColors {
-                    strongSelf.currentBackgroundColors = (backgroundColors.0, backgroundColors.1, strongSelf.state.rotation)
+                if !backgroundColors.isEmpty {
+                    strongSelf.currentBackgroundColors = (backgroundColors, strongSelf.state.rotation)
                 } else {
                     strongSelf.currentBackgroundColors = nil
                 }
                 strongSelf.patternPanelNode.backgroundColors = strongSelf.currentBackgroundColors
             }
-            
+
             if let _ = theme, let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
                 strongSelf.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: .immediate)
                 strongSelf.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: .immediate)
@@ -655,13 +583,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if sectionChanged, let section = self.state.section {
             self.view.endEditing(true)
             
-            let firstColor: UIColor?
-            let secondColor: UIColor?
+            var colors: [UInt32]
             var defaultColor: UIColor?
             switch section {
                 case .accent:
-                    firstColor = self.state.accentColor ?? defaultDayAccentColor
-                    secondColor = nil
+                    colors = [self.state.accentColor.rgb]
                 case .background:
                     if let themeReference = self.mode.themeReference, case let .builtin(theme) = themeReference {
                         switch theme {
@@ -673,15 +599,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                                 break
                         }
                     }
-                    if let backgroundColors = self.state.backgroundColors {
-                        firstColor = backgroundColors.0
-                        secondColor = backgroundColors.1
-                    } else if previousState.initialWallpaper != nil, let image = self.immediateBackgroundNode.image {
-                        firstColor = averageColor(from: image)
-                        secondColor = nil
+                    if !self.state.backgroundColors.isEmpty {
+                        colors = self.state.backgroundColors
                     } else {
-                        firstColor = nil
-                        secondColor = nil
+                        colors = []
                     }
                 case .messages:
                     if let defaultMessagesColor = self.state.defaultMessagesColor {
@@ -692,16 +613,42 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         defaultColor = self.state.accentColor
                     }
                     if let messagesColors = self.state.messagesColors {
-                        firstColor = messagesColors.0
-                        secondColor = messagesColors.1
+                        if let second = messagesColors.1 {
+                            colors = [messagesColors.0.rgb, second.rgb]
+                        } else {
+                            colors = [messagesColors.0.rgb]
+                        }
                     } else {
-                        firstColor = nil
-                        secondColor = nil
+                        colors = []
                     }
             }
 
+            if colors.isEmpty, let defaultColor = defaultColor {
+                colors = [defaultColor.rgb]
+            }
+
+            let maximumNumberOfColors: Int
+            switch self.state.section {
+            case .accent:
+                maximumNumberOfColors = 1
+            case .background:
+                maximumNumberOfColors = 4
+            case .messages:
+                maximumNumberOfColors = 2
+            default:
+                maximumNumberOfColors = 1
+            }
+
             self.colorPanelNode.updateState({ _ in
-                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .index(0), firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation, preview: false, simpleGradientGeneration: self.state.section == .messages, multiColors: [])
+                return WallpaperColorPanelNodeState(
+                    selection: colorPanelCollapsed ? nil : 0,
+                    colors: colors,
+                    maximumNumberOfColors: maximumNumberOfColors,
+                    rotateAvailable: self.state.section == .background,
+                    rotation: self.state.rotation,
+                    preview: false,
+                    simpleGradientGeneration: self.state.section == .messages
+                )
             }, animated: animated)
             
             needsLayout = true
@@ -714,7 +661,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             self.colorPanelNode.updateState({ current in
                 var updated = current
-                updated.selection = colorPanelCollapsed ? .none : .index(0)
+                updated.selection = colorPanelCollapsed ? nil : 0
                 return updated
             }, animated: animated)
         }
@@ -1008,16 +955,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         let backgroundSize = CGSize(width: bounds.width, height: bounds.height - (colorPanelHeight - colorPanelOffset))
         transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(), size: backgroundSize))
-        
-        let makeImageLayout = self.signalBackgroundNode.asyncLayout()
-        let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.patternWallpaper?.dimensions ?? layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: self.patternArguments))
-        let _ = imageApply()
+
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
         
         transition.updatePosition(node: self.backgroundWrapperNode, position: CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
         
         transition.updateBounds(node: self.backgroundWrapperNode, bounds: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.immediateBackgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.signalBackgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
     
         let displayOptionButtons = self.state.section == .background
         var messagesBottomInset: CGFloat = 0.0
@@ -1052,6 +996,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
 
         var hasMotion: Bool = self.state.patternWallpaper != nil || self.state.displayPatternPanel
+        if self.state.backgroundColors.count >= 3 {
+            hasMotion = false
+        }
         
         var patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
         var motionAlpha: CGFloat = displayOptionButtons && hasMotion ? 1.0 : 0.0
@@ -1096,11 +1043,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 updated.displayPatternPanel = true
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
                     updated.patternWallpaper = wallpaper
-                    if updated.backgroundColors == nil {
+                    if updated.backgroundColors.isEmpty {
                         if let backgroundColors = backgroundColors {
-                            updated.backgroundColors = (backgroundColors.0, backgroundColors.1)
+                            updated.backgroundColors = backgroundColors.0
                         } else {
-                            updated.backgroundColors = nil
+                            updated.backgroundColors = []
                         }
                     }
                     appeared = true

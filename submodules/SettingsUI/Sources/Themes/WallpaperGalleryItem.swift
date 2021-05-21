@@ -274,10 +274,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
             switch entry {
             case let .wallpaper(wallpaper, _):
-                if case .builtin = wallpaper {
-                    self.nativeNode.isHidden = false
-                    self.nativeNode.update(wallpaper: wallpaper)
-                } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern, !settings.additionalColors.isEmpty {
+                if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern, settings.colors.count >= 3 {
                     self.nativeNode.isHidden = false
                     self.nativeNode.update(wallpaper: wallpaper)
                 } else {
@@ -292,11 +289,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.initialWallpaper = wallpaper
 
                     switch wallpaper {
-                        case let .builtin(gradient, _):
-                            let gradientColors = self.calculateGradientColors() ?? defaultBuiltinWallpaperGradientColors
-
-                            self.colorsButtonNode.colors = gradientColors
-
+                        case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
                             signal = settingsBuiltinWallpaperImage(account: self.context.account)
@@ -315,10 +308,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(topColor, bottomColor, settings):
+                        case let .gradient(colors, settings):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            signal = gradientImage([UIColor(rgb: topColor), UIColor(rgb: bottomColor)], rotation: settings.rotation)
+                            signal = gradientImage([UIColor(rgb: colors[0]), UIColor(rgb: colors[1])], rotation: settings.rotation)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -345,15 +338,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                                 var patternIntensity: CGFloat = 0.5
                                 
-                                if let color = file.settings.color {
+                                if !file.settings.colors.isEmpty {
                                     if let intensity = file.settings.intensity {
                                         patternIntensity = CGFloat(intensity) / 100.0
                                     }
-                                    patternColor = UIColor(rgb: color, alpha: patternIntensity)
+                                    patternColor = UIColor(rgb: file.settings.colors[0], alpha: patternIntensity)
                                     patternColors.append(patternColor)
                                     
-                                    if let bottomColor = file.settings.bottomColor {
-                                        patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
+                                    if file.settings.colors.count >= 2 {
+                                        patternColors.append(UIColor(rgb: file.settings.colors[1], alpha: patternIntensity))
                                     }
                                 }
        
@@ -361,7 +354,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
-                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
+                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.colors != previousFile.settings.colors || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
                                     
                                     let makeImageLayout = self.imageNode.asyncLayout()
                                     Queue.concurrentDefaultQueue().async {
@@ -381,7 +374,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.colorPreview = self.arguments.colorPreview
 
-                                if !file.settings.additionalColors.isEmpty {
+                                if file.settings.colors.count >= 3 {
                                     signal = .single({ _ in nil })
                                 } else {
                                     signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
@@ -745,19 +738,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         switch entry {
         case let .wallpaper(wallpaper, _):
             switch wallpaper {
-            case let .builtin(gradient, _):
-                let gradientColors = gradient?.colors.map({ color in
-                    return UIColor(rgb: color)
-                }) ?? defaultBuiltinWallpaperGradientColors
-                return gradientColors
             case let .file(_, _, _, _, _, _, _, _, settings):
-                if let topColor = settings.color, let bottomColor = settings.bottomColor, settings.additionalColors.count == 2 {
-                    return [
-                        UIColor(rgb: topColor),
-                        UIColor(rgb: bottomColor),
-                        UIColor(rgb: settings.additionalColors[0]),
-                        UIColor(rgb: settings.additionalColors[1])
-                    ]
+                if settings.colors.count >= 3 {
+                    return settings.colors.map(UIColor.init(rgb:))
                 } else {
                     return nil
                 }
@@ -896,17 +879,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     motionFrame = rightButtonFrame
                 case let .wallpaper(wallpaper, _):
                     switch wallpaper {
-                        case let .builtin(gradient, _):
-                            self.colorsButtonNode.colors = self.calculateGradientColors()
-
-                            motionAlpha = 0.0
-                            patternAlpha = 1.0
-
-                            patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
-                            colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
-                            playAlpha = 1.0
-
-                            colorsAlpha = 1.0
+                        case .builtin:
+                            motionAlpha = 1.0
+                            motionFrame = centerButtonFrame
                         case .color:
                             patternAlpha = 1.0
                             if self.patternButtonNode.isSelected {
@@ -922,7 +897,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .gradient:
                             motionAlpha = 1.0
                         case let .file(file):
-                            if !file.settings.additionalColors.isEmpty {
+                            if file.settings.colors.count >= 3 {
                                 self.colorsButtonNode.colors = self.calculateGradientColors()
 
                                 motionAlpha = 0.0

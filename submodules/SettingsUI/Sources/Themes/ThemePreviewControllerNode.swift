@@ -107,10 +107,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.displaysAsynchronously = false
         
         let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
-        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-        if self.instantChatBackgroundNode.image != nil {
-            self.ready.set(.single(true))
-        }
+
+        self.ready.set(.single(true))
         self.instantChatBackgroundNode.update(wallpaper: wallpaper)
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
@@ -235,7 +233,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if wallpaper.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                } else if strongSelf.instantChatBackgroundNode.image == nil {
+                }/* else if strongSelf.instantChatBackgroundNode.image == nil {
                     signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
                         |> afterNext { next in
                             if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
@@ -243,7 +241,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
                             }
                     }
-                } else {
+                }*/ else {
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
@@ -269,14 +267,14 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 })
                 
                 var patternArguments: PatternWallpaperArguments?
-                if let color = file.settings.color {
+                if !file.settings.colors.isEmpty {
                     var patternIntensity: CGFloat = 0.5
                     if let intensity = file.settings.intensity {
                         patternIntensity = CGFloat(intensity) / 100.0
                     }
-                    var patternColors = [UIColor(rgb: color, alpha: patternIntensity)]
-                    if let bottomColor = file.settings.bottomColor {
-                        patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
+                    var patternColors = [UIColor(rgb: file.settings.colors[0], alpha: patternIntensity)]
+                    if file.settings.colors.count >= 2 {
+                        patternColors.append(UIColor(rgb: file.settings.colors[1], alpha: patternIntensity))
                     }
                     patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                 }

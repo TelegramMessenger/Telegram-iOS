@@ -57,10 +57,10 @@ final class ThemeGridControllerInteraction {
 
 private struct ThemeGridControllerEntry: Comparable, Identifiable {
     enum StableId: Hashable {
-        case builtin([UInt32])
+        case builtin
         case color(UInt32)
-        case gradient(UInt32, UInt32)
-        case file(Int64, UInt32, Int32)
+        case gradient([UInt32])
+        case file(Int64, [UInt32], Int32)
         case image(String)
     }
 
@@ -79,14 +79,14 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
     
     var stableId: StableId {
         switch self.wallpaper {
-            case let .builtin(gradient, _):
-                return .builtin(gradient?.colors ?? [])
+            case .builtin:
+                return .builtin
             case let .color(color):
                 return .color(color)
-            case let .gradient(topColor, bottomColor, _):
-                return .gradient(topColor, bottomColor)
+            case let .gradient(colors, _):
+                return .gradient(colors)
             case let .file(id, _, _, _, _, _, _, _, settings):
-                return .file(id, settings.color ?? 0, settings.intensity ?? 0)
+                return .file(id, settings.colors, settings.intensity ?? 0)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
                     return .image(largest.resource.id.uniqueId)
@@ -364,10 +364,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var index = 1
             
             var isSelectedEditable = true
-            if case let .builtin(gradient, _) = presentationData.chatWallpaper {
-                if gradient == nil {
-                    isSelectedEditable = false
-                }
+            if case .builtin = presentationData.chatWallpaper {
+                isSelectedEditable = false
             } else if presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 isSelectedEditable = false
             }
@@ -384,13 +382,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
 
             if !entries.contains(where: { entry in
-                if case .builtin = entry.wallpaper {
+                if case .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), _) = entry.wallpaper {
                     return true
                 } else {
                     return false
                 }
             }) {
-                let entry = ThemeGridControllerEntry(index: 1, wallpaper: .builtin(nil, WallpaperSettings(motion: true)), isEditable: false, isSelected: false)
+                let entry = ThemeGridControllerEntry(index: 1, wallpaper: .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings()), isEditable: false, isSelected: false)
                 if !entries.contains(where: { $0.stableId == entry.stableId }) {
                     entries.insert(entry, at: index)
                     index += 1
@@ -413,7 +411,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.color == nil) {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.colors.isEmpty) {
                     continue
                 }
                 let selected = presentationData.chatWallpaper.isBasicallyEqual(to: wallpaper)
@@ -422,10 +420,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     isDefault = true
                 }
                 var isEditable = true
-                if case let .builtin(gradient, _) = wallpaper {
-                    if gradient == nil {
-                        isEditable = false
-                    }
+                if case .builtin = wallpaper {
+                    isEditable = false
                 }
                 if !selected && !isDefault {
                     let entry = ThemeGridControllerEntry(index: index, wallpaper: wallpaper, isEditable: isEditable, isSelected: false)

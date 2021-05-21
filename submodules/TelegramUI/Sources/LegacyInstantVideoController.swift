@@ -54,6 +54,9 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
     func bindCaptureController(_ captureController: TGVideoMessageCaptureController?) {
         self.captureController = captureController
         if let captureController = captureController {
+            captureController.view.disablesInteractiveKeyboardGestureRecognizer = true
+            captureController.view.disablesInteractiveTransitionGestureRecognizer = true
+
             captureController.micLevel = { [weak self] (level: CGFloat) -> Void in
                 self?.micLevelValue.set(Float(level))
             }

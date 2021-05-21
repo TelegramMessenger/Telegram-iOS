@@ -35,7 +35,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     private var arguments: PatternWallpaperArguments?
     
     let buttonNode = HighlightTrackingButtonNode()
-    let backgroundNode = ASDisplayNode()
+    let backgroundNode = ASImageNode()
     let imageNode = TransformImageNode()
     private var gradientNode: GradientBackgroundNode?
     private let statusNode: RadialStatusNode
@@ -74,18 +74,39 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
 
-        if case let .builtin(gradient, _) = wallpaper {
-            if self.gradientNode == nil {
+        var colors: [UInt32] = []
+        if case let .gradient(value, _) = wallpaper {
+            colors = value
+        } else if case let .file(file) = wallpaper {
+            colors = file.settings.colors
+        } else if case let .color(color) = wallpaper {
+            colors = [color]
+        }
+        if colors.count >= 3 {
+            if let gradientNode = self.gradientNode {
+                gradientNode.updateColors(colors: colors.map { UIColor(rgb: $0) })
+            } else {
                 let gradientNode = createGradientBackgroundNode()
-                if let gradient = gradient {
-                    gradientNode.updateColors(colors: gradient.colors.map { UIColor(rgb: $0) })
-                }
+                gradientNode.isUserInteractionEnabled = false
                 self.gradientNode = gradientNode
-                self.addSubnode(gradientNode)
+                gradientNode.updateColors(colors: colors.map { UIColor(rgb: $0) })
+                self.insertSubnode(gradientNode, aboveSubnode: self.backgroundNode)
             }
-        } else if let gradientNode = self.gradientNode {
-            self.gradientNode = nil
-            gradientNode.removeFromSupernode()
+
+            self.backgroundNode.image = nil
+        } else {
+            if let gradientNode = self.gradientNode {
+                self.gradientNode = nil
+                gradientNode.removeFromSupernode()
+            }
+
+            if colors.count >= 2 {
+                self.backgroundNode.image = generateGradientImage(size: CGSize(width: 80.0, height: 80.0), colors: colors.map(UIColor.init(rgb:)), locations: [0.0, 1.0], direction: .vertical)
+                self.backgroundNode.backgroundColor = nil
+            } else if colors.count >= 1 {
+                self.backgroundNode.image = nil
+                self.backgroundNode.backgroundColor = UIColor(rgb: colors[0])
+            }
         }
 
         if let gradientNode = self.gradientNode {
@@ -105,72 +126,46 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             self.wallpaper = wallpaper
             switch wallpaper {
                 case .builtin:
-                    self.imageNode.isHidden = false
-                    self.backgroundNode.isHidden = true
+                    self.imageNode.alpha = 1.0
                     self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: context.account))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
-                case let .color(color):
-                    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
-                    let uiColor = UIColor(rgb: color)
-                    if uiColor.distance(to: theme.list.itemBlocksBackgroundColor) < 200 {
-                        self.imageNode.isHidden = false
-                        self.backgroundNode.isHidden = true
-                        self.imageNode.setSignal(whiteColorImage(theme: theme, color: uiColor))
-                        let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
-                        apply()
-                    } else {
-                        self.imageNode.isHidden = true
-                        self.backgroundNode.isHidden = false
-                        self.backgroundNode.backgroundColor = UIColor(rgb: color)
-                    }
-                case let .gradient(topColor, bottomColor, _):
-                    self.imageNode.isHidden = false
-                    self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(gradientImage([UIColor(rgb: topColor), UIColor(rgb: bottomColor)]))
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
-                    apply()
                 case let .image(representations, _):
-                    self.imageNode.isHidden = false
-                    self.backgroundNode.isHidden = true
-                    
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
+                    self.imageNode.alpha = 10
                     self.imageNode.setSignal(wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .file(file):
-                    self.imageNode.isHidden = false
-                    
                     let convertedRepresentations : [ImageRepresentationWithReference] = file.file.previewRepresentations.map {
                         ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: .slug(file.slug), resource: $0.resource))
                     }
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                     if wallpaper.isPattern {
-                        self.backgroundNode.isHidden = false
-                        
                         var patternColors: [UIColor] = []
                         var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                         var patternIntensity: CGFloat = 0.5
-                        if let color = file.settings.color {
+                        if !file.settings.colors.isEmpty {
                             if let intensity = file.settings.intensity {
                                 patternIntensity = CGFloat(intensity) / 100.0
                             }
-                            patternColor = UIColor(rgb: color, alpha: patternIntensity)
+                            patternColor = UIColor(rgb: file.settings.colors[0], alpha: patternIntensity)
                             patternColors.append(patternColor)
                             
-                            if let bottomColor = file.settings.bottomColor {
-                                patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
+                            if file.settings.colors.count >= 2 {
+                                patternColors.append(UIColor(rgb: file.settings.colors[1], alpha: patternIntensity))
                             }
                         }
-                        
-                        self.backgroundNode.backgroundColor = patternColor
-                        self.arguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
+
+                        self.imageNode.alpha = CGFloat(file.settings.intensity ?? 50) / 100.0
+
+                        self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 0.3))
                         imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
-                        self.backgroundNode.isHidden = true
-                        
+                        self.imageNode.alpha = 1.0
+
                         imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
                     }
                     self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
@@ -178,6 +173,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: self.arguments))
                     apply()
+                default:
+                    break
             }
         } else if let wallpaper = self.wallpaper {
             switch wallpaper {

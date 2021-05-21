@@ -154,20 +154,16 @@ final class ThemeAccentColorController: ViewController {
         }, apply: { [weak self] state, serviceBackgroundColor in
             if let strongSelf = self {
                 let context = strongSelf.context
-                let initialAccentColor = strongSelf.initialAccentColor
                 let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                 
                 var coloredWallpaper: TelegramWallpaper?
-                if let backgroundColors = state.backgroundColors {
-                    let color = backgroundColors.0.argb
-                    let bottomColor = backgroundColors.1.flatMap { $0.argb }
-                    
+                if !state.backgroundColors.isEmpty {
                     if let patternWallpaper = state.patternWallpaper {
-                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
-                    } else if let bottomColor = bottomColor {
-                        coloredWallpaper = .gradient(color, bottomColor, WallpaperSettings(motion: state.motion, rotation: state.rotation))
+                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, colors: state.backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+                    } else if state.backgroundColors.count >= 2 {
+                        coloredWallpaper = .gradient(state.backgroundColors, WallpaperSettings(motion: state.motion, rotation: state.rotation))
                     } else {
-                        coloredWallpaper = .color(color)
+                        coloredWallpaper = .color(state.backgroundColors[0])
                     }
                 }
                 
@@ -175,9 +171,9 @@ final class ThemeAccentColorController: ViewController {
                 let apply: Signal<Void, NoError>
                 
                 let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>
-                if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
+                if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, !state.backgroundColors.isEmpty {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: backgroundColors.0.argb, bottomColor: backgroundColors.1.flatMap { $0.argb }, intensity: state.patternIntensity, rotation: state.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(color: state.backgroundColors.count >= 1 ? state.backgroundColors[0] : 0, bottomColor: state.backgroundColors.count >= 2 ? state.backgroundColors[1] : 0, intensity: state.patternIntensity, rotation: state.rotation)
                     
                     var data: Data?
                     if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -396,7 +392,7 @@ final class ThemeAccentColorController: ViewController {
                 
             let accentColor: UIColor
             var initialWallpaper: TelegramWallpaper?
-            var backgroundColors: (UIColor, UIColor?)?
+            var backgroundColors: [UInt32] = []
             var patternWallpaper: TelegramWallpaper?
             var patternIntensity: Int32 = 50
             var motion = false
@@ -411,27 +407,27 @@ final class ThemeAccentColorController: ViewController {
                 if case let .file(file) = wallpaper, wallpaper.isPattern {
                     var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.4)
                     var bottomColor: UIColor?
-                    if let color = file.settings.color {
+                    if !file.settings.colors.isEmpty {
                         if let intensity = file.settings.intensity {
                             patternIntensity = intensity
                         }
-                        patternColor = UIColor(rgb: color)
-                        if let bottomColorValue = file.settings.bottomColor {
-                            bottomColor = UIColor(rgb: bottomColorValue)
+                        patternColor = UIColor(rgb: file.settings.colors[0])
+                        if file.settings.colors.count >= 2 {
+                            bottomColor = UIColor(rgb: file.settings.colors[1])
                         }
                     }
                     patternWallpaper = wallpaper
-                    backgroundColors = (patternColor, bottomColor)
+                    backgroundColors = file.settings.colors
                     motion = file.settings.motion
                     rotation = file.settings.rotation ?? 0
                 } else if case let .color(color) = wallpaper {
-                    backgroundColors = (UIColor(rgb: color), nil)
-                } else if case let .gradient(topColor, bottomColor, settings) = wallpaper {
-                    backgroundColors = (UIColor(rgb: topColor), UIColor(rgb: bottomColor))
+                    backgroundColors = [color]
+                } else if case let .gradient(colors, settings) = wallpaper {
+                    backgroundColors = colors
                     motion = settings.motion
                     rotation = settings.rotation ?? 0
                 } else {
-                    backgroundColors = nil
+                    backgroundColors = []
                 }
             }
             
@@ -439,7 +435,7 @@ final class ThemeAccentColorController: ViewController {
                 var wallpaper: TelegramWallpaper
         
                 func extractBuiltinWallpaper(_ currentWallpaper: TelegramWallpaper) {
-                    if case let .builtin(_, settings) = currentWallpaper {
+                    if case let .builtin(settings) = currentWallpaper {
                         var defaultPatternWallpaper: TelegramWallpaper?
                         
                         for wallpaper in wallpapers {
@@ -450,7 +446,7 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         if let defaultPatternWallpaper = defaultPatternWallpaper {
-                            wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 40, rotation: nil))
+                            wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, colors: [0xd6e2ee], intensity: 40, rotation: nil))
                         }
                     }
                 }
@@ -475,7 +471,7 @@ final class ThemeAccentColorController: ViewController {
                     }
                     
                     if let initialBackgroundColor = strongSelf.initialBackgroundColor {
-                        backgroundColors = (initialBackgroundColor, nil)
+                        backgroundColors = [initialBackgroundColor.rgb]
                     } else {
                         extractWallpaperParameters(wallpaper)
                     }
@@ -539,7 +535,7 @@ final class ThemeAccentColorController: ViewController {
                          }
                          
                          if let initialBackgroundColor = strongSelf.initialBackgroundColor {
-                             backgroundColors = (initialBackgroundColor, nil)
+                            backgroundColors = [initialBackgroundColor.rgb]
                          } else {
                              extractWallpaperParameters(wallpaper)
                          }
@@ -601,7 +597,7 @@ final class ThemeAccentColorController: ViewController {
                 }
             } else {
                 accentColor = defaultDayAccentColor
-                backgroundColors = nil
+                backgroundColors = []
                 messageColors = nil
             }
             
