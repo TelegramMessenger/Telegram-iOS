@@ -723,6 +723,7 @@ public final class VoiceChatController: ViewController {
         private var animatingAppearance = false
         private var animatingButtonsSwap = false
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat)?
+        private var isPanning = false
         
         private var peer: Peer?
         private var currentTitle: String = ""
@@ -826,11 +827,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
         }
-        
-        private var effectiveDisplayMode: DisplayMode {
-            return self.displayMode
-        }
-        
+                
         private var isExpanded: Bool {
             switch self.displayMode {
                 case .modal(true, _), .fullscreen:
@@ -2005,18 +2002,6 @@ public final class VoiceChatController: ViewController {
             self.mainStageNode.switchTo = { [weak self] peerId in
                 if let strongSelf = self, let interaction = strongSelf.itemInteraction {
                     interaction.switchToPeer(peerId, nil, false)
-                    
-//                    let position: ListViewScrollPosition
-//                    var index: Int = 0
-//                    if index > strongSelf.currentFullscreenEntries.count - 3 {
-//                        index = strongSelf.currentFullscreenEntries.count - 1
-//                        position = .bottom(0.0)
-//                    } else {
-//                        position = .center(.bottom)
-//                    }
-//                    strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: index, position: position, animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
-//                        completion()
-//                    })
                 }
             }
             
@@ -3111,7 +3096,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private var isFullscreen: Bool {
-            switch self.effectiveDisplayMode {
+            switch self.displayMode {
                 case .fullscreen(_), .modal(_, true):
                     return true
                 default:
@@ -3137,7 +3122,7 @@ public final class VoiceChatController: ViewController {
             
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
             let listTopInset = isLandscape ? topPanelHeight : layoutTopInset + topPanelHeight
-            let bottomPanelHeight = isLandscape ? layout.intrinsicInsets.bottom : self.effectiveBottomAreaHeight + layout.intrinsicInsets.bottom
+            let bottomPanelHeight = isLandscape ? layout.intrinsicInsets.bottom : bottomAreaHeight + layout.intrinsicInsets.bottom
             
             var size = layout.size
             if case .regular = layout.metrics.widthClass {
@@ -3218,12 +3203,10 @@ public final class VoiceChatController: ViewController {
             }
             
             var bottomInset: CGFloat = 0.0
-            var bottomEdgeInset: CGFloat = 0.0
-            if case let .fullscreen(controlsHidden) = self.effectiveDisplayMode {
+            if case let .fullscreen(controlsHidden) = self.displayMode {
                 if !controlsHidden {
                     bottomInset = 80.0
                 }
-                bottomEdgeInset = 154.0
             }
             transition.updateAlpha(node: self.bottomGradientNode, alpha: self.isLandscape ? 0.0 : 1.0)
             
@@ -3277,14 +3260,13 @@ public final class VoiceChatController: ViewController {
             self.topPanelBackgroundNode.frame = CGRect(x: 0.0, y: topPanelHeight - 24.0, width: size.width, height: min(topPanelFrame.height, 24.0))
             
             let listMaxY = listTopInset + listSize.height
-            let bottomOffset: CGFloat = min(0.0, bottomEdge - listMaxY) + layout.size.height - bottomPanelHeight
-            let bottomDelta = bottomGradientHeight - bottomEdgeInset
-            
-            let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: -50.0 + bottomOffset + bottomDelta), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0))
+            let bottomOffset = min(0.0, bottomEdge - listMaxY) + layout.size.height - bottomPanelHeight
+
+            let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: -50.0 + bottomOffset + bottomGradientHeight), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0))
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
                 self.bottomCornersNode.frame = bottomCornersFrame
-                self.bottomPanelBackgroundNode.frame = CGRect(x: 0.0, y: bottomOffset + bottomDelta, width: size.width, height: 2000.0)
+                self.bottomPanelBackgroundNode.frame = CGRect(x: 0.0, y: bottomOffset + bottomGradientHeight, width: size.width, height: 2000.0)
                 
                 let positionDelta = CGPoint(x: 0.0, y: previousBottomCornersFrame.minY - bottomCornersFrame.minY)
                 transition.animatePositionAdditive(node: self.bottomCornersNode, offset: positionDelta)
@@ -3299,8 +3281,7 @@ public final class VoiceChatController: ViewController {
             }
             
             let isFullscreen = self.isFullscreen
-            let isLandscape = self.isLandscape
-            let effectiveDisplayMode = self.effectiveDisplayMode
+            let effectiveDisplayMode = self.displayMode
             
             self.controller?.statusBar.updateStatusBarStyle(isFullscreen ? .White : .Ignore, animated: true)
                         
@@ -3324,11 +3305,7 @@ public final class VoiceChatController: ViewController {
             
             let backgroundColor: UIColor
             if case .fullscreen = effectiveDisplayMode {
-                if isLandscape {
-                    backgroundColor = isFullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor
-                } else {
-                    backgroundColor = fullscreenBackgroundColor
-                }
+                backgroundColor = isFullscreen ? panelBackgroundColor : secondaryPanelBackgroundColor
             } else if self.isScheduling || self.callState?.scheduleTimestamp != nil {
                 backgroundColor = panelBackgroundColor
             } else {
@@ -3578,7 +3555,7 @@ public final class VoiceChatController: ViewController {
 
             
             if previousIsLandscape != isLandscape {
-                if case .modal = self.effectiveDisplayMode {
+                if case .modal = self.displayMode {
                     self.displayMode = .modal(isExpanded: true, isFilled: true)
                 }
                 self.updateDecorationsColors()
@@ -3586,7 +3563,7 @@ public final class VoiceChatController: ViewController {
                 self.updateMembers()
             }
             
-            let effectiveDisplayMode = self.effectiveDisplayMode
+            let effectiveDisplayMode = self.displayMode
 
             transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentWidth) / 2.0), y: 10.0), size: CGSize(width: contentWidth, height: 44.0)))
             self.updateTitle(transition: transition)
@@ -4595,7 +4572,9 @@ public final class VoiceChatController: ViewController {
                     
                     self.controller?.dismissAllTooltips()
                     
-                    if case .fullscreen = self.effectiveDisplayMode {
+                    if case .fullscreen = self.displayMode {
+                        self.isPanning = true
+                        
                         self.mainStageBackgroundNode.alpha = 0.0
                         self.mainStageBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4)
                         self.mainStageNode.setControlsHidden(true, animated: true)
@@ -4613,7 +4592,7 @@ public final class VoiceChatController: ViewController {
                         return
                     }
                     
-                    switch self.effectiveDisplayMode {
+                    switch self.displayMode {
                         case let .modal(isExpanded, previousIsFilled):
                             var topInset: CGFloat = 0.0
                             if let (currentTopInset, currentPanOffset) = self.panGestureArguments {
@@ -4699,13 +4678,14 @@ public final class VoiceChatController: ViewController {
                         topInset = self.listNode.frame.height
                     }
                     
-                    if case .fullscreen = self.effectiveDisplayMode {
+                    if case .fullscreen = self.displayMode {
                         self.panGestureArguments = nil
                         if abs(translation.y) > 100.0 || abs(velocity.y) > 300.0 {
                             self.currentForcedSpeaker = nil
                             self.updateDisplayMode(.modal(isExpanded: true, isFilled: true), fromPan: true)
                             self.effectiveSpeaker = nil
                         } else {
+                            self.isPanning = false
                             self.mainStageBackgroundNode.alpha = 1.0
                             self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { [weak self] _ in
                                 self?.attachFullscreenVideos()
@@ -4725,7 +4705,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             })
                         }
-                    } else if case .modal(true, _) = self.effectiveDisplayMode {
+                    } else if case .modal(true, _) = self.displayMode {
                         self.panGestureArguments = nil
                         if velocity.y > 300.0 || offset > topInset / 2.0 {
                             self.displayMode = .modal(isExpanded: false, isFilled: false)
@@ -4758,7 +4738,7 @@ public final class VoiceChatController: ViewController {
                             if self.isScheduling {
                                 self.dismissScheduled()
                             } else {
-                                if case .fullscreen = self.effectiveDisplayMode {
+                                if case .fullscreen = self.displayMode {
                                 } else {
                                     self.controller?.dismiss(closing: false, manual: true)
                                     dismissing = true
@@ -4771,7 +4751,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             }
                             
-                            if case .modal = self.effectiveDisplayMode {
+                            if case .modal = self.displayMode {
                                 self.displayMode = .modal(isExpanded: true, isFilled: true)
                             }
                             self.updateDecorationsColors()
@@ -5277,13 +5257,17 @@ public final class VoiceChatController: ViewController {
                         }
                         
                         self.fullscreenListNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item, let otherItemNode = verticalItemNodes[item.peer.id] {
-                                itemNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                            if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
+                                itemNode.animateTransitionIn(from: verticalItemNodes[item.peer.id], containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
                             }
                         }
                         
+                        if self.isLandscape {
+                            self.transitionMaskTopFillLayer.opacity = 1.0
+                        }
                         self.transitionMaskBottomFillLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                             Queue.mainQueue().after(0.2) {
+                                self?.transitionMaskTopFillLayer.opacity = 0.0
                                 self?.transitionMaskBottomFillLayer.removeAllAnimations()
                             }
                         })
@@ -5378,6 +5362,8 @@ public final class VoiceChatController: ViewController {
                             strongSelf.mainStageContainerNode.bounds = bounds
                             
                             strongSelf.contentContainer.insertSubnode(strongSelf.mainStageContainerNode, belowSubnode: strongSelf.transitionContainerNode)
+                            
+                            strongSelf.isPanning = false
                         })
                                                 
                         self.transitionMaskTopFillLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)

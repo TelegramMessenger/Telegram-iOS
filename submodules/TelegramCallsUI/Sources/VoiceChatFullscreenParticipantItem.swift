@@ -300,7 +300,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.layoutParams?.0.action?(self.contextSourceNode)
     }
     
-    func animateTransitionIn(from sourceNode: ASDisplayNode, containerNode: ASDisplayNode, transition: ContainedViewLayoutTransition, animate: Bool = true) {
+    func animateTransitionIn(from sourceNode: ASDisplayNode?, containerNode: ASDisplayNode, transition: ContainedViewLayoutTransition, animate: Bool = true) {
         guard let item = self.item else {
             return
         }
@@ -372,7 +372,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
                 self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             } else if !initialAnimate {
-                if case .animated = transition {
+                if transition.isAnimated {
                     self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
                     self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
                 }
@@ -380,7 +380,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         } else if let sourceNode = sourceNode as? VoiceChatParticipantItemNode, let _ = sourceNode.item {
             var startContainerPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
             var animate = true
-            if startContainerPosition.y > containerNode.frame.height {
+            if startContainerPosition.y < -tileHeight || startContainerPosition.y > containerNode.frame.height + tileHeight {
                 animate = false
             }
             startContainerPosition = startContainerPosition.offsetBy(dx: 0.0, dy: 9.0)
@@ -415,6 +415,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
                 self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
                 self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+            }
+        } else {
+            if transition.isAnimated {
+                self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             }
         }
     }
@@ -842,8 +847,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             if currentItem != nil {
                                 if item.active {
                                     if strongSelf.avatarNode.alpha.isZero {
+                                        strongSelf.animatingSelection = true
                                         strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: 0.2)
-                                        strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                                        strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                                            self?.animatingSelection = false
+                                        })
                                         strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: 0.2, additive: true)
                                         strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
                                     }
