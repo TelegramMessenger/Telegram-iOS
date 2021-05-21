@@ -682,8 +682,14 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         
         let startContainerAvatarPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
         var animate = true
-        if startContainerAvatarPosition.x < -tileSize.width || startContainerAvatarPosition.x > containerNode.frame.width + tileSize.width {
-            animate = false
+        if containerNode.frame.width > containerNode.frame.height {
+            if startContainerAvatarPosition.y < -tileSize.height || startContainerAvatarPosition.y > containerNode.frame.height + tileSize.height {
+                animate = false
+            }
+        } else {
+            if startContainerAvatarPosition.x < -tileSize.width || startContainerAvatarPosition.x > containerNode.frame.width + tileSize.width {
+                animate = false
+            }
         }
         if animate {
             sourceNode.avatarNode.alpha = 0.0

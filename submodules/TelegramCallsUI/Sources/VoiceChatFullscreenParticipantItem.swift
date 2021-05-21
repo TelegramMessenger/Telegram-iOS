@@ -372,8 +372,10 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.contentWrapperNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
                 self.contentWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
             } else if !initialAnimate {
-                self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
-                self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                if case .animated = transition {
+                    self.contextSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                    self.contextSourceNode.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: timingFunction)
+                }
             }
         } else if let sourceNode = sourceNode as? VoiceChatParticipantItemNode, let _ = sourceNode.item {
             var startContainerPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center

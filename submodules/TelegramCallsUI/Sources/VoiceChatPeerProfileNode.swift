@@ -231,6 +231,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             
             if let snapshotView = sourceNode.infoNode.view.snapshotView(afterScreenUpdates: false) {
                 self.videoFadeNode.image = tileFadeImage
+                self.videoFadeNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
                 self.videoFadeNode.frame = CGRect(x: 0.0, y: sourceRect.height - sourceNode.fadeNode.frame.height, width: sourceRect.width, height: sourceNode.fadeNode.frame.height)
                 
                 self.insertSubnode(self.videoFadeNode, aboveSubnode: sourceNode.videoContainerNode)

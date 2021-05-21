@@ -6472,5 +6472,6 @@ Sorry for the inconvenience.";
 
 "VoiceChat.ShareScreen" = "Share Screen";
 "VoiceChat.StopScreenSharing" = "Stop Screen Sharing";
+"VoiceChat.ParticipantIsSpeaking" = "%1$@ is speaking";
 
 "WallpaperPreview.WallpaperColors" = "Colors";
