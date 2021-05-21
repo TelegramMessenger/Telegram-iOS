@@ -8,7 +8,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -41,10 +41,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 
                 let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                 let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
+                suggestedWallpaper = .gradient([topColor.argb, bottomColor.argb], WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .builtin(nil, WallpaperSettings())
+                suggestedWallpaper = .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             }
         }
     }
@@ -201,11 +201,11 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     var defaultWallpaper: TelegramWallpaper?
     if let forcedWallpaper = forcedWallpaper {
         defaultWallpaper = forcedWallpaper
-    } else if let backgroundColors = backgroundColors {
-        if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
+    } else if !backgroundColors.isEmpty {
+        if backgroundColors.count >= 2 {
+            defaultWallpaper = .gradient(backgroundColors, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(backgroundColors.0.argb)
+            defaultWallpaper = .color(backgroundColors[0])
         }
     } else if let forcedWallpaper = suggestedWallpaper {
         defaultWallpaper = forcedWallpaper
@@ -345,13 +345,13 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
-        blurredBackgroundColor: UIColor(rgb: 0xf2f2f2, alpha: 0.8),
+        blurredBackgroundColor: UIColor(rgb: 0xf2f2f2, alpha: 0.9),
         opaqueBackgroundColor: UIColor(rgb: 0xf7f7f7).mixedWith(.white, alpha: 0.14),
         separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
         badgeTextColor: UIColor(rgb: 0xffffff),
-        segmentedBackgroundColor: UIColor(rgb: 0xe9e9e9),
+        segmentedBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.06),
         segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
         segmentedTextColor: UIColor(rgb: 0x000000),
         segmentedDividerColor: UIColor(rgb: 0xd6d6dc),
@@ -714,7 +714,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let chat = PresentationThemeChat(
-        defaultWallpaper: day ? .color(0xffffff) : .builtin(nil, WallpaperSettings(motion: true)),
+        defaultWallpaper: day ? .color(0xffffff) : .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings()),
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,

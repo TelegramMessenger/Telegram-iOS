@@ -444,9 +444,13 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
             return serviceColor(with: UIColor(argb: color))
-        case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
-            return serviceColor(with: mixedColor)
+        case let .gradient(colors, _):
+            if colors.count == 2 {
+                let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
+                return serviceColor(with: mixedColor)
+            } else {
+                return UIColor(rgb: 0x000000, alpha: 0.3)
+            }
         case .image:
             if let image = wallpaper.1 {
                 return serviceColor(with: averageColor(from: image))
@@ -455,10 +459,10 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             }
         case let .file(file):
             if wallpaper.0.isPattern {
-                if let color = file.settings.color {
-                    var mixedColor = UIColor(argb: color)
-                    if let bottomColor = file.settings.bottomColor {
-                        mixedColor = mixedColor.mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
+                if file.settings.colors.count >= 1 && file.settings.colors.count <= 2 {
+                    var mixedColor = UIColor(argb: file.settings.colors[0])
+                    if file.settings.colors.count >= 2 {
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: file.settings.colors[1]), alpha: 0.5)
                     }
                     return serviceColor(with: mixedColor)
                 } else {
@@ -499,9 +503,14 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             return .single(UIColor(rgb: 0x000000, alpha: 0.2))
         case let .color(color):
             return .single(serviceColor(with: UIColor(argb: color)))
-        case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
-            return .single(serviceColor(with: mixedColor))
+        case let .gradient(colors, _):
+            if colors.count == 2 {
+                let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
+                return .single(
+                    serviceColor(with: mixedColor))
+            } else {
+                return .single(UIColor(rgb: 0x000000, alpha: 0.3))
+            }
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
                 return Signal<UIColor, NoError> { subscriber in
@@ -524,10 +533,10 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             }
         case let .file(file):
             if wallpaper.isPattern {
-                if let color = file.settings.color {
-                    var mixedColor = UIColor(argb: color)
-                    if let bottomColor = file.settings.bottomColor {
-                        mixedColor = mixedColor.mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
+                if file.settings.colors.count >= 1 && file.settings.colors.count <= 2 {
+                    var mixedColor = UIColor(argb: file.settings.colors[0])
+                    if file.settings.colors.count >= 2 {
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: file.settings.colors[1]), alpha: 0.5)
                     }
                     return .single(serviceColor(with: mixedColor))
                 } else {
@@ -681,7 +690,7 @@ public func defaultPresentationData() -> PresentationData {
     
     let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
     
-    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: .builtin(nil, WallpaperSettings()), chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: defaultPresentationTheme.chat.defaultWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
 }
 
 public extension PresentationData {

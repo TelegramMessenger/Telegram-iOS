@@ -226,7 +226,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(backgroundNode, at: 0)
                     }
                     
-                    if let updatedBackgroundSignal = updatedBackgroundSignal {
+                    /*if let updatedBackgroundSignal = updatedBackgroundSignal {
                         strongSelf.disposable.set((updatedBackgroundSignal
                         |> deliverOnMainQueue).start(next: { [weak self] image in
                             if let strongSelf = self, let (image, final) = image, let backgroundNode = strongSelf.backgroundNode {
@@ -244,7 +244,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                                 strongSelf.finalImage = final
                             }
                         }))
-                    }
+                    }*/
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
 

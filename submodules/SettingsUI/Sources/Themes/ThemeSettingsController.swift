@@ -374,6 +374,19 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                 }
                 colorItems.append(contentsOf: colors.map { .color($0) })
+                if let index = colorItems.firstIndex(where: { item in
+                    if case .default = item {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    if index > 0 {
+                        let item = colorItems[index]
+                        colorItems.remove(at: index)
+                        colorItems.insert(item, at: 1)
+                    }
+                }
                 
                 return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
                     if let color = color {
@@ -632,7 +645,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 effectiveWallpaper = wallpaper
             } else {
                 let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
-                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(nil, WallpaperSettings())
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
             return (accentColor, effectiveWallpaper)
         }
@@ -643,7 +656,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                         return (accentColor, wallpaper)
                     } else {
-                        return (accentColor, .builtin(nil, WallpaperSettings()))
+                        return (accentColor, .builtin(WallpaperSettings()))
                     }
                 }
             } else {
@@ -833,7 +846,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 } else {
                     theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
                 }
-                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(nil, WallpaperSettings())
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
             
             let wallpaperSignal: Signal<TelegramWallpaper, NoError>
@@ -1227,7 +1240,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             |> mapToSignal { cachedWallpaper in
                 if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: file.settings.color ?? 0xd6e2ee, bottomColor: file.settings.bottomColor, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors.count >= 1 ? file.settings.colors[0] : 0xd6e2ee, bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : 0xd6e2ee, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
                             
                     let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
 

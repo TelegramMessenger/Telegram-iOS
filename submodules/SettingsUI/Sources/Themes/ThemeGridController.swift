@@ -299,8 +299,8 @@ final class ThemeGridController: ViewController {
                 case let .file(_, _, _, _, isPattern, _, slug, _, settings):
                     var options: [String] = []
                     if isPattern {
-                        if let color = settings.color {
-                            options.append("bg_color=\(UIColor(rgb: color).hexString)")
+                        if settings.colors.count >= 1 {
+                            options.append("bg_color=\(UIColor(rgb: settings.colors[0]).hexString)")
                         }
                         if let intensity = settings.intensity {
                             options.append("intensity=\(intensity)")

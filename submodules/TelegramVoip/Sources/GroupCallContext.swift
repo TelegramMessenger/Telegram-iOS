@@ -187,7 +187,7 @@ public final class OngoingGroupCallContext {
         }
     }
 
-    public struct VideoChannel {
+    public struct VideoChannel: Equatable {
         public enum Quality {
             case thumbnail
             case medium
@@ -216,6 +216,8 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
+
+        private var currentRequestedVideoChannels: [VideoChannel] = []
         
         private var broadcastPartsSource: BroadcastPartSource?
         
@@ -370,22 +372,26 @@ public final class OngoingGroupCallContext {
         }
 
         func setRequestedVideoChannels(_ channels: [VideoChannel]) {
-            self.context.setRequestedVideoChannels(channels.map { channel -> OngoingGroupCallRequestedVideoChannel in
-                let mappedQuality: OngoingGroupCallRequestedVideoQuality
-                switch channel.quality {
-                case .thumbnail:
-                    mappedQuality = .thumbnail
-                case .medium:
-                    mappedQuality = .medium
-                case .full:
-                    mappedQuality = .full
-                }
-                return OngoingGroupCallRequestedVideoChannel(
-                    audioSsrc: channel.audioSsrc,
-                    videoInformation: channel.videoDescription,
-                    quality: mappedQuality
-                )
-            })
+            if self.currentRequestedVideoChannels != channels {
+                self.currentRequestedVideoChannels = channels
+
+                self.context.setRequestedVideoChannels(channels.map { channel -> OngoingGroupCallRequestedVideoChannel in
+                    let mappedQuality: OngoingGroupCallRequestedVideoQuality
+                    switch channel.quality {
+                    case .thumbnail:
+                        mappedQuality = .thumbnail
+                    case .medium:
+                        mappedQuality = .medium
+                    case .full:
+                        mappedQuality = .full
+                    }
+                    return OngoingGroupCallRequestedVideoChannel(
+                        audioSsrc: channel.audioSsrc,
+                        videoInformation: channel.videoDescription,
+                        quality: mappedQuality
+                    )
+                })
+            }
         }
         
         func stop() {

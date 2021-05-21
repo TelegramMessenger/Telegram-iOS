@@ -20,6 +20,7 @@ swift_library(
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Svg:Svg",
+        "//submodules/GradientBackground:GradientBackground",
     ],
     visibility = [
         "//visibility:public",

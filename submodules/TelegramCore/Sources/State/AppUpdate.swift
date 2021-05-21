@@ -16,7 +16,7 @@ public struct AppUpdateInfo: Equatable {
 extension AppUpdateInfo {
     init?(apiAppUpdate: Api.help.AppUpdate) {
         switch apiAppUpdate {
-            case let .appUpdate(flags, _, version, text, entities, _, _):
+            case let .appUpdate(flags, _, version, text, entities, _, _, _):
                 self.blocking = (flags & (1 << 0)) != 0
                 self.version = version
                 self.text = text

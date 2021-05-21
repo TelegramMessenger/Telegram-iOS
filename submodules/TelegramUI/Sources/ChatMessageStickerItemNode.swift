@@ -1199,7 +1199,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 
-    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -1229,10 +1229,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             y: sourceCenter.y - self.imageNode.frame.midY
         )
 
-        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
-        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
-        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
-        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.imageNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.placeholderNode, from: sourceScale)
 
         let inverseScale = 1.0 / sourceScale
 
@@ -1240,7 +1240,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
             y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
         ), removeOnCompletion: false)
-        transition.updateTransformScale(layer: textInput.contentView.layer, scale: 1.0 / sourceScale)
+        transition.horizontal.updateTransformScale(layer: textInput.contentView.layer, scale: 1.0 / sourceScale)
 
         textInput.contentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
             textInput.contentView.removeFromSuperview()
@@ -1252,7 +1252,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.16)
     }
 
-    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: ContainedViewLayoutTransition) {
+    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -1297,10 +1297,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             y: sourceCenter.y - self.imageNode.frame.midY
         )
 
-        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
-        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
-        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
-        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.imageNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.placeholderNode, from: sourceScale)
 
         let inverseScale = 1.0 / sourceScale
 
@@ -1309,7 +1309,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
                 y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
             ), removeOnCompletion: false)
-            transition.updateTransformScale(layer: snapshotView.layer, scale: 1.0 / sourceScale)
+            transition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: 1.0 / sourceScale)
 
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.06, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
@@ -1335,13 +1335,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
-            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, horizontalTransition: transition, verticalTransition: transition)
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
             if let replyBackgroundNode = self.replyBackgroundNode {
-                transition.animatePositionAdditive(node: replyBackgroundNode, offset: offset)
+                transition.animatePositionAdditive(layer: replyBackgroundNode.layer, offset: offset)
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }

@@ -158,7 +158,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                 }
 
                 for subview in effectView.subviews {
-                    if subview.description.contains("_UIVisualEffectSubview") {
+                    if subview.description.contains("VisualEffectSubview") {
                         subview.isHidden = true
                     }
                 }

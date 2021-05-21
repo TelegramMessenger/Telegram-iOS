@@ -487,7 +487,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.frame = transformedSurfaceFrame
         }
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        //self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)

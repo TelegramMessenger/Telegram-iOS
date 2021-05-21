@@ -2210,14 +2210,25 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let backgroundView = UIImageView(image: backgroundImage)
         backgroundView.frame = self.textInputBackgroundNode.frame
 
-        //let previousTintColor = textInputNode.view.tintColor
-        //textInputNode.view.tintColor = .clear
+        func updateIsCaretHidden(view: UIView, isHidden: Bool) {
+            if String(describing: type(of: view)).contains("TextSelectionView") {
+                view.isHidden = isHidden
+            } else {
+                for subview in view.subviews {
+                    updateIsCaretHidden(view: subview, isHidden: isHidden)
+                }
+            }
+        }
+
+        updateIsCaretHidden(view: textInputNode.view, isHidden: true)
 
         guard let contentView = textInputNode.view.snapshotView(afterScreenUpdates: true) else {
-            //textInputNode.view.tintColor = previousTintColor
+            updateIsCaretHidden(view: textInputNode.view, isHidden: false)
             return nil
         }
-        //textInputNode.view.tintColor = previousTintColor
+
+        updateIsCaretHidden(view: textInputNode.view, isHidden: false)
+
         contentView.frame = textInputNode.frame
 
         return ChatMessageTransitionNode.Source.TextInput(
