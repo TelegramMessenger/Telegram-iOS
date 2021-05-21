@@ -1,6 +1,18 @@
 
 webrtc_source_dir = "webrtc"
 
+config_setting(
+    name = "debug_build",
+    values = {
+        "compilation_mode": "dbg",
+    },
+)
+
+optimization_flags = select({
+    ":debug_build": ["-Os"],
+    "//conditions:default": [],
+})
+
 rnnoise_sources = [ "dependencies/third_party/rnnoise/src/" + x for x in [
     "rnn_vad_weights.cc",
     "rnn_vad_weights.h",
@@ -3318,7 +3330,7 @@ cc_library(
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION=''",
         "-DHAVE_SCTP",
-    ] + arch_specific_cflags,
+    ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )
 
@@ -3396,7 +3408,7 @@ cc_library(
         "-DHAVE_UNISTD_H",
         "-DPACKAGE_STRING='\"\"'",
         "-DHAVE_SCTP",
-    ] + arch_specific_cflags,
+    ] + arch_specific_cflags + optimization_flags,
     deps = [
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
@@ -3443,7 +3455,7 @@ cc_library(
         "-Ithird-party/webrtc/dependencies/base/third_party/libevent",
         "-Ithird-party/webrtc/dependencies",
         "-Ithird-party/webrtc/" + webrtc_source_dir,
-    ] + arch_specific_cflags,
+    ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )
 
@@ -3521,7 +3533,7 @@ cc_library(
     copts = [
         "-ffp-contract=fast",
         "-Ithird-party/webrtc/dependencies/third_party/libyuv/include",
-    ] + arch_specific_cflags,
+    ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )
 
@@ -3565,7 +3577,7 @@ objc_library(
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
         "-DHAVE_SCTP",
-    ] + arch_specific_cflags,
+    ] + arch_specific_cflags + optimization_flags,
     deps = [
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
