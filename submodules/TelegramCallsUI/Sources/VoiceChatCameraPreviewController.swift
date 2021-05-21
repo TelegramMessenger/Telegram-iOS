@@ -133,6 +133,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
     private var applicationStateDisposable: Disposable?
     
+    private let hapticFeedback = HapticFeedback()
+    
     var shareCamera: ((Bool) -> Void)?
     var switchCamera: (() -> Void)?
     var dismiss: (() -> Void)?
@@ -186,7 +188,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
         if #available(iOS 12.0, *) {
             let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
-            broadcastPickerView.alpha = 0.1
+            broadcastPickerView.alpha = 0.02
             broadcastPickerView.preferredExtension = "\(self.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
             broadcastPickerView.showsMicrophoneButton = false
             self.broadcastPickerView = broadcastPickerView
@@ -293,12 +295,18 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         }
     }
     
+    deinit {
+        self.applicationStateDisposable?.dispose()
+    }
+    
     @objc private func microphonePressed() {
+        self.hapticFeedback.impact(.light)
         self.microphoneButton.isSelected = !self.microphoneButton.isSelected
         self.microphoneIconNode.update(state: .init(muted: !self.microphoneButton.isSelected, filled: true, color: .white), animated: true)
     }
     
     @objc private func switchCameraPressed() {
+        self.hapticFeedback.impact(.light)
         self.switchCamera?()
         
         let springDuration: Double = 0.7
@@ -438,7 +446,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.previewContainerNode, frame: CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize))
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
-        self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
+        self.cameraNode.updateLayout(size: previewSize, layoutMode: .fillVertical, transition: .immediate)
         
         let microphoneFrame = CGRect(x: 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.microphoneButton, frame: microphoneFrame)

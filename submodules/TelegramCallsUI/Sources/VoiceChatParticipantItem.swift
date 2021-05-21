@@ -245,6 +245,7 @@ class VoiceChatParticipantStatusNode: ASDisplayNode {
 class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let highlightContainerNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
     let contextSourceNode: ContextExtractedContentContainingNode
@@ -275,7 +276,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var raiseHandNode: VoiceChatRaiseHandNode?
     private var actionButtonNode: HighlightableButtonNode
     
-    private var audioLevelView: VoiceBlobView?
+    var audioLevelView: VoiceBlobView?
     private let audioLevelDisposable = MetaDisposable()
     private var didSetupAudioLevel = false
     
@@ -287,6 +288,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private var wavesColor: UIColor?
         
     private var raiseHandTimer: SwiftSignalKit.Timer?
+    private var silenceTimer: SwiftSignalKit.Timer?
     
     var item: VoiceChatParticipantItem? {
         return self.layoutParams?.0
@@ -336,12 +338,16 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         self.actionContainerNode = ASDisplayNode()
         self.actionButtonNode = HighlightableButtonNode()
         
+        self.highlightContainerNode = ASDisplayNode()
+        self.highlightContainerNode.clipsToBounds = true
+        
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
+        
+        self.highlightContainerNode.addSubnode(self.highlightedBackgroundNode)
         
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
@@ -515,6 +521,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             avatarListNode.controlsClippingNode.frame = CGRect(x: -targetRect.width / 2.0, y: -targetRect.height / 2.0, width: targetRect.width, height: targetRect.height)
                             avatarListNode.controlsClippingOffsetNode.frame = CGRect(origin: CGPoint(x: targetRect.width / 2.0, y: targetRect.height / 2.0), size: CGSize())
                             avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
+                            avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
                             
                             avatarListContainerNode.addSubnode(avatarListNode)
                             avatarListContainerNode.addSubnode(avatarListNode.controlsClippingOffsetNode)
@@ -646,6 +653,15 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     deinit {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
+        self.silenceTimer?.invalidate()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.highlightContainerNode.layer.cornerCurve = .continuous
+        }
     }
     
     override func selected() {
@@ -666,12 +682,19 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
         
         let startContainerAvatarPosition = sourceNode.avatarNode.view.convert(sourceNode.avatarNode.bounds, to: containerNode.view).center
         var animate = true
-        if startContainerAvatarPosition.x < -tileSize.width || startContainerAvatarPosition.x > containerNode.frame.width + tileSize.width {
-            animate = false
+        if containerNode.frame.width > containerNode.frame.height {
+            if startContainerAvatarPosition.y < -tileSize.height || startContainerAvatarPosition.y > containerNode.frame.height + tileSize.height {
+                animate = false
+            }
+        } else {
+            if startContainerAvatarPosition.x < -tileSize.width || startContainerAvatarPosition.x > containerNode.frame.width + tileSize.width {
+                animate = false
+            }
         }
         if animate {
             sourceNode.avatarNode.alpha = 0.0
-
+            sourceNode.audioLevelView?.alpha = 0.0
+            
             let initialAvatarPosition = self.avatarNode.position
             let initialBackgroundPosition = sourceNode.backgroundImageNode.position
             let initialContentPosition = sourceNode.contentWrapperNode.position
@@ -686,7 +709,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             containerNode.addSubnode(sourceNode.backgroundImageNode)
             containerNode.addSubnode(sourceNode.contentWrapperNode)
 
-            sourceNode.borderImageNode.alpha = 0.0
+            sourceNode.highlightNode.alpha = 0.0
             
             sourceNode.backgroundImageNode.layer.animatePosition(from: startContainerBackgroundPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
@@ -695,7 +718,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         sourceNode.contentWrapperNode.layer.removeAllAnimations()
                     })
                     sourceNode.backgroundImageNode.alpha = 1.0
-                    sourceNode.borderImageNode.alpha = 1.0
+                    sourceNode.highlightNode.alpha = 1.0
                     sourceNode.backgroundImageNode.position = initialBackgroundPosition
                     sourceNode.contextSourceNode.contentNode.insertSubnode(sourceNode.backgroundImageNode, at: 0)
                 }
@@ -704,11 +727,19 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             sourceNode.contentWrapperNode.layer.animatePosition(from: startContainerContentPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
                     sourceNode.avatarNode.alpha = 1.0
+                    sourceNode.audioLevelView?.alpha = 1.0
                     sourceNode.contentWrapperNode.position = initialContentPosition
                     sourceNode.offsetContainerNode.insertSubnode(sourceNode.contentWrapperNode, aboveSubnode: sourceNode.videoContainerNode)
                 }
             })
 
+            if let audioLevelView = self.audioLevelView {
+                audioLevelView.center = targetContainerAvatarPosition
+                containerNode.view.addSubview(audioLevelView)
+                
+                audioLevelView.layer.animateScale(from: 1.25, to: 1.0, duration: duration, timingFunction: timingFunction)
+                audioLevelView.layer.animatePosition(from: startContainerAvatarPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+            }
             self.avatarNode.position = targetContainerAvatarPosition
             containerNode.addSubnode(self.avatarNode)
             
@@ -717,6 +748,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     strongSelf.avatarNode.position = initialAvatarPosition
                     strongSelf.offsetContainerNode.addSubnode(strongSelf.avatarNode)
+                    if let audioLevelView = strongSelf.audioLevelView {
+                        audioLevelView.layer.removeAllAnimations()
+                        audioLevelView.center = initialAvatarPosition
+                        strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
+                    }
                 }
             })
 
@@ -1029,15 +1065,27 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.updateLevel(CGFloat(value))
                                     
                                     let avatarScale: CGFloat
-                                    if value > 0.0 {
+                                    if value > 0.02 {
                                         audioLevelView.startAnimating()
                                         avatarScale = 1.03 + level * 0.13
                                         if let wavesColor = strongSelf.wavesColor {
                                             audioLevelView.setColor(wavesColor, animated: true)
                                         }
+                                        
+                                        if let silenceTimer = strongSelf.silenceTimer {
+                                            silenceTimer.invalidate()
+                                            strongSelf.silenceTimer = nil
+                                        }
                                     } else {
-                                        audioLevelView.stopAnimating(duration: 0.5)
                                         avatarScale = 1.0
+                                        if strongSelf.silenceTimer == nil {
+                                            let silenceTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+                                                self?.audioLevelView?.stopAnimating(duration: 0.75)
+                                                self?.silenceTimer = nil
+                                            }, queue: Queue.mainQueue())
+                                            strongSelf.silenceTimer = silenceTimer
+                                            silenceTimer.start()
+                                        }
                                     }
                                     
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
@@ -1058,7 +1106,11 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightContainerNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: -UIScreenPixel), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel + 11.0))
+                    
+                    strongSelf.highlightContainerNode.cornerRadius = first ? 11.0 : 0.0
+                    
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                     
                     var hadMicrophoneNode = false
                     var hadRaiseHandNode = false
@@ -1171,8 +1223,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     var isHighlighted = false
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         if self.isHighlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
+            self.highlightContainerNode.alpha = 1.0
+            if self.highlightContainerNode.supernode == nil {
                 var anchorNode: ASDisplayNode?
                 if self.bottomStripeNode.supernode != nil {
                     anchorNode = self.bottomStripeNode
@@ -1180,24 +1232,24 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     anchorNode = self.topStripeNode
                 }
                 if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                    self.insertSubnode(self.highlightContainerNode, aboveSubnode: anchorNode)
                 } else {
-                    self.addSubnode(self.highlightedBackgroundNode)
+                    self.addSubnode(self.highlightContainerNode)
                 }
             }
         } else {
-            if self.highlightedBackgroundNode.supernode != nil {
+            if self.highlightContainerNode.supernode != nil {
                 if transition.isAnimated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+                    self.highlightContainerNode.layer.animateAlpha(from: self.highlightContainerNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
                         if let strongSelf = self {
                             if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                                strongSelf.highlightContainerNode.removeFromSupernode()
                             }
                         }
                     })
-                    self.highlightedBackgroundNode.alpha = 0.0
+                    self.highlightContainerNode.alpha = 0.0
                 } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
+                    self.highlightContainerNode.removeFromSupernode()
                 }
             }
         }

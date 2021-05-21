@@ -14,8 +14,8 @@ private let subtitleFont = Font.regular(13.0)
 private let white = UIColor(rgb: 0xffffff)
 private let greyColor = UIColor(rgb: 0x2c2c2e)
 private let secondaryGreyColor = UIColor(rgb: 0x1c1c1e)
-private let blue = UIColor(rgb: 0x0078ff)
-private let lightBlue = UIColor(rgb: 0x59c7f8)
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x3252ef)
@@ -607,7 +607,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.foregroundGradientLayer.type = .radial
         self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
-        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
+        self.foregroundGradientLayer.locations = [0.0, 0.55, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
@@ -798,12 +798,12 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             case .speaking:
                 targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
-                outerColor = UIColor(rgb: 0x21674f)
+                outerColor = UIColor(rgb: 0x134b22)
                 activeColor = green
             case .active:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x1d588d)
+                outerColor = UIColor(rgb: 0x002e5d)
                 activeColor = blue
             case .connecting:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
@@ -1296,8 +1296,8 @@ private final class VoiceBlobView: UIView {
     }
     
     public func setColor(_ color: UIColor) {
-        mediumBlob.setColor(color.withAlphaComponent(0.55))
-        bigBlob.setColor(color.withAlphaComponent(0.35))
+        mediumBlob.setColor(color.withAlphaComponent(0.5))
+        bigBlob.setColor(color.withAlphaComponent(0.21))
     }
     
     public func updateLevel(_ level: CGFloat) {

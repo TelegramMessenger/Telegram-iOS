@@ -9,7 +9,8 @@ private func edgeWidth(width: CGFloat) -> CGFloat {
     return min(44.0, floor(width / 6.0))
 }
 
-private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+let fadeWidth: CGFloat = 70.0
+private let leftFadeImage = generateImage(CGSize(width: fadeWidth, height: 32.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
     
@@ -19,10 +20,10 @@ private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaq
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
-    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
 })
 
-private let rightFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+private let rightFadeImage = generateImage(CGSize(width: fadeWidth, height: 32.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
     
@@ -32,7 +33,7 @@ private let rightFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opa
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
-    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
 })
 
 public struct GalleryPagerInsertItem {
@@ -80,8 +81,8 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     
     private let scrollView: UIScrollView
     
-    private let leftFadeNode: ASImageNode
-    private let rightFadeNode: ASImageNode
+    private let leftFadeNode: ASDisplayNode
+    private let rightFadeNode: ASDisplayNode
     private var highlightedSide: Bool?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
@@ -117,15 +118,13 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
         
-        self.leftFadeNode = ASImageNode()
-        self.leftFadeNode.contentMode = .scaleToFill
-        self.leftFadeNode.image = leftFadeImage
+        self.leftFadeNode = ASDisplayNode()
         self.leftFadeNode.alpha = 0.0
+        self.leftFadeNode.backgroundColor = leftFadeImage.flatMap { UIColor(patternImage: $0) }
         
-        self.rightFadeNode = ASImageNode()
-        self.rightFadeNode.contentMode = .scaleToFill
-        self.rightFadeNode.image = rightFadeImage
+        self.rightFadeNode = ASDisplayNode()
         self.rightFadeNode.alpha = 0.0
+        self.rightFadeNode.backgroundColor = rightFadeImage.flatMap { UIColor(patternImage: $0) }
         
         super.init()
         
@@ -293,7 +292,6 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             transition.animatePosition(node: centralItemNode, from: centralItemNode.position.offsetBy(dx: -updatedCentralPoint.x + centralPoint.x, dy: -updatedCentralPoint.y + centralPoint.y))
         }
         
-        let fadeWidth = min(72.0, layout.size.width * 0.2)
         self.leftFadeNode.frame = CGRect(x: 0.0, y: 0.0, width: fadeWidth, height: layout.size.height)
         self.rightFadeNode.frame = CGRect(x: layout.size.width - fadeWidth, y: 0.0, width: fadeWidth, height: layout.size.height)
     }

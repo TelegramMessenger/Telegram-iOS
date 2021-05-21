@@ -71,12 +71,15 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     private var statusNode: SemanticStatusNode?
     let textNode: ImmediateTextNode
     
-    private let largeButtonSize: CGFloat = 72.0
+    private let largeButtonSize: CGFloat
     
+    private var size: CGSize?
     private(set) var currentContent: Content?
     private(set) var currentText: String = ""
     
-    init() {
+    init(largeButtonSize: CGFloat = 72.0) {
+        self.largeButtonSize = largeButtonSize
+        
         self.wrapperNode = ASDisplayNode()
         self.contentContainer = ASDisplayNode()
         
@@ -145,9 +148,10 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         self.contentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         self.overlayHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
-        if self.currentContent != content {
+        if self.currentContent != content || self.size != size {
             let previousContent = self.currentContent
             self.currentContent = content
+            self.size = size
             
             if content.hasProgress {
                 let statusFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
@@ -201,7 +205,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     self.contentContainer.insertSubnode(animationNode, aboveSubnode: self.contentNode)
                 }
                 if let animationNode = self.animationNode {
-                    animationNode.frame = animationFrame
+                    animationNode.bounds = animationFrame
+                    animationNode.position = CGPoint(x: self.largeButtonSize / 2.0, y: self.largeButtonSize / 2.0)
                     if previousContent == nil {
                         animationNode.seekToEnd()
                     } else if previousContent?.image != content.image {
@@ -371,6 +376,9 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         
         transition.updatePosition(node: self.contentContainer, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateSublayerTransformScale(node: self.contentContainer, scale: scaleFactor)
+        if let animationNode = self.animationNode {
+            transition.updateTransformScale(node: animationNode, scale: isSmall ? 1.35 : 1.12)
+        }
         
         if self.currentText != text {
             self.textNode.attributedText = NSAttributedString(string: text, font: labelFont, textColor: .white)

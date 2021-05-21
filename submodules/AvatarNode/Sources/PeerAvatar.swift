@@ -87,12 +87,25 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
     }
 }
 
-public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
+public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, font: UIFont = avatarPlaceholderFont(size: 13.0), fullSize: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: false) {
-        iconSignal = signal
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+        if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
+            iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
+            |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in
+                if let fullSizeImage = fullSizeImage {
+                    return .single(fullSizeImage.0)
+                } else if let thumbnailImage = thumbnailImage {
+                    return .single(thumbnailImage.0)
+                } else {
+                    return .complete()
+                }
+            }
+        } else {
+            iconSignal = signal
             |> map { imageVersions -> UIImage? in
                 return imageVersions?.0
+            }
         }
     } else {
         let peerId = peer.id
@@ -103,7 +116,7 @@ public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize) 
         iconSignal = Signal { subscriber in
             let image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarPlaceholderFont(size: 13.0), letters: displayLetters, peerId: peerId)
+                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: font, letters: displayLetters, peerId: peerId)
             })?.withRenderingMode(.alwaysOriginal)
             
             subscriber.putNext(image)

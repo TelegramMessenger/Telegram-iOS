@@ -24,8 +24,6 @@ private let borderImage = generateImage(CGSize(width: 24.0, height: 24.0), rotat
     context.strokePath()
 })
 
-private let fadeHeight: CGFloat = 50.0
-
 final class VoiceChatTileItem: Equatable {
     enum Icon: Equatable {
         case none
@@ -80,13 +78,16 @@ final class VoiceChatTileItem: Equatable {
     }
 }
 
-private var fadeImage: UIImage? = {
-    return generateImage(CGSize(width: 1.0, height: fadeHeight), rotatedContext: { size, context in
+private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
+private let fadeHeight: CGFloat = 50.0
+
+var tileFadeImage: UIImage? = {
+    return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
-        let colorsArray = [UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 0.7).cgColor] as CFArray
-        var locations: [CGFloat] = [0.0, 1.0]
+        let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
+        var locations: [CGFloat] = [1.0, 0.0]
         let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     })
@@ -102,11 +103,11 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     var videoContainerNode: ASDisplayNode
     var videoNode: GroupVideoNode?
     let infoNode: ASDisplayNode
-    let fadeNode: ASImageNode
+    let fadeNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: VoiceChatMicrophoneNode?
-    private var highlightNode: ASImageNode
+    var highlightNode: ASImageNode
     private let statusNode: VoiceChatParticipantStatusNode
     
     private var profileNode: VoiceChatPeerProfileNode?
@@ -127,8 +128,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.contentNode = ASDisplayNode()
         self.contentNode.clipsToBounds = true
-        self.contentNode.cornerRadius = 11.0
-        
+        self.contentNode.cornerRadius = backgroundCornerRadius
+        if #available(iOS 13.0, *) {
+            self.contentNode.layer.cornerCurve = .continuous
+        }
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = panelBackgroundColor
         
@@ -137,11 +140,11 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.infoNode = ASDisplayNode()
         
-        self.fadeNode = ASImageNode()
+        self.fadeNode = ASDisplayNode()
         self.fadeNode.displaysAsynchronously = false
-        self.fadeNode.displayWithoutProcessing = true
-        self.fadeNode.contentMode = .scaleToFill
-        self.fadeNode.image = fadeImage
+        if let image = tileFadeImage {
+            self.fadeNode.backgroundColor = UIColor(patternImage: image)
+        }
         
         self.titleNode = ImmediateTextNode()
         self.statusNode = VoiceChatParticipantStatusNode()
@@ -336,10 +339,11 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         }
         
         let bounds = CGRect(origin: CGPoint(), size: size)
-        self.contentNode.frame = bounds
         self.containerNode.frame = bounds
         self.contextSourceNode.frame = bounds
         self.contextSourceNode.contentNode.frame = bounds
+        
+        transition.updateFrame(node: self.contentNode, frame: bounds)
         
         let extractedWidth = availableWidth
         let makeStatusLayout = self.statusNode.asyncLayout()
@@ -355,7 +359,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if self.videoContainerNode.supernode === self.contentNode {
             if let videoNode = self.videoNode {
                 transition.updateFrame(node: videoNode, frame: bounds)
-                videoNode.updateLayout(size: size, isLandscape: true, transition: itemTransition)
+                videoNode.updateLayout(size: size, layoutMode: .fillOrFitToSquare, transition: itemTransition)
             }
             transition.updateFrame(node: self.videoContainerNode, frame: bounds)
         }
@@ -411,7 +415,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                         
             if animate {
                 sourceNode.isHidden = true
-                Queue.mainQueue().after(0.4) {
+                Queue.mainQueue().after(0.6) {
                     sourceNode.isHidden = false
                 }
                 
@@ -429,10 +433,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                     }
                 })
                 
-                self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: transition)
+                self.videoNode?.updateLayout(size: self.bounds.size, layoutMode: .fillOrFitToSquare, transition: transition)
                 self.videoNode?.frame = self.bounds
             } else if !initialAnimate {
-                self.videoNode?.updateLayout(size: self.bounds.size, isLandscape: true, transition: .immediate)
+                self.videoNode?.updateLayout(size: self.bounds.size, layoutMode: .fillOrFitToSquare, transition: .immediate)
                 self.videoNode?.frame = self.bounds
                 
                 sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak sourceNode] _ in

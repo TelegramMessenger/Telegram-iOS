@@ -11,8 +11,8 @@ import AccountContext
 import LegacyComponents
 import AnimatedCountLabelNode
 
-private let blue = UIColor(rgb: 0x0078ff)
-private let lightBlue = UIColor(rgb: 0x59c7f8)
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x3252ef)
