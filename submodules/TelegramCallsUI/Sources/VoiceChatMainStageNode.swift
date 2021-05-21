@@ -348,6 +348,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 
                 infoView?.removeFromSuperview()
                 targetNode.alpha = 1.0
+                targetNode.highlightNode.layer.animateAlpha(from: 0.0, to: targetNode.highlightNode.alpha, duration: 0.2)
                 strongSelf.animatingOut = false
                 strongSelf.frame = originalFrame
                 strongSelf.update(size: initialFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)

@@ -155,7 +155,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     let backgroundImageNode: ASImageNode
     private let extractedBackgroundImageNode: ASImageNode
     let offsetContainerNode: ASDisplayNode
-    let borderImageNode: ASImageNode
+    let highlightNode: ASImageNode
     
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
@@ -215,10 +215,10 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.extractedBackgroundImageNode.displaysAsynchronously = false
         self.extractedBackgroundImageNode.alpha = 0.0
         
-        self.borderImageNode = ASImageNode()
-        self.borderImageNode.displaysAsynchronously = false
-        self.borderImageNode.image = borderImage
-        self.borderImageNode.isHidden = true
+        self.highlightNode = ASImageNode()
+        self.highlightNode.displaysAsynchronously = false
+        self.highlightNode.image = borderImage
+        self.highlightNode.isHidden = true
         
         self.offsetContainerNode = ASDisplayNode()
         
@@ -264,7 +264,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.contentWrapperNode.addSubnode(self.actionContainerNode)
         self.actionContainerNode.addSubnode(self.actionButtonNode)
         self.offsetContainerNode.addSubnode(self.avatarNode)
-        self.contextSourceNode.contentNode.addSubnode(self.borderImageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.highlightNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
                 
         self.containerNode.shouldBegin = { [weak self] location in
@@ -363,8 +363,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 })
 
                 if item.active {
-                    self.borderImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.borderImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
+                    self.highlightNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.highlightNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
                 }
 
                 self.backgroundImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: timingFunction)
@@ -405,8 +405,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 })
 
                 if item.active {
-                    self.borderImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.borderImageNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
+                    self.highlightNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.highlightNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, timingFunction: timingFunction)
                 }
                 
                 self.avatarNode.layer.animateScale(from: 0.8, to: 1.0, duration: duration, timingFunction: timingFunction)
@@ -588,7 +588,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.offsetContainerNode.frame = contentBounds
                     strongSelf.contextSourceNode.contentNode.frame = contentBounds
                     strongSelf.actionContainerNode.frame = contentBounds
-                    strongSelf.borderImageNode.frame = contentBounds
+                    strongSelf.highlightNode.frame = contentBounds
                     
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
@@ -832,7 +832,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.videoContainerNode.transform = CATransform3DMakeScale(videoContainerScale, videoContainerScale, 1.0)
                     }
                     
-                    strongSelf.borderImageNode.isHidden = !item.active
+                    strongSelf.highlightNode.isHidden = !item.active
                     
                     let canUpdateAvatarVisibility = !strongSelf.isExtracted && !strongSelf.animatingExtraction
                     

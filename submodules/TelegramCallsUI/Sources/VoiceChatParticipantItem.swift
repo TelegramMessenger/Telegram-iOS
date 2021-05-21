@@ -709,7 +709,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             containerNode.addSubnode(sourceNode.backgroundImageNode)
             containerNode.addSubnode(sourceNode.contentWrapperNode)
 
-            sourceNode.borderImageNode.alpha = 0.0
+            sourceNode.highlightNode.alpha = 0.0
             
             sourceNode.backgroundImageNode.layer.animatePosition(from: startContainerBackgroundPosition, to: targetContainerAvatarPosition, duration: duration, timingFunction: timingFunction, completion: { [weak sourceNode] _ in
                 if let sourceNode = sourceNode {
@@ -718,7 +718,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         sourceNode.contentWrapperNode.layer.removeAllAnimations()
                     })
                     sourceNode.backgroundImageNode.alpha = 1.0
-                    sourceNode.borderImageNode.alpha = 1.0
+                    sourceNode.highlightNode.alpha = 1.0
                     sourceNode.backgroundImageNode.position = initialBackgroundPosition
                     sourceNode.contextSourceNode.contentNode.insertSubnode(sourceNode.backgroundImageNode, at: 0)
                 }

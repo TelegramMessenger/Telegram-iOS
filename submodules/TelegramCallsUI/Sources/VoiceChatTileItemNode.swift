@@ -107,7 +107,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: VoiceChatMicrophoneNode?
-    private var highlightNode: ASImageNode
+    var highlightNode: ASImageNode
     private let statusNode: VoiceChatParticipantStatusNode
     
     private var profileNode: VoiceChatPeerProfileNode?
