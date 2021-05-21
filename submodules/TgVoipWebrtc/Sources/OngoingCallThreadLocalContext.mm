@@ -20,6 +20,7 @@
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
+#import "platform/darwin/VideoSampleBufferView.h"
 #import "platform/darwin/CustomExternalCapturer.h"
 #endif
 
@@ -110,6 +111,49 @@
 @end
 
 @implementation GLVideoView (VideoViewImpl)
+
+- (OngoingCallVideoOrientationWebrtc)orientation {
+    return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
+}
+
+- (CGFloat)aspect {
+    return self.internalAspect;
+}
+
+- (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
+    [self setInternalOrientation:(int)orientation];
+}
+
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated {
+    if (onOrientationUpdated) {
+        [self internalSetOnOrientationUpdated:^(int value, CGFloat aspect) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value, aspect);
+        }];
+    } else {
+        [self internalSetOnOrientationUpdated:nil];
+    }
+}
+
+- (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated {
+    if (onIsMirroredUpdated) {
+        [self internalSetOnIsMirroredUpdated:^(bool value) {
+            onIsMirroredUpdated(value);
+        }];
+    } else {
+        [self internalSetOnIsMirroredUpdated:nil];
+    }
+}
+
+@end
+
+@interface VideoSampleBufferView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
+
+@property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
+
+@end
+
+@implementation VideoSampleBufferView (VideoViewImpl)
 
 - (OngoingCallVideoOrientationWebrtc)orientation {
     return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
@@ -1228,7 +1272,7 @@ private:
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
-                VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+                VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
 #if TARGET_OS_IPHONE
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
 #else
