@@ -491,6 +491,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.pinButtonTitleNode.isHidden = !pinned
         self.pinButtonIconNode.image = !pinned ? generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white) : generateTintedImage(image: UIImage(bundleImageName: "Call/Unpin"), color: .white)
         
+        var firstTime = true
         var wavesColor = UIColor(rgb: 0x34c759)
         if let getAudioLevel = self.getAudioLevel, previousPeerEntry?.peer.id != peerEntry.peer.id {
             if let audioLevelView = self.audioLevelView {
@@ -528,7 +529,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     
                     let avatarScale: CGFloat
                     if value > 0.02 {
-                        audioLevelView.startAnimating(immediately: true)
+                        audioLevelView.startAnimating(immediately: firstTime)
                         avatarScale = 1.03 + level * 0.13
                         audioLevelView.setColor(wavesColor, animated: true)
                         
@@ -551,6 +552,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                 }
+                firstTime = false
             }))
         }
         

@@ -1625,6 +1625,9 @@ public final class VoiceChatController: ViewController {
                 if ignore {
                     return nil
                 }
+                if !strongSelf.readyVideoNodes.contains(endpointId) {
+                    return nil
+                }
                 for (listEndpointId, videoNode) in strongSelf.videoNodes {
                     if listEndpointId == endpointId {
                         return videoNode
@@ -4417,6 +4420,22 @@ public final class VoiceChatController: ViewController {
                                                     strongSelf.wideVideoNodes.insert(channel.endpointId)
                                                 }
                                                 strongSelf.updateMembers()
+                                                
+                                                if let interaction = strongSelf.itemInteraction {
+                                                    loop: for i in 0 ..< strongSelf.currentFullscreenEntries.count {
+                                                        let entry = strongSelf.currentFullscreenEntries[i]
+                                                        switch entry {
+                                                        case let .peer(peerEntry, _):
+                                                            if peerEntry.effectiveVideoEndpointId == channel.endpointId {
+                                                                let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                                                strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.fullscreenItem(context: strongSelf.context, presentationData: presentationData, interaction: interaction), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                                break loop
+                                                            }
+                                                        default:
+                                                            break
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }), forKey: channel.endpointId)
