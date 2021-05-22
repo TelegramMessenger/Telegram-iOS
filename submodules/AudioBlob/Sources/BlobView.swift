@@ -114,6 +114,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         if !immediately {
             mediumBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
             bigBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+        } else {
+            mediumBlob.layer.removeAllAnimations()
+            bigBlob.layer.removeAllAnimations()
         }
         
         updateBlobsState()

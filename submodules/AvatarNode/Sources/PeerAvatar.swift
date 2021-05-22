@@ -87,9 +87,9 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
     }
 }
 
-public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, font: UIFont = avatarPlaceholderFont(size: 13.0), fullSize: Bool = false) -> Signal<UIImage?, NoError> {
+public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, round: round, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
         if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
             iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
             |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in
@@ -113,10 +113,13 @@ public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, 
         if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
             displayLetters = [displayLetters[0]]
         }
+        if !drawLetters {
+            displayLetters = []
+        }
         iconSignal = Signal { subscriber in
             let image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: font, letters: displayLetters, peerId: peerId)
+                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), round: round, font: font, letters: displayLetters, peerId: peerId)
             })?.withRenderingMode(.alwaysOriginal)
             
             subscriber.putNext(image)

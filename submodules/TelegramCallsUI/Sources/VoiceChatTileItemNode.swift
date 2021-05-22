@@ -129,9 +129,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.contentNode = ASDisplayNode()
         self.contentNode.clipsToBounds = true
         self.contentNode.cornerRadius = backgroundCornerRadius
-        if #available(iOS 13.0, *) {
-            self.contentNode.layer.cornerCurve = .continuous
-        }
+
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = panelBackgroundColor
         
@@ -202,6 +200,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.contentNode.layer.cornerCurve = .continuous
+        }
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
     }
@@ -405,12 +407,6 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 videoNode.alpha = 1.0
                 self.videoNode = videoNode
                 self.videoContainerNode.addSubnode(videoNode)
- 
-                if animate {
-//                    self.videoContainerNode.layer.animateScale(from: sourceNode.bounds.width / videoSize.width, to: tileSize.width / videoSize.width, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-//                    self.videoContainerNode.layer.animate(from: (tileSize.width / 2.0) as NSNumber, to: videoCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false, completion: { _ in
-//                    })
-                }
             }
                         
             if animate {
@@ -445,7 +441,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 sourceNode.layer.animateScale(from: 1.0, to: 0.0, duration: duration, timingFunction: timingFunction)
             }
             
-            self.fadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            if transition.isAnimated {
+                self.fadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
         }
     }
 }
