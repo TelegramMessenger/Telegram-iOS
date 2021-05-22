@@ -48,12 +48,12 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private let audioLevelDisposable = MetaDisposable()
     private let speakingPeerDisposable = MetaDisposable()
     private let speakingAudioLevelDisposable = MetaDisposable()
-    private var avatarNode: ASImageNode
+    private var backdropAvatarNode: ImageNode
+    private var backdropEffectView: UIVisualEffectView?
+    private var avatarNode: ImageNode
     private let titleNode: ImmediateTextNode
     private let microphoneNode: VoiceChatMicrophoneNode
-    
-    private let avatarDisposable = MetaDisposable()
-    
+        
     private let speakingContainerNode: ASDisplayNode
     private var speakingEffectView: UIVisualEffectView?
     private let speakingAvatarNode: AvatarNode
@@ -129,7 +129,12 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.pinButtonTitleNode.attributedText = NSAttributedString(string: "Unpin", font: Font.regular(17.0), textColor: .white)
         self.pinButtonNode = HighlightableButtonNode()
         
-        self.avatarNode = ASImageNode()
+        self.backdropAvatarNode = ImageNode()
+        self.backdropAvatarNode.contentMode = .scaleAspectFill
+        self.backdropAvatarNode.displaysAsynchronously = false
+        self.backdropAvatarNode.isHidden = true
+        
+        self.avatarNode = ImageNode()
         self.avatarNode.displaysAsynchronously = false
         self.avatarNode.isHidden = true
         
@@ -152,14 +157,12 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         self.clipsToBounds = true
         self.cornerRadius = backgroundCornerRadius
-        if #available(iOS 13.0, *) {
-            self.layer.cornerCurve = .continuous
-        }
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.topFadeNode)
         self.addSubnode(self.bottomFadeNode)
         self.addSubnode(self.bottomFillNode)
+        self.addSubnode(self.backdropAvatarNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.microphoneNode)
@@ -215,7 +218,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     }
     
     deinit {
-        self.avatarDisposable.dispose()
         self.videoReadyDisposable.dispose()
         self.audioLevelDisposable.dispose()
         self.speakingPeerDisposable.dispose()
@@ -226,9 +228,24 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .continuous
+        }
+        
         let speakingEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         self.speakingContainerNode.view.insertSubview(speakingEffectView, at: 0)
         self.speakingEffectView = speakingEffectView
+        
+        let effect: UIVisualEffect
+        if #available(iOS 13.0, *) {
+            effect = UIBlurEffect(style: .systemMaterialDark)
+        } else {
+            effect = UIBlurEffect(style: .dark)
+        }
+        let backdropEffectView = UIVisualEffectView(effect: effect)
+        backdropEffectView.isHidden = true
+        self.view.insertSubview(backdropEffectView, aboveSubview: self.backdropAvatarNode.view)
+        self.backdropEffectView = backdropEffectView
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
         
@@ -476,12 +493,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
             let peer = peerEntry.peer
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            self.avatarDisposable.set((peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true)
-            |> deliverOnMainQueue).start(next: { [weak self] image in
-                if let strongSelf = self {
-                    strongSelf.avatarNode.image = image
-                }
-            }))
+            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false))
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
             self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
             if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
@@ -581,6 +594,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: .white), animated: true)
     }
     
+    private func setAvatarHidden(_ hidden: Bool) {
+        self.backdropAvatarNode.isHidden = hidden
+        self.backdropEffectView?.isHidden = hidden
+        self.avatarNode.isHidden = hidden
+        self.audioLevelView?.isHidden = hidden
+    }
+    
     func update(peer: (peer: PeerId, endpointId: String?)?, waitForFullSize: Bool, completion: (() -> Void)? = nil) {
         let previousPeer = self.currentPeer
         if previousPeer?.0 == peer?.0 && previousPeer?.1 == peer?.1 {
@@ -594,8 +614,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let (_, endpointId) = peer {
             if endpointId != previousPeer?.1 {
                 if let endpointId = endpointId {
-                    self.avatarNode.isHidden = true
-                    self.audioLevelView?.isHidden = true
+                    self.setAvatarHidden(true)
                     
                     self.call.makeIncomingVideoView(endpointId: endpointId, completion: { [weak self] videoView in
                         Queue.mainQueue().async {
@@ -643,15 +662,14 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                         }
                     })
                 } else {
-                    self.avatarNode.isHidden = false
-                    self.audioLevelView?.isHidden = false
+                    self.setAvatarHidden(false)
                     if let currentVideoNode = self.currentVideoNode {
                         currentVideoNode.removeFromSupernode()
                         self.currentVideoNode = nil
                     }
                 }
             } else {
-                self.audioLevelView?.isHidden = self.currentPeer?.1 != nil
+                self.setAvatarHidden(endpointId != nil)
                 completion?()
             }
         } else {
@@ -705,6 +723,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.backdropAvatarNode, frame: CGRect(origin: CGPoint(), size: size))
+        if let backdropEffectView = self.backdropEffectView {
+            transition.updateFrame(view: backdropEffectView, frame: CGRect(origin: CGPoint(), size: size))
+        }
         
         let avatarSize = CGSize(width: 180.0, height: 180.0)
         let avatarFrame = CGRect(origin: CGPoint(x: (size.width - avatarSize.width) / 2.0, y: (size.height - avatarSize.height) / 2.0), size: avatarSize)

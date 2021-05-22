@@ -132,6 +132,14 @@ private final class CallVideoNode: ASDisplayNode {
         self.isReadyTimer?.invalidate()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .continuous
+        }
+    }
+    
     func animateRadialMask(from fromRect: CGRect, to toRect: CGRect) {
         let maskLayer = CAShapeLayer()
         maskLayer.frame = fromRect

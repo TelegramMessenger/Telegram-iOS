@@ -688,7 +688,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                     
-                                    if let item = strongSelf.item, strongSelf.videoNode != nil || item.active {
+                                    if let item = strongSelf.item, strongSelf.videoNode != nil && !item.active {
                                         audioLevelView.alpha = 0.0
                                     }
                                 }

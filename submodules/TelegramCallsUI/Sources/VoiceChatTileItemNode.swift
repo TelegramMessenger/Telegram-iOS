@@ -129,9 +129,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.contentNode = ASDisplayNode()
         self.contentNode.clipsToBounds = true
         self.contentNode.cornerRadius = backgroundCornerRadius
-        if #available(iOS 13.0, *) {
-            self.contentNode.layer.cornerCurve = .continuous
-        }
+
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = panelBackgroundColor
         
@@ -202,6 +200,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.contentNode.layer.cornerCurve = .continuous
+        }
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
     }
