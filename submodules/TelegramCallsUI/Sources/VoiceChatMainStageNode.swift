@@ -284,10 +284,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     }
     private var animatingIn = false
     private var animatingOut = false
+    private var appeared = false
+    
     func animateTransitionIn(from sourceNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
         guard let sourceNode = sourceNode as? VoiceChatTileItemNode, let _ = sourceNode.item, let (_, sideInset, bottomInset, isLandscape) = self.validLayout else {
             return
         }
+        self.appeared = true
                 
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
@@ -326,6 +329,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         guard let (_, sideInset, bottomInset, isLandscape) = self.validLayout else {
             return
         }
+        
+        self.appeared = false
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
@@ -543,14 +548,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.audioLevelNode.startAnimating(immediately: true)
         
         if let getAudioLevel = self.getAudioLevel, previousPeerEntry?.peer.id != peerEntry.peer.id {
+            self.audioLevelNode.isHidden = self.currentPeer?.1 != nil
             self.audioLevelDisposable.set((getAudioLevel(peerEntry.peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] value in
                 guard let strongSelf = self else {
                     return
                 }
-                
-                strongSelf.audioLevelNode.isHidden = strongSelf.currentPeer?.1 != nil
-                                
+                                    
                 let level = min(1.5, max(0.0, CGFloat(value)))
                 
                 strongSelf.audioLevelNode.updateLevel(CGFloat(value))
@@ -590,7 +594,14 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let (_, endpointId) = peer {
             if endpointId != previousPeer?.1 {
                 if let endpointId = endpointId {
-                    self.setAvatarHidden(true)
+                    var delayTransition = false
+                    if previousPeer?.0 == peer?.0 && self.appeared {
+                        delayTransition = true
+                    }
+                    
+                    if !delayTransition {
+                        self.setAvatarHidden(true)
+                    }
                     
                     self.call.makeIncomingVideoView(endpointId: endpointId, completion: { [weak self] videoView in
                         Queue.mainQueue().async {
@@ -630,6 +641,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     strongSelf.currentVideoNode = videoNode
                                     strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
                                     
+                                    if delayTransition {
+                                        videoNode.alpha = 0.0
+                                    }
                                     if waitForFullSize {
                                         strongSelf.videoReadyDisposable.set((videoNode.ready
                                         |> filter { $0 }
@@ -643,8 +657,23 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                                         strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                                     }
                                                 }
-                                                if let previousVideoNode = previousVideoNode {
-                                                    previousVideoNode.removeFromSupernode()
+ 
+                                                if delayTransition {
+                                                    if let videoNode = strongSelf.currentVideoNode {
+                                                        videoNode.alpha = 1.0
+                                                        videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                                                            if let strongSelf = self {
+                                                                strongSelf.setAvatarHidden(true)
+                                                                if let previousVideoNode = previousVideoNode {
+                                                                    previousVideoNode.removeFromSupernode()
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                } else {
+                                                    if let previousVideoNode = previousVideoNode {
+                                                        previousVideoNode.removeFromSupernode()
+                                                    }
                                                 }
                                             }
                                         }))
@@ -664,9 +693,17 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     })
                 } else {
                     self.setAvatarHidden(false)
-                    if let currentVideoNode = self.currentVideoNode {
-                        currentVideoNode.removeFromSupernode()
-                        self.currentVideoNode = nil
+                    if self.appeared {
+                        if let currentVideoNode = self.currentVideoNode {
+                            currentVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak currentVideoNode] _ in
+                                currentVideoNode?.removeFromSupernode()
+                            })
+                        }
+                    } else {
+                        if let currentVideoNode = self.currentVideoNode {
+                            currentVideoNode.removeFromSupernode()
+                            self.currentVideoNode = nil
+                        }
                     }
                 }
             } else {

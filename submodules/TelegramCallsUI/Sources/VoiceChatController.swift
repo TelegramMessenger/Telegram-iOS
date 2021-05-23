@@ -747,6 +747,7 @@ public final class VoiceChatController: ViewController {
         private var currentNormalButtonColor: UIColor?
         private var currentActiveButtonColor: UIColor?
         
+        private var mainEntry: VoiceChatPeerEntry?
         private var currentEntries: [ListEntry] = []
         private var currentFullscreenEntries: [ListEntry] = []
         
@@ -1840,7 +1841,7 @@ public final class VoiceChatController: ViewController {
                     } else if strongSelf.peerIdToEndpoint.count > 0 {
                         for entry in strongSelf.currentFullscreenEntries {
                             if case let .peer(peerEntry, _) = entry {
-                                if let videoEndpointId = peerEntry.effectiveVideoEndpointId {
+                                if let _ = peerEntry.effectiveVideoEndpointId {
                                     maxLevelWithVideo = (peerEntry.peer.id, 0.0)
                                     break
                                 }
@@ -4162,11 +4163,11 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers() {
-            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set())
+        private func updateMembers(maybeUpdateVideo: Bool = true) {
+            self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), maybeUpdateVideo: maybeUpdateVideo)
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>, updatePinnedPeer: Bool = true) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>, maybeUpdateVideo: Bool = true) {
             var disableAnimation = false
             if self.currentCallMembers?.1 != callMembers.1 {
                 disableAnimation = true
@@ -4193,6 +4194,7 @@ public final class VoiceChatController: ViewController {
             var entryByPeerId: [PeerId: VoiceChatPeerEntry] = [:]
             var latestWideVideo: String? = nil
             
+            var mainEntry: VoiceChatPeerEntry?
             for member in callMembers.0 {
                 if processedPeerIds.contains(member.peer.id) {
                     continue
@@ -4270,7 +4272,7 @@ public final class VoiceChatController: ViewController {
                     isLandscape: self.isLandscape
                 )
                 if peerEntry.active {
-                    self.mainStageNode.update(peerEntry: peerEntry, pinned: self.currentForcedSpeaker != nil)
+                    mainEntry = peerEntry
                 }
                 entryByPeerId[peerEntry.peer.id] = peerEntry
                 
@@ -4390,6 +4392,19 @@ public final class VoiceChatController: ViewController {
                         
             guard self.didSetDataReady || !self.isPanning else {
                 return
+            }
+            
+            let previousMainEntry = self.mainEntry
+            self.mainEntry = mainEntry
+            if let mainEntry = mainEntry {
+                self.mainStageNode.update(peerEntry: mainEntry, pinned: self.currentForcedSpeaker != nil)
+                
+                if let previousMainEntry = previousMainEntry, maybeUpdateVideo {
+                    if previousMainEntry.effectiveVideoEndpointId != mainEntry.effectiveVideoEndpointId {
+                        self.updateMainVideo(waitForFullSize: true, entries: fullscreenEntries, force: true)
+                        return
+                    }
+                }
             }
             
             self.updateRequestedVideoChannels()
@@ -4557,13 +4572,13 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        private func updateMainVideo(waitForFullSize: Bool, updateMembers: Bool = true, force: Bool = false, completion: (() -> Void)? = nil) {
+        private func updateMainVideo(waitForFullSize: Bool, entries: [ListEntry]? = nil, updateMembers: Bool = true, force: Bool = false, completion: (() -> Void)? = nil) {
             let effectiveMainSpeaker = self.currentForcedSpeaker ?? self.currentDominantSpeaker.flatMap { ($0.0, $0.1) }
             guard effectiveMainSpeaker?.0 != self.effectiveSpeaker?.0 || effectiveMainSpeaker?.1 != self.effectiveSpeaker?.1 || force else {
                 return
             }
             
-            let currentEntries = self.currentFullscreenEntries
+            let currentEntries = entries ?? self.currentFullscreenEntries
             var effectiveSpeaker: (PeerId, String?)? = nil
             var anySpeakerWithVideo: (PeerId, String?)? = nil
             var anySpeaker: PeerId? = nil
@@ -4600,7 +4615,7 @@ public final class VoiceChatController: ViewController {
             
             self.effectiveSpeaker = effectiveSpeaker
             if updateMembers {
-                self.updateMembers()
+                self.updateMembers(maybeUpdateVideo: false)
             }
             self.mainStageNode.update(peer: effectiveSpeaker, waitForFullSize: waitForFullSize, completion: {
                 completion?()
