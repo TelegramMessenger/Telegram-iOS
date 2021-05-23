@@ -601,6 +601,12 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     }
                                     
                                     let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
+                                    videoNode.tapped = { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.tap()
+                                    }
                                     videoNode.sourceContainerNode.activate = { [weak self] sourceNode in
                                         guard let strongSelf = self else {
                                             return

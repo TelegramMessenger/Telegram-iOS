@@ -274,7 +274,7 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if let backdropEffectView = self.backdropEffectView {
-            let maxSide = max(bounds.width, bounds.height)
+            let maxSide = max(bounds.width, bounds.height) + 32.0
             let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.height - maxSide) / 2.0, width: maxSide, height: maxSide)
             
             if case let .animated(duration, .spring) = transition {
