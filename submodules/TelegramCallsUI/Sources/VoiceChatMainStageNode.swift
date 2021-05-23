@@ -705,8 +705,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                             self.currentVideoNode = nil
                         }
                     }
+                    completion?()
                 }
             } else {
+                if let currentVideoNode = self.currentVideoNode {
+                    currentVideoNode.removeFromSupernode()
+                    self.currentVideoNode = nil
+                }
                 self.setAvatarHidden(endpointId != nil)
                 completion?()
             }

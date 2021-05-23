@@ -267,7 +267,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.contextSourceNode, gesture)
+            if item.peer.smallProfileImage != nil {
+                contextAction(strongSelf.contextSourceNode, gesture)
+            }
         }
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -589,11 +591,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     
-                    if strongSelf.isExtracted {
-                        strongSelf.backgroundImageNode.frame = extractedRect
-                    } else {
-                        strongSelf.backgroundImageNode.frame = nonExtractedRect
-                    }
+                    strongSelf.backgroundImageNode.frame = nonExtractedRect
+                
                     if strongSelf.backgroundImageNode.image == nil {
                         strongSelf.backgroundImageNode.image = generateStretchableFilledCircleImage(diameter: backgroundCornerRadius * 2.0, color: UIColor(rgb: 0x1c1c1e))
                         strongSelf.backgroundImageNode.alpha = 1.0

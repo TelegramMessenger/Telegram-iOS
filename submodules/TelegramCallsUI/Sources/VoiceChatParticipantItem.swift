@@ -1056,7 +1056,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
                                     audioLevelView.setColor(wavesColor)
-                                    audioLevelView.alpha = 1.0
+                                    audioLevelView.alpha = strongSelf.isExtracted ? 0.0 : 1.0
                                     
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
