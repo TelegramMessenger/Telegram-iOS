@@ -162,14 +162,13 @@ public final class VoiceChatOverlayController: ViewController {
         
         private var animating = false
         private var dismissed = false
-        func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
+        func animateOut(reclaim: Bool, targetPosition: CGPoint, completion: @escaping (Bool) -> Void) {
             guard let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode, let layout = self.validLayout else {
                 return
             }
             
             if reclaim {
                 self.dismissed = true
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - bottomAreaHeight / 2.0 - 3.0)
                 if self.isSlidOffscreen {
                     self.isSlidOffscreen = false
                     self.isButtonHidden = true
@@ -371,8 +370,8 @@ public final class VoiceChatOverlayController: ViewController {
         completion?()
     }
             
-    func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
-        self.controllerNode.animateOut(reclaim: reclaim, completion: completion)
+    func animateOut(reclaim: Bool, targetPosition: CGPoint, completion: @escaping (Bool) -> Void) {
+        self.controllerNode.animateOut(reclaim: reclaim, targetPosition: targetPosition, completion: completion)
     }
     
     public func updateVisibility() {

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import AccountContext
+import ContextUI
 
 final class GroupVideoNode: ASDisplayNode {
     enum Position {
@@ -18,6 +19,8 @@ final class GroupVideoNode: ASDisplayNode {
         case fillVertical
     }
     
+    let sourceContainerNode: PinchSourceContainerNode
+    private let containerNode: ASDisplayNode
     private let videoViewContainer: UIView
     private let videoView: PresentationCallVideoView
     
@@ -38,16 +41,18 @@ final class GroupVideoNode: ASDisplayNode {
     }
     
     init(videoView: PresentationCallVideoView, backdropVideoView: PresentationCallVideoView?) {
+        self.sourceContainerNode = PinchSourceContainerNode()
+        self.containerNode = ASDisplayNode()
         self.videoViewContainer = UIView()
+        self.videoViewContainer.isUserInteractionEnabled = false
         self.videoView = videoView
         
         self.backdropVideoViewContainer = UIView()
+        self.backdropVideoViewContainer.isUserInteractionEnabled = false
         self.backdropVideoView = backdropVideoView
         
         super.init()
-        
-        self.isUserInteractionEnabled = false
-        
+                
         if let backdropVideoView = backdropVideoView {
             self.backdropVideoViewContainer.addSubview(backdropVideoView.view)
             self.view.addSubview(self.backdropVideoViewContainer)
@@ -64,7 +69,9 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         self.videoViewContainer.addSubview(self.videoView.view)
-        self.view.addSubview(self.videoViewContainer)
+        self.addSubnode(self.sourceContainerNode)
+        self.containerNode.view.addSubview(self.videoViewContainer)
+        self.sourceContainerNode.contentNode.addSubnode(self.containerNode)
         
         self.clipsToBounds = true
         
@@ -91,7 +98,7 @@ final class GroupVideoNode: ASDisplayNode {
             }
         })
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        self.containerNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
@@ -170,6 +177,9 @@ final class GroupVideoNode: ASDisplayNode {
     func updateLayout(size: CGSize, layoutMode: LayoutMode, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, layoutMode)
         let bounds = CGRect(origin: CGPoint(), size: size)
+        self.sourceContainerNode.update(size: size, transition: .immediate)
+        transition.updateFrameAsPositionAndBounds(node: self.sourceContainerNode, frame: bounds)
+        transition.updateFrameAsPositionAndBounds(node: self.containerNode, frame: bounds)
         transition.updateFrameAsPositionAndBounds(layer: self.videoViewContainer.layer, frame: bounds)
         transition.updateFrameAsPositionAndBounds(layer: self.backdropVideoViewContainer.layer, frame: bounds)
         
@@ -264,7 +274,7 @@ final class GroupVideoNode: ASDisplayNode {
         }
         
         if let backdropEffectView = self.backdropEffectView {
-            let maxSide = max(bounds.width, bounds.height) + 32.0
+            let maxSide = max(bounds.width, bounds.height)
             let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.height - maxSide) / 2.0, width: maxSide, height: maxSide)
             
             if case let .animated(duration, .spring) = transition {

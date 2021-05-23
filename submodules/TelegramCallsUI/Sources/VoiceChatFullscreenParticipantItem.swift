@@ -31,16 +31,7 @@ private let constructiveColor: UIColor = UIColor(rgb: 0x34c759)
 private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
 private let borderLineWidth: CGFloat = 2.0
-private let borderImage = generateImage(CGSize(width: tileSize.width, height: tileSize.height), rotatedContext: { size, context in
-    let bounds = CGRect(origin: CGPoint(), size: size)
-    context.clear(bounds)
-    
-    context.setLineWidth(borderLineWidth)
-    context.setStrokeColor(constructiveColor.cgColor)
-    
-    context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: (borderLineWidth - UIScreenPixel) / 2.0, dy: (borderLineWidth - UIScreenPixel) / 2.0), cornerRadius: backgroundCornerRadius - UIScreenPixel).cgPath)
-    context.strokePath()
-})
+
 
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
 private let fadeHeight: CGFloat = 50.0
@@ -78,6 +69,7 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     let peer: Peer
     let icon: Icon
     let text: VoiceChatParticipantItem.ParticipantText
+    let textColor: Color
     let color: Color
     let isLandscape: Bool
     let active: Bool
@@ -89,13 +81,14 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
+    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, textColor: Color, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.nameDisplayOrder = nameDisplayOrder
         self.context = context
         self.peer = peer
         self.icon = icon
         self.text = text
+        self.textColor = textColor
         self.color = color
         self.isLandscape = isLandscape
         self.active = active
@@ -155,7 +148,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     let backgroundImageNode: ASImageNode
     private let extractedBackgroundImageNode: ASImageNode
     let offsetContainerNode: ASDisplayNode
-    let highlightNode: ASImageNode
+    let highlightNode: VoiceChatTileHighlightNode
     
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
@@ -212,9 +205,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.extractedBackgroundImageNode.displaysAsynchronously = false
         self.extractedBackgroundImageNode.alpha = 0.0
         
-        self.highlightNode = ASImageNode()
-        self.highlightNode.displaysAsynchronously = false
-        self.highlightNode.image = borderImage
+        self.highlightNode = VoiceChatTileHighlightNode()
         self.highlightNode.isHidden = true
         
         self.offsetContainerNode = ASDisplayNode()
@@ -235,6 +226,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.videoContainerNode.addSubnode(self.videoFadeNode)
         
         self.titleNode = TextNode()
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
@@ -464,7 +456,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             
             var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             if !hasVideo || item.active {
-                switch item.color {
+                switch item.textColor {
                     case .generic:
                         titleColor = item.presentationData.theme.list.itemPrimaryTextColor
                     case .accent:
@@ -492,15 +484,22 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             } else if let channel = item.peer as? TelegramChannel {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
             }
-            
+        
             var wavesColor = UIColor(rgb: 0x34c759)
+            var gradient: VoiceChatTileHighlightNode.Gradient = .active
             switch item.color {
                 case .accent:
                     wavesColor = accentColor
+                case .constructive:
+                    gradient = .speaking
                 case .destructive:
                     wavesColor = destructiveColor
                 default:
                     break
+            }
+            var titleUpdated = false
+            if let currentColor = currentItem?.textColor, currentColor != item.textColor {
+                titleUpdated = true
             }
 
             let leftInset: CGFloat = 58.0 + params.leftInset
@@ -610,6 +609,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.contextSourceNode.contentNode.frame = contentBounds
                     strongSelf.actionContainerNode.frame = contentBounds
                     strongSelf.highlightNode.frame = contentBounds
+                    strongSelf.highlightNode.updateLayout(size: contentBounds.size, transition: .immediate)
                     
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
@@ -628,6 +628,15 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                                                             
+                    
+                    if titleUpdated, let snapshotView = strongSelf.titleNode.view.snapshotContentTree() {
+                        strongSelf.titleNode.view.superview?.addSubview(snapshotView)
+                        snapshotView.frame = strongSelf.titleNode.view.frame
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                    
                     let _ = titleApply()               
                     transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                 
@@ -652,6 +661,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)
                     
+                    strongSelf.highlightNode.updateGlowAndGradientAnimations(type: gradient, animated: true)
+                    
                     let blobFrame = avatarFrame.insetBy(dx: -18.0, dy: -18.0)
                     if let getAudioLevel = item.getAudioLevel {
                         if !strongSelf.didSetupAudioLevel || currentItem?.peer.id != item.peer.id {
@@ -662,6 +673,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                 guard let strongSelf = self else {
                                     return
                                 }
+                                
+                                strongSelf.highlightNode.updateLevel(CGFloat(value))
                                 
                                 if strongSelf.audioLevelView == nil, value > 0.0 {
                                     let audioLevelView = VoiceBlobView(
@@ -701,9 +714,6 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     if value > 0.02 {
                                         audioLevelView.startAnimating()
                                         avatarScale = 1.03 + level * 0.13
-                                        if let wavesColor = strongSelf.wavesColor {
-                                            audioLevelView.setColor(wavesColor, animated: true)
-                                        }
 
                                         if let silenceTimer = strongSelf.silenceTimer {
                                             silenceTimer.invalidate()
@@ -719,6 +729,10 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                             strongSelf.silenceTimer = silenceTimer
                                             silenceTimer.start()
                                         }
+                                    }
+                                    
+                                    if let wavesColor = strongSelf.wavesColor {
+                                        audioLevelView.setColor(wavesColor, animated: true)
                                     }
                                     
                                     if !strongSelf.animatingSelection {

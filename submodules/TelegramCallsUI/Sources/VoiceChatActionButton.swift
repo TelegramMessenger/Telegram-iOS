@@ -813,7 +813,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x3b3474)
+                outerColor = UIColor(rgb: 0x24306b)
                 activeColor = purple
         }
         self.updatedColors?(outerColor, activeColor)

@@ -269,7 +269,8 @@ private extension PresentationGroupCallState {
             title: title,
             raisedHand: false,
             scheduleTimestamp: scheduleTimestamp,
-            subscribedToScheduled: subscribedToScheduled
+            subscribedToScheduled: subscribedToScheduled,
+            isVideoEnabled: false
         )
     }
 }
@@ -987,7 +988,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 var topParticipants: [GroupCallParticipantsContext.Participant] = []
 
                 var members = PresentationGroupCallMembers(
@@ -1214,7 +1215,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 scheduleTimestamp: self.stateValue.scheduleTimestamp,
                 subscribedToScheduled: self.stateValue.subscribedToScheduled,
                 totalCount: 0,
-                isVideoEnabled: false,
+                isVideoEnabled: callInfo.isVideoEnabled,
                 version: 0
             ),
             previousServiceState: nil
@@ -1969,7 +1970,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
                     strongSelf.stateValue.title = state.title
                     strongSelf.stateValue.scheduleTimestamp = state.scheduleTimestamp
-                                        
+                    strongSelf.stateValue.isVideoEnabled = state.isVideoEnabled
+                    
                     strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                         id: callInfo.id,
                         accessHash: callInfo.accessHash,

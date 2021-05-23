@@ -11,18 +11,7 @@ import TelegramUIPreferences
 import TelegramPresentationData
 
 private let backgroundCornerRadius: CGFloat = 11.0
-private let constructiveColor: UIColor = UIColor(rgb: 0x34c759)
 private let borderLineWidth: CGFloat = 2.0
-private let borderImage = generateImage(CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
-    let bounds = CGRect(origin: CGPoint(), size: size)
-    context.clear(bounds)
-    
-    context.setLineWidth(borderLineWidth)
-    context.setStrokeColor(constructiveColor.cgColor)
-    
-    context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: (borderLineWidth - UIScreenPixel) / 2.0, dy: (borderLineWidth - UIScreenPixel) / 2.0), cornerRadius: backgroundCornerRadius - UIScreenPixel).cgPath)
-    context.strokePath()
-})
 
 final class VoiceChatTileItem: Equatable {
     enum Icon: Equatable {
@@ -107,7 +96,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: VoiceChatMicrophoneNode?
-    var highlightNode: ASImageNode
+    var highlightNode: VoiceChatTileHighlightNode
     private let statusNode: VoiceChatParticipantStatusNode
     
     private var profileNode: VoiceChatPeerProfileNode?
@@ -151,10 +140,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        self.highlightNode = ASImageNode()
-        self.highlightNode.contentMode = .scaleToFill
-        self.highlightNode.image = borderImage?.stretchableImage(withLeftCapWidth: 12, topCapHeight: 12)
+        self.highlightNode = VoiceChatTileHighlightNode()
         self.highlightNode.alpha = 0.0
+        self.highlightNode.updateGlowAndGradientAnimations(type: .speaking)
         
         super.init()
         
@@ -256,19 +244,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             let previousItem = self.item
             self.item = item
             
-            if false, let getAudioLevel = item.getAudioLevel {
+            if let getAudioLevel = item.getAudioLevel {
                 self.audioLevelDisposable.set((getAudioLevel()
                 |> deliverOnMainQueue).start(next: { [weak self] value in
                     guard let strongSelf = self else {
                         return
                     }
-                    
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                    if value > 0.4 {
-                        transition.updateAlpha(node: strongSelf.highlightNode, alpha: 1.0)
-                    } else {
-                        transition.updateAlpha(node: strongSelf.highlightNode, alpha: 0.0)
-                    }
+                    strongSelf.highlightNode.updateLevel(CGFloat(value))
                 }))
             }
             
@@ -368,6 +350,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         transition.updateFrame(node: self.backgroundNode, frame: bounds)
         transition.updateFrame(node: self.highlightNode, frame: bounds)
+        self.highlightNode.updateLayout(size: bounds.size, transition: transition)
         transition.updateFrame(node: self.infoNode, frame: bounds)
         transition.updateFrame(node: self.fadeNode, frame: CGRect(x: 0.0, y: size.height - fadeHeight, width: size.width, height: fadeHeight))
         
@@ -463,8 +446,8 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
         case muted
     }
     
-    private let maskView: UIView
-    private let maskLayer = CAShapeLayer()
+    private var maskView: UIView?
+    private let maskLayer = CALayer()
     
     private let foregroundGradientLayer = CAGradientLayer()
     
@@ -477,8 +460,11 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     private var displayLinkAnimator: ConstantDisplayLinkAnimator?
     
     override init() {
-        self.maskView = UIView()
-        self.maskView.layer.addSublayer(self.maskLayer)
+        self.foregroundGradientLayer.type = .radial
+        self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
+        self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
+        self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
         var updateInHierarchy: ((Bool) -> Void)?
         self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
@@ -494,16 +480,29 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
             }
         }
         
-        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+        self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
         }
+        
+        self.addSubnode(self.hierarchyTrackingNode)
     }
     
     override func didLoad() {
         super.didLoad()
         
+        self.layer.addSublayer(self.foregroundGradientLayer)
+        
+        let maskView = UIView()
+        maskView.layer.addSublayer(self.maskLayer)
+        self.maskView = maskView
+        
+        self.maskLayer.masksToBounds = true
+        self.maskLayer.cornerRadius = backgroundCornerRadius - UIScreenPixel
+        self.maskLayer.borderColor = UIColor.white.cgColor
+        self.maskLayer.borderWidth = borderLineWidth
+                
         self.view.mask = self.maskView
     }
     
@@ -517,6 +516,15 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     
     func updateLevel(_ level: CGFloat) {
         self.audioLevel = level
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        if let maskView = self.maskView {
+            transition.updateFrame(view: maskView, frame: bounds)
+        }
+        transition.updateFrame(layer: self.maskLayer, frame: bounds)
+        transition.updateFrame(layer: self.foregroundGradientLayer, frame: bounds)
     }
     
     private func setupGradientAnimations() {
@@ -551,7 +559,12 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
         }
     }
     
+    private var gradient: Gradient?
     func updateGlowAndGradientAnimations(type: Gradient, animated: Bool = true) {
+        guard self.gradient != type else {
+            return
+        }
+        self.gradient = type
         let initialColors = self.foregroundGradientLayer.colors
         let targetColors: [CGColor]
         switch type {
@@ -568,5 +581,6 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
         if animated {
             self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }
+        self.updateAnimations()
     }
 }
