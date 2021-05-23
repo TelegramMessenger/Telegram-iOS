@@ -68,6 +68,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     var togglePin: (() -> Void)?
     var switchTo: ((PeerId) -> Void)?
     
+    var controlsHidden: ((Bool) -> Void)?
+    
     var getAudioLevel: ((PeerId) -> Signal<Float, NoError>)?
     private let videoReadyDisposable = MetaDisposable()
     private var silenceTimer: SwiftSignalKit.Timer?
@@ -603,10 +605,19 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                         guard let strongSelf = self else {
                                             return
                                         }
+                                        strongSelf.setControlsHidden(true, animated: false)
+                                        strongSelf.controlsHidden?(true)
                                         let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
                                             return UIScreen.main.bounds
                                         })
                                         strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+                                    }
+                                    videoNode.sourceContainerNode.animatedOut = { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.controlsHidden?(false)
+                                        strongSelf.setControlsHidden(false, animated: true)
                                     }
                                     videoNode.isUserInteractionEnabled = true
                                     let previousVideoNode = strongSelf.currentVideoNode

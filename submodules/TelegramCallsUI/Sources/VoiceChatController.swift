@@ -1985,6 +1985,17 @@ public final class VoiceChatController: ViewController {
                     strongSelf.dismissScheduled()
                 }
             }
+            
+            self.mainStageNode.controlsHidden = { [weak self] hidden in
+                if let strongSelf = self {
+                    if hidden {
+                        strongSelf.fullscreenListNode.alpha = 0.0
+                    } else {
+                        strongSelf.fullscreenListNode.alpha = 1.0
+                        strongSelf.fullscreenListNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
         
             self.mainStageNode.tapped = { [weak self] in
                 if let strongSelf = self {
