@@ -9,6 +9,7 @@ import TelegramCore
 import AccountContext
 import TelegramUIPreferences
 import TelegramPresentationData
+import AvatarNode
 
 private let backgroundCornerRadius: CGFloat = 11.0
 private let borderLineWidth: CGFloat = 2.0
@@ -20,8 +21,10 @@ final class VoiceChatTileItem: Equatable {
         case presentation
     }
     
+    let account: Account
     let peer: Peer
     let videoEndpointId: String
+    let videoReady: Bool
     let strings: PresentationStrings
     let nameDisplayOrder: PresentationPersonNameOrder
     let icon: Icon
@@ -36,9 +39,11 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(peer: Peer, videoEndpointId: String, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+        self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
+        self.videoReady = videoReady
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
         self.icon = icon
@@ -55,6 +60,9 @@ final class VoiceChatTileItem: Equatable {
             return false
         }
         if lhs.videoEndpointId != rhs.videoEndpointId {
+            return false
+        }
+        if lhs.videoReady != rhs.videoReady {
             return false
         }
         if lhs.speaking != rhs.speaking {
@@ -93,6 +101,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     var videoNode: GroupVideoNode?
     let infoNode: ASDisplayNode
     let fadeNode: ASDisplayNode
+    private var shimmerNode: VoiceChatTileShimmeringNode?
     private let titleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: VoiceChatMicrophoneNode?
@@ -197,7 +206,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     }
     
     @objc private func tap() {
-        self.item?.action()
+        if let item = self.item, item.videoReady {
+            item.action()
+        }
     }
     
     private func updateIsExtracted(_ isExtracted: Bool, transition: ContainedViewLayoutTransition) {
@@ -232,6 +243,14 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         }
     }
     
+    private var absoluteLocation: (CGRect, CGSize)?
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.shimmerNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
+    }
+    
     func update(size: CGSize, availableWidth: CGFloat, item: VoiceChatTileItem, transition: ContainedViewLayoutTransition) {
         guard self.validLayout?.0 != size || self.validLayout?.1 != availableWidth || self.item != item else {
             return
@@ -244,6 +263,28 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             let previousItem = self.item
             self.item = item
             
+            if !item.videoReady {
+                let shimmerNode: VoiceChatTileShimmeringNode
+                if let current = self.shimmerNode {
+                    shimmerNode = current
+                } else {
+                    shimmerNode = VoiceChatTileShimmeringNode(account: item.account, peer: item.peer)
+                    self.contentNode.insertSubnode(shimmerNode, aboveSubnode: self.fadeNode)
+                    self.shimmerNode = shimmerNode
+                    
+                    if let (rect, containerSize) = self.absoluteLocation {
+                        shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+                    }
+                }
+                transition.updateFrame(node: shimmerNode, frame: CGRect(origin: CGPoint(), size: size))
+                shimmerNode.update(shimmeringColor: UIColor.white, size: size, transition: transition)
+            } else if let shimmerNode = self.shimmerNode {
+                self.shimmerNode = nil
+                shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak shimmerNode] _ in
+                    shimmerNode?.removeFromSupernode()
+                })
+            }
+            
             if let getAudioLevel = item.getAudioLevel {
                 self.audioLevelDisposable.set((getAudioLevel()
                 |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -255,11 +296,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             }
             
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-            if item.speaking {
-                transition.updateAlpha(node: self.highlightNode, alpha: 1.0)
-            } else {
-                transition.updateAlpha(node: self.highlightNode, alpha: 0.0)
-            }
+            transition.updateAlpha(node: self.highlightNode, alpha: item.speaking ? 1.0 : 0.0)
             
             if previousItem?.videoEndpointId != item.videoEndpointId || self.videoNode == nil {
                 if let current = self.videoNode {
@@ -342,7 +379,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         if self.videoContainerNode.supernode === self.contentNode {
             if let videoNode = self.videoNode {
-                transition.updateFrame(node: videoNode, frame: bounds)
+                itemTransition.updateFrame(node: videoNode, frame: bounds)
                 videoNode.updateLayout(size: size, layoutMode: .fillOrFitToSquare, transition: itemTransition)
             }
             transition.updateFrame(node: self.videoContainerNode, frame: bounds)
@@ -582,5 +619,210 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
             self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }
         self.updateAnimations()
+    }
+}
+
+private final class ShimmerEffectForegroundNode: ASDisplayNode {
+    private var currentForegroundColor: UIColor?
+    private let imageNodeContainer: ASDisplayNode
+    private let imageNode: ASImageNode
+    
+    private var absoluteLocation: (CGRect, CGSize)?
+    private var isCurrentlyInHierarchy = false
+    private var shouldBeAnimating = false
+    
+    private let size: CGFloat
+    
+    init(size: CGFloat) {
+        self.size = size
+        
+        self.imageNodeContainer = ASDisplayNode()
+        self.imageNodeContainer.isLayerBacked = true
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.isLayerBacked = true
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.contentMode = .scaleToFill
+        
+        super.init()
+        
+        self.isLayerBacked = true
+        self.clipsToBounds = true
+        
+        self.imageNodeContainer.addSubnode(self.imageNode)
+        self.addSubnode(self.imageNodeContainer)
+    }
+    
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimation()
+    }
+    
+    func update(foregroundColor: UIColor) {
+        if let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
+            return
+        }
+        self.currentForegroundColor = foregroundColor
+        
+        let image = generateImage(CGSize(width: self.size, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            
+            context.clip(to: CGRect(origin: CGPoint(), size: size))
+            
+            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
+            let peakColor = foregroundColor.cgColor
+            
+            var locations: [CGFloat] = [0.0, 0.5, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+            
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+            
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+        })
+        self.imageNode.image = image
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        if let absoluteLocation = self.absoluteLocation, absoluteLocation.0 == rect && absoluteLocation.1 == containerSize {
+            return
+        }
+        let sizeUpdated = self.absoluteLocation?.1 != containerSize
+        let frameUpdated = self.absoluteLocation?.0 != rect
+        self.absoluteLocation = (rect, containerSize)
+        
+        if sizeUpdated {
+            if self.shouldBeAnimating {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+                self.addImageAnimation()
+            } else {
+                self.updateAnimation()
+            }
+        }
+        
+        if frameUpdated {
+            self.imageNodeContainer.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+        }
+    }
+    
+    private func updateAnimation() {
+        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil
+        if shouldBeAnimating != self.shouldBeAnimating {
+            self.shouldBeAnimating = shouldBeAnimating
+            if shouldBeAnimating {
+                self.addImageAnimation()
+            } else {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+            }
+        }
+    }
+    
+    private func addImageAnimation() {
+        guard let containerSize = self.absoluteLocation?.1 else {
+            return
+        }
+        let gradientHeight: CGFloat = self.size
+        self.imageNode.frame = CGRect(origin: CGPoint(x: -gradientHeight, y: 0.0), size: CGSize(width: gradientHeight, height: containerSize.height))
+        let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.width + gradientHeight) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+        animation.repeatCount = Float.infinity
+        animation.beginTime = 1.0
+        self.imageNode.layer.add(animation, forKey: "shimmer")
+    }
+}
+
+private class VoiceChatTileShimmeringNode: ASDisplayNode {
+    private let backgroundNode: ImageNode
+    private let effectNode: ShimmerEffectForegroundNode
+    
+    private let borderNode: ASDisplayNode
+    private var borderMaskView: UIView?
+    private let borderEffectNode: ShimmerEffectForegroundNode
+    
+    private var currentShimmeringColor: UIColor?
+    private var currentSize: CGSize?
+    
+    public init(account: Account, peer: Peer) {
+        self.backgroundNode = ImageNode(enableHasImage: false, enableEmpty: false, enableAnimatedTransition: true)
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.contentMode = .scaleAspectFill
+        
+        self.effectNode = ShimmerEffectForegroundNode(size: 220.0)
+        
+        self.borderNode = ASDisplayNode()
+        self.borderEffectNode = ShimmerEffectForegroundNode(size: 320.0)
+        
+        super.init()
+        
+        self.clipsToBounds = true
+        self.cornerRadius = backgroundCornerRadius
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.effectNode)
+        self.addSubnode(self.borderNode)
+        self.borderNode.addSubnode(self.borderEffectNode)
+        
+        self.backgroundNode.setSignal(peerAvatarCompleteImage(account: account, peer: peer, size: CGSize(width: 180.0, height: 180.0), round: false, font: Font.regular(16.0), drawLetters: false, fullSize: false, blurred: true))
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        self.effectNode.layer.compositingFilter = "screenBlendMode"
+        self.borderEffectNode.layer.compositingFilter = "screenBlendMode"
+        
+        let borderMaskView = UIView()
+        borderMaskView.layer.borderWidth = 1.0
+        borderMaskView.layer.borderColor = UIColor.white.cgColor
+        borderMaskView.layer.cornerRadius = backgroundCornerRadius
+        self.borderMaskView = borderMaskView
+        
+        if let size = self.currentSize {
+            borderMaskView.frame = CGRect(origin: CGPoint(), size: size)
+        }
+        
+        self.borderNode.view.mask = borderMaskView
+        
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .continuous
+            borderMaskView.layer.cornerCurve = .continuous
+        }
+    }
+    
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.effectNode.updateAbsoluteRect(rect, within: containerSize)
+        self.borderEffectNode.updateAbsoluteRect(rect, within: containerSize)
+    }
+    
+    public func update(shimmeringColor: UIColor, size: CGSize, transition: ContainedViewLayoutTransition) {
+        if let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor) && self.currentSize == size {
+            return
+        }
+        
+        self.currentShimmeringColor = shimmeringColor
+        self.currentSize = size
+        
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        
+        self.effectNode.update(foregroundColor: shimmeringColor.withAlphaComponent(0.3))
+        self.effectNode.frame = bounds
+        
+        self.borderEffectNode.update(foregroundColor: shimmeringColor.withAlphaComponent(0.5))
+        self.borderEffectNode.frame = bounds
+        
+        transition.updateFrame(node: self.backgroundNode, frame: bounds)
+        transition.updateFrame(node: self.borderNode, frame: bounds)
+        if let borderMaskView = self.borderMaskView {
+            transition.updateFrame(view: borderMaskView, frame: bounds)
+        }
     }
 }

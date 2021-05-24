@@ -87,9 +87,9 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
     }
 }
 
-public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false) -> Signal<UIImage?, NoError> {
+public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, round: round, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, round: round, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
         if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
             iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
             |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in
@@ -120,6 +120,10 @@ public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, 
             let image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), round: round, font: font, letters: displayLetters, peerId: peerId)
+                if blurred {
+                    context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.45).cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                }
             })?.withRenderingMode(.alwaysOriginal)
             
             subscriber.putNext(image)
@@ -130,7 +134,7 @@ public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, 
     return iconSignal
 }
 
-public func peerAvatarImage(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false, provideUnrounded: Bool = false) -> Signal<(UIImage, UIImage)?, NoError>? {
+public func peerAvatarImage(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, blurred: Bool = false, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false, provideUnrounded: Bool = false) -> Signal<(UIImage, UIImage)?, NoError>? {
     if let imageData = peerAvatarImageData(account: account, peerReference: peerReference, authorOfMessage: authorOfMessage, representation: representation, synchronousLoad: synchronousLoad) {
         return imageData
         |> mapToSignal { data -> Signal<(UIImage, UIImage)?, NoError> in
@@ -149,11 +153,22 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                                 context.clip()
                             }
 
+                            var shouldBlur = false
                             if case .blurred = dataType {
+                                shouldBlur = true
+                            } else if blurred {
+                                shouldBlur = true
+                            }
+                            if shouldBlur {
                                 let imageContextSize = CGSize(width: 64.0, height: 64.0)
                                 let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, premultiplied: true, clear: true)
                                 imageContext.withFlippedContext { c in
                                     c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
+                                    
+                                    context.setBlendMode(.saturation)
+                                    context.setFillColor(UIColor(rgb: 0xffffff, alpha: 1.0).cgColor)
+                                    context.fill(CGRect(origin: CGPoint(), size: size))
+                                    context.setBlendMode(.copy)
                                 }
 
                                 telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
@@ -162,6 +177,12 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                             }
                             
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            if blurred {
+                                context.setBlendMode(.normal)
+                                context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.45).cgColor)
+                                context.fill(CGRect(origin: CGPoint(), size: size))
+                                context.setBlendMode(.copy)
+                            }
                             if round {
                                 if displayDimensions.width == 60.0 {
                                     context.setBlendMode(.destinationOut)

@@ -365,7 +365,7 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            func tileItem(context: AccountContext, presentationData: PresentationData, interaction: Interaction, videoEndpointId: String) -> VoiceChatTileItem? {
+            func tileItem(context: AccountContext, presentationData: PresentationData, interaction: Interaction, videoEndpointId: String, videoReady: Bool) -> VoiceChatTileItem? {
                 guard case let .peer(peerEntry, _) = self else {
                     return nil
                 }
@@ -433,7 +433,7 @@ public final class VoiceChatController: ViewController {
                     text = .text(about, textIcon, .generic)
                 }
                 
-                return VoiceChatTileItem(peer: peerEntry.peer, videoEndpointId: videoEndpointId, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, icon: icon, text: text, action: {
+                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, icon: icon, text: text, action: {
                     interaction.switchToPeer(peer.id, videoEndpointId, true)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture)
@@ -4278,11 +4278,11 @@ public final class VoiceChatController: ViewController {
                 
                 var isTile = false
                 if let interaction = self.itemInteraction {
-                    if let videoEndpointId = member.presentationEndpointId, self.readyVideoNodes.contains(videoEndpointId) {
+                    if let videoEndpointId = member.presentationEndpointId {
                         if !self.videoOrder.contains(videoEndpointId) {
                             self.videoOrder.append(videoEndpointId)
                         }
-                        if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId) {
+                        if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId, videoReady: self.readyVideoNodes.contains(videoEndpointId)) {
                             isTile = true
                             tileByVideoEndpoint[videoEndpointId] = tileItem
                         }
@@ -4290,11 +4290,11 @@ public final class VoiceChatController: ViewController {
                             latestWideVideo = videoEndpointId
                         }
                     }
-                    if let videoEndpointId = member.videoEndpointId, self.readyVideoNodes.contains(videoEndpointId) {
+                    if let videoEndpointId = member.videoEndpointId {
                         if !self.videoOrder.contains(videoEndpointId) {
                             self.videoOrder.append(videoEndpointId)
                         }
-                        if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId) {
+                        if let tileItem = ListEntry.peer(peerEntry, 0).tileItem(context: self.context, presentationData: self.presentationData, interaction: interaction, videoEndpointId: videoEndpointId, videoReady: self.readyVideoNodes.contains(videoEndpointId)) {
                             isTile = true
                             tileByVideoEndpoint[videoEndpointId] = tileItem
                         }
