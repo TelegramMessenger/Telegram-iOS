@@ -174,6 +174,10 @@ class VoiceChatActionItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
+                    guard params.width > 0.0 else {
+                        return
+                    }
+                    
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     

@@ -15,12 +15,24 @@ final class VoiceChatTileGridNode: ASDisplayNode {
     fileprivate var itemNodes: [String: VoiceChatTileItemNode] = [:]
     private var isFirstTime = true
     
+    private var absoluteLocation: (CGRect, CGSize)?
+    
     init(context: AccountContext) {
         self.context = context
         
         super.init()
         
         self.clipsToBounds = true
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteLocation = (rect, containerSize)
+        for itemNode in self.itemNodes.values {
+            var localRect = rect
+            localRect.origin = localRect.origin.offsetBy(dx: itemNode.frame.minX, dy: itemNode.frame.minY)
+            localRect.size = itemNode.frame.size
+            itemNode.updateAbsoluteRect(localRect, within: containerSize)
+        }
     }
     
     func update(size: CGSize, items: [VoiceChatTileItem], transition: ContainedViewLayoutTransition) -> CGSize {
@@ -71,6 +83,13 @@ final class VoiceChatTileGridNode: ASDisplayNode {
                     }
                 } else {
                     transition.updateFrame(node: itemNode, frame: itemFrame)
+                }
+                
+                if let (rect, containerSize) = self.absoluteLocation {
+                    var localRect = rect
+                    localRect.origin = localRect.origin.offsetBy(dx: itemFrame.minX, dy: itemFrame.minY)
+                    localRect.size = itemFrame.size
+                    itemNode.updateAbsoluteRect(localRect, within: containerSize)
                 }
             }
         }
@@ -147,6 +166,8 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
     let backgroundNode: ASDisplayNode
     let cornersNode: ASImageNode
     
+    private var absoluteLocation: (CGRect, CGSize)?
+    
     var tileNodes: [VoiceChatTileItemNode] {
         if let values = self.tileGridNode?.itemNodes.values {
             return Array(values)
@@ -208,10 +229,15 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.tileGridNode = tileGridNode
                     }
 
+                    
+                    if let (rect, size) = strongSelf.absoluteLocation {
+                        tileGridNode.updateAbsoluteRect(rect, within: size)
+                    }
+                    
                     let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.3, curve: .easeInOut)
                     let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), items: item.tiles, transition: transition)
                     if currentItem == nil {
-                        tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: 0.0)
+                        tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: tileGridSize.height)
                         strongSelf.backgroundNode.frame = tileGridNode.frame
                         strongSelf.cornersNode.frame = CGRect(x: params.leftInset, y: layout.size.height, width: tileGridSize.width, height: 50.0)
                     } else {
@@ -222,5 +248,10 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                 }
             })
         }
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteLocation = (rect, containerSize)
+        self.tileGridNode?.updateAbsoluteRect(rect, within: containerSize)
     }
 }

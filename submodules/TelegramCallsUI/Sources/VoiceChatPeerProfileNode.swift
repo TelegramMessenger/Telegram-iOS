@@ -173,7 +173,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
 
         if animate {
             let springDuration: Double = !self.appeared ? 0.42 : 0.3
-            let springDamping: CGFloat = !self.appeared ? 104.0 : 1000.0
+            let springDamping: CGFloat = !self.appeared ? 124.0 : 1000.0
             
             let initialInfoPosition = self.infoNode.position
             self.infoNode.layer.position = infoFrame.center
@@ -188,9 +188,9 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
     }
     
     func animateIn(from sourceNode: ASDisplayNode, targetRect: CGRect, transition: ContainedViewLayoutTransition) {
-        let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
         let springDuration: Double = 0.42
-        let springDamping: CGFloat = 104.0
+        let springDamping: CGFloat = 124.0
         
         if let sourceNode = sourceNode as? VoiceChatTileItemNode {
             let sourceRect = sourceNode.bounds

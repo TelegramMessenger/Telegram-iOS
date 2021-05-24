@@ -18,11 +18,13 @@ import AvatarNode
 import AudioBlob
 import TextFormat
 import Markdown
+import ContextUI
 
 private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .white)
 private let backgroundCornerRadius: CGFloat = 11.0
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
 private let fadeHeight: CGFloat = 50.0
+private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
@@ -44,7 +46,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private let pinButtonNode: HighlightTrackingButtonNode
     private let pinButtonIconNode: ASImageNode
     private let pinButtonTitleNode: ImmediateTextNode
-    private var audioLevelView: VoiceBlobView?
+    private let audioLevelNode: VoiceChatBlobNode
     private let audioLevelDisposable = MetaDisposable()
     private let speakingPeerDisposable = MetaDisposable()
     private let speakingAudioLevelDisposable = MetaDisposable()
@@ -66,6 +68,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     var back: (() -> Void)?
     var togglePin: (() -> Void)?
     var switchTo: ((PeerId) -> Void)?
+    
+    var controlsHidden: ((Bool) -> Void)?
     
     var getAudioLevel: ((PeerId) -> Signal<Float, NoError>)?
     private let videoReadyDisposable = MetaDisposable()
@@ -134,12 +138,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.backdropAvatarNode.displaysAsynchronously = false
         self.backdropAvatarNode.isHidden = true
         
+        self.audioLevelNode = VoiceChatBlobNode(size: CGSize(width: 300.0, height: 300.0))
+        
         self.avatarNode = ImageNode()
         self.avatarNode.displaysAsynchronously = false
         self.avatarNode.isHidden = true
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.alpha = 0.0
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
         
         self.microphoneNode = VoiceChatMicrophoneNode()
@@ -152,6 +159,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         self.speakingAvatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
         self.speakingTitleNode = ImmediateTextNode()
+        self.speakingTitleNode.displaysAsynchronously = false
         
         super.init()
         
@@ -163,6 +171,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.addSubnode(self.bottomFadeNode)
         self.addSubnode(self.bottomFillNode)
         self.addSubnode(self.backdropAvatarNode)
+        self.addSubnode(self.audioLevelNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.microphoneNode)
@@ -276,10 +285,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     }
     private var animatingIn = false
     private var animatingOut = false
+    private var appeared = false
+    
     func animateTransitionIn(from sourceNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
         guard let sourceNode = sourceNode as? VoiceChatTileItemNode, let _ = sourceNode.item, let (_, sideInset, bottomInset, isLandscape) = self.validLayout else {
             return
         }
+        self.appeared = true
                 
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
@@ -318,6 +330,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         guard let (_, sideInset, bottomInset, isLandscape) = self.validLayout else {
             return
         }
+        
+        self.appeared = false
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
@@ -460,8 +474,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.speakingPeerDisposable.set(nil)
             self.speakingAudioLevelDisposable.set(nil)
             
-            let audioLevelView = self.audioLevelView
-            self.audioLevelView = nil
+            let audioLevelView = self.speakingAudioLevelView
+            self.speakingAudioLevelView = nil
             
             if !self.speakingContainerNode.alpha.isZero {
                 self.speakingContainerNode.alpha = 0.0
@@ -490,115 +504,97 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     func update(peerEntry: VoiceChatPeerEntry, pinned: Bool) {
         let previousPeerEntry = self.currentPeerEntry
         self.currentPeerEntry = peerEntry
+        
+        let peer = peerEntry.peer
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
-            let peer = peerEntry.peer
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false))
             self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
-            self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
-            if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
-            }
         }
-        
-        self.pinButtonTitleNode.isHidden = !pinned
-        self.pinButtonIconNode.image = !pinned ? generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white) : generateTintedImage(image: UIImage(bundleImageName: "Call/Unpin"), color: .white)
-        
-        var firstTime = true
-        var wavesColor = UIColor(rgb: 0x34c759)
-        if let getAudioLevel = self.getAudioLevel, previousPeerEntry?.peer.id != peerEntry.peer.id {
-            if let audioLevelView = self.audioLevelView {
-                self.audioLevelView = nil
-                audioLevelView.removeFromSuperview()
-            }
-            
-            let blobFrame = self.avatarNode.frame.insetBy(dx: -60.0, dy: -60.0)
-            self.audioLevelDisposable.set((getAudioLevel(peerEntry.peer.id)
-            |> deliverOnMainQueue).start(next: { [weak self] value in
-                guard let strongSelf = self else {
-                    return
-                }
                 
-                if strongSelf.audioLevelView == nil, value > 0.0 {
-                    let audioLevelView = VoiceBlobView(
-                        frame: blobFrame,
-                        maxLevel: 1.5,
-                        smallBlobRange: (0, 0),
-                        mediumBlobRange: (0.69, 0.87),
-                        bigBlobRange: (0.71, 1.0)
-                    )
-                    audioLevelView.isHidden = strongSelf.currentPeer?.1 != nil
-                    
-                    audioLevelView.setColor(wavesColor)
-                    audioLevelView.alpha = 1.0
-                    
-                    strongSelf.audioLevelView = audioLevelView
-                    strongSelf.view.insertSubview(audioLevelView, belowSubview: strongSelf.avatarNode.view)
-                }
-                
-                let level = min(1.5, max(0.0, CGFloat(value)))
-                if let audioLevelView = strongSelf.audioLevelView {
-                    audioLevelView.updateLevel(CGFloat(value))
-                    
-                    let avatarScale: CGFloat
-                    if value > 0.02 {
-                        audioLevelView.startAnimating(immediately: firstTime)
-                        avatarScale = 1.03 + level * 0.13
-                        audioLevelView.setColor(wavesColor, animated: true)
-                        
-                        if let silenceTimer = strongSelf.silenceTimer {
-                            silenceTimer.invalidate()
-                            strongSelf.silenceTimer = nil
-                        }
-                    } else {
-                        avatarScale = 1.0
-                        if strongSelf.silenceTimer == nil {
-                            let silenceTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
-                                self?.audioLevelView?.stopAnimating(duration: 0.75)
-                                self?.silenceTimer = nil
-                            }, queue: Queue.mainQueue())
-                            strongSelf.silenceTimer = silenceTimer
-                            silenceTimer.start()
-                        }
-                    }
-                    
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
-                    transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
-                }
-                firstTime = false
-            }))
-        }
-        
+        var gradient: VoiceChatBlobNode.Gradient = .active
         var muted = false
         var state = peerEntry.state
         if let muteState = peerEntry.muteState, case .speaking = state, muteState.mutedByYou || !muteState.canUnmute {
             state = .listening
         }
+        var mutedForYou = false
         switch state {
-        case .listening:
-            if let muteState = peerEntry.muteState, muteState.mutedByYou {
+            case .listening:
+                if let muteState = peerEntry.muteState, muteState.mutedByYou {
+                    gradient = .muted
+                    muted = true
+                    mutedForYou = true
+                } else {
+                    gradient = .active
+                    muted = peerEntry.muteState != nil
+                }
+            case .speaking:
+                if let muteState = peerEntry.muteState, muteState.mutedByYou {
+                    gradient = .muted
+                    muted = true
+                    mutedForYou = true
+                } else {
+                    gradient = .speaking
+                    muted = false
+                }
+            default:
                 muted = true
-            } else {
-                muted = peerEntry.muteState != nil
-            }
-        case .speaking:
-            if let muteState = peerEntry.muteState, muteState.mutedByYou {
-                muted = true
-            } else {
-                muted = false
-            }
-        case .raisedHand, .invited:
-            muted = true
         }
         
-        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: .white), animated: true)
+        var microphoneColor = UIColor.white
+        var titleAttributedString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
+        if mutedForYou {
+            microphoneColor = destructiveColor
+            
+            let updatedString = NSMutableAttributedString(attributedString: titleAttributedString)
+            updatedString.append(NSAttributedString(string: " \(presentationData.strings.VoiceChat_StatusMutedForYou)", font: Font.regular(15.0), textColor: UIColor.white))
+            titleAttributedString = updatedString
+        }
+        self.titleNode.attributedText = titleAttributedString
+        if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+        }
+        
+        self.audioLevelNode.updateGlowAndGradientAnimations(type: gradient, animated: true)
+        
+        self.pinButtonTitleNode.isHidden = !pinned
+        self.pinButtonIconNode.image = !pinned ? generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white) : generateTintedImage(image: UIImage(bundleImageName: "Call/Unpin"), color: .white)
+        
+        self.audioLevelNode.startAnimating(immediately: true)
+        
+        if let getAudioLevel = self.getAudioLevel, previousPeerEntry?.peer.id != peerEntry.peer.id {
+            self.audioLevelNode.isHidden = self.currentPeer?.1 != nil
+            self.audioLevelDisposable.set((getAudioLevel(peerEntry.peer.id)
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                                    
+                let level = min(1.5, max(0.0, CGFloat(value)))
+                
+                strongSelf.audioLevelNode.updateLevel(CGFloat(value))
+                    
+                let avatarScale: CGFloat
+                if value > 0.02 {
+                    avatarScale = 1.03 + level * 0.13
+                } else {
+                    avatarScale = 1.0
+                }
+                
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+                transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
+            }))
+        }
+        
+        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: microphoneColor), animated: true)
     }
     
     private func setAvatarHidden(_ hidden: Bool) {
         self.backdropAvatarNode.isHidden = hidden
         self.backdropEffectView?.isHidden = hidden
         self.avatarNode.isHidden = hidden
-        self.audioLevelView?.isHidden = hidden
+        self.audioLevelNode.isHidden = hidden
     }
     
     func update(peer: (peer: PeerId, endpointId: String?)?, waitForFullSize: Bool, completion: (() -> Void)? = nil) {
@@ -614,7 +610,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let (_, endpointId) = peer {
             if endpointId != previousPeer?.1 {
                 if let endpointId = endpointId {
-                    self.setAvatarHidden(true)
+                    var delayTransition = false
+                    if previousPeer?.0 == peer?.0 && self.appeared {
+                        delayTransition = true
+                    }
+                    let appeared = self.appeared
+                    
+                    if !delayTransition {
+                        self.setAvatarHidden(true)
+                    }
                     
                     self.call.makeIncomingVideoView(endpointId: endpointId, completion: { [weak self] videoView in
                         Queue.mainQueue().async {
@@ -625,10 +629,38 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     }
                                     
                                     let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
+                                    videoNode.tapped = { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.tap()
+                                    }
+                                    videoNode.sourceContainerNode.activate = { [weak self] sourceNode in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.setControlsHidden(true, animated: false)
+                                        strongSelf.controlsHidden?(true)
+                                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                                            return UIScreen.main.bounds
+                                        })
+                                        strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+                                    }
+                                    videoNode.sourceContainerNode.animatedOut = { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.controlsHidden?(false)
+                                        strongSelf.setControlsHidden(false, animated: true)
+                                    }
+                                    videoNode.isUserInteractionEnabled = true
                                     let previousVideoNode = strongSelf.currentVideoNode
                                     strongSelf.currentVideoNode = videoNode
                                     strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
                                     
+                                    if delayTransition {
+                                        videoNode.alpha = 0.0
+                                    }
                                     if waitForFullSize {
                                         strongSelf.videoReadyDisposable.set((videoNode.ready
                                         |> filter { $0 }
@@ -642,8 +674,25 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                                         strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                                     }
                                                 }
-                                                if let previousVideoNode = previousVideoNode {
-                                                    previousVideoNode.removeFromSupernode()
+ 
+                                                if delayTransition {
+                                                    if let videoNode = strongSelf.currentVideoNode {
+                                                        videoNode.alpha = 1.0
+                                                        videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                                                            if let strongSelf = self {
+                                                                strongSelf.setAvatarHidden(true)
+                                                                if let previousVideoNode = previousVideoNode {
+                                                                    previousVideoNode.removeFromSupernode()
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                } else {
+                                                    Queue.mainQueue().after(0.07) {
+                                                        if let previousVideoNode = previousVideoNode {
+                                                            previousVideoNode.removeFromSupernode()
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }))
@@ -663,12 +712,25 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     })
                 } else {
                     self.setAvatarHidden(false)
-                    if let currentVideoNode = self.currentVideoNode {
-                        currentVideoNode.removeFromSupernode()
-                        self.currentVideoNode = nil
+                    if self.appeared {
+                        if let currentVideoNode = self.currentVideoNode {
+                            currentVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak currentVideoNode] _ in
+                                currentVideoNode?.removeFromSupernode()
+                            })
+                        }
+                    } else {
+                        if let currentVideoNode = self.currentVideoNode {
+                            currentVideoNode.removeFromSupernode()
+                            self.currentVideoNode = nil
+                        }
                     }
+                    completion?()
                 }
             } else {
+                if let currentVideoNode = self.currentVideoNode {
+                    currentVideoNode.removeFromSupernode()
+                    self.currentVideoNode = nil
+                }
                 self.setAvatarHidden(endpointId != nil)
                 completion?()
             }
@@ -731,9 +793,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         let avatarSize = CGSize(width: 180.0, height: 180.0)
         let avatarFrame = CGRect(origin: CGPoint(x: (size.width - avatarSize.width) / 2.0, y: (size.height - avatarSize.height) / 2.0), size: avatarSize)
         transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
-        if let audioLevelView = self.audioLevelView {
-            transition.updatePosition(layer: audioLevelView.layer, position: avatarFrame.center)
-        }
+        transition.updateFrame(node: self.audioLevelNode, frame: avatarFrame.insetBy(dx: -60.0, dy: -60.0))
         
         let animationSize = CGSize(width: 36.0, height: 36.0)
         let titleSize = self.titleNode.updateLayout(size)
@@ -818,7 +878,7 @@ class VoiceChatBlobNode: ASDisplayNode {
         
         self.foregroundGradientLayer.type = .radial
         self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
-        self.foregroundGradientLayer.locations = [0.0, 0.55, 1.0]
+        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
@@ -835,6 +895,8 @@ class VoiceChatBlobNode: ASDisplayNode {
                 strongSelf.updateAnimations()
             }
         }
+        
+        self.addSubnode(self.hierarchyTrackingNode)
     }
     
     override func didLoad() {
@@ -856,6 +918,14 @@ class VoiceChatBlobNode: ASDisplayNode {
     
     func updateLevel(_ level: CGFloat) {
         self.blobView.updateLevel(level)
+    }
+    
+    func startAnimating(immediately: Bool) {
+        self.blobView.startAnimating(immediately: immediately)
+    }
+    
+    func stopAnimating() {
+        self.blobView.stopAnimating(duration: 0.8)
     }
     
     private func setupGradientAnimations() {
@@ -890,7 +960,12 @@ class VoiceChatBlobNode: ASDisplayNode {
         }
     }
     
+    private var gradient: Gradient?
     func updateGlowAndGradientAnimations(type: Gradient, animated: Bool = true) {
+        guard self.gradient != type else {
+            return
+        }
+        self.gradient = type
         let initialColors = self.foregroundGradientLayer.colors
         let targetColors: [CGColor]
         switch type {
@@ -912,6 +987,7 @@ class VoiceChatBlobNode: ASDisplayNode {
     override func layout() {
         super.layout()
         
-        self.blobView.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: self.bounds.height)
+        self.blobView.frame = self.bounds
+        self.foregroundGradientLayer.frame = self.bounds.insetBy(dx: -24.0, dy: -24.0)
     }
 }

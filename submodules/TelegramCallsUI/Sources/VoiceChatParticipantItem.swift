@@ -419,12 +419,12 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 }
                 
                 let springDuration: Double = isExtracted ? 0.42 : 0.3
-                let springDamping: CGFloat = isExtracted ? 104.0 : 1000.0
+                let springDamping: CGFloat = isExtracted ? 124.0 : 1000.0
                 
                 let itemBackgroundColor: UIColor = item.getIsExpanded() ? UIColor(rgb: 0x1c1c1e) : UIColor(rgb: 0x2c2c2e)
                 
                 if !extractedVerticalOffset.isZero {
-                    let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
                     if isExtracted {
                         strongSelf.backgroundImageNode.image = generateImage(CGSize(width: backgroundCornerRadius * 2.0, height: backgroundCornerRadius * 2.0), rotatedContext: { (size, context) in
                             let bounds = CGRect(origin: CGPoint(), size: size)
@@ -856,8 +856,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let constrainedWidth = params.width - leftInset - 12.0 - rightInset - 30.0 - titleIconsWidth
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let expandedWidth = min(params.width - leftInset - rightInset, params.availableHeight - 30.0)
             let (statusLayout, statusApply) = makeStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), item.text, false)
-            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(CGSize(width: params.width - leftInset - 8.0 - rightInset - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), item.expandedText ?? item.text, true)
+            let (expandedStatusLayout, expandedStatusApply) = makeExpandedStatusLayout(CGSize(width: expandedWidth - 8.0 - expandedRightInset, height: CGFloat.greatestFiniteMagnitude), item.expandedText ?? item.text, params.availableHeight > params.width)
             
             let titleSpacing: CGFloat = statusLayout.height == 0.0 ? 0.0 : 1.0
             
@@ -903,6 +904,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     var extractedHeight = extractedRect.height + expandedStatusLayout.height - statusLayout.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.peer.smallProfileImage != nil {
+                        extractedRect.size.width = min(extractedRect.width, params.availableHeight - 20.0)
                         extractedVerticalOffset = extractedRect.width
                         extractedHeight += extractedVerticalOffset
                     }
@@ -1054,7 +1056,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
                                     audioLevelView.setColor(wavesColor)
-                                    audioLevelView.alpha = 1.0
+                                    audioLevelView.alpha = strongSelf.isExtracted ? 0.0 : 1.0
                                     
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)

@@ -188,6 +188,7 @@ public struct PresentationGroupCallState: Equatable {
     public var raisedHand: Bool
     public var scheduleTimestamp: Int32?
     public var subscribedToScheduled: Bool
+    public var isVideoEnabled: Bool
     
     public init(
         myPeerId: PeerId,
@@ -200,7 +201,8 @@ public struct PresentationGroupCallState: Equatable {
         title: String?,
         raisedHand: Bool,
         scheduleTimestamp: Int32?,
-        subscribedToScheduled: Bool
+        subscribedToScheduled: Bool,
+        isVideoEnabled: Bool
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -213,6 +215,7 @@ public struct PresentationGroupCallState: Equatable {
         self.raisedHand = raisedHand
         self.scheduleTimestamp = scheduleTimestamp
         self.subscribedToScheduled = subscribedToScheduled
+        self.isVideoEnabled = isVideoEnabled
     }
 }
 
