@@ -5296,8 +5296,10 @@ public final class VoiceChatController: ViewController {
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                     for tileNode in itemNode.tileNodes {
-                        if let item = tileNode.item, let otherItemNode = fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] {
-                            tileNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: .immediate, animate: false)
+                        if let item = tileNode.item {
+                            if let otherItemNode = fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] {
+                                tileNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: .immediate, animate: false)
+                            }
                             
                             if tileNode.item?.peer.id == self.effectiveSpeaker?.0 && tileNode.item?.videoEndpointId == self.effectiveSpeaker?.1 {
                                 tileNode.isHidden = true
