@@ -1370,6 +1370,8 @@ final class BlobView: UIView {
     
     var level: CGFloat = 0 {
         didSet {
+            return;
+            
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             let lv = minScale + (maxScale - minScale) * level
@@ -1502,7 +1504,7 @@ final class BlobView: UIView {
         animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         animation.fromValue = 0
         animation.toValue = 1
-        pop_add(animation, forKey: "blob")
+        //pop_add(animation, forKey: "blob")
         
         lastSpeedLevel = speedLevel
         speedLevel = 0

@@ -329,7 +329,7 @@ final class BlobView: UIView {
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.fromValue = 0
         animation.toValue = 1
-        pop_add(animation, forKey: "blob")
+        //pop_add(animation, forKey: "blob")
         
         lastSpeedLevel = speedLevel
         speedLevel = 0
