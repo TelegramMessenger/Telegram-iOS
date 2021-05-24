@@ -67,6 +67,7 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     let nameDisplayOrder: PresentationPersonNameOrder
     let context: AccountContext
     let peer: Peer
+    let videoEndpointId: String?
     let icon: Icon
     let text: VoiceChatParticipantItem.ParticipantText
     let textColor: Color
@@ -81,11 +82,12 @@ final class VoiceChatFullscreenParticipantItem: ListViewItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, textColor: Color, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
+    public init(presentationData: ItemListPresentationData, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, videoEndpointId: String?, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, textColor: Color, color: Color, isLandscape: Bool, active: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, getVideo: @escaping () -> GroupVideoNode?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.nameDisplayOrder = nameDisplayOrder
         self.context = context
         self.peer = peer
+        self.videoEndpointId = videoEndpointId
         self.icon = icon
         self.text = text
         self.textColor = textColor

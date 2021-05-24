@@ -528,7 +528,7 @@ public final class VoiceChatController: ViewController {
                             text = .text(about, textIcon, .generic)
                         }
                         
-                        return VoiceChatFullscreenParticipantItem(presentationData: ItemListPresentationData(presentationData), nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peerEntry.peer, icon: icon, text: text, textColor: textColor, color: color, isLandscape: peerEntry.isLandscape, active: peerEntry.active, getAudioLevel: { return interaction.getAudioLevel(peerEntry.peer.id) }, getVideo: {
+                        return VoiceChatFullscreenParticipantItem(presentationData: ItemListPresentationData(presentationData), nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peerEntry.peer, videoEndpointId: peerEntry.effectiveVideoEndpointId, icon: icon, text: text, textColor: textColor, color: color, isLandscape: peerEntry.isLandscape, active: peerEntry.active, getAudioLevel: { return interaction.getAudioLevel(peerEntry.peer.id) }, getVideo: {
                             if let endpointId = peerEntry.effectiveVideoEndpointId {
                                 return interaction.getPeerVideo(endpointId, .list)
                             } else {
@@ -5264,42 +5264,42 @@ public final class VoiceChatController: ViewController {
         }
         
         private func attachFullscreenVideos() {
-            var verticalItemNodes: [PeerId: ASDisplayNode] = [:]
+            var verticalItemNodes: [String: ASDisplayNode] = [:]
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                     for tileNode in itemNode.tileNodes {
                         if let item = tileNode.item {
-                            verticalItemNodes[item.peer.id] = tileNode
+                            verticalItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] = tileNode
                         }
                         
-                        if tileNode.item?.peer.id == self.effectiveSpeaker?.0 {
+                        if tileNode.item?.peer.id == self.effectiveSpeaker?.0 && tileNode.item?.videoEndpointId == self.effectiveSpeaker?.1 {
                             tileNode.isHidden = false
                         }
                     }
                 }
             }
             self.fullscreenListNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item, let otherItemNode = verticalItemNodes[item.peer.id] {
+                if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item, let otherItemNode = verticalItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")] {
                     itemNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: .immediate, animate: false)
                 }
             }
         }
         
         private func attachTileVideos() {
-            var fullscreenItemNodes: [PeerId: VoiceChatFullscreenParticipantItemNode] = [:]
+            var fullscreenItemNodes: [String: VoiceChatFullscreenParticipantItemNode] = [:]
             self.fullscreenListNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
-                    fullscreenItemNodes[item.peer.id] = itemNode
+                    fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")] = itemNode
                 }
             }
             
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                     for tileNode in itemNode.tileNodes {
-                        if let item = tileNode.item, let otherItemNode = fullscreenItemNodes[item.peer.id] {
+                        if let item = tileNode.item, let otherItemNode = fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] {
                             tileNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: .immediate, animate: false)
                             
-                            if tileNode.item?.peer.id == self.effectiveSpeaker?.0 {
+                            if tileNode.item?.peer.id == self.effectiveSpeaker?.0 && tileNode.item?.videoEndpointId == self.effectiveSpeaker?.1 {
                                 tileNode.isHidden = true
                             }
                         }
@@ -5336,7 +5336,7 @@ public final class VoiceChatController: ViewController {
                     self.updateDecorationsLayout(transition: .immediate)
                     
                     var minimalVisiblePeerid: (PeerId, CGPoint)?
-                    var verticalItemNodes: [PeerId: ASDisplayNode] = [:]
+                    var verticalItemNodes: [String: ASDisplayNode] = [:]
                     self.listNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                             for tileNode in itemNode.tileNodes {
@@ -5351,7 +5351,7 @@ public final class VoiceChatController: ViewController {
                                             minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                         }
                                     }
-                                    verticalItemNodes[item.peer.id] = tileNode
+                                    verticalItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] = tileNode
                                 }
                             }
                         } else if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item {
@@ -5365,7 +5365,7 @@ public final class VoiceChatController: ViewController {
                                     minimalVisiblePeerid = (item.peer.id, convertedFrame.origin)
                                 }
                             }
-                            verticalItemNodes[item.peer.id] = itemNode
+                            verticalItemNodes[String(item.peer.id.toInt64()) + "_"] = itemNode
                         }
                     }
                     
@@ -5373,7 +5373,7 @@ public final class VoiceChatController: ViewController {
                     
                     let completion = {
                         let effectiveSpeakerPeerId = self.effectiveSpeaker?.0
-                        if let effectiveSpeakerPeerId = effectiveSpeakerPeerId, let otherItemNode = verticalItemNodes[effectiveSpeakerPeerId] {
+                        if let effectiveSpeakerPeerId = effectiveSpeakerPeerId, let otherItemNode = verticalItemNodes[String(effectiveSpeakerPeerId.toInt64()) + "_" + (self.effectiveSpeaker?.1 ?? "")] {
                             self.mainStageNode.animateTransitionIn(from: otherItemNode, transition: transition)
                             
                             self.mainStageBackgroundNode.alpha = 1.0
@@ -5382,7 +5382,7 @@ public final class VoiceChatController: ViewController {
                         
                         self.fullscreenListNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
-                                itemNode.animateTransitionIn(from: verticalItemNodes[item.peer.id], containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                                itemNode.animateTransitionIn(from: verticalItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")], containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
                             }
                         }
                         
@@ -5422,7 +5422,7 @@ public final class VoiceChatController: ViewController {
                     })
                 } else if case .fullscreen = previousDisplayMode, case .modal = self.displayMode {
                     var minimalVisiblePeerid: (PeerId, CGFloat)?
-                    var fullscreenItemNodes: [PeerId: VoiceChatFullscreenParticipantItemNode] = [:]
+                    var fullscreenItemNodes: [String: VoiceChatFullscreenParticipantItemNode] = [:]
                     self.fullscreenListNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
                             let convertedFrame = itemNode.view.convert(itemNode.bounds, to: self.transitionContainerNode.view)
@@ -5433,7 +5433,7 @@ public final class VoiceChatController: ViewController {
                             } else if convertedFrame.minX >= 0.0 {
                                 minimalVisiblePeerid = (item.peer.id, convertedFrame.minX)
                             }
-                            fullscreenItemNodes[item.peer.id] = itemNode
+                            fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")] = itemNode
                         }
                     }
                     
@@ -5448,17 +5448,19 @@ public final class VoiceChatController: ViewController {
                         self.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
                                 for tileNode in itemNode.tileNodes {
-                                    if let item = tileNode.item, let otherItemNode = fullscreenItemNodes[item.peer.id] {
-                                        if !fromPan || item.peer.id == effectiveSpeakerPeerId {
-                                            tileNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                                    if let item = tileNode.item {
+                                        if let otherItemNode = fullscreenItemNodes[String(item.peer.id.toInt64()) + "_" + item.videoEndpointId] {
+                                            if !fromPan || item.peer.id == effectiveSpeakerPeerId {
+                                                tileNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                                            }
                                         }
                                         
-                                        if item.peer.id == effectiveSpeakerPeerId {
+                                        if item.peer.id == effectiveSpeakerPeerId, item.videoEndpointId == self.effectiveSpeaker?.1 {
                                             targetTileNode = tileNode
                                         }
                                     }
                                 }
-                            } else if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item, let otherItemNode = fullscreenItemNodes[item.peer.id] {
+                            } else if let itemNode = itemNode as? VoiceChatParticipantItemNode, let item = itemNode.item, let otherItemNode = fullscreenItemNodes[String(item.peer.id.toInt64()) + "_"] {
                                 if !fromPan {
                                     itemNode.animateTransitionIn(from: otherItemNode, containerNode: self.transitionContainerNode, transition: transition)
                                 }
