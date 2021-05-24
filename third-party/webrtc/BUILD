@@ -2883,6 +2883,15 @@ webrtc_sources = [
     "rtc_base/internal/default_socket_server.cc",
     "modules/video_coding/svc/scalability_structure_simulcast.h",
     "modules/video_coding/svc/scalability_structure_simulcast.cc",
+    "api/async_dns_resolver.h",
+    "modules/video_coding/utility/qp_parser.h",
+    "modules/video_coding/utility/qp_parser.cc",
+    "modules/audio_processing/agc2/saturation_protector_buffer.h",
+    "modules/audio_processing/agc2/saturation_protector_buffer.cc",
+    "modules/audio_processing/capture_levels_adjuster/capture_levels_adjuster.h",
+    "modules/audio_processing/capture_levels_adjuster/capture_levels_adjuster.cc",
+    "modules/audio_processing/capture_levels_adjuster/audio_samples_scaler.h",
+    "modules/audio_processing/capture_levels_adjuster/audio_samples_scaler.cc",
 ]
 
 ios_objc_sources = [
