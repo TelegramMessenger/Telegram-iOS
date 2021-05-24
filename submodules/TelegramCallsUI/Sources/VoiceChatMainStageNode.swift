@@ -662,6 +662,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                         videoNode.alpha = 0.0
                                     }
                                     if waitForFullSize {
+                                        Queue.mainQueue().after(2.0) {
+                                            if let previousVideoNode = previousVideoNode {
+                                                previousVideoNode.removeFromSupernode()
+                                            }
+                                        }
                                         strongSelf.videoReadyDisposable.set((videoNode.ready
                                         |> filter { $0 }
                                         |> take(1)

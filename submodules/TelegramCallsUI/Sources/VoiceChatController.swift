@@ -4741,7 +4741,7 @@ public final class VoiceChatController: ViewController {
                                 }
                             }
                         case .fullscreen:
-                            if fabs(translation) > 32.0 {
+                            if abs(translation) > 32.0 {
                                 if self.fullscreenListNode.layer.animationKeys()?.contains("opacity") == true {
                                     self.fullscreenListNode.layer.removeAllAnimations()
                                 }
