@@ -373,6 +373,7 @@ public final class VoiceChatController: ViewController {
                 
                 let icon: VoiceChatTileItem.Icon
                 var text: VoiceChatParticipantItem.ParticipantText
+                var additionalText: VoiceChatParticipantItem.ParticipantText?
                 var speaking = false
                                 
                 var textIcon = VoiceChatParticipantItem.ParticipantText.TextIcon()
@@ -404,6 +405,7 @@ public final class VoiceChatController: ViewController {
                     }
                     if let muteState = peerEntry.muteState, muteState.mutedByYou {
                         icon = .microphone(true)
+                        additionalText = .text(presentationData.strings.VoiceChat_StatusMutedForYou, textIcon, .destructive)
                     } else {
                         icon = .microphone(peerEntry.muteState != nil)
                     }
@@ -411,6 +413,7 @@ public final class VoiceChatController: ViewController {
                     if let muteState = peerEntry.muteState, muteState.mutedByYou {
                         text = .text(presentationData.strings.VoiceChat_StatusMutedForYou, textIcon, .destructive)
                         icon = .microphone(true)
+                        additionalText = .text(presentationData.strings.VoiceChat_StatusMutedForYou, textIcon, .destructive)
                     } else {
                         if peerEntry.volume != nil {
                             textIcon.insert(.volume)
@@ -433,7 +436,7 @@ public final class VoiceChatController: ViewController {
                     text = .text(about, textIcon, .generic)
                 }
                 
-                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, icon: icon, text: text, action: {
+                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, icon: icon, text: text, additionalText: additionalText, action: {
                     interaction.switchToPeer(peer.id, videoEndpointId, true)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture)
@@ -3575,7 +3578,7 @@ public final class VoiceChatController: ViewController {
             let isFirstTime = self.validLayout == nil
             let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationHeight)
-
+            
             var size = layout.size
             let contentWidth: CGFloat
             if case .regular = layout.metrics.widthClass {
@@ -3695,6 +3698,15 @@ public final class VoiceChatController: ViewController {
             transition.updatePosition(node: self.fullscreenListNode, position: fullscreenListPosition)
             self.fullscreenListNode.transform = fullscreenListTransform
             self.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: fullscreenListUpdateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            
+            
+            var childrenLayout = layout
+            var childrenInsets = childrenLayout.intrinsicInsets
+            if !isLandscape, case .fullscreen = effectiveDisplayMode {
+                childrenInsets.bottom += self.effectiveBottomAreaHeight + fullscreenListHeight + 30.0
+            }
+            childrenLayout.intrinsicInsets = childrenInsets
+            self.controller?.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
             
             transition.updateFrame(node: self.topCornersNode, frame: CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: topCornersY), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0)))
             
@@ -4680,7 +4692,7 @@ public final class VoiceChatController: ViewController {
                         self.mainStageNode.setControlsHidden(true, animated: true)
                         
                         self.fullscreenListNode.alpha = 0.0
-                        self.fullscreenListNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, completion: { [weak self] _ in
+                        self.fullscreenListNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, completion: { [weak self] finished in
                             self?.attachTileVideos()
                         })
                         
@@ -4729,6 +4741,11 @@ public final class VoiceChatController: ViewController {
                                 }
                             }
                         case .fullscreen:
+                            if fabs(translation) > 32.0 {
+                                if self.fullscreenListNode.layer.animationKeys()?.contains("opacity") == true {
+                                    self.fullscreenListNode.layer.removeAllAnimations()
+                                }
+                            }
                             var bounds = self.mainStageContainerNode.bounds
                             bounds.origin.y = -translation
                             self.mainStageContainerNode.bounds = bounds
@@ -5647,6 +5664,7 @@ public final class VoiceChatController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.automaticallyControlPresentationContextLayout = false
         self.blocksBackgroundWhenInOverlay = true
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)

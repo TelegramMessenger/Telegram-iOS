@@ -14,6 +14,8 @@ import AvatarNode
 private let backgroundCornerRadius: CGFloat = 11.0
 private let borderLineWidth: CGFloat = 2.0
 
+private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
+
 final class VoiceChatTileItem: Equatable {
     enum Icon: Equatable {
         case none
@@ -29,6 +31,7 @@ final class VoiceChatTileItem: Equatable {
     let nameDisplayOrder: PresentationPersonNameOrder
     let icon: Icon
     let text: VoiceChatParticipantItem.ParticipantText
+    let additionalText: VoiceChatParticipantItem.ParticipantText?
     let speaking: Bool
     let action: () -> Void
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
@@ -39,7 +42,7 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping () -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
@@ -48,6 +51,7 @@ final class VoiceChatTileItem: Equatable {
         self.nameDisplayOrder = nameDisplayOrder
         self.icon = icon
         self.text = text
+        self.additionalText = additionalText
         self.speaking = speaking
         self.action = action
         self.contextAction = contextAction
@@ -66,6 +70,12 @@ final class VoiceChatTileItem: Equatable {
             return false
         }
         if lhs.speaking != rhs.speaking {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.additionalText != rhs.additionalText {
             return false
         }
         if lhs.icon != rhs.icon {
@@ -312,6 +322,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             }
             
             let titleFont = Font.semibold(13.0)
+            let subtitleFont = Font.regular(13.0)
             let titleColor = UIColor.white
             var titleAttributedString: NSAttributedString?
             if let user = item.peer as? TelegramUser {
@@ -340,6 +351,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             } else if let channel = item.peer as? TelegramChannel {
                 titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
             }
+            
+            var microphoneColor = UIColor.white
+            if let additionalText = item.additionalText, case let .text(text, _, color) = additionalText {
+                if case .destructive = color {
+                    microphoneColor = destructiveColor
+                }
+            }
             self.titleNode.attributedText = titleAttributedString
             
             if case let .microphone(muted) = item.icon {
@@ -352,7 +370,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                     self.infoNode.addSubnode(animationNode)
                 }
                 animationNode.alpha = 1.0
-                animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: UIColor.white), animated: true)
+                animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: microphoneColor), animated: true)
             } else if let animationNode = self.animationNode {
                 self.animationNode = nil
                 animationNode.removeFromSupernode()
