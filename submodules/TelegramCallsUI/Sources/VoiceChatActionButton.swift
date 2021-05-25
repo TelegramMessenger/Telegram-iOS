@@ -1371,9 +1371,9 @@ final class BlobView: UIView {
         didSet {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            let lv = minScale + (maxScale - minScale) * level
-            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
-            self.scaleUpdated?(level)
+            let lv = self.minScale + (self.maxScale - self.minScale) * self.level
+            self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            self.scaleUpdated?(self.level)
             CATransaction.commit()
         }
     }
@@ -1386,30 +1386,7 @@ final class BlobView: UIView {
         layer.strokeColor = nil
         return layer
     }()
-    
-    private var transition: CGFloat = 0 {
-        didSet {
-            guard let currentPoints = currentPoints else { return }
-            
-            shapeLayer.path = UIBezierPath.smoothCurve(through: currentPoints, length: bounds.width, smoothness: smoothness).cgPath
-        }
-    }
-    
-    private var fromPoints: [CGPoint]?
-    private var toPoints: [CGPoint]?
-    
-    private var currentPoints: [CGPoint]? {
-        guard let fromPoints = fromPoints, let toPoints = toPoints else { return nil }
         
-        return fromPoints.enumerated().map { offset, fromPoint in
-            let toPoint = toPoints[offset]
-            return CGPoint(
-                x: fromPoint.x + (toPoint.x - fromPoint.x) * transition,
-                y: fromPoint.y + (toPoint.y - fromPoint.y) * transition
-            )
-        }
-    }
-    
     init(
         pointsCount: Int,
         minRandomness: CGFloat,
@@ -1484,10 +1461,11 @@ final class BlobView: UIView {
                 self?.animateToNewShape()
             }
         }
+
         self.shapeLayer.add(animation, forKey: "path")
         
-        lastSpeedLevel = speedLevel
-        speedLevel = 0
+        self.lastSpeedLevel = self.speedLevel
+        self.speedLevel = 0
     }
     
     // MARK: Helpers

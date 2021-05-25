@@ -419,7 +419,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 unboundSize = CGSize(width: floor(dimensions.cgSize.width * 0.5), height: floor(dimensions.cgSize.height * 0.5))
             } else if let wallpaper = media as? WallpaperPreviewMedia {
                 switch wallpaper.content {
-                    case let .file(file, _, _, _, isTheme, isSupported):
+                    case let .file(file, _, _, isTheme, isSupported):
                         if let thumbnail = file.previewRepresentations.first, var dimensions = file.dimensions {
                             let dimensionsVertical = dimensions.width < dimensions.height
                             let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
@@ -570,11 +570,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         emptyColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                     }
                     if let wallpaper = media as? WallpaperPreviewMedia {
-                        if case let .file(_, patternColor, patternBottomColor, rotation, _, _) = wallpaper.content {
+                        if case let .file(_, patternColors, rotation, _, _) = wallpaper.content {
                             var colors: [UIColor] = []
-                            colors.append(patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5))
-                            if let patternBottomColor = patternBottomColor {
-                                colors.append(patternBottomColor)
+                            if patternColors.isEmpty {
+                                colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                            } else {
+                                colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
                             }
                             patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation)
                         }
@@ -714,7 +715,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             updateImageSignal = { synchronousLoad, _ in
                                 switch wallpaper.content {
-                                    case let .file(file, _, _, _, isTheme, _):
+                                    case let .file(file, _, _, isTheme, _):
                                         if isTheme {
                                             return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)))
                                         } else {
@@ -732,12 +733,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
                                     case let .color(color):
                                         return solidColorImage(color)
-                                    case let .gradient(topColor, bottomColor, rotation):
-                                        return gradientImage([topColor, bottomColor], rotation: rotation ?? 0)
+                                    case let .gradient(colors, rotation):
+                                        return gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
                                 }
                             }
                             
-                            if case let .file(file, _, _, _, _, _) = wallpaper.content {
+                            if case let .file(file, _, _, _, _) = wallpaper.content {
                                 updatedFetchControls = FetchControls(fetch: { manual in
                                     if let strongSelf = self {
                                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
@@ -782,7 +783,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             switch wallpaper.content {
-                                case let .file(file, _, _, _, _, _):
+                                case let .file(file, _, _, _, _):
                                     updatedStatusSignal = messageMediaFileStatus(context: context, messageId: message.id, file: file)
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)

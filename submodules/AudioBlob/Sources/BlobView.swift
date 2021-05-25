@@ -187,8 +187,8 @@ final class BlobView: UIView {
         didSet {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            let lv = minScale + (maxScale - minScale) * level
-            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            let lv = self.minScale + (self.maxScale - self.minScale) * self.level
+            self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
             CATransaction.commit()
         }
     }
@@ -312,6 +312,7 @@ final class BlobView: UIView {
                 self?.animateToNewShape()
             }
         }
+
         self.shapeLayer.add(animation, forKey: "path")
 
         self.lastSpeedLevel = self.speedLevel

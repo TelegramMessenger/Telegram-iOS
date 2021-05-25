@@ -15,13 +15,21 @@ enum WallpaperOptionButtonValue {
 private func generateColorsImage(diameter: CGFloat, colors: [UIColor]) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.addEllipse(in: CGRect(origin: CGPoint(), size: size))
-        context.clip()
-        for i in 0 ..< min(colors.count, 4) {
-            let x = i % 2
-            let y = i / 2
-            context.setFillColor(colors[i].cgColor)
-            context.fill(CGRect(origin: CGPoint(x: CGFloat(x) * size.width / 2.0, y: CGFloat(y) * size.height / 2.0), size: CGSize(width: size.width / 2.0, height: size.height / 2.0)))
+
+        if !colors.isEmpty {
+            let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            var startAngle = -CGFloat.pi * 0.5
+            for i in 0 ..< colors.count {
+                context.setFillColor(colors[i].cgColor)
+
+                let endAngle = startAngle + 2.0 * CGFloat.pi * (1.0 / CGFloat(colors.count))
+
+                context.move(to: center)
+                context.addArc(center: center, radius: size.width / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise: false)
+                context.fillPath()
+
+                startAngle = endAngle
+            }
         }
     })
 }

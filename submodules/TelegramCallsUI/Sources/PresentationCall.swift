@@ -927,6 +927,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -978,6 +979,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {
@@ -997,6 +1001,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -1048,6 +1053,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {

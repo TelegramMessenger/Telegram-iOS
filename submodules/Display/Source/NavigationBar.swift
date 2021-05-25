@@ -1132,12 +1132,18 @@ open class NavigationBar: ASDisplayNode {
         if let titleView = self.titleView {
             let titleSize = CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight)
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-            transition.updateFrame(view: titleView, frame: titleFrame)
+            var titleViewTransition = transition
+            if titleView.frame.isEmpty {
+                titleViewTransition = .immediate
+                titleView.frame = titleFrame
+            }
+
+            titleViewTransition.updateFrame(view: titleView, frame: titleFrame)
             
             if let titleView = titleView as? NavigationBarTitleView {
                 let titleWidth = size.width - (leftTitleInset > 0.0 ? leftTitleInset : rightTitleInset) - (rightTitleInset > 0.0 ? rightTitleInset : leftTitleInset)
                 
-                titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: transition)
+                titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: titleViewTransition)
             }
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {

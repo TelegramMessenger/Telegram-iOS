@@ -1950,9 +1950,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 } else if participant.muteState?.mutedByYou == true {
                                     strongSelf.genericCallContext?.setVolume(ssrc: ssrc, volume: 0.0)
                                 }
-                                if participant.videoJsonDescription == nil {
-                                    strongSelf.genericCallContext?.removeIncomingVideoSource(ssrc)
-                                }
                             }
                         }
                         
@@ -2434,6 +2431,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -2485,6 +2483,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {
@@ -2923,6 +2924,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -2974,6 +2976,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {

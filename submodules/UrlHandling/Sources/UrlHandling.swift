@@ -186,7 +186,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     let parameter: WallpaperUrlParameter
                     if [6, 8].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
-                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-~").inverted) == nil {
                         var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -197,17 +197,33 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             }
                         }
-                        let components = component.components(separatedBy: "-")
-                        if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
-                            parameter = .gradient(topColor, bottomColor, rotation)
+                        if component.contains("~") {
+                            let components = component.components(separatedBy: "~")
+
+                            var colors: [UInt32] = []
+                            if components.count >= 2 && components.count <= 4 {
+                                colors = components.compactMap { component in
+                                    return UIColor(hexString: component)?.rgb
+                                }
+                            }
+
+                            if !colors.isEmpty {
+                                parameter = .gradient(colors, rotation)
+                            } else {
+                                return nil
+                            }
                         } else {
-                            return nil
+                            let components = component.components(separatedBy: "-")
+                            if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
+                                parameter = .gradient([topColor.rgb, bottomColor.rgb], rotation)
+                            } else {
+                                return nil
+                            }
                         }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
-                        var topColor: UIColor?
-                        var bottomColor: UIColor?
+                        var colors: [UInt32] = []
                         var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -225,12 +241,18 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                         }
                                     } else if queryItem.name == "bg_color" {
                                         if [6, 8].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
-                                            topColor = color
+                                            colors = [color.rgb]
                                         } else if [13, 15, 17].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
                                             let components = value.components(separatedBy: "-")
                                             if components.count == 2, let topColorValue = UIColor(hexString: components[0]), let bottomColorValue = UIColor(hexString: components[1]) {
-                                                topColor = topColorValue
-                                                bottomColor = bottomColorValue
+                                                colors = [topColorValue.rgb, bottomColorValue.rgb]
+                                            }
+                                        } else if value.contains("~") {
+                                            let components = value.components(separatedBy: "~")
+                                            if components.count >= 2 && components.count <= 4 {
+                                                colors = components.compactMap { component in
+                                                    return UIColor(hexString: component)?.rgb
+                                                }
                                             }
                                         }
                                     } else if queryItem.name == "intensity" {
@@ -241,7 +263,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             }
                         }
-                        parameter = .slug(component, options, topColor, bottomColor, intensity, rotation)
+                        parameter = .slug(component, options, colors, intensity, rotation)
                     }
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
