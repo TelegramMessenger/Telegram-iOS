@@ -139,7 +139,6 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     private func setupGradientAnimations() {
-        return
         if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
@@ -817,7 +816,7 @@ final class CurveView: UIView {
         animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         animation.fromValue = 0
         animation.toValue = 1
-        //pop_add(animation, forKey: "curve")
+        pop_add(animation, forKey: "curve")
         
         lastSpeedLevel = speedLevel
         speedLevel = 0

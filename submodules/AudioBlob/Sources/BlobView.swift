@@ -185,6 +185,7 @@ final class BlobView: UIView {
     
     var level: CGFloat = 0 {
         didSet {
+            return;
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             let lv = minScale + (maxScale - minScale) * level
