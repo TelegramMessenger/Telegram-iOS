@@ -1400,7 +1400,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             contentHeight = layout.size.height
                         } else {
                             let totalHeight = originalContentFrame.height + originalActionsFrame.height
-                            contentContainerFrame = CGRect(origin: CGPoint(x: originalContentFrame.minX - contentParentNode.contentRect.minX, y: floor((layout.size.height - totalHeight) / 2.0)), size: originalContentFrame.size)
+                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - originalContentFrame.width) / 2.0), y: floor((layout.size.height - totalHeight) / 2.0)), size: originalContentFrame.size)
                             originalActionsFrame.origin.y = contentContainerFrame.maxY + contentActionsSpacing
                         }
                     } else if keepInPlace {

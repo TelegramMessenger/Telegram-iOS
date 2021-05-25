@@ -24,6 +24,7 @@ private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .w
 private let backgroundCornerRadius: CGFloat = 11.0
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
 private let fadeHeight: CGFloat = 50.0
+private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
@@ -503,28 +504,27 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     func update(peerEntry: VoiceChatPeerEntry, pinned: Bool) {
         let previousPeerEntry = self.currentPeerEntry
         self.currentPeerEntry = peerEntry
+        
+        let peer = peerEntry.peer
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
-            let peer = peerEntry.peer
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false))
             self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
-            self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
-            if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
-            }
         }
-        
+                
         var gradient: VoiceChatBlobNode.Gradient = .active
         var muted = false
         var state = peerEntry.state
         if let muteState = peerEntry.muteState, case .speaking = state, muteState.mutedByYou || !muteState.canUnmute {
             state = .listening
         }
+        var mutedForYou = false
         switch state {
             case .listening:
                 if let muteState = peerEntry.muteState, muteState.mutedByYou {
                     gradient = .muted
                     muted = true
+                    mutedForYou = true
                 } else {
                     gradient = .active
                     muted = peerEntry.muteState != nil
@@ -533,6 +533,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 if let muteState = peerEntry.muteState, muteState.mutedByYou {
                     gradient = .muted
                     muted = true
+                    mutedForYou = true
                 } else {
                     gradient = .speaking
                     muted = false
@@ -540,6 +541,21 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             default:
                 muted = true
         }
+        
+        var microphoneColor = UIColor.white
+        var titleAttributedString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
+        if mutedForYou {
+            microphoneColor = destructiveColor
+            
+            let updatedString = NSMutableAttributedString(attributedString: titleAttributedString)
+            updatedString.append(NSAttributedString(string: " \(presentationData.strings.VoiceChat_StatusMutedForYou)", font: Font.regular(15.0), textColor: UIColor.white))
+            titleAttributedString = updatedString
+        }
+        self.titleNode.attributedText = titleAttributedString
+        if let (size, sideInset, bottomInset, isLandscape) = self.validLayout {
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
+        }
+        
         self.audioLevelNode.updateGlowAndGradientAnimations(type: gradient, animated: true)
         
         self.pinButtonTitleNode.isHidden = !pinned
@@ -571,7 +587,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             }))
         }
         
-        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: .white), animated: true)
+        self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: microphoneColor), animated: true)
     }
     
     private func setAvatarHidden(_ hidden: Bool) {
@@ -598,6 +614,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     if previousPeer?.0 == peer?.0 && self.appeared {
                         delayTransition = true
                     }
+                    let appeared = self.appeared
                     
                     if !delayTransition {
                         self.setAvatarHidden(true)
@@ -671,8 +688,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                                         })
                                                     }
                                                 } else {
-                                                    if let previousVideoNode = previousVideoNode {
-                                                        previousVideoNode.removeFromSupernode()
+                                                    Queue.mainQueue().after(0.07) {
+                                                        if let previousVideoNode = previousVideoNode {
+                                                            previousVideoNode.removeFromSupernode()
+                                                        }
                                                     }
                                                 }
                                             }
