@@ -14,6 +14,7 @@
 #ifndef WEBRTC_IOS
 #import "platform/darwin/VideoMetalViewMac.h"
 #import "platform/darwin/GLVideoViewMac.h"
+#import "platform/darwin/VideoSampleBufferViewMac.h"
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
 #define UIViewContentModeScaleAspect kCAGravityResizeAspect
 

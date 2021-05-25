@@ -383,19 +383,21 @@ public enum GetGroupCallParticipantsError {
 
 public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
     let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool), GetGroupCallParticipantsError>
-    if let sortAscending = sortAscending {
-        sortAscendingValue = .single((sortAscending, nil, false, nil, false))
-    } else {
-        sortAscendingValue = getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
-        |> mapError { _ -> GetGroupCallParticipantsError in
-            return .generic
+//    if let sortAscending = sortAscending {
+//        sortAscendingValue = .single((sortAscending, nil, false, nil, false))
+//    } else {
+//
+//    }
+    
+    sortAscendingValue = getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
+    |> mapError { _ -> GetGroupCallParticipantsError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool), GetGroupCallParticipantsError> in
+        guard let result = result else {
+            return .fail(.generic)
         }
-        |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool), GetGroupCallParticipantsError> in
-            guard let result = result else {
-                return .fail(.generic)
-            }
-            return .single((result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled))
-        }
+        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled))
     }
 
     return combineLatest(
