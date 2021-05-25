@@ -499,6 +499,9 @@ public final class OngoingGroupCallContext {
                             view?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
+                        },
+                        updateIsEnabled: { [weak view] value in
+                            view?.updateIsEnabled(value)
                         }
                     ))
                     #else

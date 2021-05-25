@@ -9,7 +9,7 @@ config_setting(
 )
 
 optimization_flags = select({
-    #":debug_build": ["-Os"],
+    ":debug_build": ["-Os"],
     "//conditions:default": [],
 })
 

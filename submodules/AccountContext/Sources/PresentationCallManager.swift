@@ -109,6 +109,7 @@ public final class PresentationCallVideoView {
     public let getAspect: () -> CGFloat
     public let setOnOrientationUpdated: (((Orientation, CGFloat) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
+    public let updateIsEnabled: (Bool) -> Void
     
     public init(
         holder: AnyObject,
@@ -117,7 +118,8 @@ public final class PresentationCallVideoView {
         getOrientation: @escaping () -> Orientation,
         getAspect: @escaping () -> CGFloat,
         setOnOrientationUpdated: @escaping (((Orientation, CGFloat) -> Void)?) -> Void,
-        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void,
+        updateIsEnabled: @escaping (Bool) -> Void
     ) {
         self.holder = holder
         self.view = view
@@ -126,6 +128,7 @@ public final class PresentationCallVideoView {
         self.getAspect = getAspect
         self.setOnOrientationUpdated = setOnOrientationUpdated
         self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
+        self.updateIsEnabled = updateIsEnabled
     }
 }
 

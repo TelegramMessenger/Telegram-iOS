@@ -19,6 +19,7 @@ objc_library(
         "tgcalls/tgcalls/platform/uwp/**",
         "tgcalls/tgcalls/platform/darwin/VideoCameraCapturerMac.*",
         "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
+        "tgcalls/tgcalls/platform/darwin/VideoSampleBufferViewMac.*",
         "tgcalls/tgcalls/platform/darwin/GLVideoViewMac.*",
         "tgcalls/tgcalls/platform/darwin/ScreenCapturer.*",
         "tgcalls/tgcalls/platform/darwin/DesktopSharingCapturer.*",

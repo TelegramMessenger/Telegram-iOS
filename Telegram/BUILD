@@ -1820,7 +1820,8 @@ ios_application(
     ],
 )
 
-# a temporary target used to simplify webrtc build tests
+# Temporary targets used to simplify webrtc build tests
+
 ios_application(
     name = "webrtc_build_test",
     bundle_id = "{telegram_bundle_id}".format(
@@ -1841,5 +1842,28 @@ ios_application(
     ],
     deps = [
         "//third-party/webrtc:webrtc_lib",
+    ],
+)
+
+ios_application(
+    name = "libvpx_build_test",
+    bundle_id = "{telegram_bundle_id}".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = ["iphone", "ipad"],
+    minimum_os_version = "9.0",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
+    entitlements = ":TelegramEntitlements.entitlements",
+    infoplists = [
+        ":TelegramInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":UrlTypesInfoPlist",
+    ],
+    deps = [
+        "//third-party/libvpx:vpx",
     ],
 )

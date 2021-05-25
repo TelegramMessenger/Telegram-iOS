@@ -41,6 +41,8 @@ objc_library(
     ],
     copts = [
         "-D{name}=rnnoise_{name}".format(name = name) for name in replace_symbol_list
+    ] + [
+        "-Os",
     ],
     visibility = [
         "//visibility:public",

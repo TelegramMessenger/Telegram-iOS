@@ -275,6 +275,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
         
         self.pager.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
+
         self.pager.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     

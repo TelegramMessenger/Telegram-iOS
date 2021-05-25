@@ -1136,7 +1136,20 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     outgoingColor = (bubbleColor, bubbleColor)
                 }
             } else {
-                topBackgroundColor = UIColor(rgb: 0xd6e2ee)
+                if let wallpaper = wallpaper, case let .file(file) = wallpaper {
+                    topBackgroundColor = file.settings.colors.first.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
+                    if file.settings.colors.count >= 2 {
+                        bottomBackgroundColor = UIColor(rgb: file.settings.colors[1])
+                    }
+                } else if let wallpaper = wallpaper, case let .gradient(colors, _) = wallpaper {
+                    topBackgroundColor = colors.first.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
+                    if colors.count >= 2 {
+                        bottomBackgroundColor = UIColor(rgb: colors[1])
+                    }
+                } else {
+                    topBackgroundColor = defaultBuiltinWallpaperGradientColors[0]
+                    bottomBackgroundColor = defaultBuiltinWallpaperGradientColors[1]
+                }
                 outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
             }
         case .day:
@@ -1190,6 +1203,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     colors = [0xd6e2ee]
                     topBackgroundColor = UIColor(rgb: 0xd6e2ee)
             }
+        } else {
+            colors = defaultBuiltinWallpaperGradientColors.map(\.rgb)
         }
         
         colorsSignal = .single(((topBackgroundColor, bottomBackgroundColor, colors), (incomingColor, incomingColor), outgoingColor, nil, rotation))

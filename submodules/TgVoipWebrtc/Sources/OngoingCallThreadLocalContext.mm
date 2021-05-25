@@ -101,6 +101,10 @@
     }
 }
 
+- (void)updateIsEnabled:(bool)isEnabled {
+    [self setEnabled:isEnabled];
+}
+
 @end
 
 @interface GLVideoView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
@@ -144,6 +148,9 @@
     }
 }
 
+- (void)updateIsEnabled:(bool)__unused isEnabled {
+}
+
 @end
 
 @interface VideoSampleBufferView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
@@ -185,6 +192,10 @@
     } else {
         [self internalSetOnIsMirroredUpdated:nil];
     }
+}
+
+- (void)updateIsEnabled:(bool)isEnabled {
+    [self setEnabled:isEnabled];
 }
 
 @end
@@ -1271,7 +1282,21 @@ private:
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
-            if ([VideoMetalView isSupported]) {
+            if (true) {
+                VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf && strongSelf->_instance) {
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
+                    }
+                }];
+
+                completion(remoteRenderer);
+            } else if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
 #if TARGET_OS_IPHONE
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;

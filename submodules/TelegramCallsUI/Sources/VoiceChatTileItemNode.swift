@@ -259,6 +259,8 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if let shimmerNode = self.shimmerNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
+        let isVisible = rect.maxY >= 0.0 && rect.minY <= containerSize.height
+        self.videoNode?.updateIsEnabled(isVisible)
     }
     
     func update(size: CGSize, availableWidth: CGFloat, item: VoiceChatTileItem, transition: ContainedViewLayoutTransition) {

@@ -101,6 +101,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setOnFirstFrameReceived:(void (^ _Nullable)(float))onFirstFrameReceived;
 - (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated;
 - (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated;
+- (void)updateIsEnabled:(bool)isEnabled;
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 - (void)setVideoContentMode:(CALayerContentsGravity _Nonnull )mode;
 - (void)setForceMirrored:(bool)forceMirrored;

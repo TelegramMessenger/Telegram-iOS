@@ -100,6 +100,10 @@ final class GroupVideoNode: ASDisplayNode {
         
         self.containerNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
+
+    func updateIsEnabled(_ isEnabled: Bool) {
+        self.videoView.updateIsEnabled(isEnabled)
+    }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
         if self.isBlurred == isBlurred {

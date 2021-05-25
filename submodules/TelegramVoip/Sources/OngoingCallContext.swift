@@ -376,6 +376,9 @@ public final class OngoingCallVideoCapturer {
                     },
                     setOnIsMirroredUpdated: { [weak view] f in
                         view?.setOnIsMirroredUpdated(f)
+                    },
+                    updateIsEnabled: { [weak view] value in
+                        view?.updateIsEnabled(value)
                     }
                 ))
             } else {
@@ -508,6 +511,7 @@ public final class OngoingCallContextPresentationCallVideoView {
     public let getAspect: () -> CGFloat
     public let setOnOrientationUpdated: (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
+    public let updateIsEnabled: (Bool) -> Void
     
     public init(
         view: UIView,
@@ -515,7 +519,8 @@ public final class OngoingCallContextPresentationCallVideoView {
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
         getAspect: @escaping () -> CGFloat,
         setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void,
-        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void,
+        updateIsEnabled: @escaping (Bool) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
@@ -523,6 +528,7 @@ public final class OngoingCallContextPresentationCallVideoView {
         self.getAspect = getAspect
         self.setOnOrientationUpdated = setOnOrientationUpdated
         self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
+        self.updateIsEnabled = updateIsEnabled
     }
 }
 
@@ -918,6 +924,9 @@ public final class OngoingCallContext {
                                 view?.setOnIsMirroredUpdated { value in
                                     f?(value)
                                 }
+                            },
+                            updateIsEnabled: { [weak view] value in
+                                view?.updateIsEnabled(value)
                             }
                         ))
                     } else {
