@@ -773,7 +773,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             nodeToAnimateIn = animationNode
                         }
                         var color = color
-                        if color.rgb == 0x979797 {
+                        if hasVideo || color.rgb == 0x979797 {
                             color = UIColor(rgb: 0xffffff)
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: color), animated: true)

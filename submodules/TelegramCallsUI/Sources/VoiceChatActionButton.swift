@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import LegacyComponents
 import AnimationUI
 import AppBundle
 import ManagedAnimationNode
@@ -1433,9 +1432,9 @@ final class BlobView: UIView {
         
         super.init(frame: .zero)
         
-        layer.addSublayer(shapeLayer)
+        self.layer.addSublayer(self.shapeLayer)
         
-        shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+        self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
     }
     
     required init?(coder: NSCoder) {
@@ -1443,11 +1442,11 @@ final class BlobView: UIView {
     }
     
     func setColor(_ color: UIColor) {
-        shapeLayer.fillColor = color.cgColor
+        self.shapeLayer.fillColor = color.cgColor
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        speedLevel = max(speedLevel, newSpeedLevel)
+        self.speedLevel = max(self.speedLevel, newSpeedLevel)
         
 //        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
 //            animateToNewShape()
@@ -1455,54 +1454,37 @@ final class BlobView: UIView {
     }
     
     func startAnimating() {
-        animateToNewShape()
+        self.animateToNewShape()
     }
     
     func stopAnimating() {
-        fromPoints = currentPoints
-        toPoints = nil
-        pop_removeAnimation(forKey: "blob")
+        self.shapeLayer.removeAnimation(forKey: "path")
     }
     
     private func animateToNewShape() {
-        if pop_animation(forKey: "blob") != nil {
-            fromPoints = currentPoints
-            toPoints = nil
-            pop_removeAnimation(forKey: "blob")
+        if self.shapeLayer.path == nil {
+            let points = generateNextBlob(for: self.bounds.size)
+            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: smoothness).cgPath
         }
         
-        if fromPoints == nil {
-            fromPoints = generateNextBlob(for: bounds.size)
-        }
-        if toPoints == nil {
-            toPoints = generateNextBlob(for: bounds.size)
-        }
+        let nextPoints = generateNextBlob(for: self.bounds.size)
+        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: smoothness).cgPath
         
-        let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "blob.transition", initializer: { property in
-            property?.readBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                values.pointee = blobView.transition
-            }
-            property?.writeBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                blobView.transition = values.pointee
-            }
-        })  as? POPAnimatableProperty
-        animation.completionBlock = { [weak self] animation, finished in
+        let animation = CABasicAnimation(keyPath: "path")
+        let previousPath = self.shapeLayer.path
+        self.shapeLayer.path = nextPath
+        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = previousPath
+        animation.toValue = nextPath
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .forwards
+        animation.completion = { [weak self] finished in
             if finished {
-                self?.fromPoints = self?.currentPoints
-                self?.toPoints = nil
                 self?.animateToNewShape()
             }
         }
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        animation.fromValue = 0
-        animation.toValue = 1
-        pop_add(animation, forKey: "blob")
+        self.shapeLayer.add(animation, forKey: "path")
         
         lastSpeedLevel = speedLevel
         speedLevel = 0

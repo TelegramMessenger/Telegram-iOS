@@ -653,7 +653,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }
             case let .extracted(extracted, keepInPlace):
                 let springDuration: Double = 0.42 * animationDurationFactor
-                let springDamping: CGFloat = 104.0
+                var springDamping: CGFloat = 104.0
+                if case let .extracted(source) = self.source, source.centerVertically {
+                    springDamping = 124.0
+                }
                 
                 self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
                 self.actionsContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
@@ -662,13 +665,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let contentParentNode = extracted
                     let localSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.scrollNode.view)
                    
-                    var actionsSpringDamping = springDamping
                     var actionsDuration = springDuration
                     var actionsOffset: CGFloat = 0.0
                     var contentDuration = springDuration
                     if case let .extracted(source) = self.source, source.centerVertically {
                         actionsOffset = -(originalProjectedContentViewFrame.1.height - originalProjectedContentViewFrame.0.height) * 0.57
-                        actionsSpringDamping *= 1.2
                         actionsDuration *= 1.0
                         contentDuration *= 0.9
                     }
@@ -684,7 +685,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         reactionContextNode.animateIn(from: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size))
                     }
                     
-                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: actionsSpringDamping, additive: true)
+                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
                     self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     contentParentNode.applyAbsoluteOffsetSpring?(-contentContainerOffset.y, springDuration, springDamping)

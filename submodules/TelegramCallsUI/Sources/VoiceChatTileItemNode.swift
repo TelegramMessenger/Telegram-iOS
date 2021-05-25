@@ -449,7 +449,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                         
             if animate {
                 sourceNode.isHidden = true
-                Queue.mainQueue().after(0.6) {
+                Queue.mainQueue().after(0.7) {
                     sourceNode.isHidden = false
                 }
                 
@@ -640,7 +640,7 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     }
 }
 
-private final class ShimmerEffectForegroundNode: ASDisplayNode {
+final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentForegroundColor: UIColor?
     private let imageNodeContainer: ASDisplayNode
     private let imageNode: ASImageNode

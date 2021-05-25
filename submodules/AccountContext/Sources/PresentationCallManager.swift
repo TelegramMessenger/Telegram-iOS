@@ -385,6 +385,7 @@ public protocol PresentationGroupCall: class {
     
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
+    var isSpeaking: Signal<Bool, NoError> { get }
     var canBeRemoved: Signal<Bool, NoError> { get }
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var stateVersion: Signal<Int, NoError> { get }

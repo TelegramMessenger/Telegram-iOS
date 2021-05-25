@@ -625,6 +625,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var isScheduled = false
     private var isScheduledStarted = false
 
+    private let isSpeakingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var isSpeaking: Signal<Bool, NoError> {
+        return self.isSpeakingPromise.get()
+    }
+    
     private var screencastFramesDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
@@ -1612,6 +1617,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 var result: [(PeerId, UInt32, Float, Bool)] = []
                 var myLevel: Float = 0.0
                 var myLevelHasVoice: Bool = false
+                var orignalMyLevelHasVoice: Bool = false
                 var missingSsrcs = Set<UInt32>()
                 for (ssrcKey, level, hasVoice) in levels {
                     var peerId: PeerId?
@@ -1626,6 +1632,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     if let peerId = peerId {
                         if case .local = ssrcKey {
+                            orignalMyLevelHasVoice = hasVoice
                             if !strongSelf.isMutedValue.isEffectivelyMuted {
                                 myLevel = level
                                 myLevelHasVoice = hasVoice
@@ -1642,6 +1649,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let mappedLevel = myLevel * 1.5
                 strongSelf.myAudioLevelPipe.putNext(mappedLevel)
                 strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
+                strongSelf.isSpeakingPromise.set(orignalMyLevelHasVoice)
                 
                 if !missingSsrcs.isEmpty {
                     strongSelf.participantsContext?.ensureHaveParticipants(ssrcs: missingSsrcs)
