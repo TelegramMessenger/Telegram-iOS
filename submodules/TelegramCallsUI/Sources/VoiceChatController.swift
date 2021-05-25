@@ -3844,9 +3844,7 @@ public final class VoiceChatController: ViewController {
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: smallButtons, animated: true)
             
             var hasCameraButton = self.callState?.isVideoEnabled ?? false
-            #if DEBUG
-            hasCameraButton = true
-            #endif
+            
             switch actionButtonState {
                 case let .active(state):
                     switch state {
