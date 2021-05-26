@@ -56,6 +56,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let instantChatBackgroundNode: WallpaperBackgroundNode
     private let remoteChatBackgroundNode: TransformImageNode
     private let blurredNode: BlurredImageNode
+    private let wallpaperNode: WallpaperBackgroundNode
     private var dateHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
 
@@ -69,11 +70,15 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var fetchDisposable = MetaDisposable()
     
     private var dismissed = false
+
+    private var wallpaper: TelegramWallpaper
     
     init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, ready: Promise<Bool>) {
         self.context = context
         self.previewTheme = previewTheme
         self.isPreview = isPreview
+
+        self.wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
         
         self.ready = ready
         
@@ -105,8 +110,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.instantChatBackgroundNode = WallpaperBackgroundNode(context: context)
         self.instantChatBackgroundNode.displaysAsynchronously = false
-        
-        let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
 
         self.ready.set(.single(true))
         self.instantChatBackgroundNode.update(wallpaper: wallpaper)
@@ -117,6 +120,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.blurredNode = BlurredImageNode()
         self.blurredNode.blurView.contentMode = .scaleAspectFill
+
+        self.wallpaperNode = WallpaperBackgroundNode(context: context)
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         
@@ -143,7 +148,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
         
-        if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
+        if case let .color(value) = self.wallpaper {
             self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: value)
         }
         
@@ -178,11 +183,21 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
-        
-        if case let .file(file) = self.previewTheme.chat.defaultWallpaper {
+
+        var gradientColors: [UInt32] = []
+        if case let .file(file) = self.wallpaper {
+            gradientColors = file.settings.colors
+
             if file.settings.blur {
                 self.chatContainerNode.insertSubnode(self.blurredNode, belowSubnode: self.messagesContainerNode)
             }
+        } else if case let .gradient(colors, _) = self.wallpaper {
+            gradientColors = colors
+        }
+
+        if gradientColors.count >= 3 {
+            self.chatContainerNode.insertSubnode(self.wallpaperNode, belowSubnode: self.messagesContainerNode)
+            self.wallpaperNode.update(wallpaper: self.wallpaper)
         }
         
         self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in
@@ -309,7 +324,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
-        if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
+        if case let .color(value) = self.wallpaper {
             self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: value)
         }
         
@@ -483,7 +498,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         sampleMessages.append(message8)
         
         items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil)
+            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil)
         }
                 
         let width: CGFloat
@@ -590,6 +605,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, transition: .immediate)
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
+        self.wallpaperNode.frame = self.chatContainerNode.bounds
+        self.wallpaperNode.updateLayout(size: self.wallpaperNode.bounds.size, transition: .immediate)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)

@@ -1658,7 +1658,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     private let expandedBackgroundNode: NavigationBackgroundNode
     let separatorNode: ASDisplayNode
-    let navigationBackgroundNode: NavigationBackgroundNode
+    let navigationBackgroundNode: ASDisplayNode
+    let navigationBackgroundBackgroundNode: ASDisplayNode
     var navigationTitle: String?
     let navigationTitleNode: ImmediateTextNode
     let navigationSeparatorNode: ASDisplayNode
@@ -1720,9 +1721,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
         self.avatarOverlayNode.isUserInteractionEnabled = false
         
-        self.navigationBackgroundNode = NavigationBackgroundNode(color: .clear)
+        self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isHidden = true
         self.navigationBackgroundNode.isUserInteractionEnabled = false
+
+        self.navigationBackgroundBackgroundNode = ASDisplayNode()
+        self.navigationBackgroundBackgroundNode.isUserInteractionEnabled = false
         
         self.navigationTitleNode = ImmediateTextNode()
         
@@ -1762,6 +1766,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
         self.addSubnode(self.navigationBackgroundNode)
+        self.navigationBackgroundNode.addSubnode(self.navigationBackgroundBackgroundNode)
         self.navigationBackgroundNode.addSubnode(self.navigationTitleNode)
         self.navigationBackgroundNode.addSubnode(self.navigationSeparatorNode)
         self.addSubnode(self.navigationButtonContainer)
@@ -1963,7 +1968,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (112.0 + avatarSize)))
 
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(presentationData.theme.list.itemBlocksBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
         }
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
@@ -1978,11 +1983,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - navigationTitleSize.width) / 2.0), y: navigationHeight - 44.0 + floorToScreenPixels((44.0 - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
         
         self.navigationBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
-        self.navigationBackgroundNode.update(size: self.navigationBackgroundNode.bounds.size, transition: .immediate)
+        self.navigationBackgroundBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
         self.navigationSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: width, height: UIScreenPixel))
-        self.navigationBackgroundNode.color = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+        self.navigationBackgroundBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-        transition.updateAlpha(node: self.navigationBackgroundNode, alpha: state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0)
+
+        let separatorAlpha: CGFloat = state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0
+        transition.updateAlpha(node: self.navigationBackgroundBackgroundNode, alpha: 1.0 - separatorAlpha)
+        transition.updateAlpha(node: self.navigationSeparatorNode, alpha: separatorAlpha)
+
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let defaultButtonSize: CGFloat = 40.0

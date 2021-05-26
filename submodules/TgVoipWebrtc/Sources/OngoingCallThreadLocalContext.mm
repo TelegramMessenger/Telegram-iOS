@@ -1278,12 +1278,12 @@ private:
     }
 }
 
-- (void)makeIncomingVideoViewWithEndpointId:(NSString *)endpointId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+- (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
     if (_instance) {
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (true) {
+            if (false) {
                 VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
 
@@ -1296,25 +1296,31 @@ private:
                     }
                 }];
 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             } else if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-#if TARGET_OS_IPHONE
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
-#else
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
-#endif
+
+                VideoMetalView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+                }
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> cloneSink = [cloneRenderer getSink];
                 
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
                         strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
+                        if (cloneSink) {
+                            strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, cloneSink);
+                        }
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, cloneRenderer);
             } else {
                 GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
              //   [remoteRenderer setVideoContentMode:kCAGravityResizeAspectFill];
@@ -1327,7 +1333,7 @@ private:
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             }
         });
     }

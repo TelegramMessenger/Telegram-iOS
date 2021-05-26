@@ -622,99 +622,95 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                         self.setAvatarHidden(true)
                     }
                     
-                    self.call.makeIncomingVideoView(endpointId: endpointId, completion: { [weak self] videoView in
+                    self.call.makeIncomingVideoView(endpointId: endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
-                            self?.call.makeIncomingVideoView(endpointId: endpointId, completion: { [weak self] backdropVideoView in
-                                Queue.mainQueue().async {
-                                    guard let strongSelf = self, let videoView = videoView else {
-                                        return
+                            guard let strongSelf = self, let videoView = videoView else {
+                                return
+                            }
+
+                            let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
+                            videoNode.tapped = { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.tap()
+                            }
+                            videoNode.sourceContainerNode.activate = { [weak self] sourceNode in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.setControlsHidden(true, animated: false)
+                                strongSelf.controlsHidden?(true)
+                                let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                                    return UIScreen.main.bounds
+                                })
+                                strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+                            }
+                            videoNode.sourceContainerNode.animatedOut = { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.controlsHidden?(false)
+                                strongSelf.setControlsHidden(false, animated: true)
+                            }
+                            videoNode.isUserInteractionEnabled = true
+                            let previousVideoNode = strongSelf.currentVideoNode
+                            strongSelf.currentVideoNode = videoNode
+                            strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
+
+                            if delayTransition {
+                                videoNode.alpha = 0.0
+                            }
+                            if waitForFullSize {
+                                Queue.mainQueue().after(2.0) {
+                                    if let previousVideoNode = previousVideoNode {
+                                        previousVideoNode.removeFromSupernode()
                                     }
-                                    
-                                    let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
-                                    videoNode.tapped = { [weak self] in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.tap()
-                                    }
-                                    videoNode.sourceContainerNode.activate = { [weak self] sourceNode in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.setControlsHidden(true, animated: false)
-                                        strongSelf.controlsHidden?(true)
-                                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-                                            return UIScreen.main.bounds
-                                        })
-                                        strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
-                                    }
-                                    videoNode.sourceContainerNode.animatedOut = { [weak self] in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.controlsHidden?(false)
-                                        strongSelf.setControlsHidden(false, animated: true)
-                                    }
-                                    videoNode.isUserInteractionEnabled = true
-                                    let previousVideoNode = strongSelf.currentVideoNode
-                                    strongSelf.currentVideoNode = videoNode
-                                    strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backgroundNode)
-                                    
-                                    if delayTransition {
-                                        videoNode.alpha = 0.0
-                                    }
-                                    if waitForFullSize {
-                                        Queue.mainQueue().after(2.0) {
-                                            if let previousVideoNode = previousVideoNode {
-                                                previousVideoNode.removeFromSupernode()
+                                }
+                                strongSelf.videoReadyDisposable.set((videoNode.ready
+                                |> filter { $0 }
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                    Queue.mainQueue().after(0.07) {
+                                        completion?()
+
+                                        if let strongSelf = self {
+                                            if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
+                                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                             }
                                         }
-                                        strongSelf.videoReadyDisposable.set((videoNode.ready
-                                        |> filter { $0 }
-                                        |> take(1)
-                                        |> deliverOnMainQueue).start(next: { [weak self] _ in
-                                            Queue.mainQueue().after(0.07) {
-                                                completion?()
-                                                
-                                                if let strongSelf = self {
-                                                    if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
-                                                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
-                                                    }
-                                                }
- 
-                                                if delayTransition {
-                                                    if let videoNode = strongSelf.currentVideoNode {
-                                                        videoNode.alpha = 1.0
-                                                        videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
-                                                            if let strongSelf = self {
-                                                                strongSelf.setAvatarHidden(true)
-                                                                if let previousVideoNode = previousVideoNode {
-                                                                    previousVideoNode.removeFromSupernode()
-                                                                }
-                                                            }
-                                                        })
-                                                    }
-                                                } else {
-                                                    Queue.mainQueue().after(0.07) {
+
+                                        if delayTransition {
+                                            if let videoNode = strongSelf.currentVideoNode {
+                                                videoNode.alpha = 1.0
+                                                videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
+                                                    if let strongSelf = self {
+                                                        strongSelf.setAvatarHidden(true)
                                                         if let previousVideoNode = previousVideoNode {
                                                             previousVideoNode.removeFromSupernode()
                                                         }
                                                     }
+                                                })
+                                            }
+                                        } else {
+                                            Queue.mainQueue().after(0.07) {
+                                                if let previousVideoNode = previousVideoNode {
+                                                    previousVideoNode.removeFromSupernode()
                                                 }
                                             }
-                                        }))
-                                    } else {
-                                        if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
-                                            strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                         }
-                                        if let previousVideoNode = previousVideoNode {
-                                            previousVideoNode.removeFromSupernode()
-                                        }
-                                        strongSelf.videoReadyDisposable.set(nil)
-                                        completion?()
                                     }
+                                }))
+                            } else {
+                                if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
+                                    strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                 }
-                            })
+                                if let previousVideoNode = previousVideoNode {
+                                    previousVideoNode.removeFromSupernode()
+                                }
+                                strongSelf.videoReadyDisposable.set(nil)
+                                completion?()
+                            }
                         }
                     })
                 } else {

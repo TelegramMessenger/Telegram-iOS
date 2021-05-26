@@ -437,7 +437,7 @@ public protocol PresentationGroupCall: class {
     
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
     
-    func makeIncomingVideoView(endpointId: String, completion: @escaping (PresentationCallVideoView?) -> Void)
+    func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void)
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
     
     func loadMoreMembers(token: String)

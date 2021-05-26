@@ -7,7 +7,6 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     copts = [
-        "-O",
     ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

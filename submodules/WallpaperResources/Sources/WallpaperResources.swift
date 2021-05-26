@@ -455,6 +455,15 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                             c.setFillColor(color.cgColor)
                             c.fill(arguments.drawingRect)
                         }
+                    } else if colors.count >= 3 {
+                        let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.draw(image.cgImage!, in: drawingRect)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                     } else {
                         let gradientColors = colors.map { $0.cgColor } as CFArray
                         let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
@@ -487,12 +496,17 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
                         
                         let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-                        
-                        c.setBlendMode(.normal)
+
                         c.interpolationQuality = customArguments.preview ? .low : .medium
                         c.clip(to: fittedRect, mask: image)
-                       
-                        if colors.count == 1 {
+
+                        c.setBlendMode(.normal)
+
+                        if colors.count >= 3 && customArguments.customPatternColor == nil {
+                            c.setBlendMode(.softLight)
+                            c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+                            c.fill(arguments.drawingRect)
+                        } else if colors.count == 1 {
                             c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
                             c.fill(arguments.drawingRect)
                         } else {
