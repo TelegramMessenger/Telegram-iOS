@@ -334,7 +334,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.appeared = false
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+        if offset.isZero {
+            alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+        } else {
+            self.backgroundNode.alpha = 0.0
+        }
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.microphoneNode, alpha: 0.0)

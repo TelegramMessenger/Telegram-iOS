@@ -763,6 +763,7 @@ public final class VoiceChatController: ViewController {
         private var callStateDisposable: Disposable?
         
         private var pushingToTalk = false
+        private var temporaryPushingToTalk = false
         private let hapticFeedback = HapticFeedback()
         
         private var callState: PresentationGroupCallState?
@@ -2866,9 +2867,11 @@ public final class VoiceChatController: ViewController {
         }
         
         private var actionButtonPressTimer: SwiftSignalKit.Timer?
+        private var actionButtonPressedTimestamp: Double?
         private func startActionButtonPressTimer() {
             self.actionButtonPressTimer?.invalidate()
             let pressTimer = SwiftSignalKit.Timer(timeout: 0.185, repeat: false, completion: { [weak self] in
+                self?.actionButtonPressedTimestamp = CACurrentMediaTime()
                 self?.actionButtonPressTimerFired()
                 self?.actionButtonPressTimer = nil
             }, queue: Queue.mainQueue())
@@ -2958,20 +2961,35 @@ public final class VoiceChatController: ViewController {
                 case .began:
                     self.actionButton.pressing = true
                     self.hapticFeedback.impact(.light)
+                    self.actionButtonPressedTimestamp = nil
                     self.startActionButtonPressTimer()
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 case .ended, .cancelled:
-                    self.pushingToTalk = false
-                    self.actionButton.pressing = false
-                    
                     if self.actionButtonPressTimer != nil {
+                        self.pushingToTalk = false
+                        self.actionButton.pressing = false
+                        
                         self.stopActionButtonPressTimer()
                         self.call.toggleIsMuted()
                     } else {
                         self.hapticFeedback.impact(.light)
-                        self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                        if self.pushingToTalk, let timestamp = self.actionButtonPressedTimestamp, CACurrentMediaTime() < timestamp + 0.5 {
+                            self.pushingToTalk = false
+                            self.temporaryPushingToTalk = true
+                            self.call.setIsMuted(action: .unmuted)
+                            
+                            Queue.mainQueue().after(0.1) {
+                                self.temporaryPushingToTalk = false
+                                self.actionButton.pressing = false
+                            }
+                        } else {
+                            self.pushingToTalk = false
+                            self.actionButton.pressing = false
+                            
+                            self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                        }
                     }
                     
                     if let callState = self.callState {
@@ -3838,7 +3856,7 @@ public final class VoiceChatController: ViewController {
                     }
 
                     if connected {
-                        if let muteState = callState.muteState, !self.pushingToTalk {
+                        if let muteState = callState.muteState, !self.pushingToTalk && !self.temporaryPushingToTalk {
                             if muteState.canUnmute {
                                 actionButtonState = .active(state: .muted)
                                 
@@ -4461,6 +4479,9 @@ public final class VoiceChatController: ViewController {
                         return
                     }
                 }
+            } else if self.effectiveSpeaker != nil, !fullscreenEntries.isEmpty {
+                self.updateMainVideo(waitForFullSize: true, entries: fullscreenEntries, force: true)
+                return
             }
             
             self.updateRequestedVideoChannels()
