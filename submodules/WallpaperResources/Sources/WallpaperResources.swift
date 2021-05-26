@@ -1103,7 +1103,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
 
 public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError>
-    if case let .builtin(theme) = theme {
+    if false, case let .builtin(theme) = theme {
         let incomingColor: UIColor
         let outgoingColor: (UIColor, UIColor)
         var accentColor = color?.color
@@ -1215,9 +1215,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         } else if case let .cloud(theme) = theme, let resource = theme.theme.file?.resource {
             reference = .theme(theme: .slug(theme.theme.slug), resource: resource)
         }
-        
+
         let themeSignal: Signal<PresentationTheme?, NoError>
-        if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+        if case let .builtin(theme) = theme {
+            themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
+        } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
             themeSignal = Signal { subscriber in
                 let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
                 subscriber.putNext(theme)
@@ -1246,7 +1248,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 var backgroundColor: (UIColor, UIColor?, [UInt32])
                 let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
                 let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
-                switch theme.chat.defaultWallpaper {
+                let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
+                switch wallpaper {
                     case .builtin:
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil, [])
                     case let .color(color):
