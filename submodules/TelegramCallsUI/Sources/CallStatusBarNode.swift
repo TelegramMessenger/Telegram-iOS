@@ -755,11 +755,11 @@ final class CurveView: UIView {
     private func animateToNewShape() {
         if self.shapeLayer.path == nil {
             let points = self.generateNextCurve(for: self.bounds.size)
-            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: self.smoothness).cgPath
+            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: self.smoothness, curve: true).cgPath
         }
         
         let nextPoints = self.generateNextCurve(for: self.bounds.size)
-        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: self.smoothness).cgPath
+        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: self.smoothness, curve: true).cgPath
         
         let animation = CABasicAnimation(keyPath: "path")
         let previousPath = self.shapeLayer.path
