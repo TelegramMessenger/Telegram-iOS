@@ -191,7 +191,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.contextSourceNode, gesture)
+            if item.videoReady {
+                contextAction(strongSelf.contextSourceNode, gesture)
+            }
         }
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -274,6 +276,8 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if self.item != item {
             let previousItem = self.item
             self.item = item
+            
+            self.containerNode.isGestureEnabled = item.videoReady
             
             if !item.videoReady {
                 let shimmerNode: VoiceChatTileShimmeringNode

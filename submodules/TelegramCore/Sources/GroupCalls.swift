@@ -156,6 +156,10 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                                 presentationJsonDescription = data
                             }
                         }
+                        if muteState?.canUnmute == false {
+                            videoJsonDescription = nil
+                            presentationJsonDescription = nil
+                        }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -481,6 +485,10 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                                 presentationJsonDescription = data
                             }
                         }
+                        if muteState?.canUnmute == false {
+                            videoJsonDescription = nil
+                            presentationJsonDescription = nil
+                        }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
@@ -740,6 +748,10 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                         case let .dataJSON(data):
                                             presentationJsonDescription = data
                                         }
+                                    }
+                                    if muteState?.canUnmute == false {
+                                        videoJsonDescription = nil
+                                        presentationJsonDescription = nil
                                     }
                                     if !state.participants.contains(where: { $0.peer.id == peer.id }) {
                                         state.participants.append(GroupCallParticipantsContext.Participant(
@@ -2150,7 +2162,10 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                     presentationJsonDescription = data
                 }
             }
-            
+            if muteState?.canUnmute == false {
+                videoJsonDescription = nil
+                presentationJsonDescription = nil
+            }
             self.init(
                 peerId: peerId,
                 ssrc: ssrc,
@@ -2213,7 +2228,10 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                         presentationJsonDescription = data
                     }
                 }
-                
+                if muteState?.canUnmute == false {
+                    videoJsonDescription = nil
+                    presentationJsonDescription = nil
+                }
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,
                     ssrc: ssrc,

@@ -96,8 +96,8 @@ struct VoiceChatPeerEntry: Identifiable {
     var peer: Peer
     var about: String?
     var isMyPeer: Bool
-    var videoEndpointId: String?
-    var presentationEndpointId: String?
+    var _videoEndpointId: String?
+    var _presentationEndpointId: String?
     var state: State
     var muteState: GroupCallParticipantsContext.Participant.MuteState?
     var canManageCall: Bool
@@ -106,6 +106,22 @@ struct VoiceChatPeerEntry: Identifiable {
     var displayRaisedHandStatus: Bool
     var active: Bool
     var isLandscape: Bool
+    
+    var videoEndpointId: String? {
+        if let muteState = self.muteState, !muteState.canUnmute || muteState.mutedByYou {
+            return nil
+        } else {
+            return self._videoEndpointId
+        }
+    }
+    
+    var presentationEndpointId: String? {
+        if let muteState = self.muteState, !muteState.canUnmute || muteState.mutedByYou {
+            return nil
+        } else {
+            return self._presentationEndpointId
+        }
+    }
     
     var effectiveVideoEndpointId: String? {
         return self.presentationEndpointId ?? self.videoEndpointId
@@ -129,8 +145,8 @@ struct VoiceChatPeerEntry: Identifiable {
         self.peer = peer
         self.about = about
         self.isMyPeer = isMyPeer
-        self.videoEndpointId = videoEndpointId
-        self.presentationEndpointId = presentationEndpointId
+        self._videoEndpointId = videoEndpointId
+        self._presentationEndpointId = presentationEndpointId
         self.state = state
         self.muteState = muteState
         self.canManageCall = canManageCall
@@ -155,10 +171,10 @@ struct VoiceChatPeerEntry: Identifiable {
         if lhs.isMyPeer != rhs.isMyPeer {
             return false
         }
-        if lhs.videoEndpointId != rhs.videoEndpointId {
+        if lhs._videoEndpointId != rhs._videoEndpointId {
             return false
         }
-        if lhs.presentationEndpointId != rhs.presentationEndpointId {
+        if lhs._presentationEndpointId != rhs._presentationEndpointId {
             return false
         }
         if lhs.state != rhs.state {
@@ -5587,6 +5603,9 @@ public final class VoiceChatController: ViewController {
                         })
                                                 
                         self.transitionMaskTopFillLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                        if !transitionOffset.isZero {
+                            self.transitionMaskBottomFillLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        }
                         
                         if let (layout, navigationHeight) = self.validLayout {
                             self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
