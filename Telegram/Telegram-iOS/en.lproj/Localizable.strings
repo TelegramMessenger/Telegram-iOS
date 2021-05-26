@@ -6475,3 +6475,5 @@ Sorry for the inconvenience.";
 "VoiceChat.ParticipantIsSpeaking" = "%1$@ is speaking";
 
 "WallpaperPreview.WallpaperColors" = "Colors";
+
+"VoiceChat.UnmuteSuggestion" = "You are on mute. Tap here to speak.";

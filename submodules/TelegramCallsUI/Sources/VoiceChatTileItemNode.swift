@@ -191,7 +191,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.contextSourceNode, gesture)
+            if item.videoReady {
+                contextAction(strongSelf.contextSourceNode, gesture)
+            }
         }
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -274,6 +276,8 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if self.item != item {
             let previousItem = self.item
             self.item = item
+            
+            self.containerNode.isGestureEnabled = item.videoReady
             
             if !item.videoReady {
                 let shimmerNode: VoiceChatTileShimmeringNode
@@ -451,7 +455,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                         
             if animate {
                 sourceNode.isHidden = true
-                Queue.mainQueue().after(0.6) {
+                Queue.mainQueue().after(0.7) {
                     sourceNode.isHidden = false
                 }
                 
@@ -642,7 +646,7 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     }
 }
 
-private final class ShimmerEffectForegroundNode: ASDisplayNode {
+final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentForegroundColor: UIColor?
     private let imageNodeContainer: ASDisplayNode
     private let imageNode: ASImageNode

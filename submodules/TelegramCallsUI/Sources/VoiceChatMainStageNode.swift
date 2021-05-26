@@ -334,7 +334,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.appeared = false
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+        if offset.isZero {
+            alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+        } else {
+            self.backgroundNode.alpha = 0.0
+        }
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.microphoneNode, alpha: 0.0)
@@ -430,7 +434,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 strongSelf.speakingContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 strongSelf.speakingContainerNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 
-                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -10.0, dy: -10.0)
+                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -14.0, dy: -14.0)
                 strongSelf.speakingAudioLevelDisposable.set((getAudioLevel(peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] value in
                     guard let strongSelf = self else {
@@ -613,9 +617,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     var delayTransition = false
                     if previousPeer?.0 == peer?.0 && self.appeared {
                         delayTransition = true
-                    }
-                    let appeared = self.appeared
-                    
+                    }                    
                     if !delayTransition {
                         self.setAvatarHidden(true)
                     }
@@ -660,6 +662,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 videoNode.alpha = 0.0
                             }
                             if waitForFullSize {
+                                Queue.mainQueue().after(2.0) {
+                                    if let previousVideoNode = previousVideoNode {
+                                        previousVideoNode.removeFromSupernode()
+                                    }
+                                }
                                 strongSelf.videoReadyDisposable.set((videoNode.ready
                                 |> filter { $0 }
                                 |> take(1)
@@ -823,7 +830,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         let speakingInset: CGFloat = 16.0
         let speakingAvatarSize = CGSize(width: 30.0, height: 30.0)
-        let speakingTitleSize = self.speakingTitleNode.updateLayout(CGSize(width: 220.0, height: CGFloat.greatestFiniteMagnitude))
+        let speakingTitleSize = self.speakingTitleNode.updateLayout(CGSize(width: size.width - 100.0, height: CGFloat.greatestFiniteMagnitude))
         let speakingContainerSize = CGSize(width: speakingTitleSize.width + speakingInset * 2.0 + speakingAvatarSize.width, height: 38.0)
         self.speakingEffectView?.frame = CGRect(origin: CGPoint(), size: speakingContainerSize)
         self.speakingAvatarNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: speakingAvatarSize)

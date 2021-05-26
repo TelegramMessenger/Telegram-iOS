@@ -625,6 +625,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var isScheduled = false
     private var isScheduledStarted = false
 
+    private let isSpeakingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var isSpeaking: Signal<Bool, NoError> {
+        return self.isSpeakingPromise.get()
+    }
+    
     private var screencastFramesDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
@@ -1608,6 +1613,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 var result: [(PeerId, UInt32, Float, Bool)] = []
                 var myLevel: Float = 0.0
                 var myLevelHasVoice: Bool = false
+                var orignalMyLevelHasVoice: Bool = false
                 var missingSsrcs = Set<UInt32>()
                 for (ssrcKey, level, hasVoice) in levels {
                     var peerId: PeerId?
@@ -1622,6 +1628,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     if let peerId = peerId {
                         if case .local = ssrcKey {
+                            orignalMyLevelHasVoice = hasVoice
                             if !strongSelf.isMutedValue.isEffectivelyMuted {
                                 myLevel = level
                                 myLevelHasVoice = hasVoice
@@ -1638,6 +1645,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let mappedLevel = myLevel * 1.5
                 strongSelf.myAudioLevelPipe.putNext(mappedLevel)
                 strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
+                strongSelf.isSpeakingPromise.set(orignalMyLevelHasVoice)
                 
                 if !missingSsrcs.isEmpty {
                     strongSelf.participantsContext?.ensureHaveParticipants(ssrcs: missingSsrcs)
@@ -2919,22 +2927,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void) {
-        self.genericCallContext?.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: { view, _ in
-            if let view = view {
-                let setOnFirstFrameReceived = view.setOnFirstFrameReceived
-                let setOnOrientationUpdated = view.setOnOrientationUpdated
-                let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
-                let updateIsEnabled = view.updateIsEnabled
-                completion(PresentationCallVideoView(
-                    holder: view,
-                    view: view.view,
+        self.genericCallContext?.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: { mainView, cloneView in
+            if let mainView = mainView {
+                let setOnFirstFrameReceived = mainView.setOnFirstFrameReceived
+                let setOnOrientationUpdated = mainView.setOnOrientationUpdated
+                let setOnIsMirroredUpdated = mainView.setOnIsMirroredUpdated
+                let updateIsEnabled = mainView.updateIsEnabled
+                let mainVideoView = PresentationCallVideoView(
+                    holder: mainView,
+                    view: mainView.view,
                     setOnFirstFrameReceived: { f in
                         setOnFirstFrameReceived(f)
                     },
-                    getOrientation: { [weak view] in
-                        if let view = view {
+                    getOrientation: { [weak mainView] in
+                        if let mainView = mainView {
                             let mappedValue: PresentationCallVideoView.Orientation
-                            switch view.getOrientation() {
+                            switch mainView.getOrientation() {
                             case .rotation0:
                                 mappedValue = .rotation0
                             case .rotation90:
@@ -2949,9 +2957,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return .rotation0
                         }
                     },
-                    getAspect: { [weak view] in
-                        if let view = view {
-                            return view.getAspect()
+                    getAspect: { [weak mainView] in
+                        if let mainView = mainView {
+                            return mainView.getAspect()
                         } else {
                             return 0.0
                         }
@@ -2980,7 +2988,73 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     updateIsEnabled: { value in
                         updateIsEnabled(value)
                     }
-                ), nil)
+                )
+
+                var cloneVideoView: PresentationCallVideoView?
+                if let cloneView = cloneView {
+                    let setOnFirstFrameReceived = cloneView.setOnFirstFrameReceived
+                    let setOnOrientationUpdated = cloneView.setOnOrientationUpdated
+                    let setOnIsMirroredUpdated = cloneView.setOnIsMirroredUpdated
+                    let updateIsEnabled = cloneView.updateIsEnabled
+                    cloneVideoView = PresentationCallVideoView(
+                        holder: cloneView,
+                        view: cloneView.view,
+                        setOnFirstFrameReceived: { f in
+                            setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak cloneView] in
+                            if let cloneView = cloneView {
+                                let mappedValue: PresentationCallVideoView.Orientation
+                                switch cloneView.getOrientation() {
+                                case .rotation0:
+                                    mappedValue = .rotation0
+                                case .rotation90:
+                                    mappedValue = .rotation90
+                                case .rotation180:
+                                    mappedValue = .rotation180
+                                case .rotation270:
+                                    mappedValue = .rotation270
+                                }
+                                return mappedValue
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak cloneView] in
+                            if let cloneView = cloneView {
+                                return cloneView.getAspect()
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { f in
+                            setOnOrientationUpdated { value, aspect in
+                                let mappedValue: PresentationCallVideoView.Orientation
+                                switch value {
+                                case .rotation0:
+                                    mappedValue = .rotation0
+                                case .rotation90:
+                                    mappedValue = .rotation90
+                                case .rotation180:
+                                    mappedValue = .rotation180
+                                case .rotation270:
+                                    mappedValue = .rotation270
+                                }
+                                f?(mappedValue, aspect)
+                            }
+                        },
+                        setOnIsMirroredUpdated: { f in
+                            setOnIsMirroredUpdated { value in
+                                f?(value)
+                            }
+                        },
+                        updateIsEnabled: { value in
+                            updateIsEnabled(value)
+                        }
+                    )
+                }
+
+                completion(mainVideoView, cloneVideoView)
             } else {
                 completion(nil, nil)
             }

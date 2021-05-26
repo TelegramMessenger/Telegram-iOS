@@ -55,7 +55,7 @@ class VoiceChatActionItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatActionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, false, nextItem == nil)
+            let (layout, apply) = node.asyncLayout()(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -74,7 +74,7 @@ class VoiceChatActionItem: ListViewItem {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, false, nextItem == nil)
+                    let (layout, apply) = makeLayout(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -95,6 +95,7 @@ class VoiceChatActionItem: ListViewItem {
 class VoiceChatActionItemNode: ListViewItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let highlightContainerNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
     private let iconNode: ASImageNode
@@ -121,12 +122,16 @@ class VoiceChatActionItemNode: ListViewItemNode {
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
         
+        self.highlightContainerNode = ASDisplayNode()
+        self.highlightContainerNode.clipsToBounds = true
+        
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.isLayerBacked = true
         
         self.activateArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
+        
+        self.highlightContainerNode.addSubnode(self.highlightedBackgroundNode)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
@@ -138,11 +143,19 @@ class VoiceChatActionItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: VoiceChatActionItem, _ params: ListViewItemLayoutParams, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.highlightContainerNode.layer.cornerCurve = .continuous
+        }
+    }
+    
+    func asyncLayout() -> (_ item: VoiceChatActionItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { item, params, firstWithHeader, last in
+        return { item, params, first, last in
             var updatedTheme: PresentationTheme?
             var updatedContent = false
             
@@ -165,7 +178,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
             let contentHeight: CGFloat = 12.0 * 2.0 + titleLayout.size.height
             
             let contentSize = CGSize(width: params.width, height: contentHeight)
-            let insets = UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            let insets = UIEdgeInsets()
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -214,6 +227,10 @@ class VoiceChatActionItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset + 1.0, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
+                    strongSelf.highlightContainerNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: -UIScreenPixel), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel + 11.0))
+                    
+                    strongSelf.highlightContainerNode.cornerRadius = first ? 11.0 : 0.0
+                    
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
@@ -224,8 +241,8 @@ class VoiceChatActionItemNode: ListViewItemNode {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
+            self.highlightContainerNode.alpha = 1.0
+            if self.highlightContainerNode.supernode == nil {
                 var anchorNode: ASDisplayNode?
                 if self.bottomStripeNode.supernode != nil {
                     anchorNode = self.bottomStripeNode
@@ -233,24 +250,24 @@ class VoiceChatActionItemNode: ListViewItemNode {
                     anchorNode = self.topStripeNode
                 }
                 if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                    self.insertSubnode(self.highlightContainerNode, aboveSubnode: anchorNode)
                 } else {
-                    self.addSubnode(self.highlightedBackgroundNode)
+                    self.addSubnode(self.highlightContainerNode)
                 }
             }
         } else {
-            if self.highlightedBackgroundNode.supernode != nil {
+            if self.highlightContainerNode.supernode != nil {
                 if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+                    self.highlightContainerNode.layer.animateAlpha(from: self.highlightContainerNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
                         if let strongSelf = self {
                             if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                                strongSelf.highlightContainerNode.removeFromSupernode()
                             }
                         }
                     })
-                    self.highlightedBackgroundNode.alpha = 0.0
+                    self.highlightContainerNode.alpha = 0.0
                 } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
+                    self.highlightContainerNode.removeFromSupernode()
                 }
             }
         }

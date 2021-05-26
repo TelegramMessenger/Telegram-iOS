@@ -773,7 +773,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             nodeToAnimateIn = animationNode
                         }
                         var color = color
-                        if color.rgb == 0x979797 {
+                        if hasVideo || color.rgb == 0x979797 {
                             color = UIColor(rgb: 0xffffff)
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: color), animated: true)
@@ -884,8 +884,13 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                         strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: 0.2, additive: true)
                                         strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
                                     }
-                                    transition.updateAlpha(node: videoNode, alpha: 0.0)
-                                    transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
+                                    if videoNodeUpdated {
+                                        videoNode.alpha = 0.0
+                                        strongSelf.videoFadeNode.alpha = 0.0
+                                    } else {
+                                        transition.updateAlpha(node: videoNode, alpha: 0.0)
+                                        transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
+                                    }
                                     transition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
                                     if let audioLevelView = strongSelf.audioLevelView {
                                         transition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
