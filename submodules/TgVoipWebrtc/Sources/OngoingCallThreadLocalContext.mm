@@ -1283,7 +1283,7 @@ private:
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (true) {
+            if (false) {
                 VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
 
