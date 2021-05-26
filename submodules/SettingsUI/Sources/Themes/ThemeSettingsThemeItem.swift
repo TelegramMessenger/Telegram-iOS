@@ -614,8 +614,10 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
                     for var theme in item.themes {
-                        if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
-                            continue
+                        if case let .cloud(theme) = theme {
+                            if !item.displayUnsupported && theme.theme.file == nil {
+                                continue
+                            }
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
                         var accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
@@ -625,8 +627,15 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             }
                             accentColor = nil
                         }
+
+                        var themeWallpaper: TelegramWallpaper?
+                        if case let .cloud(theme) = theme {
+                            themeWallpaper = theme.resolvedWallpaper ?? theme.theme.settings?.wallpaper
+                        }
+
+                        let customWallpaper = item.themeSpecificChatWallpapers[theme.generalThemeReference.index]
                         
-                        let wallpaper = accentColor?.wallpaper
+                        let wallpaper = accentColor?.wallpaper ?? customWallpaper ?? themeWallpaper
                         entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1
                     }

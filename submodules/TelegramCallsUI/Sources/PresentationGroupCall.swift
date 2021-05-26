@@ -1566,9 +1566,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 if (wasConnecting != isConnecting && strongSelf.didConnectOnce) {
                     if isConnecting {
-                        let toneRenderer = PresentationCallToneRenderer(tone: .groupConnecting)
-                        strongSelf.toneRenderer = toneRenderer
-                        toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                        strongSelf.beginTone(tone: .groupConnecting)
                     } else {
                         strongSelf.toneRenderer = nil
                     }
@@ -1583,9 +1581,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.didConnectOnce = true
                         
                         if !strongSelf.isScheduled {
-                            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
-                            strongSelf.toneRenderer = toneRenderer
-                            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+                            strongSelf.beginTone(tone: .groupJoined)
                         }
                     }
 
@@ -2143,6 +2139,24 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
 
+    private func beginTone(tone: PresentationCallTone) {
+        var completed: (() -> Void)?
+        let toneRenderer = PresentationCallToneRenderer(tone: tone, completed: {
+            completed?()
+        })
+        completed = { [weak self, weak toneRenderer] in
+            Queue.mainQueue().async {
+                guard let strongSelf = self, let toneRenderer = toneRenderer, toneRenderer === strongSelf.toneRenderer else {
+                    return
+                }
+                strongSelf.toneRenderer = nil
+            }
+        }
+
+        self.toneRenderer = toneRenderer
+        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+    }
+
     public func playTone(_ tone: PresentationGroupCallTone) {
         let name: String
         switch tone {
@@ -2152,9 +2166,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             name = "voip_group_recording_started.mp3"
         }
 
-        let toneRenderer = PresentationCallToneRenderer(tone: .custom(name: name, loopCount: 1))
-        self.toneRenderer = toneRenderer
-        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+        self.beginTone(tone: .custom(name: name, loopCount: 1))
     }
     
     private func markAsCanBeRemoved() {
@@ -2182,10 +2194,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.wasRemoved.set(.single(true))
                         return
                     }
-                    
-                    let toneRenderer = PresentationCallToneRenderer(tone: .groupLeft)
-                    strongSelf.toneRenderer = toneRenderer
-                    toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+
+                    strongSelf.beginTone(tone: .groupLeft)
                     
                     Queue.mainQueue().after(1.0, {
                         strongSelf.wasRemoved.set(.single(true))
@@ -2373,10 +2383,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return
             }
             strongSelf.updateSessionState(internalState: .active(callInfo), audioSessionControl: strongSelf.audioSessionControl)
-            
-            let toneRenderer = PresentationCallToneRenderer(tone: .groupJoined)
-            strongSelf.toneRenderer = toneRenderer
-            toneRenderer.setAudioSessionActive(strongSelf.isAudioSessionActive)
+
+            strongSelf.beginTone(tone: .groupJoined)
         }))
     }
     
@@ -2910,8 +2918,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContext?.updateDefaultParticipantsAreMuted(isMuted: isMuted)
     }
     
-    public func makeIncomingVideoView(endpointId: String, completion: @escaping (PresentationCallVideoView?) -> Void) {
-        self.genericCallContext?.makeIncomingVideoView(endpointId: endpointId, completion: { view in
+    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void) {
+        self.genericCallContext?.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: { view, _ in
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
@@ -2972,9 +2980,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     updateIsEnabled: { value in
                         updateIsEnabled(value)
                     }
-                ))
+                ), nil)
             } else {
-                completion(nil)
+                completion(nil, nil)
             }
         })
     }

@@ -90,9 +90,10 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 gradientNode.isUserInteractionEnabled = false
                 self.gradientNode = gradientNode
                 gradientNode.updateColors(colors: colors.map { UIColor(rgb: $0) })
-                self.insertSubnode(gradientNode, aboveSubnode: self.backgroundNode)
+                self.insertSubnode(gradientNode, belowSubnode: self.imageNode)
             }
 
+            self.imageNode.layer.compositingFilter = "softLightBlendMode"
             self.backgroundNode.image = nil
         } else {
             if let gradientNode = self.gradientNode {
@@ -132,7 +133,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     apply()
                 case let .image(representations, _):
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
-                    self.imageNode.alpha = 10
+                    self.imageNode.alpha = 1.0
                     self.imageNode.setSignal(wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
@@ -161,7 +162,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
                         self.imageNode.alpha = CGFloat(file.settings.intensity ?? 50) / 100.0
 
-                        self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 0.3))
+                        self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0))
                         imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.imageNode.alpha = 1.0

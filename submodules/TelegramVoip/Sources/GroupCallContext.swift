@@ -467,43 +467,79 @@ public final class OngoingGroupCallContext {
             self.context.switchAudioOutput(deviceId)
         }
         
-        func makeIncomingVideoView(endpointId: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-            self.context.makeIncomingVideoView(withEndpointId: endpointId, completion: { view in
-                if let view = view {
+        func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withEndpointId: endpointId, requestClone: requestClone, completion: { mainView, cloneView in
+                if let mainView = mainView {
                     #if os(iOS)
-                    completion(OngoingCallContextPresentationCallVideoView(
-                        view: view,
-                        setOnFirstFrameReceived: { [weak view] f in
-                            view?.setOnFirstFrameReceived(f)
+                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: mainView,
+                        setOnFirstFrameReceived: { [weak mainView] f in
+                            mainView?.setOnFirstFrameReceived(f)
                         },
-                        getOrientation: { [weak view] in
-                            if let view = view {
-                                return OngoingCallVideoOrientation(view.orientation)
+                        getOrientation: { [weak mainView] in
+                            if let mainView = mainView {
+                                return OngoingCallVideoOrientation(mainView.orientation)
                             } else {
                                 return .rotation0
                             }
                         },
-                        getAspect: { [weak view] in
-                            if let view = view {
-                                return view.aspect
+                        getAspect: { [weak mainView] in
+                            if let mainView = mainView {
+                                return mainView.aspect
                             } else {
                                 return 0.0
                             }
                         },
-                        setOnOrientationUpdated: { [weak view] f in
-                            view?.setOnOrientationUpdated { value, aspect in
+                        setOnOrientationUpdated: { [weak mainView] f in
+                            mainView?.setOnOrientationUpdated { value, aspect in
                                 f?(OngoingCallVideoOrientation(value), aspect)
                             }
                         },
-                        setOnIsMirroredUpdated: { [weak view] f in
-                            view?.setOnIsMirroredUpdated { value in
+                        setOnIsMirroredUpdated: { [weak mainView] f in
+                            mainView?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
                         },
-                        updateIsEnabled: { [weak view] value in
-                            view?.updateIsEnabled(value)
+                        updateIsEnabled: { [weak mainView] value in
+                            mainView?.updateIsEnabled(value)
                         }
-                    ))
+                    )
+                    let cloneVideoView = cloneView.flatMap { cloneView in
+                        return OngoingCallContextPresentationCallVideoView(
+                            view: cloneView,
+                            setOnFirstFrameReceived: { [weak cloneView] f in
+                                cloneView?.setOnFirstFrameReceived(f)
+                            },
+                            getOrientation: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return OngoingCallVideoOrientation(cloneView.orientation)
+                                } else {
+                                    return .rotation0
+                                }
+                            },
+                            getAspect: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return cloneView.aspect
+                                } else {
+                                    return 0.0
+                                }
+                            },
+                            setOnOrientationUpdated: { [weak cloneView] f in
+                                cloneView?.setOnOrientationUpdated { value, aspect in
+                                    f?(OngoingCallVideoOrientation(value), aspect)
+                                }
+                            },
+                            setOnIsMirroredUpdated: { [weak cloneView] f in
+                                cloneView?.setOnIsMirroredUpdated { value in
+                                    f?(value)
+                                }
+                            },
+                            updateIsEnabled: { [weak cloneView] value in
+                                cloneView?.updateIsEnabled(value)
+                            }
+                        )
+                    }
+                    completion(mainVideoView, cloneVideoView)
                     #else
                     completion(OngoingCallContextPresentationCallVideoView(
                         view: view,
@@ -539,7 +575,7 @@ public final class OngoingGroupCallContext {
                     ))
                     #endif
                 } else {
-                    completion(nil)
+                    completion(nil, nil)
                 }
             })
         }
@@ -697,9 +733,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func makeIncomingVideoView(endpointId: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.with { impl in
-            impl.makeIncomingVideoView(endpointId: endpointId, completion: completion)
+            impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
         }
     }
 }

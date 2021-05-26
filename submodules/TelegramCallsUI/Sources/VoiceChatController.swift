@@ -3844,6 +3844,9 @@ public final class VoiceChatController: ViewController {
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: smallButtons, animated: true)
             
             var hasCameraButton = self.callState?.isVideoEnabled ?? false
+            #if DEBUG
+            hasCameraButton = true
+            #endif
             
             switch actionButtonState {
                 case let .active(state):
@@ -4514,52 +4517,46 @@ public final class VoiceChatController: ViewController {
 
                 if !self.requestedVideoSources.contains(channel.endpointId) {
                     self.requestedVideoSources.insert(channel.endpointId)
-                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, completion: { [weak self] videoView in
-                        Queue.mainQueue().async {
-                            self?.call.makeIncomingVideoView(endpointId: channel.endpointId, completion: { [weak self] backdropVideoView in
-                                Queue.mainQueue().async {
-                                    guard let strongSelf = self, let videoView = videoView else {
-                                        return
+                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
+                        guard let strongSelf = self, let videoView = videoView else {
+                            return
+                        }
+                        let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
+                        strongSelf.readyVideoDisposables.set((videoNode.ready
+                        |> filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        ).start(next: { [weak self, weak videoNode] _ in
+                            if let strongSelf = self, let videoNode = videoNode {
+                                Queue.mainQueue().after(0.1) {
+                                    strongSelf.readyVideoNodes.insert(channel.endpointId)
+                                    if videoNode.aspectRatio <= 0.77 {
+                                        strongSelf.wideVideoNodes.insert(channel.endpointId)
                                     }
-                                    let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
-                                    strongSelf.readyVideoDisposables.set((videoNode.ready
-                                    |> filter { $0 }
-                                    |> take(1)
-                                    |> deliverOnMainQueue
-                                    ).start(next: { [weak self, weak videoNode] _ in
-                                        if let strongSelf = self, let videoNode = videoNode {
-                                            Queue.mainQueue().after(0.1) {
-                                                strongSelf.readyVideoNodes.insert(channel.endpointId)
-                                                if videoNode.aspectRatio <= 0.77 {
-                                                    strongSelf.wideVideoNodes.insert(channel.endpointId)
+                                    strongSelf.updateMembers()
+
+                                    if let interaction = strongSelf.itemInteraction {
+                                        loop: for i in 0 ..< strongSelf.currentFullscreenEntries.count {
+                                            let entry = strongSelf.currentFullscreenEntries[i]
+                                            switch entry {
+                                            case let .peer(peerEntry, _):
+                                                if peerEntry.effectiveVideoEndpointId == channel.endpointId {
+                                                    let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                                    strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.fullscreenItem(context: strongSelf.context, presentationData: presentationData, interaction: interaction), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                    break loop
                                                 }
-                                                strongSelf.updateMembers()
-                                                
-                                                if let interaction = strongSelf.itemInteraction {
-                                                    loop: for i in 0 ..< strongSelf.currentFullscreenEntries.count {
-                                                        let entry = strongSelf.currentFullscreenEntries[i]
-                                                        switch entry {
-                                                        case let .peer(peerEntry, _):
-                                                            if peerEntry.effectiveVideoEndpointId == channel.endpointId {
-                                                                let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
-                                                                strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.fullscreenItem(context: strongSelf.context, presentationData: presentationData, interaction: interaction), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
-                                                                break loop
-                                                            }
-                                                        default:
-                                                            break
-                                                        }
-                                                    }
-                                                }
+                                            default:
+                                                break
                                             }
                                         }
-                                    }), forKey: channel.endpointId)
-                                    strongSelf.videoNodes[channel.endpointId] = videoNode
-
-                                    if let _ = strongSelf.validLayout {
-                                        strongSelf.updateMembers()
                                     }
                                 }
-                            })
+                            }
+                        }), forKey: channel.endpointId)
+                        strongSelf.videoNodes[channel.endpointId] = videoNode
+
+                        if let _ = strongSelf.validLayout {
+                            strongSelf.updateMembers()
                         }
                     })
                 }

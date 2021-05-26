@@ -173,8 +173,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             var updated = true
             if let previousWallpaper = previousWallpaper {
                 switch previousWallpaper {
-                case let .file(previousId, _, _, _, previousIsPattern, _, _, _, _):
-                    if id == previousId && isPattern == previousIsPattern {
+                case let .file(previousId, _, _, _, previousIsPattern, _, _, previousFile, _):
+                    if id == previousId && isPattern == previousIsPattern && file.id == previousFile.id {
                         updated = false
                     }
                 default:

@@ -1278,7 +1278,7 @@ private:
     }
 }
 
-- (void)makeIncomingVideoViewWithEndpointId:(NSString *)endpointId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+- (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
     if (_instance) {
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
@@ -1296,7 +1296,7 @@ private:
                     }
                 }];
 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             } else if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
 #if TARGET_OS_IPHONE
@@ -1314,7 +1314,7 @@ private:
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             } else {
                 GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
              //   [remoteRenderer setVideoContentMode:kCAGravityResizeAspectFill];
@@ -1327,7 +1327,7 @@ private:
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             }
         });
     }
