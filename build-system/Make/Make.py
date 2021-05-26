@@ -370,10 +370,15 @@ def generate_project(arguments):
     bazel_command_line.set_build_number(arguments.buildNumber)
 
     disable_extensions = False
+    disable_provisioning_profiles = False
+    generate_dsym = False
+
     if arguments.disableExtensions is not None:
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    if arguments.generateDsym is not None:
+        generate_dsym = arguments.generateDsym
     
     call_executable(['killall', 'Xcode'], check_result=False)
 
@@ -381,6 +386,7 @@ def generate_project(arguments):
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
         disable_provisioning_profiles=disable_provisioning_profiles,
+        generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments()
     )
@@ -529,6 +535,15 @@ if __name__ == '__main__':
         help='''
             This allows to build the project for simulator without having any codesigning identities installed.
             Building for an actual device will fail.
+            '''
+    )
+
+    generateProjectParser.add_argument(
+        '--generateDsym',
+        action='store_true',
+        default=False,
+        help='''
+            This improves profiling experinence by generating DSYM files. Keep disabled for better build performance.
             '''
     )
 
