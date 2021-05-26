@@ -328,7 +328,6 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             }
             
             let titleFont = Font.semibold(13.0)
-            let subtitleFont = Font.regular(13.0)
             let titleColor = UIColor.white
             var titleAttributedString: NSAttributedString?
             if let user = item.peer as? TelegramUser {

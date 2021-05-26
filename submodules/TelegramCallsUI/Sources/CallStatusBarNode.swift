@@ -138,6 +138,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     private func setupGradientAnimations() {
+        return
         if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
