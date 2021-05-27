@@ -56,13 +56,22 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             if let bubbleTheme = backgroundNode.bubbleTheme, let wallpaper = backgroundNode.wallpaper, let bubbleCorners = backgroundNode.bubbleCorners {
                 let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
                 var needsCleanBackground = false
-                self.contentNode.backgroundColor = backgroundNode.contentNode.backgroundColor
                 switch self.bubbleType {
                 case .incoming:
                     self.contentNode.image = graphics.incomingBubbleGradientImage
+                    if graphics.incomingBubbleGradientImage == nil {
+                        self.contentNode.backgroundColor = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill
+                    } else {
+                        self.contentNode.backgroundColor = nil
+                    }
                     needsCleanBackground = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.incoming.bubble.withWallpaper.gradientFill.alpha <= 0.99
                 case .outgoing:
                     self.contentNode.image = graphics.outgoingBubbleGradientImage
+                    if graphics.outgoingBubbleGradientImage == nil {
+                        self.contentNode.backgroundColor = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill
+                    } else {
+                        self.contentNode.backgroundColor = nil
+                    }
                     needsCleanBackground = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.outgoing.bubble.withWallpaper.gradientFill.alpha <= 0.99
                 }
 
@@ -98,6 +107,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                         self.insertSubnode(cleanWallpaperNode, at: 0)
                     }
                     self.cleanWallpaperNode?.contents = backgroundNode.contentNode.contents
+                    self.cleanWallpaperNode?.backgroundColor = backgroundNode.contentNode.backgroundColor
                 } else {
                     if let cleanWallpaperNode = self.cleanWallpaperNode {
                         self.cleanWallpaperNode = nil
