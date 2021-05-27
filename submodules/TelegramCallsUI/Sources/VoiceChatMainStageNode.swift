@@ -469,7 +469,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                             avatarScale = 1.0
                         }
                         
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                         transition.updateTransformScale(node: strongSelf.speakingAvatarNode, scale: avatarScale, beginWithCurrentState: true)
                     }
                 }))
@@ -676,13 +676,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
                                     Queue.mainQueue().after(0.07) {
-                                        completion?()
-
                                         if let strongSelf = self {
                                             if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
                                                 strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                             }
                                         }
+                                        
+                                        completion?()
 
                                         if delayTransition {
                                             if let videoNode = strongSelf.currentVideoNode {

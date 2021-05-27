@@ -1948,7 +1948,7 @@ public final class VoiceChatController: ViewController {
             self.actionButtonColorDisposable = (self.actionButton.outerColor
             |> deliverOnMainQueue).start(next: { [weak self] normalColor, activeColor in
                 if let strongSelf = self {
-                    let animated = strongSelf.currentNormalButtonColor != nil
+                    let animated = strongSelf.currentNormalButtonColor != nil || strongSelf.currentActiveButtonColor == nil
                     strongSelf.currentNormalButtonColor = normalColor
                     strongSelf.currentActiveButtonColor = activeColor
                     strongSelf.updateButtons(transition: animated ? .animated(duration: 0.3, curve: .linear) : .immediate)
@@ -2211,19 +2211,21 @@ public final class VoiceChatController: ViewController {
                     })))
                 }
                 
-                if #available(iOS 12.0, *) {
-                    if strongSelf.call.hasScreencast {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StopScreenSharing, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            f(.default)
+                if let callState = strongSelf.callState, callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
+                    if #available(iOS 12.0, *) {
+                        if strongSelf.call.hasScreencast {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StopScreenSharing, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
 
-                            self?.call.disableScreencast()
-                        })))
-                    } else {
-                        items.append(.custom(VoiceChatShareScreenContextItem(context: strongSelf.context, text: strongSelf.presentationData.strings.VoiceChat_ShareScreen, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, _ in }), false))
+                                self?.call.disableScreencast()
+                            })))
+                        } else {
+                            items.append(.custom(VoiceChatShareScreenContextItem(context: strongSelf.context, text: strongSelf.presentationData.strings.VoiceChat_ShareScreen, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, _ in }), false))
+                        }
                     }
                 }
 
@@ -3646,6 +3648,10 @@ public final class VoiceChatController: ViewController {
             
             transition.updateAlpha(node: self.cameraButton.textNode, alpha: hasCameraButton ? buttonsTitleAlpha : 0.0)
             transition.updateAlpha(node: self.switchCameraButton.textNode, alpha: buttonsTitleAlpha)
+            var audioButtonTransition = transition
+            if hasCameraButton, transition.isAnimated {
+                audioButtonTransition = .animated(duration: 0.15, curve: .easeInOut)
+            }
             transition.updateAlpha(node: self.audioButton.textNode, alpha: hasCameraButton ? 0.0 : buttonsTitleAlpha)
             transition.updateAlpha(node: self.leaveButton.textNode, alpha: buttonsTitleAlpha)
         }
@@ -4480,7 +4486,7 @@ public final class VoiceChatController: ViewController {
             
             self.requestedVideoChannels = requestedVideoChannels
                         
-            guard self.didSetDataReady || !self.isPanning else {
+            guard self.didSetDataReady && !self.isPanning else {
                 return
             }
             
@@ -4596,8 +4602,7 @@ public final class VoiceChatController: ViewController {
                     self.requestedVideoSources.insert(channel.endpointId)
                     self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
-                            print("create main video \(channel.endpointId)")
-                            print("create blur video \(channel.endpointId)")
+                            print("create video \(channel.endpointId)")
                             guard let strongSelf = self, let videoView = videoView else {
                                 return
                             }
@@ -5480,15 +5485,23 @@ public final class VoiceChatController: ViewController {
                     let completion = {
                         let effectiveSpeakerPeerId = self.effectiveSpeaker?.0
                         if let effectiveSpeakerPeerId = effectiveSpeakerPeerId, let otherItemNode = verticalItemNodes[String(effectiveSpeakerPeerId.toInt64()) + "_" + (self.effectiveSpeaker?.1 ?? "")] {
-                            self.mainStageNode.animateTransitionIn(from: otherItemNode, transition: transition)
                             
-                            self.mainStageBackgroundNode.alpha = 1.0
-                            self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            self.mainStageNode.alpha = 0.0
+                            
+                            Queue.mainQueue().after(0.05) {
+                                self.mainStageNode.animateTransitionIn(from: otherItemNode, transition: transition)
+                                self.mainStageNode.alpha = 1.0
+                                
+                                self.mainStageBackgroundNode.alpha = 1.0
+                                self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
                         }
                         
-                        self.fullscreenListNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
-                                itemNode.animateTransitionIn(from: verticalItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")], containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                        Queue.mainQueue().after(0.1) {
+                            self.fullscreenListNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
+                                    itemNode.animateTransitionIn(from: verticalItemNodes[String(item.peer.id.toInt64()) + "_" + (item.videoEndpointId ?? "")], containerNode: self.transitionContainerNode, transition: transition, animate: item.peer.id != effectiveSpeakerPeerId)
+                                }
                             }
                         }
                         
