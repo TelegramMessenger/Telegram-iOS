@@ -102,10 +102,12 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             }
 
             if colors.count >= 2 {
+                self.imageNode.layer.compositingFilter = "softLightBlendMode"
                 self.backgroundNode.image = generateGradientImage(size: CGSize(width: 80.0, height: 80.0), colors: colors.map(UIColor.init(rgb:)), locations: [0.0, 1.0], direction: .vertical)
                 self.backgroundNode.backgroundColor = nil
             } else if colors.count >= 1 {
                 self.backgroundNode.image = nil
+                self.imageNode.layer.compositingFilter = "softLightBlendMode"
                 self.backgroundNode.backgroundColor = UIColor(rgb: colors[0])
             }
         }

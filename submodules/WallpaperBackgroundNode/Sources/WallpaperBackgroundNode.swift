@@ -14,6 +14,159 @@ import Postbox
 private let motionAmount: CGFloat = 32.0
 
 public final class WallpaperBackgroundNode: ASDisplayNode {
+    public final class BubbleBackgroundNode: ASDisplayNode {
+        public enum BubbleType {
+            case incoming
+            case outgoing
+        }
+
+        private let bubbleType: BubbleType
+        private let contentNode: ASImageNode
+
+        private var cleanWallpaperNode: ASDisplayNode?
+        private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
+        private weak var backgroundNode: WallpaperBackgroundNode?
+        private var index: SparseBag<BubbleBackgroundNode>.Index?
+
+        init(backgroundNode: WallpaperBackgroundNode, bubbleType: BubbleType) {
+            self.backgroundNode = backgroundNode
+            self.bubbleType = bubbleType
+
+            self.contentNode = ASImageNode()
+            self.contentNode.isUserInteractionEnabled = false
+
+            super.init()
+
+            self.addSubnode(self.contentNode)
+
+            self.index = backgroundNode.bubbleBackgroundNodeReferences.add(BubbleBackgroundNodeReference(node: self))
+        }
+
+        deinit {
+            if let index = self.index, let backgroundNode = self.backgroundNode {
+                backgroundNode.bubbleBackgroundNodeReferences.remove(index)
+            }
+        }
+
+        func updateContents() {
+            guard let backgroundNode = self.backgroundNode else {
+                return
+            }
+
+            if let bubbleTheme = backgroundNode.bubbleTheme, let wallpaper = backgroundNode.wallpaper, let bubbleCorners = backgroundNode.bubbleCorners {
+                let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+                var needsCleanBackground = false
+                self.contentNode.backgroundColor = backgroundNode.contentNode.backgroundColor
+                switch self.bubbleType {
+                case .incoming:
+                    self.contentNode.image = graphics.incomingBubbleGradientImage
+                    needsCleanBackground = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.incoming.bubble.withWallpaper.gradientFill.alpha <= 0.99
+                case .outgoing:
+                    self.contentNode.image = graphics.outgoingBubbleGradientImage
+                    needsCleanBackground = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.outgoing.bubble.withWallpaper.gradientFill.alpha <= 0.99
+                }
+
+                var hasComplexGradient = false
+                switch wallpaper {
+                case let .file(_, _, _, _, isPattern, _, _, _, settings):
+                    hasComplexGradient = settings.colors.count >= 3
+                    if !isPattern {
+                        needsCleanBackground = false
+                    }
+                case let .gradient(colors, _):
+                    hasComplexGradient = colors.count >= 3
+                default:
+                    break
+                }
+
+                var needsGradientBackground = false
+                var needsWallpaperBackground = false
+
+                if needsCleanBackground {
+                    if hasComplexGradient {
+                        needsGradientBackground = backgroundNode.gradientBackgroundNode != nil
+                    } else {
+                        needsWallpaperBackground = true
+                    }
+                }
+
+                if needsWallpaperBackground {
+                    if self.cleanWallpaperNode == nil {
+                        let cleanWallpaperNode = ASImageNode()
+                        self.cleanWallpaperNode = cleanWallpaperNode
+                        cleanWallpaperNode.frame = self.contentNode.frame
+                        self.insertSubnode(cleanWallpaperNode, at: 0)
+                    }
+                    self.cleanWallpaperNode?.contents = backgroundNode.contentNode.contents
+                } else {
+                    if let cleanWallpaperNode = self.cleanWallpaperNode {
+                        self.cleanWallpaperNode = nil
+                        cleanWallpaperNode.removeFromSupernode()
+                    }
+                }
+
+                if needsGradientBackground, let gradientBackgroundNode = backgroundNode.gradientBackgroundNode {
+                    if self.gradientWallpaperNode == nil {
+                        let gradientWallpaperNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+                        gradientWallpaperNode.frame = self.contentNode.frame
+                        self.gradientWallpaperNode = gradientWallpaperNode
+                        self.insertSubnode(gradientWallpaperNode, at: 0)
+                    }
+                } else {
+                    if let gradientWallpaperNode = self.gradientWallpaperNode {
+                        self.gradientWallpaperNode = nil
+                        gradientWallpaperNode.removeFromSupernode()
+                    }
+                }
+            } else {
+                self.contentNode.image = nil
+                if let cleanWallpaperNode = self.cleanWallpaperNode {
+                    self.cleanWallpaperNode = nil
+                    cleanWallpaperNode.removeFromSupernode()
+                }
+            }
+        }
+
+        public func update(rect: CGRect, within containerSize: CGSize) {
+            self.contentNode.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                cleanWallpaperNode.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                gradientWallpaperNode.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+            }
+        }
+
+        public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
+            transition.animatePositionAdditive(node: self.contentNode, offset: CGPoint(x: -value.x, y: -value.y))
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.animatePositionAdditive(node: cleanWallpaperNode, offset: CGPoint(x: -value.x, y: -value.y))
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.animatePositionAdditive(node: gradientWallpaperNode, offset: CGPoint(x: -value.x, y: -value.y))
+            }
+        }
+
+        public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+            self.contentNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                cleanWallpaperNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                gradientWallpaperNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            }
+        }
+    }
+
+    private final class BubbleBackgroundNodeReference {
+        weak var node: BubbleBackgroundNode?
+
+        init(node: BubbleBackgroundNode) {
+            self.node = node
+        }
+    }
+
     private let context: AccountContext
     
     private let contentNode: ASDisplayNode
@@ -24,6 +177,10 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var wallpaper: TelegramWallpaper?
 
     private let patternImageDisposable = MetaDisposable()
+
+    private var bubbleTheme: PresentationTheme?
+    private var bubbleCorners: PresentationChatBubbleCorners?
+    private var bubbleBackgroundNodeReferences = SparseBag<BubbleBackgroundNodeReference>()
     
     private var motionEnabled: Bool = false {
         didSet {
@@ -206,6 +363,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.patternImageNode.isHidden = true
         }
 
+        self.updateBubbles()
+
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: .immediate)
         }
@@ -235,5 +394,52 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
     public func animateEvent(transition: ContainedViewLayoutTransition) {
         self.gradientBackgroundNode?.animateEvent(transition: transition)
+    }
+
+    public func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
+        if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
+            self.bubbleTheme = bubbleTheme
+            self.bubbleCorners = bubbleCorners
+
+            self.updateBubbles()
+        }
+    }
+
+    private func updateBubbles() {
+        for reference in self.bubbleBackgroundNodeReferences {
+            reference.node?.updateContents()
+        }
+    }
+
+    public func hasBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> Bool {
+        guard let bubbleTheme = self.bubbleTheme, let wallpaper = self.wallpaper, let bubbleCorners = self.bubbleCorners else {
+            return false
+        }
+
+        let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+        switch type {
+        case .incoming:
+            if graphics.incomingBubbleGradientImage != nil {
+                return true
+            }
+            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 {
+                return true
+            }
+        case .outgoing:
+            if graphics.outgoingBubbleGradientImage != nil {
+                return true
+            }
+            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    public func makeBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> WallpaperBackgroundNode.BubbleBackgroundNode? {
+        let node = WallpaperBackgroundNode.BubbleBackgroundNode(backgroundNode: self, bubbleType: type)
+        node.updateContents()
+        return node
     }
 }

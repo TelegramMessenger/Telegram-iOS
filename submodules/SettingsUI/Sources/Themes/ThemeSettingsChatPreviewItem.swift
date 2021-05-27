@@ -133,15 +133,16 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: ThemeSettingsChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
         let currentNodes = self.messageNodes
+
+        var currentBackgroundNode = self.backgroundNode
         
         return { item, params, neighbors in
-            var updatedBackgroundSignal: Signal<(UIImage?, Bool)?, NoError>?
-            if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, accountMediaBox: item.context.account.postbox.mediaBox)
+            if currentBackgroundNode == nil {
+                currentBackgroundNode = WallpaperBackgroundNode(context: item.context)
             }
+            currentBackgroundNode?.update(wallpaper: item.wallpaper)
+            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
             
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -160,7 +161,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: messageItem.outgoing ? otherPeerId : peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: messageItem.outgoing ? [] : [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: messageItem.outgoing ? TelegramUser(id: otherPeerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []) : nil, text: messageItem.text, attributes: messageItem.reply != nil ? [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil)] : [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode))
             }
             
             var nodes: [ListViewItemNode] = []
@@ -220,10 +221,9 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         topOffset += node.frame.size.height
                     }
 
-                    if strongSelf.backgroundNode == nil {
-                        let backgroundNode = WallpaperBackgroundNode(context: item.context)
-                        strongSelf.backgroundNode = backgroundNode
-                        strongSelf.insertSubnode(backgroundNode, at: 0)
+                    if let currentBackgroundNode = currentBackgroundNode, strongSelf.backgroundNode !== currentBackgroundNode {
+                        strongSelf.backgroundNode = currentBackgroundNode
+                        strongSelf.insertSubnode(currentBackgroundNode, at: 0)
                     }
                     
                     /*if let updatedBackgroundSignal = updatedBackgroundSignal {
@@ -287,6 +287,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
+                        backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
                     }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

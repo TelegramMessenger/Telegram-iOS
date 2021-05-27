@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both, Extracted
@@ -65,6 +66,7 @@ class ChatMessageBackground: ASDisplayNode {
     private var maskMode: Bool?
     private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
+    private weak var backgroundNode: WallpaperBackgroundNode?
     
     var hasImage: Bool {
         self.imageNode.image != nil
@@ -92,19 +94,20 @@ class ChatMessageBackground: ASDisplayNode {
     }
     
     func setMaskMode(_ maskMode: Bool) {
-        if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics {
-            self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate)
+        if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics, let backgroundNode = self.backgroundNode {
+            self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate, backgroundNode: backgroundNode)
         }
     }
     
-    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition) {
+    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
-        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
+        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
         }
         self.type = type
         self.currentHighlighted = highlighted
         self.graphics = graphics
+        self.backgroundNode = backgroundNode
         self.hasWallpaper = hasWallpaper
         
         let image: UIImage?
@@ -113,7 +116,7 @@ class ChatMessageBackground: ASDisplayNode {
         case .none:
             image = nil
         case let .incoming(mergeType):
-            if maskMode && graphics.incomingBubbleGradientImage != nil {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming) {
                 image = nil
             } else {
                 switch mergeType {
@@ -136,7 +139,7 @@ class ChatMessageBackground: ASDisplayNode {
                 }
             }
         case let .outgoing(mergeType):
-            if maskMode && graphics.outgoingBubbleGradientImage != nil {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing) {
                 image = nil
             } else {
                 switch mergeType {

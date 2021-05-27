@@ -192,55 +192,48 @@ public final class PrincipalThemeEssentialGraphics {
     
     public let hasWallpaper: Bool
     
-    init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool, bubbleCorners: PresentationChatBubbleCorners) {
+    init(presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, bubbleCorners: PresentationChatBubbleCorners) {
         let theme = presentationTheme.chat
-        var wallpaper = initialWallpaper
+        let wallpaper = initialWallpaper
         self.hasWallpaper = !wallpaper.isEmpty
         
         let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
         let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper
-        
-        if knockoutMode {
-            let wallpaperImage = chatControllerBackgroundImage(theme: presentationTheme, wallpaper: wallpaper, mediaBox: mediaBox, knockoutMode: false)
-            self.incomingBubbleGradientImage = wallpaperImage
-            self.outgoingBubbleGradientImage = wallpaperImage
-            wallpaper = presentationTheme.chat.defaultWallpaper
+
+        var incomingGradientColors: (UIColor, UIColor)?
+        if incoming.fill.rgb != incoming.gradientFill.rgb {
+            incomingGradientColors = (incoming.fill, incoming.gradientFill)
+        }
+        if let incomingGradientColors = incomingGradientColors {
+            self.incomingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                var locations: [CGFloat] = [0.0, 1.0]
+                let colors = [incomingGradientColors.0.cgColor, incomingGradientColors.1.cgColor] as NSArray
+
+                let colorSpace = deviceColorSpace
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+
+                context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+            })
         } else {
-            var incomingGradientColors: (UIColor, UIColor)?
-            if incoming.fill.rgb != incoming.gradientFill.rgb {
-                incomingGradientColors = (incoming.fill, incoming.gradientFill)
-            }
-            if let incomingGradientColors = incomingGradientColors {
-                self.incomingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
-                    var locations: [CGFloat] = [0.0, 1.0]
-                    let colors = [incomingGradientColors.0.cgColor, incomingGradientColors.1.cgColor] as NSArray
-                    
-                    let colorSpace = deviceColorSpace
-                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-                    
-                    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                })
-            } else {
-                self.incomingBubbleGradientImage = nil
-            }
-            
-            var outgoingGradientColors: (UIColor, UIColor)?
-            if outgoing.fill.rgb != outgoing.gradientFill.rgb {
-                outgoingGradientColors = (outgoing.fill, outgoing.gradientFill)
-            }
-            if let outgoingGradientColors = outgoingGradientColors {
-                self.outgoingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
-                    var locations: [CGFloat] = [0.0, 1.0]
-                    let colors = [outgoingGradientColors.0.cgColor, outgoingGradientColors.1.cgColor] as NSArray
-                    
-                    let colorSpace = deviceColorSpace
-                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-                    
-                    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                })
-            } else {
-                self.outgoingBubbleGradientImage = nil
-            }
+            self.incomingBubbleGradientImage = nil
+        }
+
+        var outgoingGradientColors: (UIColor, UIColor)?
+        if outgoing.fill.rgb != outgoing.gradientFill.rgb {
+            outgoingGradientColors = (outgoing.fill, outgoing.gradientFill)
+        }
+        if let outgoingGradientColors = outgoingGradientColors {
+            self.outgoingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                var locations: [CGFloat] = [0.0, 1.0]
+                let colors = [outgoingGradientColors.0.cgColor, outgoingGradientColors.1.cgColor] as NSArray
+
+                let colorSpace = deviceColorSpace
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+
+                context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+            })
+        } else {
+            self.outgoingBubbleGradientImage = nil
         }
         
         let incomingKnockout = self.incomingBubbleGradientImage != nil

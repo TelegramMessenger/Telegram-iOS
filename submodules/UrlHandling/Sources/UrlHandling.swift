@@ -220,6 +220,16 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 return nil
                             }
                         }
+                    } else if component.contains("~") {
+                        let components = component.components(separatedBy: "~")
+                        if components.count >= 1 && components.count <= 4 {
+                            let colors = components.compactMap { component in
+                                return UIColor(hexString: component)?.rgb
+                            }
+                            parameter = .gradient(colors, nil)
+                        } else {
+                            parameter = .color(UIColor(rgb: 0xffffff))
+                        }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
