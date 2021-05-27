@@ -431,6 +431,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var genericCallContext: OngoingGroupCallContext?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
+    private var didInitializeConnectionMode: Bool = false
 
     private var screencastCallContext: OngoingGroupCallContext?
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
@@ -2749,8 +2750,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private func requestCall(movingFromBroadcastToRtc: Bool) {
-        self.currentConnectionMode = .none
-        self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc)
+        if !self.didInitializeConnectionMode || self.currentConnectionMode != .none {
+            self.didInitializeConnectionMode = true
+            self.currentConnectionMode = .none
+            self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc)
+        }
         
         self.internalState = .requesting
         self.internalStatePromise.set(.single(.requesting))
