@@ -1076,9 +1076,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
         let stripInset: CGFloat = 8.0
         let stripSpacing: CGFloat = 4.0
-        let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
+        let stripWidth: CGFloat = max(5.0, floorToScreenPixels((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
         let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
-        let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
+        let currentStripMidX = floorToScreenPixels(currentStripMinX + stripWidth / 2.0)
         let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
         let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
         for i in 0 ..< self.stripNodes.count {

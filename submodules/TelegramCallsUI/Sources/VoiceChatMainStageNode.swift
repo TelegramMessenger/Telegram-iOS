@@ -525,17 +525,21 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         var mutedForYou = false
         switch state {
             case .listening:
-                if let muteState = peerEntry.muteState, muteState.mutedByYou {
-                    gradient = .muted
+                if let muteState = peerEntry.muteState {
                     muted = true
-                    mutedForYou = true
+                    if muteState.mutedByYou {
+                        gradient = .mutedForYou
+                        mutedForYou = true
+                    } else if !muteState.canUnmute {
+                        gradient = .muted
+                    }
                 } else {
                     gradient = .active
                     muted = peerEntry.muteState != nil
                 }
             case .speaking:
                 if let muteState = peerEntry.muteState, muteState.mutedByYou {
-                    gradient = .muted
+                    gradient = .mutedForYou
                     muted = true
                     mutedForYou = true
                 } else {
@@ -858,6 +862,7 @@ class VoiceChatBlobNode: ASDisplayNode {
         case speaking
         case active
         case connecting
+        case mutedForYou
         case muted
     }
     private let size: CGSize
@@ -978,6 +983,8 @@ class VoiceChatBlobNode: ASDisplayNode {
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
             case .connecting:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .mutedForYou:
+                targetColors = [pink.cgColor, destructiveColor.cgColor, destructiveColor.cgColor]
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
         }
