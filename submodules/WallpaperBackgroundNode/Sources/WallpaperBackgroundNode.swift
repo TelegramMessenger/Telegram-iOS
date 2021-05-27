@@ -426,6 +426,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             return false
         }
 
+        var hasPlainWallpaper = false
+        switch wallpaper {
+        case .color:
+            hasPlainWallpaper = true
+        default:
+            break
+        }
+
         let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
         switch type {
         case .incoming:
@@ -433,14 +441,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 return true
             }
             if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 {
-                return true
+                return !hasPlainWallpaper
             }
         case .outgoing:
             if graphics.outgoingBubbleGradientImage != nil {
                 return true
             }
-            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 {
-                return true
+            if bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.alpha <= 0.99 {
+                return !hasPlainWallpaper
             }
         }
 
@@ -448,6 +456,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     public func makeBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> WallpaperBackgroundNode.BubbleBackgroundNode? {
+        if !self.hasBubbleBackground(for: type) {
+            return nil
+        }
         let node = WallpaperBackgroundNode.BubbleBackgroundNode(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node

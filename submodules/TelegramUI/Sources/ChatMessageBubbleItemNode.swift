@@ -1400,8 +1400,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var backgroundHiding: ChatMessageBubbleContentBackgroundHiding?
         var hasSolidWallpaper = false
         switch item.presentationData.theme.wallpaper {
-        case .color, .gradient:
+        case .color:
             hasSolidWallpaper = true
+        case let .gradient(colors, _):
+            hasSolidWallpaper = colors.count <= 2
         default:
             break
         }
