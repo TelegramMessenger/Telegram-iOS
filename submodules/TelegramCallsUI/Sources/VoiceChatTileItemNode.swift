@@ -191,9 +191,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 gesture.cancel()
                 return
             }
-            if item.videoReady {
-                contextAction(strongSelf.contextSourceNode, gesture)
-            }
+            contextAction(strongSelf.contextSourceNode, gesture)
         }
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -218,7 +216,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     }
     
     @objc private func tap() {
-        if let item = self.item, item.videoReady {
+        if let item = self.item {
             item.action()
         }
     }
@@ -276,9 +274,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         if self.item != item {
             let previousItem = self.item
             self.item = item
-            
-            self.containerNode.isGestureEnabled = item.videoReady
-            
+                        
             if !item.videoReady {
                 let shimmerNode: VoiceChatTileShimmeringNode
                 if let current = self.shimmerNode {
@@ -502,7 +498,7 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     enum Gradient {
         case speaking
         case active
-        case connecting
+        case mutedForYou
         case muted
     }
     
@@ -632,8 +628,8 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
                 targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
             case .active:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
-            case .connecting:
-                targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
+            case .mutedForYou:
+                targetColors = [pink.cgColor, destructiveColor.cgColor, destructiveColor.cgColor]
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
         }

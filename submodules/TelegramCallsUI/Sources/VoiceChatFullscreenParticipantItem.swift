@@ -494,9 +494,13 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             switch item.color {
                 case .accent:
                     wavesColor = accentColor
+                    if case .wantsToSpeak = item.icon {
+                        gradient = .muted
+                    }
                 case .constructive:
                     gradient = .speaking
                 case .destructive:
+                    gradient = .mutedForYou
                     wavesColor = destructiveColor
                 default:
                     break
@@ -629,7 +633,6 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                                                             
-                    
                     if titleUpdated, let snapshotView = strongSelf.titleNode.view.snapshotContentTree() {
                         strongSelf.titleNode.view.superview?.addSubview(snapshotView)
                         snapshotView.frame = strongSelf.titleNode.view.frame
@@ -773,7 +776,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             nodeToAnimateIn = animationNode
                         }
                         var color = color
-                        if hasVideo || color.rgb == 0x979797 {
+                        if (hasVideo && !item.active) || color.rgb == 0x979797 {
                             color = UIColor(rgb: 0xffffff)
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: color), animated: true)

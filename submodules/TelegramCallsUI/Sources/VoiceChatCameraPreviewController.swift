@@ -301,7 +301,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         }
         
         self.readyDisposable.set(self.cameraNode.ready.start(next: { [weak self] ready in
-            if let strongSelf = self {
+            if let strongSelf = self, ready {
                 Queue.mainQueue().after(0.07) {
                     strongSelf.shimmerNode.alpha = 0.0
                     strongSelf.shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
