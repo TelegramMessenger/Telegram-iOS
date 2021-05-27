@@ -1,5 +1,17 @@
 import Foundation
 
+public final class Weak<T: AnyObject> {
+    private weak var _value: T?
+
+    public var value: T? {
+        return self._value
+    }
+
+    public init(_ value: T) {
+        self._value = value
+    }
+}
+
 public final class Bag<T> {
     public typealias Index = Int
     private var nextIndex: Index = 0
@@ -69,6 +81,46 @@ public final class Bag<T> {
             return (self.itemKeys[0], self.items[0])
         } else {
             return nil
+        }
+    }
+}
+
+public final class SparseBag<T>: Sequence {
+    public typealias Index = Int
+    private var nextIndex: Index = 0
+    private var items: [Index: T] = [:]
+
+    public init() {
+    }
+
+    public func add(_ item: T) -> Index {
+        let key = self.nextIndex
+        self.nextIndex += 1
+        self.items[key] = item
+
+        return key
+    }
+
+    public func get(_ index: Index) -> T? {
+        return self.items[index]
+    }
+
+    public func remove(_ index: Index) {
+        self.items.removeValue(forKey: index)
+    }
+
+    public func removeAll() {
+        self.items.removeAll()
+    }
+
+    public var isEmpty: Bool {
+        return self.items.isEmpty
+    }
+
+    public func makeIterator() -> AnyIterator<T> {
+        var iterator = self.items.makeIterator()
+        return AnyIterator { () -> T? in
+            return iterator.next()?.value
         }
     }
 }

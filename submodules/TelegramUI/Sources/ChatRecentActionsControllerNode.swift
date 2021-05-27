@@ -538,7 +538,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in

@@ -113,6 +113,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         self.ready.set(.single(true))
         self.instantChatBackgroundNode.update(wallpaper: wallpaper)
+
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()
@@ -197,8 +198,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         if gradientColors.count >= 3 {
             self.chatContainerNode.insertSubnode(self.wallpaperNode, belowSubnode: self.messagesContainerNode)
-            self.wallpaperNode.update(wallpaper: self.wallpaper)
         }
+
+        self.wallpaperNode.update(wallpaper: self.wallpaper)
+        self.wallpaperNode.updateBubbleTheme(bubbleTheme: self.previewTheme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in
             if let strongSelf = self, strongSelf.blurredNode.supernode != nil {
@@ -498,7 +501,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         sampleMessages.append(message8)
         
         items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil)
+            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperNode)
         }
                 
         let width: CGFloat

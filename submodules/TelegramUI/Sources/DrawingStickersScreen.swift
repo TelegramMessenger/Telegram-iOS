@@ -155,7 +155,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true), presentationContext: ChatPresentationContext(backgroundNode: nil))
         
         self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         

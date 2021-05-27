@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
 
 private func shiftArray(array: [CGPoint], offset: Int) -> [CGPoint] {
     var newArray = array
@@ -117,6 +118,26 @@ private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoi
 }
 
 public final class GradientBackgroundNode: ASDisplayNode {
+    public final class CloneNode: ASImageNode {
+        private weak var parentNode: GradientBackgroundNode?
+        private var index: SparseBag<Weak<CloneNode>>.Index?
+
+        public init(parentNode: GradientBackgroundNode) {
+            self.parentNode = parentNode
+
+            super.init()
+
+            self.index = parentNode.cloneNodes.add(Weak<CloneNode>(self))
+            self.image = parentNode.contentView.image
+        }
+
+        deinit {
+            if let parentNode = self.parentNode, let index = self.index {
+                parentNode.cloneNodes.remove(index)
+            }
+        }
+    }
+
     private static let basePositions: [CGPoint] = [
         CGPoint(x: 0.80, y: 0.10),
         CGPoint(x: 0.60, y: 0.20),
@@ -156,7 +177,8 @@ public final class GradientBackgroundNode: ASDisplayNode {
         var numberOfFrames: Int
         var curve: ContainedViewLayoutTransitionCurve
     }
-    private var cachedPhaseTransition: [PhaseTransitionKey: [UIImage]] = [:]
+
+    private let cloneNodes = SparseBag<Weak<CloneNode>>()
 
     override public init() {
         self.contentView = UIImageView()
@@ -208,12 +230,32 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     animation.isRemovedOnCompletion = true
                     self.contentView.layer.removeAnimation(forKey: "contents")
                     self.contentView.layer.add(animation, forKey: "contents")
+
+                    for cloneNode in self.cloneNodes {
+                        if let value = cloneNode.value {
+                            value.image = images.last
+                            value.layer.removeAnimation(forKey: "contents")
+                            value.layer.add(animation.copy() as! CAAnimation, forKey: "contents")
+                        }
+                    }
+
                 } else {
-                    self.contentView.image = generateGradient(size: imageSize, colors: colors, positions: positions)
+                    let image = generateGradient(size: imageSize, colors: colors, positions: positions)
+                    self.contentView.image = image
+
+                    for cloneNode in self.cloneNodes {
+                        cloneNode.value?.image = image
+                    }
                 }
             }
         } else if sizeUpdated {
-            self.contentView.image = generateGradient(size: imageSize, colors: colors, positions: positions)
+            let image = generateGradient(size: imageSize, colors: colors, positions: positions)
+            self.contentView.image = image
+
+            for cloneNode in self.cloneNodes {
+                cloneNode.value?.image = image
+            }
+
             self.validPhase = self.phase
         }
 

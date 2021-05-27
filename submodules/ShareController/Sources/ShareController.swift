@@ -1029,7 +1029,7 @@ final class MessageStoryRenderer {
         let theme = self.presentationData.theme.withUpdated(preview: true)
         let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
     
-        let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil)]
+        let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil)]
     
         let inset: CGFloat = 16.0
         let width = layout.size.width - inset * 2.0

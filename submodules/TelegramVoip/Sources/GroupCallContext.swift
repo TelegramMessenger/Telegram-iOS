@@ -504,8 +504,9 @@ public final class OngoingGroupCallContext {
                             mainView?.updateIsEnabled(value)
                         }
                     )
-                    let cloneVideoView = cloneView.flatMap { cloneView in
-                        return OngoingCallContextPresentationCallVideoView(
+                    var cloneVideoView: OngoingCallContextPresentationCallVideoView?
+                    if let cloneView = cloneView {
+                        cloneVideoView = OngoingCallContextPresentationCallVideoView(
                             view: cloneView,
                             setOnFirstFrameReceived: { [weak cloneView] f in
                                 cloneView?.setOnFirstFrameReceived(f)

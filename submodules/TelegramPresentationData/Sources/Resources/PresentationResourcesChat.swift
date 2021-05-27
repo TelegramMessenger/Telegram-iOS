@@ -86,10 +86,10 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
         return theme.object(PresentationResourceParameterKey.chatPrincipalThemeEssentialGraphics(hasWallpaper: hasWallpaper, bubbleCorners: bubbleCorners), { theme in
-            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, bubbleCorners: bubbleCorners)
+            return PrincipalThemeEssentialGraphics(presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, bubbleCorners: bubbleCorners)
         }) as! PrincipalThemeEssentialGraphics
     }
     

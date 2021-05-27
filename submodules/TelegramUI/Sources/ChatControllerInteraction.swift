@@ -138,6 +138,7 @@ public final class ChatControllerInteraction {
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()
     var currentMessageWithLoadingReplyThread: MessageId?
+    let presentationContext: ChatPresentationContext
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
@@ -216,7 +217,8 @@ public final class ChatControllerInteraction {
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
-        stickerSettings: ChatInterfaceStickerSettings
+        stickerSettings: ChatInterfaceStickerSettings,
+        presentationContext: ChatPresentationContext
     ) {
         self.openMessage = openMessage
         self.openPeer = openPeer
@@ -297,6 +299,8 @@ public final class ChatControllerInteraction {
         
         self.pollActionState = pollActionState
         self.stickerSettings = stickerSettings
+
+        self.presentationContext = presentationContext
     }
     
     static var `default`: ChatControllerInteraction {
@@ -345,6 +349,9 @@ public final class ChatControllerInteraction {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
+        pollActionState: ChatInterfacePollActionState(),
+        stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false),
+        presentationContext: ChatPresentationContext(backgroundNode: nil)
+        )
     }
 }

@@ -464,7 +464,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     updatedTheme = theme
                 }
 
-                let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: updatedTheme!, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+                let _ = PresentationResourcesChat.principalGraphics(theme: updatedTheme!, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
             } else {
                 updatedTheme = nil
             }
@@ -486,12 +486,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
                 strongSelf.chatListBackgroundNode.backgroundColor = theme.chatList.backgroundColor
                 strongSelf.maskNode.image = generateMaskImage(color: theme.chatList.backgroundColor)
+
+                strongSelf.backgroundNode.updateBubbleTheme(bubbleTheme: theme, bubbleCorners: strongSelf.presentationData.chatBubbleCorners)
             }
 
             strongSelf.serviceBackgroundColor = serviceBackgroundColor
             strongSelf.serviceBackgroundColorPromise.set(.single(serviceBackgroundColor))
 
             strongSelf.backgroundNode.update(wallpaper: wallpaper)
+
             strongSelf.ready.set(.single(true))
 
             strongSelf.wallpaper = wallpaper
@@ -840,7 +843,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }, clickThroughMessage: { [weak self] in
                 self?.updateSection(.background)
                 self?.requestSectionUpdate?(.background)
-            })
+            }, backgroundNode: self.backgroundNode)
             return item
         }
         
