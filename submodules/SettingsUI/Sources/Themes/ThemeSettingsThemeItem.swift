@@ -249,10 +249,14 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             var updatedThemeReference = false
             var updatedAccentColor = false
             var updatedTheme = false
+            var updatedWallpaper = false
             var updatedSelected = false
             
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
+            }
+            if currentItem?.wallpaper != item.wallpaper {
+                updatedWallpaper = true
             }
             if currentItem == nil || currentItem?.accentColor != item.accentColor {
                 updatedAccentColor = true
@@ -278,7 +282,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         }
                         strongSelf.containerNode.isGestureEnabled = false
                     } else {
-                        if updatedThemeReference || updatedAccentColor {
+                        if updatedThemeReference || updatedAccentColor || updatedWallpaper {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: item.themeReference, color: item.accentColor, wallpaper: item.wallpaper))
                         }
                         strongSelf.containerNode.isGestureEnabled = true
@@ -545,8 +549,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
 
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    let isFirstLayout = currentItem == nil
-                    
                     strongSelf.item = item
                     strongSelf.layoutParams = params
 
@@ -636,14 +638,15 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         let customWallpaper = item.themeSpecificChatWallpapers[theme.generalThemeReference.index]
                         
                         let wallpaper = accentColor?.wallpaper ?? customWallpaper ?? themeWallpaper
+
                         entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1
                     }
                     
-                    let action: (PresentationThemeReference) -> Void = { [weak self, weak item] themeReference in
+                    let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in
                         if let strongSelf = self {
                             strongSelf.item?.updatedTheme(themeReference)
-                            ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
+                            let _ = ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
                         }
                     }
                     let previousEntries = strongSelf.entries ?? []
