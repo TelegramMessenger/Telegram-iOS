@@ -3307,7 +3307,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         switch curve {
                             case .linear:
                                  headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
-                            case .spring:
+                            case .spring, .customSpring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
                             case let .custom(p1, p2, p3, p4):
                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))

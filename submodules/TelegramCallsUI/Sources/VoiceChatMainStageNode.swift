@@ -154,8 +154,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         self.speakingContainerNode = ASDisplayNode()
         self.speakingContainerNode.alpha = 0.0
-        self.speakingContainerNode.cornerRadius = 19.0
-        self.speakingContainerNode.clipsToBounds = true
         
         self.speakingAvatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
         self.speakingTitleNode = ImmediateTextNode()
@@ -242,6 +240,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         let speakingEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+        speakingEffectView.layer.cornerRadius = 19.0
+        speakingEffectView.clipsToBounds = true
+        if #available(iOS 13.0, *) {
+            speakingEffectView.layer.cornerCurve = .continuous
+        }
         self.speakingContainerNode.view.insertSubview(speakingEffectView, at: 0)
         self.speakingEffectView = speakingEffectView
         
@@ -292,8 +295,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             return
         }
         self.appeared = true
+        
+        self.topFadeNode.alpha = 0.0
+        self.titleNode.alpha = 0.0
+        self.microphoneNode.alpha = 0.0
+        self.headerNode.alpha = 0.0
                 
-        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
         alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 1.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 1.0)
@@ -333,7 +341,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         self.appeared = false
         
-        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
         if offset.isZero {
             alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
         } else {
@@ -434,7 +442,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 strongSelf.speakingContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 strongSelf.speakingContainerNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 
-                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -14.0, dy: -14.0)
+                let blobFrame = strongSelf.speakingAvatarNode.frame.insetBy(dx: -12.0, dy: -12.0)
                 strongSelf.speakingAudioLevelDisposable.set((getAudioLevel(peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] value in
                     guard let strongSelf = self else {
@@ -751,15 +759,15 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
     }
     
-    func setControlsHidden(_ hidden: Bool, animated: Bool) {
+    func setControlsHidden(_ hidden: Bool, animated: Bool, delay: Double = 0.0) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-        transition.updateAlpha(node: self.headerNode, alpha: hidden ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.topFadeNode, alpha: hidden ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.headerNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
+        transition.updateAlpha(node: self.topFadeNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
         
-        transition.updateAlpha(node: self.titleNode, alpha: hidden ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.microphoneNode, alpha: hidden ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.bottomFadeNode, alpha: hidden ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.bottomFillNode, alpha: hidden ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.titleNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
+        transition.updateAlpha(node: self.microphoneNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
+        transition.updateAlpha(node: self.bottomFadeNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
+        transition.updateAlpha(node: self.bottomFillNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isLandscape: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {

@@ -221,10 +221,15 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
+            var appearenceTransition = transition
+            if transition.isAnimated {
+                appearenceTransition = .animated(duration: springDuration, curve: .customSpring(damping: springDamping, initialVelocity: 0.0))
+            }
+            
             if let videoNode = sourceNode.videoNode {
-                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: transition)
-                transition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
-                transition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
+                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: appearenceTransition)
+                appearenceTransition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
+                appearenceTransition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
             }
             self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
@@ -237,11 +242,11 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                 self.insertSubnode(self.videoFadeNode, aboveSubnode: sourceNode.videoContainerNode)
                 self.view.insertSubview(snapshotView, aboveSubview: sourceNode.videoContainerNode.view)
                 snapshotView.frame = sourceRect
-                transition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - snapshotView.frame.size.height), size: snapshotView.frame.size))
+                appearenceTransition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - snapshotView.frame.size.height), size: snapshotView.frame.size))
                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                     snapshotView.removeFromSuperview()
                 })
-                transition.updateFrame(node: self.videoFadeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - self.videoFadeNode.frame.size.height), size: CGSize(width: targetSize.width, height: self.videoFadeNode.frame.height)))
+                appearenceTransition.updateFrame(node: self.videoFadeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - self.videoFadeNode.frame.size.height), size: CGSize(width: targetSize.width, height: self.videoFadeNode.frame.height)))
                 self.videoFadeNode.alpha = 0.0
                 self.videoFadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             }

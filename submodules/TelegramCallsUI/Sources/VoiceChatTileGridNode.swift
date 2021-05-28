@@ -48,6 +48,8 @@ final class VoiceChatTileGridNode: ASDisplayNode {
             self.isFirstTime = false
         }
         
+        let availableWidth = min(size.width, size.height)
+        
         for i in 0 ..< self.items.count {
             let item = self.items[i]
             let isLast = i == self.items.count - 1
@@ -65,12 +67,12 @@ final class VoiceChatTileGridNode: ASDisplayNode {
             var wasAdded = false
             if let current = self.itemNodes[item.id] {
                 itemNode = current
-                current.update(size: itemSize, availableWidth: size.width, item: item, transition: transition)
+                current.update(size: itemSize, availableWidth: availableWidth, item: item, transition: transition)
             } else {
                 wasAdded = true
                 let addedItemNode = VoiceChatTileItemNode(context: self.context)
                 itemNode = addedItemNode
-                addedItemNode.update(size: itemSize, availableWidth: size.width, item: item, transition: .immediate)
+                addedItemNode.update(size: itemSize, availableWidth: availableWidth, item: item, transition: .immediate)
                 self.itemNodes[self.items[i].id] = addedItemNode
                 self.addSubnode(addedItemNode)
             }
@@ -235,7 +237,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                     }
                     
                     let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.3, curve: .easeInOut)
-                    let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), items: item.tiles, transition: transition)
+                    let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: params.availableHeight), items: item.tiles, transition: transition)
                     if currentItem == nil {
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: tileGridSize.height)
                         strongSelf.backgroundNode.frame = tileGridNode.frame

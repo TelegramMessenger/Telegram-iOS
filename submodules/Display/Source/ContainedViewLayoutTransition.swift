@@ -6,6 +6,7 @@ public enum ContainedViewLayoutTransitionCurve: Equatable, Hashable {
     case linear
     case easeInOut
     case spring
+    case customSpring(damping: CGFloat, initialVelocity: CGFloat)
     case custom(Float, Float, Float, Float)
     
     public static var slide: ContainedViewLayoutTransitionCurve {
@@ -22,6 +23,8 @@ public extension ContainedViewLayoutTransitionCurve {
             return listViewAnimationCurveEaseInOut(offset)
         case .spring:
             return listViewAnimationCurveSystem(offset)
+        case .customSpring:
+            return listViewAnimationCurveSystem(offset)
         case let .custom(c1x, c1y, c2x, c2y):
             return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
         }
@@ -37,6 +40,8 @@ public extension ContainedViewLayoutTransitionCurve {
                 return CAMediaTimingFunctionName.easeInEaseOut.rawValue
             case .spring:
                 return kCAMediaTimingFunctionSpring
+            case let .customSpring(damping, initialVelocity):
+                return "\(kCAMediaTimingFunctionCustomSpringPrefix)_\(damping)_\(initialVelocity)"
             case .custom:
                 return CAMediaTimingFunctionName.easeInEaseOut.rawValue
         }
@@ -49,6 +54,8 @@ public extension ContainedViewLayoutTransitionCurve {
             case .easeInOut:
                 return nil
             case .spring:
+                return nil
+            case .customSpring:
                 return nil
             case let .custom(p1, p2, p3, p4):
                 return CAMediaTimingFunction(controlPoints: p1, p2, p3, p4)
@@ -63,6 +70,8 @@ public extension ContainedViewLayoutTransitionCurve {
             case .easeInOut:
                 return [.curveEaseInOut]
             case .spring:
+                return UIView.AnimationOptions(rawValue: 7 << 16)
+            case .customSpring:
                 return UIView.AnimationOptions(rawValue: 7 << 16)
             case .custom:
                 return []
