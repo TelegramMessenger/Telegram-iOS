@@ -30,8 +30,8 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
 }
  
 enum ThemeColorSection: Int {
-    case accent
     case background
+    case accent
     case messages
 }
 

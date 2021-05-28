@@ -69,10 +69,7 @@ final class ThemeAccentColorController: ViewController {
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        var section: ThemeColorSection = .accent
-        if case .background = mode {
-            section = .background
-        }
+        var section: ThemeColorSection = .background
         self.section = section
         
         self.segmentedTitleView = ThemeColorSegmentedTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings, selectedSection: section)

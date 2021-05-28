@@ -101,6 +101,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var patternButtonNode: WallpaperOptionButtonNode
     private var colorsButtonNode: WallpaperOptionButtonNode
     private var playButtonNode: HighlightableButtonNode
+    private let playButtonBackgroundNode: NavigationBackgroundNode
     
     private let messagesContainerNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
@@ -115,7 +116,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let actionButton = Promise<UIBarButtonItem?>(nil)
     var action: (() -> Void)?
     var requestPatternPanel: ((Bool, TelegramWallpaper) -> Void)?
-    var requestColorsPanel: (([UIColor]?) -> Void)?
+    var toggleColorsPanel: (([UIColor]?) -> Void)?
     var requestRotateGradient: ((Int32) -> Void)?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
@@ -153,7 +154,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode.setEnabled(false)
 
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
+        self.playButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
         self.playButtonNode = HighlightableButtonNode()
+        self.playButtonNode.insertSubnode(self.playButtonBackgroundNode, at: 0)
 
         self.playButtonPlayImage = generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -439,7 +442,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             } else {
                                 subtitleSignal = .single(nil)
                             }
-                            if file.id == 0 {
+                            if file.slug.isEmpty {
                                 actionSignal = .single(nil)
                             } else {
                                 actionSignal = .single(defaultAction)
@@ -626,7 +629,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 strongSelf.motionButtonNode.buttonColor = color
                 strongSelf.colorsButtonNode.buttonColor = color
 
-                strongSelf.playButtonNode.setBackgroundImage(generateFilledCircleImage(diameter: 48.0, color: color), for: [])
+                strongSelf.playButtonBackgroundNode.color = color
             }))
         } else if self.arguments.patternEnabled != previousArguments.patternEnabled {
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
@@ -684,6 +687,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
     var colors: [UInt32]? {
         return self.calculateGradientColors()?.map({ $0.rgb })
+    }
+
+    func updateIsColorsPanelActive(_ value: Bool, animated: Bool) {
+        self.colorsButtonNode.setSelected(value, animated: false)
     }
     
     @objc func toggleBlur() {
@@ -796,10 +803,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         guard let currentGradientColors = self.calculateGradientColors() else {
             return
         }
-        let value = !self.colorsButtonNode.isSelected
-        self.colorsButtonNode.setSelected(value, animated: false)
-
-        self.requestColorsPanel?(value ? currentGradientColors : nil)
+        self.toggleColorsPanel?(currentGradientColors)
     }
 
     @objc private func togglePlay() {
@@ -1022,6 +1026,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         transition.updateAlpha(node: self.colorsButtonNode, alpha: colorsAlpha * alpha)
 
         transition.updateFrame(node: self.playButtonNode, frame: playFrame)
+        transition.updateFrame(node: self.playButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: playFrame.size))
+        self.playButtonBackgroundNode.update(size: playFrame.size, cornerRadius: playFrame.size.height / 2.0, transition: transition)
         transition.updateAlpha(node: self.playButtonNode, alpha: playAlpha * alpha)
         transition.updateSublayerTransformScale(node: self.playButtonNode, scale: max(0.1, playAlpha))
     }

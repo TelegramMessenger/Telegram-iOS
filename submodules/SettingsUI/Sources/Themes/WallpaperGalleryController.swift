@@ -369,10 +369,13 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
-        
+
+        var currentCentralItemIndex: Int?
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
-                strongSelf.bindCentralItemNode(animated: true)
+                let updated = currentCentralItemIndex != index
+                currentCentralItemIndex = index
+                strongSelf.bindCentralItemNode(animated: true, updated: updated)
             }
         }
         
@@ -585,10 +588,10 @@ public class WallpaperGalleryController: ViewController {
         super.viewDidAppear(animated)
         
         self.galleryNode.modalAnimateIn()
-        self.bindCentralItemNode(animated: false)
+        self.bindCentralItemNode(animated: false, updated: false)
     }
     
-    private func bindCentralItemNode(animated: Bool) {
+    private func bindCentralItemNode(animated: Bool, updated: Bool) {
         if let node = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
             self.centralItemSubtitle.set(node.subtitle.get())
             self.centralItemStatus.set(node.status.get())
@@ -599,6 +602,7 @@ public class WallpaperGalleryController: ViewController {
             node.requestPatternPanel = { [weak self] enabled, initialWallpaper in
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
                     strongSelf.colorsPanelEnabled = false
+                    strongSelf.colorsPanelNode?.view.endEditing(true)
 
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
@@ -637,12 +641,13 @@ public class WallpaperGalleryController: ViewController {
                 }
             }
 
-            node.requestColorsPanel = { [weak self] colors in
-                if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+            node.toggleColorsPanel = { [weak self] colors in
+                if let strongSelf = self, let (layout, _) = strongSelf.validLayout, let colors = colors, let itemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     strongSelf.patternPanelEnabled = false
-                    strongSelf.colorsPanelEnabled = colors != nil
-                    strongSelf.galleryNode.scrollView.isScrollEnabled = colors == nil
-                    if let colors = colors {
+                    strongSelf.colorsPanelEnabled = !strongSelf.colorsPanelEnabled
+                    strongSelf.galleryNode.scrollView.isScrollEnabled = !strongSelf.colorsPanelEnabled
+
+                    if strongSelf.colorsPanelEnabled {
                         strongSelf.colorsPanelNode?.updateState({ _ in
                             return WallpaperColorPanelNodeState(
                                 selection: 0,
@@ -654,9 +659,10 @@ public class WallpaperGalleryController: ViewController {
                                 simpleGradientGeneration: false
                             )
                         }, animated: false)
-                    } else {
-                        //strongSelf.updateEntries(pattern: .color(0), preview: false)
                     }
+
+                    itemNode.updateIsColorsPanelActive(strongSelf.colorsPanelEnabled, animated: true)
+
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
@@ -680,12 +686,14 @@ public class WallpaperGalleryController: ViewController {
                 //self.patternPanelNode?.backgroundColors = ([settings.colors[0]], nil)
             }
 
-            if self.colorsPanelEnabled || self.patternPanelEnabled {
-                self.colorsPanelEnabled = false
-                self.patternPanelEnabled = false
+            if updated {
+                if self.colorsPanelEnabled || self.patternPanelEnabled {
+                    self.colorsPanelEnabled = false
+                    self.patternPanelEnabled = false
 
-                if let (layout, _) = self.validLayout {
-                    self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    if let (layout, _) = self.validLayout {
+                        self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    }
                 }
             }
         }
