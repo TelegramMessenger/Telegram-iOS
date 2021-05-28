@@ -1302,10 +1302,10 @@ private:
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
 
                 VideoMetalView *cloneRenderer = nil;
-                /*if (requestClone) {
+                if (requestClone) {
                     cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
                     cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
-                }*/
+                }
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> cloneSink = [cloneRenderer getSink];
