@@ -10,7 +10,7 @@ public enum ConvertGroupToSupergroupError {
 }
 
 public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
-    return account.network.request(Api.functions.messages.migrateChat(chatId: peerId.id))
+    return account.network.request(Api.functions.messages.migrateChat(chatId: peerId.id._internalGetInt32Value()))
     |> mapError { error -> ConvertGroupToSupergroupError in
         if error.errorDescription == "CHANNELS_TOO_MUCH" {
             return .tooManyChannels

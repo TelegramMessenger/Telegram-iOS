@@ -12,6 +12,7 @@ import AccountContext
 import CountrySelectionUI
 import SettingsUI
 import PhoneNumberFormat
+import DebugSettingsUI
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {

@@ -145,6 +145,12 @@ open class ManagedAnimationNode: ASDisplayNode {
         }
     }
     
+    public var scale: CGFloat = 1.0 {
+        didSet {
+            self.imageNode.transform = CATransform3DMakeScale(self.scale, self.scale, 1.0)
+        }
+    }
+    
     public init(size: CGSize) {
         self.intrinsicSize = size
         
@@ -285,5 +291,12 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.trackStack.append(item)
         self.didTryAdvancingState = false
         self.updateAnimation()
+    }
+    
+    open override func layout() {
+        super.layout()
+        
+        self.imageNode.bounds = self.bounds
+        self.imageNode.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
     }
 }

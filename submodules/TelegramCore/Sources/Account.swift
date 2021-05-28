@@ -1157,15 +1157,17 @@ public class Account {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
         }
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
-        
-        let mediaBox = postbox.mediaBox
-        self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
-            guard let mediaBox = mediaBox else {
-                return
-            }
-            let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
-            mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
-        })
+
+        if !supplementary {
+            let mediaBox = postbox.mediaBox
+            self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
+                guard let mediaBox = mediaBox else {
+                    return
+                }
+                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
+                mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
+            })
+        }
         
         let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false).start(next: { key in
             let encoder = JSONEncoder()

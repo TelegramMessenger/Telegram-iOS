@@ -12,15 +12,15 @@ public protocol TransformImageCustomArguments {
 }
 
 public struct TransformImageArguments: Equatable {
-    public let corners: ImageCorners
+    public var corners: ImageCorners
     
-    public let imageSize: CGSize
-    public let boundingSize: CGSize
-    public let intrinsicInsets: UIEdgeInsets
-    public let resizeMode: TransformImageResizeMode
-    public let emptyColor: UIColor?
-    public let custom: TransformImageCustomArguments?
-    public let scale: CGFloat?
+    public var imageSize: CGSize
+    public var boundingSize: CGSize
+    public var intrinsicInsets: UIEdgeInsets
+    public var resizeMode: TransformImageResizeMode
+    public var emptyColor: UIColor?
+    public var custom: TransformImageCustomArguments?
+    public var scale: CGFloat?
     
     public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black), emptyColor: UIColor? = nil, custom: TransformImageCustomArguments? = nil, scale: CGFloat? = nil) {
         self.corners = corners

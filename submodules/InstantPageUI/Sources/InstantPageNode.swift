@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-protocol InstantPageNode {    
+protocol InstantPageNode: ASDisplayNode {    
     func updateIsVisible(_ isVisible: Bool)
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?

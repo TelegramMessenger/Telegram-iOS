@@ -73,7 +73,7 @@
 - (TGMenuSheetController *)_presentAvatarMenu
 {
     __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
+    TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:self.forceDark];
     controller.dismissesByOutsideTap = true;
     controller.hasSwipeGesture = true;
     controller.didDismiss = ^(bool manual)

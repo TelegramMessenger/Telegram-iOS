@@ -385,6 +385,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var screenCaptureEventsDisposable: Disposable?
     private var applicationInForegroundDisposable: Disposable?
     
+    public var centralItemUpdated: ((MessageId) -> Void)?
+    
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
@@ -1206,6 +1208,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 }
                 if strongSelf.didSetReady {
                     strongSelf._hiddenMedia.set(.single(hiddenItem))
+                    if let hiddenItem = hiddenItem {
+                        strongSelf.centralItemUpdated?(hiddenItem.0)
+                    }
                 }
             }
         }

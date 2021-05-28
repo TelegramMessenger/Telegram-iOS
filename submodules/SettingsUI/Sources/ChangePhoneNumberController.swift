@@ -12,8 +12,10 @@ import AlertUI
 import PresentationDataUtils
 import CountrySelectionUI
 import PhoneNumberFormat
+import CoreTelephony
+import MessageUI
 
-final class ChangePhoneNumberController: ViewController {
+final class ChangePhoneNumberController: ViewController, MFMailComposeViewControllerDelegate {
     private var controllerNode: ChangePhoneNumberControllerNode {
         return self.displayNode as! ChangePhoneNumberControllerNode
     }
@@ -133,23 +135,62 @@ final class ChangePhoneNumberController: ViewController {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 
                     let text: String
+                    var actions: [TextAlertAction] = []
                     switch error {
                         case .limitExceeded:
                             text = presentationData.strings.Login_CodeFloodError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .invalidPhoneNumber:
                             text = presentationData.strings.Login_InvalidPhoneError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
                             text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                        case .phoneBanned:
+                            text = presentationData.strings.Login_PhoneBannedError
+                            actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                            actions.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Login_PhoneNumberHelp, action: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let formattedNumber = formatPhoneNumber(number)
+                                let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                let systemVersion = UIDevice.current.systemVersion
+                                let locale = Locale.current.identifier
+                                let carrier = CTCarrier()
+                                let mnc = carrier.mobileNetworkCode ?? "none"
+                                
+                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0)
+                            }))
                         case .generic:
                             text = presentationData.strings.Login_UnknownError
+                            actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                     }
                     
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions), in: .window(.root))
                 }
             }))
         } else {
             self.hapticFeedback.error()
             self.controllerNode.animateError()
         }
+    }
+    
+    private func presentEmailComposeController(address: String, subject: String, body: String) {
+        if MFMailComposeViewController.canSendMail() {
+            let composeController = MFMailComposeViewController()
+            composeController.setToRecipients([address])
+            composeController.setSubject(subject)
+            composeController.setMessageBody(body, isHTML: false)
+            composeController.mailComposeDelegate = self
+            
+            self.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
+        } else {
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }
+    }
+    
+    public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+        controller.dismiss(animated: true, completion: nil)
     }
 }

@@ -138,6 +138,10 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.playlistPreloadDisposable?.dispose()
     }
     
+    func ensureMessageIsVisible(id: MessageId) {
+        
+    }
+    
     func scrollToTop() -> Bool {
         let offset = self.listNode.visibleContentOffset()
         switch offset {

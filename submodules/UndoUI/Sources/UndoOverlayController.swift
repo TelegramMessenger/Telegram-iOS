@@ -38,6 +38,7 @@ public enum UndoOverlayContent {
     case sticker(account: Account, file: TelegramMediaFile, text: String)
     case copy(text: String)
     case mediaSaved(text: String)
+    case paymentSent(currencyValue: String, itemTitle: String)
 }
 
 public enum UndoOverlayAction {
@@ -55,6 +56,8 @@ public final class UndoOverlayController: ViewController {
     
     private var didPlayPresentationAnimation = false
     private var dismissed = false
+    
+    public var keepOnParentDismissal = false
     
     public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData

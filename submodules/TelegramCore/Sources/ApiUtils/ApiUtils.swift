@@ -8,11 +8,11 @@ public extension PeerReference {
     var id: PeerId {
         switch self {
         case let .user(id, _):
-            return PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
+            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))
         case let .group(id):
-            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
+            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id))
         case let .channel(id, _):
-            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
+            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id))
         }
     }
 }
@@ -49,12 +49,12 @@ extension PeerReference {
 func forceApiInputPeer(_ peer: Peer) -> Api.InputPeer? {
     switch peer {
     case let user as TelegramUser:
-        return Api.InputPeer.inputPeerUser(userId: user.id.id, accessHash: user.accessHash?.value ?? 0)
+        return Api.InputPeer.inputPeerUser(userId: user.id.id._internalGetInt32Value(), accessHash: user.accessHash?.value ?? 0)
     case let group as TelegramGroup:
-        return Api.InputPeer.inputPeerChat(chatId: group.id.id)
+        return Api.InputPeer.inputPeerChat(chatId: group.id.id._internalGetInt32Value())
     case let channel as TelegramChannel:
         if let accessHash = channel.accessHash {
-            return Api.InputPeer.inputPeerChannel(channelId: channel.id.id, accessHash: accessHash.value)
+            return Api.InputPeer.inputPeerChannel(channelId: channel.id.id._internalGetInt32Value(), accessHash: accessHash.value)
         } else {
             return nil
         }
@@ -66,12 +66,12 @@ func forceApiInputPeer(_ peer: Peer) -> Api.InputPeer? {
 func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
     switch peer {
     case let user as TelegramUser where user.accessHash != nil:
-        return Api.InputPeer.inputPeerUser(userId: user.id.id, accessHash: user.accessHash!.value)
+        return Api.InputPeer.inputPeerUser(userId: user.id.id._internalGetInt32Value(), accessHash: user.accessHash!.value)
     case let group as TelegramGroup:
-        return Api.InputPeer.inputPeerChat(chatId: group.id.id)
+        return Api.InputPeer.inputPeerChat(chatId: group.id.id._internalGetInt32Value())
     case let channel as TelegramChannel:
         if let accessHash = channel.accessHash {
-            return Api.InputPeer.inputPeerChannel(channelId: channel.id.id, accessHash: accessHash.value)
+            return Api.InputPeer.inputPeerChannel(channelId: channel.id.id._internalGetInt32Value(), accessHash: accessHash.value)
         } else {
             return nil
         }
@@ -82,7 +82,7 @@ func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
 
 func apiInputChannel(_ peer: Peer) -> Api.InputChannel? {
     if let channel = peer as? TelegramChannel, let accessHash = channel.accessHash {
-        return Api.InputChannel.inputChannel(channelId: channel.id.id, accessHash: accessHash.value)
+        return Api.InputChannel.inputChannel(channelId: channel.id.id._internalGetInt32Value(), accessHash: accessHash.value)
     } else {
         return nil
     }
@@ -90,7 +90,7 @@ func apiInputChannel(_ peer: Peer) -> Api.InputChannel? {
 
 func apiInputUser(_ peer: Peer) -> Api.InputUser? {
     if let user = peer as? TelegramUser, let accessHash = user.accessHash {
-        return Api.InputUser.inputUser(userId: user.id.id, accessHash: accessHash.value)
+        return Api.InputUser.inputUser(userId: user.id.id._internalGetInt32Value(), accessHash: accessHash.value)
     } else {
         return nil
     }
@@ -98,7 +98,7 @@ func apiInputUser(_ peer: Peer) -> Api.InputUser? {
 
 func apiInputSecretChat(_ peer: Peer) -> Api.InputEncryptedChat? {
     if let chat = peer as? TelegramSecretChat {
-        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: chat.accessHash)
+        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: chat.accessHash)
     } else {
         return nil
     }

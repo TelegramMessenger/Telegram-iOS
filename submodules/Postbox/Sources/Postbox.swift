@@ -985,6 +985,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)
     }
+
+    public func scanTopMessages(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (Message) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.scanTopMessages(peerId: peerId, namespace: namespace, limit: limit, f)
+    }
     
     public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
         self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
@@ -1129,6 +1134,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
+            postboxLog("openPostbox, basePath: \(basePath), useCopy: \(useCopy)")
+
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
             
             var tempDir: TempBoxDirectory?
@@ -1149,6 +1156,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                         return
                     }
                 } else {
+                    postboxLog("openPostbox, error1")
                     subscriber.putNext(.error)
                     return
                 }
@@ -1163,10 +1171,14 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
+
+            postboxLog("openPostbox, initialize SqliteValueBox")
             
             guard var valueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                postboxLog("openPostbox, SqliteValueBox upgrading progress \(progress)")
                 subscriber.putNext(.upgrading(progress))
             }) else {
+                postboxLog("openPostbox, SqliteValueBox open error")
                 subscriber.putNext(.error)
                 return
             }
@@ -1176,10 +1188,13 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 
                 let userVersion: Int32? = metadataTable.userVersion()
                 let currentUserVersion: Int32 = 25
+
+                postboxLog("openPostbox, current userVersion: \(userVersion ?? nil)")
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
                         if isTemporary {
+                            postboxLog("openPostbox, isTemporary = true, not upgrading")
                             subscriber.putNext(.error)
                             return
                         } else {
@@ -1241,9 +1256,12 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 }
                 
                 let endTime = CFAbsoluteTimeGetCurrent()
-                print("Postbox load took \((endTime - startTime) * 1000.0) ms")
+                postboxLog("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
                 subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary, tempDir: tempDir)))
+
+                postboxLog("openPostbox, putCompletion")
+
                 subscriber.putCompletion()
                 break
             }
@@ -1407,21 +1425,10 @@ public final class Postbox {
         self.seedConfiguration = seedConfiguration
         self.tempDir = tempDir
         
-        print("MediaBox path: \(self.basePath + "/media")")
+        postboxLog("MediaBox path: \(basePath + "/media")")
         
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.valueBox = valueBox
-        
-        /*self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
-            //if let strongSelf = self {
-                /*strongSelf.queue.async {
-                    if strongSelf.valueBox != nil {
-                        let _ = strongSelf.transaction({ _ -> Void in
-                        }).start()
-                    }
-                }*/
-            //}
-        })*/
         
         self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
         
@@ -1557,7 +1564,7 @@ public final class Postbox {
             })
         )
         
-        print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+        postboxLog("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
         let _ = self.transaction({ transaction -> Void in
             let reindexUnreadVersion: Int32 = 2
@@ -3404,6 +3411,26 @@ public final class Postbox {
             }
             if let last = indices.last {
                 index = last
+            } else {
+                break
+            }
+        }
+    }
+
+    fileprivate func scanTopMessages(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (Message) -> Bool) {
+        let lowerBound = MessageIndex.lowerBound(peerId: peerId, namespace: namespace)
+        var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
+        var remainingLimit = limit
+        while remainingLimit > 0 {
+            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: nil, from: index, includeFrom: false, to: lowerBound, limit: 10)
+            remainingLimit -= 10
+            for message in messages {
+                if !f(self.renderIntermediateMessage(message)) {
+                    break
+                }
+            }
+            if let last = messages.last {
+                index = last.index
             } else {
                 break
             }

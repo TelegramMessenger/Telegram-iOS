@@ -65,7 +65,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (textString, isMedia) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
+            let (textString, isMedia) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
             
             let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor

@@ -298,22 +298,22 @@ extension ChatListFilter {
                     includePeers: ChatListFilterIncludePeers(rawPeers: includePeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                         case let .inputPeerChat(chatId):
-                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         case let .inputPeerChannel(channelId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         default:
                             return nil
                         }
                     }, rawPinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                         case let .inputPeerChat(chatId):
-                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         case let .inputPeerChannel(channelId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         default:
                             return nil
                         }
@@ -321,11 +321,11 @@ extension ChatListFilter {
                     excludePeers: excludePeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                         case let .inputPeerChat(chatId):
-                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         case let .inputPeerChannel(channelId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         default:
                             return nil
                         }
@@ -426,11 +426,11 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                         var peerId: PeerId?
                         switch peer {
                         case let .inputPeerUser(userId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                         case let .inputPeerChat(chatId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         case let .inputPeerChannel(channelId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         default:
                             break
                         }
@@ -446,11 +446,11 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                         var peerId: PeerId?
                         switch peer {
                         case let .inputPeerUser(userId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                         case let .inputPeerChat(chatId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
                         case let .inputPeerChannel(channelId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
                         default:
                             break
                         }
@@ -1092,7 +1092,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
 
 func requestChatListFiltersSync(transaction: Transaction) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatListFilters
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     var topOperation: (SynchronizeChatListFiltersOperation, Int32)?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in

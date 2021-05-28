@@ -46,6 +46,81 @@ private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] 
 
 private let currencyFormatterEntries = loadCurrencyFormatterEntries()
 
+public func setupCurrencyNumberFormatter(currency: String) -> NumberFormatter {
+    guard let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] else {
+        preconditionFailure()
+    }
+
+    var result = ""
+    if entry.symbolOnLeft {
+        result.append("¤")
+        if entry.spaceBetweenAmountAndSymbol {
+            result.append(" ")
+        }
+    }
+
+    result.append("#")
+
+    result.append(entry.decimalSeparator)
+
+    for _ in 0 ..< entry.decimalDigits {
+        result.append("#")
+    }
+    if entry.decimalDigits != 0 {
+        result.append("0")
+    }
+
+    if !entry.symbolOnLeft {
+        if entry.spaceBetweenAmountAndSymbol {
+            result.append(" ")
+        }
+        result.append("¤")
+    }
+
+    let numberFormatter = NumberFormatter()
+
+    numberFormatter.numberStyle = .currency
+
+    numberFormatter.positiveFormat = result
+    numberFormatter.negativeFormat = "-\(result)"
+
+    numberFormatter.currencySymbol = ""
+    numberFormatter.currencyDecimalSeparator = entry.decimalSeparator
+    numberFormatter.currencyGroupingSeparator = entry.thousandsSeparator
+
+    numberFormatter.minimumFractionDigits = entry.decimalDigits
+    numberFormatter.maximumFractionDigits = entry.decimalDigits
+    numberFormatter.minimumIntegerDigits = 1
+
+    return numberFormatter
+}
+
+public func fractionalToCurrencyAmount(value: Double, currency: String) -> Int64? {
+    guard let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] else {
+        return nil
+    }
+    var factor: Double = 1.0
+    for _ in 0 ..< entry.decimalDigits {
+        factor *= 10.0
+    }
+    if value > Double(Int64.max) / factor {
+        return nil
+    } else {
+        return Int64(value * factor)
+    }
+}
+
+public func currencyToFractionalAmount(value: Int64, currency: String) -> Double? {
+    guard let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] else {
+        return nil
+    }
+    var factor: Double = 1.0
+    for _ in 0 ..< entry.decimalDigits {
+        factor *= 10.0
+    }
+    return Double(value) / factor
+}
+
 public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
     if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
         var result = ""
@@ -87,5 +162,44 @@ public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
         formatter.currencyCode = currency
         formatter.negativeFormat = "-¤#,##0.00"
         return formatter.string(from: (Float(amount) * 0.01) as NSNumber) ?? ""
+    }
+}
+
+public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (String, String, Bool) {
+    if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
+        var result = ""
+        if amount < 0 {
+            result.append("-")
+        }
+        /*if entry.symbolOnLeft {
+            result.append(entry.symbol)
+            if entry.spaceBetweenAmountAndSymbol {
+                result.append(" ")
+            }
+        }*/
+        var integerPart = abs(amount)
+        var fractional: [Character] = []
+        for _ in 0 ..< entry.decimalDigits {
+            let part = integerPart % 10
+            integerPart /= 10
+            if let scalar = UnicodeScalar(UInt32(part + 48)) {
+                fractional.append(Character(scalar))
+            }
+        }
+        result.append("\(integerPart)")
+        result.append(entry.decimalSeparator)
+        for i in 0 ..< fractional.count {
+            result.append(fractional[fractional.count - i - 1])
+        }
+        /*if !entry.symbolOnLeft {
+            if entry.spaceBetweenAmountAndSymbol {
+                result.append(" ")
+            }
+            result.append(entry.symbol)
+        }*/
+
+        return (result, entry.symbol, entry.symbolOnLeft)
+    } else {
+        return ("", "", false)
     }
 }

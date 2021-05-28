@@ -36,7 +36,7 @@ public func updatePeerGroupIdInteractively(transaction: Transaction, peerId: Pee
 
 private func addSynchronizeGroupedPeersOperation(transaction: Transaction, peerId: PeerId, groupId: PeerGroupId) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeGroupedPeers
-    let logPeerId = PeerId(namespace: 0, id: 0)
+    let logPeerId = PeerId(0)
     
     transaction.operationLogAddEntry(peerId: logPeerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeGroupedPeersOperation(peerId: peerId, groupId: groupId))
 }

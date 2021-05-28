@@ -69,6 +69,10 @@ public enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Peer?, GalleryItemIndexData?, Data?, String?)
     case image(MediaId, TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Peer?, Int32?, GalleryItemIndexData?, MessageId?, Data?, String?)
     
+    public init(representation: TelegramMediaImageRepresentation, peer: Peer) {
+        self = .topImage([ImageRepresentationWithReference(representation: representation, reference: MediaResourceReference.standalone(resource: representation.resource))], [], peer, nil, nil, nil)
+    }
+    
     public var id: AvatarGalleryEntryId {
         switch self {
         case let .topImage(representations, _, _, _, _, _):

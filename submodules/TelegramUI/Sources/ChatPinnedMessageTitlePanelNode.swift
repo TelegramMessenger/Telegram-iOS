@@ -269,7 +269,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
-                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
             }
         }
         
@@ -314,14 +314,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentLayout = (width, leftInset, rightInset)
             
             if let currentMessage = self.currentMessage {
-                self.enqueueTransition(width: width, panelHeight: panelHeight, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
+                self.enqueueTransition(width: width, panelHeight: panelHeight, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
             }
         }
         
         return panelHeight
     }
     
-    private func enqueueTransition(width: CGFloat, panelHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
+    private func enqueueTransition(width: CGFloat, panelHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
         let message = pinnedMessage.message
         
         var animationTransition: ContainedViewLayoutTransition = .immediate
@@ -470,7 +470,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: foldLineBreaks(descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId).0), font: Font.regular(15.0), textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: foldLineBreaks(descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId).0), font: Font.regular(15.0), textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
             Queue.mainQueue().async {
                 if let strongSelf = self {

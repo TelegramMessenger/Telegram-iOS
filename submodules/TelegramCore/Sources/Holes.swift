@@ -573,13 +573,13 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
 func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     switch peerId.namespace {
         case Namespaces.Peer.CloudUser:
-            return Api.Peer.peerUser(userId: peerId.id)
+            return Api.Peer.peerUser(userId: peerId.id._internalGetInt32Value())
         case Namespaces.Peer.CloudGroup:
-            return Api.Peer.peerChat(chatId: peerId.id)
+            return Api.Peer.peerChat(chatId: peerId.id._internalGetInt32Value())
         case Namespaces.Peer.CloudChannel:
-            return Api.Peer.peerChannel(channelId: peerId.id)
+            return Api.Peer.peerChannel(channelId: peerId.id._internalGetInt32Value())
         default:
-            return Api.Peer.peerUser(userId: accountPeerId.id)
+            return Api.Peer.peerUser(userId: accountPeerId.id._internalGetInt32Value())
     }
 }
 
@@ -698,7 +698,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                 
                 var updatedIndex: MessageIndex?
                 if let topIndex = topIndex {
-                    updatedIndex = topIndex.predecessor()
+                    updatedIndex = topIndex.globalPredecessor()
                 }
                 
                 transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
@@ -730,6 +730,6 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
 }
 
 public func fetchAccountPeer(account: Account) {
-    let messageId = MessageId(peerId: PeerId(namespace: PeerId.Namespace(Int32.max), id: 0), namespace: 0, id: 1)
+    let messageId = MessageId(peerId: PeerId(namespace: PeerId.Namespace.max, id: PeerId.Id._internalFromInt32Value(0)), namespace: 0, id: 1)
     fetchChatListHole(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, groupId: .root, hole: ChatListHole(index: MessageIndex(id: messageId, timestamp: Int32.max - 1))).start()
 }

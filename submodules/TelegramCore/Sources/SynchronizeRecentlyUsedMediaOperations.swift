@@ -14,7 +14,7 @@ func addSynchronizeRecentlyUsedMediaOperation(transaction: Transaction, category
         case .stickers:
             tag = OperationLogTags.SynchronizeRecentlyUsedStickers
     }
-    let peerId = PeerId(namespace: 0, id: 0)
+    let peerId = PeerId(0)
     
     var topOperation: (SynchronizeRecentlyUsedMediaOperation, Int32)?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in

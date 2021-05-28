@@ -160,7 +160,7 @@ final class AccountManagerImpl {
         self.tables.append(self.sharedDataTable)
         self.tables.append(self.noticeTable)
         
-        print("AccountManager initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+        postboxLog("AccountManager initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
     }
     
     deinit {

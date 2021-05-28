@@ -513,7 +513,7 @@ public enum ChatListSearchFilter: Equatable {
             case .voice:
                 return 5
             case let .peer(peerId, _, _, _):
-                return peerId.id
+                return peerId.id._internalGetInt32Value()
             case let .date(_, date, _):
                 return date
         }
@@ -741,6 +741,7 @@ public protocol AccountContext: class {
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
     
+    func scheduleGroupCall(peerId: PeerId)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: CachedChannelData.ActiveCall)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }
