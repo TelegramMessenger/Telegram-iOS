@@ -360,7 +360,7 @@ public class WallpaperGalleryController: ViewController {
         }, replaceRootController: { controller, ready in
         }, editMedia: { _ in
         })
-        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
+        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0, disableTapNavigation: true)
         self.displayNodeDidLoad()
 
         (self.displayNode as? WallpaperGalleryControllerNode)?.nativeStatusBar = self.statusBar
@@ -498,7 +498,7 @@ public class WallpaperGalleryController: ViewController {
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
                                         if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                            let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation)
+                                            let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation)
                                             
                                             var data: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -671,13 +671,22 @@ public class WallpaperGalleryController: ViewController {
             }
             
             if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry, case let .file(_, _, _, _, true, _, _, _ , settings) = wallpaper, !settings.colors.isEmpty {
-                if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
+                /*if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
                     self.patternPanelNode?.view.addSubview(snapshotView)
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false) { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     }
-                }
+                }*/
                 //self.patternPanelNode?.backgroundColors = ([settings.colors[0]], nil)
+            }
+
+            if self.colorsPanelEnabled || self.patternPanelEnabled {
+                self.colorsPanelEnabled = false
+                self.patternPanelEnabled = false
+
+                if let (layout, _) = self.validLayout {
+                    self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                }
             }
         }
     }

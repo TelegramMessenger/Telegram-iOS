@@ -178,6 +178,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     private let context: AccountContext
+    private let useSharedAnimationPhase: Bool
     
     private let contentNode: ASDisplayNode
     private var gradientBackgroundNode: GradientBackgroundNode?
@@ -245,8 +246,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, useSharedAnimationPhase: Bool = false) {
         self.context = context
+        self.useSharedAnimationPhase = useSharedAnimationPhase
         self.imageContentMode = .scaleAspectFill
         
         self.contentNode = ASDisplayNode()
@@ -289,7 +291,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
         if gradientColors.count >= 3 {
             if self.gradientBackgroundNode == nil {
-                let gradientBackgroundNode = createGradientBackgroundNode()
+                let gradientBackgroundNode = createGradientBackgroundNode(useSharedAnimationPhase: self.useSharedAnimationPhase)
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.addSubnode(self.patternImageNode)

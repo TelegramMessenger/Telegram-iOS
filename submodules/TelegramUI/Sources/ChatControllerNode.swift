@@ -1610,6 +1610,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 self.updatePlainInputSeparator(transition: .immediate)
                 self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
+
+                self.backgroundNode.updateBubbleTheme(bubbleTheme: chatPresentationInterfaceState.theme, bubbleCorners: chatPresentationInterfaceState.bubbleCorners)
             }
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil

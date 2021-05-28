@@ -284,9 +284,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
             switch entry {
             case let .wallpaper(wallpaper, _):
+                self.nativeNode.update(wallpaper: wallpaper)
+
                 if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
                     self.nativeNode.isHidden = false
-                    self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = isPattern
 
                     if isPattern && settings.colors.count >= 3 {
@@ -629,11 +630,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }))
         } else if self.arguments.patternEnabled != previousArguments.patternEnabled {
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
-            
-            if let (layout, _) = self.validLayout {
-                self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: .immediate)
-                self.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .immediate)
-            }
+        }
+
+        if let (layout, _) = self.validLayout {
+            self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: .immediate)
+            self.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .immediate)
         }
     }
     
@@ -949,9 +950,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
-                            patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
-                            colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
-                            playAlpha = 1.0
+                            patternFrame = leftButtonFrame
+                            playAlpha = 0.0
 
                             colorsAlpha = 1.0
                         case .image:
@@ -959,13 +959,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
-                        case .gradient:
+                        case let .gradient(colors, _):
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
-                            patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
-                            colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
-                            playAlpha = 1.0
+                            if colors.count >= 2 {
+                                playAlpha = 1.0
+                                patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
+                                colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                            } else {
+                                playAlpha = 0.0
+                                patternFrame = leftButtonFrame
+                            }
 
                             colorsAlpha = 1.0
                         case let .file(file):
@@ -973,9 +978,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 motionAlpha = 0.0
                                 patternAlpha = 1.0
 
-                                patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
-                                colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
-                                playAlpha = 1.0
+                                if file.settings.colors.count >= 2 {
+                                    playAlpha = 1.0
+                                    patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
+                                    colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                                } else {
+                                    playAlpha = 0.0
+                                    patternFrame = leftButtonFrame
+                                }
 
                                 colorsAlpha = 1.0
                             } else {

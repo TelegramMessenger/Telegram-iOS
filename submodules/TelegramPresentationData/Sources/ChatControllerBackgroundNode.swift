@@ -75,7 +75,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
             case let .file(file):
                 if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
                     var image: UIImage?
-                    let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                    let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                         if data.complete {
                             image = UIImage(contentsOfFile: data.path)?.precomposed()
                         }
@@ -175,7 +175,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 }
             case let .file(file):
                 if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                    let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors.count >= 1 ? file.settings.colors[0] : 0, bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : 0, intensity: intensity, rotation: file.settings.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation)
                     
                     let effectiveMediaBox: MediaBox
                     if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: representation)) {
@@ -214,7 +214,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                                 }
                             })
 
-                            return .single((interrimImage, false)) |> then(effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 1 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
+                            return .single((interrimImage, false)) |> then(effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
                             |> map { data -> (UIImage?, Bool)? in
                                 return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
                             })

@@ -1240,7 +1240,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             |> mapToSignal { cachedWallpaper in
                 if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors.count >= 1 ? file.settings.colors[0] : 0xd6e2ee, bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : 0xd6e2ee, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors.count >= 1 ? file.settings.colors : [0xd6e2ee], intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
                             
                     let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
 
