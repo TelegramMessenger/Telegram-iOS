@@ -78,6 +78,8 @@ private var declaredEncodables: Void = {
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
     declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
+    declareEncodable(HiddenAccountAttribute.self, f: { HiddenAccountAttribute(decoder: $0) })
+    declareEncodable(ContinueDoubleBottomFlowAttribute.self, f: { ContinueDoubleBottomFlowAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -174,6 +176,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedPeerExportedInvitations.self, f: { CachedPeerExportedInvitations(decoder: $0) })
     declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
     declareEncodable(CachedDisplayAsPeers.self, f: { CachedDisplayAsPeers(decoder: $0) })
+    declareEncodable(DoubleBottomHideTimestamp.self, f: { DoubleBottomHideTimestamp(decoder: $0) })
     
     return
 }()
@@ -196,6 +199,92 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
         try mutableUrl.setResourceValues(resourceValues)
     } catch let e {
         print("\(e)")
+    }
+}
+
+public final class HiddenAccountManagerImpl: HiddenAccountManager {
+    public let unlockedHiddenAccountRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
+    public var unlockedHiddenAccountRecordId: AccountRecordId?
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
+    
+    public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
+    public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
+    public let didFinishChangingAccountPromise = Promise<Void>()
+    
+    public init() {
+        unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.unlockedHiddenAccountRecordId = value
+                strongSelf.accountManagerRecordIdPromise.set(value)
+            })
+    }
+    
+    public func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager) {
+        self.getHiddenAccountsAccessChallengeDataPromise.set(accountManager.accountRecords()
+            |> map { view in
+                var result = [AccountRecordId:PostboxAccessChallengeData]()
+                var passcodes = Set<PostboxAccessChallengeData>()
+                let recordsWithOrder: [(AccountRecord, Int32)] = view.records.map { record in
+                    var order: Int32 = 0
+                    for attribute in record.attributes {
+                        if let attribute = attribute as? AccountSortOrderAttribute {
+                            order = attribute.order
+                            break
+                        }
+                    }
+                    return (record, order)
+                }
+                let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+                    .map { $0.0 }
+                for record in records {
+                    guard !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) else { continue }
+                    
+                    var accessChallengeData = PostboxAccessChallengeData.none
+                    for attribute in record.attributes {
+                        if let attribute = attribute as? HiddenAccountAttribute {
+                            accessChallengeData = attribute.accessChallengeData
+                            break
+                        }
+                    }
+                    if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
+                        result[record.id] = accessChallengeData
+                        passcodes.insert(accessChallengeData)
+                    }
+                }
+                return result
+            }
+            |> distinctUntilChanged(isEqual: ==)
+        )
+    }
+    
+    public func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords().first(where: {
+                !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) &&
+                !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+            }) != nil
+        }
+    }
+    
+    public func hiddenAccounts(accountManager: AccountManager) -> Signal<[AccountRecordId], NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+                .filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+                .map { $0.id }
+        }
+    }
+    
+    public func isAccountHidden(accountRecordId: AccountRecordId,accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+                .contains { $0.id == accountRecordId && $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+        }
+    }
+    
+    deinit {
+        unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 }
 
@@ -236,6 +325,10 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     })
     |> mapToSignal { record -> Signal<AccountResult?, NoError> in
         if let record = record {
+            guard !record.1.contains(where: { $0 is HiddenAccountAttribute }) else {
+                return .single(nil)
+            }
+            
             let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
             return reload.get()
             |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
@@ -295,6 +388,9 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
+    if accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == id {
+        accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
+    }
     return accountManager.transaction { transaction -> Void in
         transaction.updateRecord(id, { current in
             if alreadyLoggedOutRemotely {

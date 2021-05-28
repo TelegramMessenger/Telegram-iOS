@@ -733,7 +733,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
 
-    let canAddAccount = activeAccountsAndPeers(context: context)
+    let canAddAccount = visibleAccountsAndPeers(context: context)
     |> take(1)
     |> map { accountsAndPeers -> Bool in
         return accountsAndPeers.1.count + 1 < maximumNumberOfAccounts

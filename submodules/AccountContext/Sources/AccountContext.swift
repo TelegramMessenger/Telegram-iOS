@@ -538,6 +538,8 @@ public enum CreateGroupMode {
 public protocol AppLockContext: class {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
+    var lockingIsCompletePromise: Promise<Bool> { get }
+    var hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData] { get }
     
     func lock()
     func unlock()
@@ -574,6 +576,8 @@ public protocol SharedAccountContext: class {
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
     
     var presentGlobalController: (ViewController, Any?) -> Void { get }
+    
+    var openDoubleBottomFlow: () -> Void { get }
     
     func makeTempAccountContext(account: Account) -> AccountContext
     
@@ -629,6 +633,7 @@ public protocol SharedAccountContext: class {
     
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
+    func beginNewAuthAndContinueDoubleBottomFlow(testingEnvironment: Bool)
 }
 
 #if ENABLE_WALLET

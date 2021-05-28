@@ -278,7 +278,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         })
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        if !iconFrame.isEmpty {
+        if iconFrame.origin != .zero, iconFrame.size != .zero {
             self.iconNode.animateIn(fromScale: 0.416)
             self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
         }

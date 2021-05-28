@@ -4332,6 +4332,7 @@ Sorry for the inconvenience.";
 
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
 "PasscodeSettings.DoNotMatch" = "Passcodes don't match. Please try again.";
+"PasscodeSettings.MatchMaster" = "Matches master password. Please enter another one.";
 
 "Conversation.PrivateChannelTooltip" = "This channel is private";
 
@@ -6445,3 +6446,25 @@ Sorry for the inconvenience.";
 "VoiceChat.ReminderNotify" = "We will notify you when it starts.";
 
 "Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
+
+"DoubleBottom.Settings.Text" = "Double Bottom";
+"DoubleBottom.HideAccount.Title" = "Double Bottom";
+"DoubleBottom.HideAccount.Text" = "Hide account, so you can access it only via unique passcode.";
+"DoubleBottom.HideAccount.Button" = "Enable";
+"DoubleBottom.AddOneMoreAccount.Title" = "Main Account";
+"DoubleBottom.AddOneMoreAccount.Text" = "To hide current account, you have to add one more account. It would be your main account.";
+"DoubleBottom.AddOneMoreAccount.Button" = "Add an Account";
+"DoubleBottom.SetMasterPasscode.Title" = "Main Passcode";
+"DoubleBottom.SetMasterPasscode.Text" = "Set up a main passcode for all non-hidden (main) accounts.";
+"DoubleBottom.SetMasterPasscode.Button" = "Set Up Passcode";
+"DoubleBottom.SetSecretPasscode.Title" = "Hidden Passcode";
+"DoubleBottom.SetSecretPasscode.Text" = "Set up a passcode for the account you want to hide.";
+"DoubleBottom.SetSecretPasscode.Button" = "Set Up Passcode";
+"DoubleBottom.DisableNotifications.Text" = "You can disable push notifications and calls for hidden account.";
+"DoubleBottom.DisableNotifications.Subtitle" = "It will take effect for every device this account is logged in.";
+"DoubleBottom.LockExplanation.Title" = "Lock";
+"DoubleBottom.LockExplanation.Text" = "To enter hidden account, please block application by pressing lock at the top of the screen.";
+"DoubleBottom.LockExplanation.Button" = "OK";
+"DoubleBottom.AccountWasHidden.Title" = "Account Is Hidden";
+"DoubleBottom.AccountWasHidden.Text" = "Now you can open the account you need, by entering the main or the hidden passcode.";
+"DoubleBottom.AccountWasHidden.Button" = "Enter Passcode";

@@ -244,13 +244,20 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     transaction.setAccessChallengeData(challenge)
                 }).start()
                 
+                Queue.mainQueue().after(1.0) { [weak context] in
+                    guard let context = context else { return }
+                    let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
+                        updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
+                    }).start()
+                }
+                
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
                 })
                 
                 var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
                 let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                    let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
+                    let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                     setupController.complete = { passcode, numerical in
                         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
@@ -262,6 +269,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                             transaction.setAccessChallengeData(data)
                             
                             updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                            
+                            updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: transaction)
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
@@ -294,7 +303,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }
         })
         |> deliverOnMainQueue).start(next: { isSimple in
-            let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, .digits6))
+            let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: true, .digits6))
             setupController.complete = { passcode, numerical in
                 let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
@@ -392,6 +401,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
 }
 
 public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+    
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
@@ -399,7 +409,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     |> map { challenge -> ViewController? in
         if case .none = challenge {
             let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
+                let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                 setupController.complete = { passcode, numerical in
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
@@ -411,6 +421,8 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                         transaction.setAccessChallengeData(data)
                         
                         updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                        
+                        updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: transaction)
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {
@@ -422,7 +434,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
             })
             return controller
         } else {
-            let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
+            let controller = PasscodeSetupController(context: context.sharedContext, mode: .entry(challenge))
             controller.check = { passcode in
                 var succeed = false
                 switch challenge {
@@ -469,7 +481,7 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
                 biometrics = .none
             }
             #endif
-            let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
+            let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, challengeData: challenge, hiddenAccountsAccessChallengeData: context.sharedContext.appLockContext.hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
             }, modalPresentation: modalPresentation))
             controller.presentationCompleted = { [weak controller] in

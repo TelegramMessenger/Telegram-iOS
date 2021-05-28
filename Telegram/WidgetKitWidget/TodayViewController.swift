@@ -100,114 +100,121 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     setupSharedLogger(rootPath: rootPath, path: logsPath)
     
     initializeAccountManagement()
+    let hiddenAccountManager = HiddenAccountManagerImpl()
+    let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager, isTemporary: true, isReadOnly: false)
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
     let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
     
-    var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
-    var itemOrder: [(Int64, Int64)] = []
-    if let friends = friends {
-        for item in friends {
-            guard let identifier = item.identifier else {
-                continue
-            }
-            guard let index = identifier.firstIndex(of: ":") else {
-                continue
-            }
-            guard let accountId = Int64(identifier[identifier.startIndex ..< index]) else {
-                continue
-            }
-            guard let peerId = Int64(identifier[identifier.index(after: index)...]) else {
-                continue
-            }
-            if itemsByAccount[accountId] == nil {
-                itemsByAccount[accountId] = []
-            }
-            itemsByAccount[accountId]?.append((peerId, item))
-            itemOrder.append((accountId, peerId))
-        }
-    }
-    
-    var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
-    for (accountId, items) in itemsByAccount {
-        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [ParsedPeer] in
-            guard let state = transaction.getState() as? AuthorizedAccountState else {
-                return []
-            }
-            
-            var result: [ParsedPeer] = []
-            
-            for (peerId, _) in items {
-                guard let peer = transaction.getPeer(PeerId(peerId)) else {
+    _ = hiddenAccountManager.hiddenAccounts(accountManager: accountManager).start(next: { hiddenAccounts in
+        var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
+        var itemOrder: [(Int64, Int64)] = []
+        if let friends = friends {
+            for item in friends {
+                guard let identifier = item.identifier else {
                     continue
                 }
-                
-                var name: String = ""
-                var lastName: String?
-                
-                if let user = peer as? TelegramUser {
-                    if let firstName = user.firstName {
-                        name = firstName
-                        lastName = user.lastName
-                    } else if let lastName = user.lastName {
-                        name = lastName
-                    } else if let phone = user.phone, !phone.isEmpty {
-                        name = phone
-                    }
-                } else {
-                    name = peer.debugDisplayTitle
+                guard let index = identifier.firstIndex(of: ":") else {
+                    continue
                 }
-                
-                var badge: WidgetDataPeer.Badge?
-                
-                if let readState = transaction.getCombinedPeerReadState(peer.id), readState.count > 0 {
-                    var isMuted = false
-                    if let notificationSettings = transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings {
-                        isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
-                    }
-                    badge = WidgetDataPeer.Badge(
-                        count: Int(readState.count),
-                        isMuted: isMuted
-                    )
+                guard let accountId = Int64(identifier[identifier.startIndex ..< index]) else {
+                    continue
                 }
-                
-                var mappedMessage: WidgetDataPeer.Message?
-                if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
-                    if let message = transaction.getMessage(index.id) {
-                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
-                    }
+                guard !hiddenAccounts.contains(AccountRecordId(rawValue: accountId)) else {
+                    continue
                 }
-                
-                let widgetPeer = WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
-                    return postbox.mediaBox.resourcePath(representation.resource)
-                }, badge: badge, message: mappedMessage)
-                
-                result.append(ParsedPeer(accountId: accountId, accountPeerId: state.peerId.toInt64(), peer: widgetPeer))
-            }
-            
-            return result
-        })
-        |> `catch` { _ -> Signal<[ParsedPeer], NoError> in
-            return .single([])
-        })
-    }
-    
-    let _ = combineLatest(friendsByAccount).start(next: { allPeers in
-        var orderedPeers: [ParsedPeer] = []
-        
-        outer: for (accountId, peerId) in itemOrder {
-            for peerSet in allPeers {
-                for peer in peerSet {
-                    if peer.accountId == accountId && peer.peer.id == peerId {
-                        orderedPeers.append(peer)
-                        continue outer
-                    }
+                guard let peerId = Int64(identifier[identifier.index(after: index)...]) else {
+                    continue
                 }
+                if itemsByAccount[accountId] == nil {
+                    itemsByAccount[accountId] = []
+                }
+                itemsByAccount[accountId]?.append((peerId, item))
+                itemOrder.append((accountId, peerId))
             }
         }
         
-        let result = ParsedPeers(peers: orderedPeers, updateTimestamp: Int32(Date().timeIntervalSince1970))
-        completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(result))], policy: .atEnd))
+        var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
+        for (accountId, items) in itemsByAccount {
+            friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [ParsedPeer] in
+                guard let state = transaction.getState() as? AuthorizedAccountState else {
+                    return []
+                }
+                
+                var result: [ParsedPeer] = []
+                
+                for (peerId, _) in items {
+                    guard let peer = transaction.getPeer(PeerId(peerId)) else {
+                        continue
+                    }
+                    
+                    var name: String = ""
+                    var lastName: String?
+                    
+                    if let user = peer as? TelegramUser {
+                        if let firstName = user.firstName {
+                            name = firstName
+                            lastName = user.lastName
+                        } else if let lastName = user.lastName {
+                            name = lastName
+                        } else if let phone = user.phone, !phone.isEmpty {
+                            name = phone
+                        }
+                    } else {
+                        name = peer.debugDisplayTitle
+                    }
+                    
+                    var badge: WidgetDataPeer.Badge?
+                    
+                    if let readState = transaction.getCombinedPeerReadState(peer.id), readState.count > 0 {
+                        var isMuted = false
+                        if let notificationSettings = transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings {
+                            isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
+                        }
+                        badge = WidgetDataPeer.Badge(
+                            count: Int(readState.count),
+                            isMuted: isMuted
+                        )
+                    }
+                    
+                    var mappedMessage: WidgetDataPeer.Message?
+                    if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
+                        if let message = transaction.getMessage(index.id) {
+                            mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
+                        }
+                    }
+                    
+                    let widgetPeer = WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
+                        return postbox.mediaBox.resourcePath(representation.resource)
+                    }, badge: badge, message: mappedMessage)
+                    
+                    result.append(ParsedPeer(accountId: accountId, accountPeerId: state.peerId.toInt64(), peer: widgetPeer))
+                }
+                
+                return result
+            })
+            |> `catch` { _ -> Signal<[ParsedPeer], NoError> in
+                return .single([])
+            })
+        }
+        
+        let _ = combineLatest(friendsByAccount).start(next: { allPeers in
+            var orderedPeers: [ParsedPeer] = []
+            
+            outer: for (accountId, peerId) in itemOrder {
+                for peerSet in allPeers {
+                    for peer in peerSet {
+                        if peer.accountId == accountId && peer.peer.id == peerId {
+                            orderedPeers.append(peer)
+                            continue outer
+                        }
+                    }
+                }
+            }
+            
+            let result = ParsedPeers(peers: orderedPeers, updateTimestamp: Int32(Date().timeIntervalSince1970))
+            completion(Timeline(entries: [SimpleEntry(date: entryDate, contents: .peers(result))], policy: .atEnd))
+        })
     })
 }
 

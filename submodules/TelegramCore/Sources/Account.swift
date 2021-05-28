@@ -241,11 +241,11 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
             case .error:
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
-                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, Bool) in
+                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings, transaction.getRecords().first(where: { $0.id == id })?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false)
                 }
-                |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
-                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                |> mapToSignal { localizationSettings, proxySettings, isHidden -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?, Bool) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
                             let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
@@ -257,9 +257,9 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
                         }
                         
-                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings, isHidden)
                     }
-                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
+                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings, isHidden) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
                         
                         if let accountState = accountState {
@@ -276,7 +276,7 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isHidden: isHidden))
                                         }
                                     }
                                 case _:
@@ -291,6 +291,22 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                     }
                 }
         }
+    }
+}
+
+public func setAccountRecordAccessChallengeData(transaction: AccountManagerModifier, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
+    transaction.updateRecord(id) { record in
+        guard let record = record else { return nil }
+        
+        var attributes = record.attributes
+        let isHidden = accessChallengeData != .none
+        let wasHidden = attributes.contains { $0 is HiddenAccountAttribute } ?? false
+        if wasHidden, !isHidden {
+            attributes.removeAll { $0 is HiddenAccountAttribute }
+        } else if !wasHidden, isHidden {
+            attributes.append(HiddenAccountAttribute(accessChallengeData: accessChallengeData))
+        }
+        return AccountRecord(id: id, attributes: attributes, temporarySessionId: record.temporarySessionId)
     }
 }
 
@@ -889,6 +905,9 @@ public class Account {
         return self._importantTasksRunning.get()
     }
     
+    public var isHidden: Bool
+    private var isHiddenDisposable: Disposable?
+    
     fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
@@ -896,7 +915,10 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
-    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
+    public private(set) var keepServiceTaskMasterActiveState = false
+    private var keepServiceTaskMasterActiveStateTimer: SwiftSignalKit.Timer?
+    
+    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isHidden: Bool) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -904,6 +926,7 @@ public class Account {
         self.network = network
         self.networkArguments = networkArguments
         self.peerId = peerId
+        self.isHidden = isHidden
         
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
@@ -946,6 +969,17 @@ public class Account {
         }
         
         let networkStateQueue = Queue()
+        
+        self.isHiddenDisposable = (accountManager.accountRecords()
+        |> map { view -> Bool in
+            return view.records.first(where: { $0.id == id })?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false
+        }
+        |> distinctUntilChanged(isEqual: ==)
+        |> deliverOnMainQueue).start(next: { [weak self] isHidden in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.isHidden = isHidden
+        })
         
         let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
         |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
@@ -1151,6 +1185,20 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.isHiddenDisposable?.dispose()
+    }
+    
+    public func temporarilyKeepActive() {
+        Queue.mainQueue().async {
+            self.keepServiceTaskMasterActiveState = true
+            self.keepServiceTaskMasterActiveStateTimer?.invalidate()
+            self.keepServiceTaskMasterActiveStateTimer = Timer(timeout: 10.0, repeat: false, completion: { [weak self] in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.keepServiceTaskMasterActiveState = false
+            }, queue: .mainQueue())
+            self.keepServiceTaskMasterActiveStateTimer?.start()
+        }
     }
     
     private func postSmallLogIfNeeded() {

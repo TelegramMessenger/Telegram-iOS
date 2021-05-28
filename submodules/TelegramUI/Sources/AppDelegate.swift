@@ -206,6 +206,7 @@ final class SharedApplicationContext {
     
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
+    private var doubleBottomFlow: DoubleBottomFlow?
     
     private var notificationTokenPromise: Promise<Data> {
         if let current = self._notificationTokenPromise {
@@ -675,8 +676,9 @@ final class SharedApplicationContext {
             UINavigationController.attemptRotationToDeviceOrientation()
         })
         
+        let hiddenAccountManager = HiddenAccountManagerImpl()
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager, isTemporary: false, isReadOnly: false)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -813,6 +815,8 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
+            }, openDoubleBottomFlow: { [weak self] in
+                self?.openDoubleBottomFlow()
             })
 
             /*self.mainWindow.debugAction = {
@@ -998,7 +1002,7 @@ final class SharedApplicationContext {
             return sharedApplicationContext.sharedContext.activeAccounts
             |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
                 if let auth = auth {
-                    return (primary, auth, Array(accounts.map({ $0.1 })))
+                    return (primary, auth, Array(accounts.filter { !$0.1.isHidden }.map({ $0.1 })))
                 } else {
                     return nil
                 }
@@ -1133,6 +1137,14 @@ final class SharedApplicationContext {
                     
                     self.resetIntentsIfNeeded(context: context.context)
                 }))
+                
+                context.context.account.postbox.transaction({ transaction -> Void in
+                    var value = transaction.getPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp) as? DoubleBottomHideTimestamp ?? DoubleBottomHideTimestamp.defaultValue
+                    if value.timestamp == 0 {
+                        value.timestamp = Int64(Date().timeIntervalSince1970) + 600
+                        transaction.setPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp, value: value)
+                    }
+                    }).start()
             } else {
                 self.mainWindow.viewController = nil
                 self.mainWindow.topLevelOverlayControllers = []
@@ -1153,18 +1165,23 @@ final class SharedApplicationContext {
             
             if let authContextValue = self.authContextValue {
                 authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
-                if authContextValue.authorizationCompleted {
-                    let accountId = authContextValue.account.id
-                    let _ = (self.context.get()
-                    |> filter { context in
-                        return context?.context.account.id == accountId
+                 if authContextValue.authorizationCompleted {
+                    if let _ = self.doubleBottomFlow?.doubleBottomContext {
+                        self.doubleBottomFlow?.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
+                        self.doubleBottomFlow?.continueAfterAddingAccount(with: authContextValue.account.id)
+                    } else {
+                        let accountId = authContextValue.account.id
+                        let _ = (self.context.get()
+                        |> filter { context in
+                            return context?.context.account.id == accountId
+                        }
+                        |> take(1)
+                        |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
+                            |> deliverOnMainQueue).start(completed: { [weak self] in
+                            authContextValue.rootController.view.endEditing(true)
+                            authContextValue.rootController.dismiss()
+                        })
                     }
-                    |> take(1)
-                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
-                    |> deliverOnMainQueue).start(completed: {
-                        authContextValue.rootController.view.endEditing(true)
-                        authContextValue.rootController.dismiss()
-                    })
                 } else {
                     authContextValue.rootController.view.endEditing(true)
                     authContextValue.rootController.dismiss()
@@ -1174,14 +1191,25 @@ final class SharedApplicationContext {
             if let context = context {
                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                 let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                self.mainWindow.present(statusController, on: .root)
+                if !(self.doubleBottomFlow?.doubleBottomContext?.doubleBottomAddAccountFlowInProgress ?? false) || self.contextValue == nil {
+                    self.mainWindow.present(statusController, on: .root)
+                }
                 let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     statusController.dismiss()
-                    self.mainWindow.present(context.rootController, on: .root)
+                    if UserDefaults.standard.bool(forKey: "TG_DoubleBottom_AddAccountFlowInProgress"), let authorizedContext = self.contextValue {
+                        if self.doubleBottomFlow == nil {
+                            self.doubleBottomFlow = DoubleBottomFlow(context: authorizedContext) { [weak self] in
+                                self?.doubleBottomFlow = nil
+                            }
+                        }
+                        authorizedContext.rootController.doubleBottomAuthViewControllersSignal = context.rootController.viewControllersPromise.get()
+                    } else {
+                        self.mainWindow.present(context.rootController, on: .root)
+                    }
                 }))
             } else {
                 authContextReadyDisposable.set(nil)
@@ -1241,7 +1269,7 @@ final class SharedApplicationContext {
         
         self.badgeDisposable.set((self.context.get()
         |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
+            if let context = context, !context.context.account.isHidden {
                 return context.applicationBadge
             } else {
                 return .single(0)
@@ -1257,10 +1285,19 @@ final class SharedApplicationContext {
                 if let context = context {
                     let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    return activeAccountsAndPeers(context: context.context)
+                    return visibleAccountsAndPeers(context: context.context)
                     |> take(1)
                     |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
-                        return primaryAndAccounts.1.first
+                        let accounts = primaryAndAccounts.1
+                        if context.context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil {
+                            if accounts.count > 1 {
+                                return accounts.first
+                            } else {
+                                return nil
+                            }
+                        } else {
+                            return accounts.first
+                        }
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
@@ -1366,6 +1403,8 @@ final class SharedApplicationContext {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        doubleBottomFlow?.blockInterfaceInNeeded()
+        
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -1423,6 +1462,7 @@ final class SharedApplicationContext {
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
+        doubleBottomFlow?.blockInterfaceInNeeded()
         Logger.shared.log("App \(self.episodeId)", "terminating")
     }
     
@@ -1456,14 +1496,18 @@ final class SharedApplicationContext {
             return
         }
         
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            
-            sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
-                completionHandler(.newData)
-            }, timeout: 29.0)
-            sharedApplicationContext.notificationManager.addNotification(userInfo)
+        let _ = (combineLatest(queue: .mainQueue(), self.sharedContextPromise.get(), accountIdFromNotification(userInfo, sharedContext: self.sharedContextPromise.get()))
+            |> take(1)).start(next: { sharedApplicationContext, accountId in
+                
+            let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ [weak sharedApplicationContext] transaction in
+                if let sharedApplicationContext = sharedApplicationContext, let record = transaction.getRecords().first(where: { $0.id == accountId }),
+                    !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                    sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
+                        completionHandler(.newData)
+                    }, timeout: 29.0)
+                    sharedApplicationContext.notificationManager.addNotification(userInfo)
+                }
+            }) |> deliverOnMainQueue).start()
         })
     }
     
@@ -1861,8 +1905,7 @@ final class SharedApplicationContext {
                 })
             }
             if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
-                let _ = (appLockContext.isCurrentlyLocked
-                |> filter { !$0 }
+                let _ = (appLockContext.isUnlockedAndReady
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     proceed()
@@ -1908,7 +1951,17 @@ final class SharedApplicationContext {
         |> take(1)
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
-                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
+                let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ transaction -> Bool in
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }) {
+                        return !record.attributes.contains(where: { $0 is HiddenAccountAttribute })
+                    } else {
+                        return false
+                    }
+                }) |> deliverOnMainQueue).start(next: { [weak sharedApplicationContext] canSwitch in
+                    if canSwitch {
+                        sharedApplicationContext?.sharedContext.switchToAccount(id: accountId)
+                    }
+                })
                 return self.authorizedContext()
                 |> filter { context in
                     context.context.account.id == accountId
@@ -1935,17 +1988,41 @@ final class SharedApplicationContext {
         }))
     }
     
+    private func openDoubleBottomFlow() {
+        guard let context = self.contextValue else { return }
+        
+        doubleBottomFlow = DoubleBottomFlow(context: context) { [weak self] in
+            self?.doubleBottomFlow = nil
+        }
+        doubleBottomFlow?.start()
+    }
+    
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
-        |> deliverOnMainQueue).start(next: { accountId in
+        
+        let hiddenIdsAndPasscodeSettings = self.sharedContextPromise.get() |> mapToSignal { context in
+            return context.sharedContext.accountManager.transaction({ transaction -> (hiddenIds: [AccountRecordId], hasMasterPasscode: Bool) in
+                let hiddenIds = transaction.getRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id }
+                let hasMasterPasscode = transaction.getAccessChallengeData() != .none
+                return (hiddenIds, hasMasterPasscode)
+            })
+        }
+        
+        let _ = combineLatest(queue: .mainQueue(), accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get()), hiddenIdsAndPasscodeSettings, self.sharedContextPromise.get()).start(next: { accountId, hiddenIdsAndPasscodeSettings, context in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 if let peerId = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    if let accountId = accountId, hiddenIdsAndPasscodeSettings.hiddenIds.contains(accountId) {
+                        if hiddenIdsAndPasscodeSettings.hasMasterPasscode {
+                            context.sharedContext.appLockContext.lock()
+                            self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                        }
+                    } else {
+                        self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    }
                 }
                 completionHandler()
             } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
@@ -2152,10 +2229,13 @@ final class SharedApplicationContext {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
-            if let context = self.contextValue {
-                if let accountId = accountId, context.context.account.id != accountId {
-                    completionHandler([.alert])
-                }
+            if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
+                let _ = context.context.sharedContext.accountManager.transaction { transaction in
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }),
+                        !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                        completionHandler([.alert])
+                    }
+                }.start()
             }
         })
     }
@@ -2308,6 +2388,64 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
                 }
             }
         } else if let userId = notification.request.content.userInfo["userId"] as? Int {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> map { _, accounts, _ -> AccountRecordId? in
+                    for (_, account, _) in accounts {
+                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
+                            return account.id
+                        }
+                    }
+                    return nil
+                }
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+}
+
+private func accountIdFromNotification(_ notification: [AnyHashable : Any], sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
+    if let id = notification["accountId"] as? Int64 {
+        return .single(AccountRecordId(rawValue: id))
+    } else {
+        var encryptedData: Data?
+        if var encryptedPayload = notification["p"] as? String {
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            encryptedData = Data(base64Encoded: encryptedPayload)
+        }
+        if let encryptedData = encryptedData, let notificationKeyId = notificationPayloadKey(data: encryptedData) {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> mapToSignal { _, accounts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = accounts.map { _, account, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: account, ignoreDisabled: true)
+                        |> map { key in
+                            return (account.id, key)
+                        }
+                    }
+                    return combineLatest(keys)
+                    |> map { keys -> AccountRecordId? in
+                        for idAndKey in keys {
+                            if let (id, key) = idAndKey, key.id == notificationKeyId {
+                                return id
+                            }
+                        }
+                        return nil
+                    }
+                }
+            }
+        } else if let userId = notification["userId"] as? Int {
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in

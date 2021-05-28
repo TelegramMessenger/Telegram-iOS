@@ -306,7 +306,7 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
         presentControllerImpl?(actionSheet)
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), activeAccountsAndPeers(context: context, includePrimary: true))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), visibleAccountsAndPeers(context: context, includePrimary: true))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData, accounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings

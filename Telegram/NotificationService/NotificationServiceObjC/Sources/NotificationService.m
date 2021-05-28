@@ -174,9 +174,10 @@ static void reportMemory() {
     StoredAccountInfos * _Nullable accountInfos = [StoredAccountInfos loadFromPath:[_rootPath stringByAppendingPathComponent:@"accounts-shared-data"]];
     
     int selectedAccountIndex = -1;
-    NSDictionary *decryptedPayload = decryptedNotificationPayload(accountInfos.accounts, encryptedData, &selectedAccountIndex);
+    bool isHidden = false;
+    NSDictionary *decryptedPayload = decryptedNotificationPayload(accountInfos.accounts, encryptedData, &selectedAccountIndex, &isHidden);
     
-    if (decryptedPayload != nil && selectedAccountIndex != -1) {
+    if (decryptedPayload != nil && selectedAccountIndex != -1 && !isHidden) {
         StoredAccountInfo *account = accountInfos.accounts[selectedAccountIndex];
         
         NSMutableDictionary *userInfo = nil;
@@ -399,7 +400,11 @@ static void reportMemory() {
                     }
                 }
                 
-                if (accountInfos.accounts.count > 1) {
+                NSArray *publicAccounts = [accountInfos.accounts filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(StoredAccountInfo* object, NSDictionary *bindings) {
+                    return !object.isHidden;
+                }]];
+                
+                if (publicAccounts.count > 1) {
                     if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
                         _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
                     }
@@ -469,6 +474,46 @@ static void reportMemory() {
         } else {
             [self completeWithBestAttemptContent];
         }
+    } else if (decryptedPayload != nil && selectedAccountIndex != -1 && isHidden) {
+        StoredAccountInfo *account = accountInfos.accounts[selectedAccountIndex];
+        
+        NSMutableDictionary *userInfo = nil;
+        if (_bestAttemptContent.userInfo != nil) {
+            userInfo = [[NSMutableDictionary alloc] initWithDictionary:_bestAttemptContent.userInfo];
+        } else {
+            userInfo = [[NSMutableDictionary alloc] init];
+        }
+        userInfo[@"accountId"] = @(account.accountId);
+        
+        NSString *messageIdString = decryptedPayload[@"msg_id"];
+        if ([messageIdString isKindOfClass:[NSString class]]) {
+            userInfo[@"msg_id"] = messageIdString;
+        }
+        
+        NSString *fromIdString = decryptedPayload[@"from_id"];
+        if ([fromIdString isKindOfClass:[NSString class]]) {
+            userInfo[@"from_id"] = fromIdString;
+        }
+        
+        NSString *chatIdString = decryptedPayload[@"chat_id"];
+        if ([chatIdString isKindOfClass:[NSString class]]) {
+            userInfo[@"chat_id"] = chatIdString;
+        }
+        
+        NSString *channelIdString = decryptedPayload[@"channel_id"];
+        if ([channelIdString isKindOfClass:[NSString class]]) {
+            userInfo[@"channel_id"] = channelIdString;
+        }
+        
+        NSString *encryptionIdString = decryptedPayload[@"encryption_id"];
+        if ([encryptionIdString isKindOfClass:[NSString class]]) {
+            userInfo[@"encryption_id"] = encryptionIdString;
+        }
+        
+        _bestAttemptContent.userInfo = userInfo;
+        _bestAttemptContent.body = _lockedMessageTextValue;
+        
+        [self completeWithBestAttemptContent];
     } else {
         [self completeWithBestAttemptContent];
     }

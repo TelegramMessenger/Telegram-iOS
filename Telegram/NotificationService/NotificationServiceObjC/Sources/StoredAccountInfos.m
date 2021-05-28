@@ -224,7 +224,7 @@
 
 @implementation StoredAccountInfo
 
-- (instancetype)initWithAccountId:(int64_t)accountId primaryId:(int32_t)primaryId isTestingEnvironment:(bool)isTestingEnvironment peerName:(NSString *)peerName datacenters:(NSDictionary<NSNumber *, AccountDatacenterInfo *> *)datacenters notificationKey:(AccountNotificationKey *)notificationKey {
+- (instancetype)initWithAccountId:(int64_t)accountId primaryId:(int32_t)primaryId isTestingEnvironment:(bool)isTestingEnvironment peerName:(NSString *)peerName datacenters:(NSDictionary<NSNumber *, AccountDatacenterInfo *> *)datacenters notificationKey:(AccountNotificationKey *)notificationKey isHidden:(bool)isHidden {
     self = [super init];
     if (self != nil) {
         _accountId = accountId;
@@ -233,6 +233,7 @@
         _peerName = peerName;
         _datacenters = datacenters;
         _notificationKey = notificationKey;
+        _isHidden = isHidden;
     }
     return self;
 }
@@ -257,6 +258,13 @@
     }
     
     bool isTestingEnvironment = [isTestingEnvironmentNumber intValue] != 0;
+    
+    NSNumber *isHiddenNumber = dict[@"isHidden"];
+    if (![isHiddenNumber isKindOfClass:[NSNumber class]]) {
+        return nil;
+    }
+    
+    bool isHidden = [isHiddenNumber intValue] != 0;
     
     NSString *peerNameString = dict[@"peerName"];
     if (![peerNameString isKindOfClass:[NSString class]]) {
@@ -298,7 +306,7 @@
         return nil;
     }
     
-    return [[StoredAccountInfo alloc] initWithAccountId:accountId primaryId:primaryId isTestingEnvironment:isTestingEnvironment peerName:peerName datacenters:datacenters notificationKey:notificationKey];
+    return [[StoredAccountInfo alloc] initWithAccountId:accountId primaryId:primaryId isTestingEnvironment:isTestingEnvironment peerName:peerName datacenters:datacenters notificationKey:notificationKey isHidden:isHidden];
 }
 
 @end
@@ -344,7 +352,7 @@
         }
     }
     
-    return [[StoredAccountInfos alloc] initWithProxy:proxy accounts:accounts];;
+    return [[StoredAccountInfos alloc] initWithProxy:proxy accounts:accounts];
 }
 
 @end
@@ -371,7 +379,7 @@ static NSData *concatData3(NSData *data1, NSData *data2, NSData *data3) {
     return data;
 }
 
-NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex) {
+NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex, bool *isHidden) {
     if (data.length < 8 + 16) {
         return nil;
     }
@@ -420,6 +428,7 @@ NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo 
         }
         if (selectedAccountIndex != nil) {
             *selectedAccountIndex = accountIndex;
+            *isHidden = account.isHidden;
         }
         return dict;
     }

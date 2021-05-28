@@ -1103,7 +1103,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
-                                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                                        let _ = (contactDataManager.createContactWithData(composedContactData, account: context.account)
                                         |> deliverOnMainQueue).start(next: { contactIdAndData in
                                             updateState { state in
                                                 var state = state
@@ -1123,7 +1123,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 break
                         }
                         
-                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                        let _ = (contactDataManager.createContactWithData(composedContactData, account: context.account)
                         |> castError(AddContactError.self)
                         |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                             guard let (id, data) = contactIdAndData else {

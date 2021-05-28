@@ -6836,6 +6836,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.displayNodeDidLoad()
     }
     
+    override public func viewDidLoad() {
+        super.viewDidLoad()
+        
+        let notificationCenter = NotificationCenter.default
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(appMovedToBackground),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+    }
+    
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
@@ -7716,6 +7728,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentationInterfaceStatePromise.set(self.presentationInterfaceState)
     }
     
+    @objc private func appMovedToBackground() {
+        let currentAccountIsHidden = context.account.isHidden
+        
+        // Close the UIActivityViewController when the hidden account goes into the background.
+        guard currentAccountIsHidden,
+              let rootViewController = view.window?.rootViewController,
+              let presentedViewController = rootViewController.presentedViewController,
+              presentedViewController is UIActivityViewController else { return }
+        
+        presentedViewController.dismiss(animated: true)
+    }
+
     private func updateItemNodesSelectionStates(animated: Bool) {
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {

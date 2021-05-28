@@ -307,7 +307,7 @@ public final class CallController: ViewController {
             if let strongSelf = self {
                 if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
                     strongSelf.peer = peer
-                    strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
+                    strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.filter { !$0.account.isHidden }.count > 1)
                     strongSelf._ready.set(.single(true))
                 }
             }

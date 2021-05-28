@@ -222,6 +222,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     var updateSupportedOrientations: (() -> Void)?
     
+    public var allowInteractiveDismissal: Bool = true {
+        didSet {
+            for container in self.modalContainers {
+                container.allowInteractiveDismissal = allowInteractiveDismissal
+            }
+        }
+    }
+    
     public func updateMasterDetailsBlackout(_ blackout: MasterDetailLayoutBlackout?, transition: ContainedViewLayoutTransition) {
         self.masterDetailsBlackout = blackout
         if isViewLoaded {
@@ -496,6 +504,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         for container in self.modalContainers {
+            container.allowInteractiveDismissal = self.allowInteractiveDismissal
             if !modalContainers.contains(where: { $0 === container }) {
                 if viewTreeContainsFirstResponder(view: container.view) {
                     self.ignoreInputHeight = true

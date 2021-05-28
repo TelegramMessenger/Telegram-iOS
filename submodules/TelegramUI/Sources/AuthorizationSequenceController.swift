@@ -17,6 +17,7 @@ import SettingsUI
 import PhoneNumberFormat
 import LegacyComponents
 import LegacyMediaPickerUI
+import PasscodeUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -47,6 +48,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return self._ready
     }
     private var didSetReady = false
+    
+    public var viewControllersPromise = ValuePromise<[ViewController]>()
     
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), presentationData: PresentationData, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
@@ -164,6 +167,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 strongSelf.account = updatedAccount
             }
+            
+            let replaceTopControllerImpl: ((ViewController, Bool) -> Void)? = { [weak controller] c, animated in
+                (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+            }
+            
             controller.loginWithNumber = { [weak self, weak controller] number, syncContacts in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -855,6 +863,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             self.didSetReady = true
             self._ready.set(.single(true))
         }
+        self.viewControllersPromise.set(viewControllers.compactMap { $0 as? ViewController })
     }
     
     public func applyConfirmationCode(_ code: Int) {

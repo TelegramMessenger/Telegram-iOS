@@ -307,6 +307,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var selectionTouchLocation: CGPoint?
     private var selectionTouchDelayTimer: Foundation.Timer?
     private var selectionLongTapDelayTimer: Foundation.Timer?
+    private var selectionSuperLongTapDelayTimer: Foundation.Timer?
     private var flashNodesDelayTimer: Foundation.Timer?
     private var flashScrollIndicatorTimer: Foundation.Timer?
     private var highlightedItemIndex: Int?
@@ -3898,6 +3899,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.selectionTouchDelayTimer?.invalidate()
             self.selectionLongTapDelayTimer?.invalidate()
             self.selectionLongTapDelayTimer = nil
+            self.selectionSuperLongTapDelayTimer?.invalidate()
+            self.selectionSuperLongTapDelayTimer = nil
             let timer = Timer(timeInterval: 0.08, target: ListViewTimerProxy { [weak self] in
                 if let strongSelf = self, strongSelf.selectionTouchLocation != nil {
                     strongSelf.clearHighlightAnimated(false)
@@ -3941,6 +3944,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                                 }
                                             }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
                                             strongSelf.selectionLongTapDelayTimer = timer
+                                            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
+                                        }
+                                        
+                                        if itemNode.canBeSuperLongTapped {
+                                            let timer = Timer(timeInterval: 5.0, target: ListViewTimerProxy {
+                                                if let strongSelf = self, strongSelf.highlightedItemIndex == index {
+                                                    for itemNode in strongSelf.itemNodes {
+                                                        if itemNode.index == index && itemNode.canBeSuperLongTapped {
+                                                            itemNode.superLongTapped()
+                                                            strongSelf.clearHighlightAnimated(true)
+                                                            strongSelf.selectionTouchLocation = nil
+                                                            break
+                                                        }
+                                                    }
+                                                }
+                                            }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
+                                            strongSelf.selectionSuperLongTapDelayTimer = timer
                                             RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
                                         }
                                     }

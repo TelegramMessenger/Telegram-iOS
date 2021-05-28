@@ -268,6 +268,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     let listNode: ChatListNode
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
     init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
@@ -280,6 +281,19 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.listNode)
+        
+        self.unlockedHiddenAccountRecordIdDisposable = (context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] accountId in
+            guard let strongSelf = self else { return }
+            
+            if accountId != nil && strongSelf.emptyShimmerEffectNode == nil {
+                let emptyShimmerEffectNode = ChatListShimmerNode()
+                strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
+                strongSelf.addSubnode(emptyShimmerEffectNode)
+                if let (size, insets, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
+                    strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: .immediate)
+                }
+            }
+        }, error: { _ in }, completed: {})
         
         self.listNode.isEmptyUpdated = { [weak self] isEmptyState, _, transition in
             guard let strongSelf = self else {
@@ -392,6 +406,10 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             transition.updateFrame(node: emptyNode, frame: emptyNodeFrame)
             emptyNode.updateLayout(size: emptyNodeFrame.size, transition: transition)
         }
+    }
+    
+    deinit {
+        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 }
 

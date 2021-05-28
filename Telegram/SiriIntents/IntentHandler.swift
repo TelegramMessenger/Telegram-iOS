@@ -124,7 +124,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: HiddenAccountManagerImpl(), isTemporary: true, isReadOnly: false)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -140,6 +140,12 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                     return attribute is LoggedOutAccountAttribute
                 })
                 if isLoggedOut {
+                    continue
+                }
+                let isHidden = record.attributes.contains(where: { attribute in
+                    return attribute is HiddenAccountAttribute
+                })
+                if isHidden {
                     continue
                 }
                 /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
@@ -905,6 +911,12 @@ private final class WidgetIntentHandler {
                 return attribute is LoggedOutAccountAttribute
             })
             if isLoggedOut {
+                continue
+            }
+            let isHidden = record.attributes.contains(where: { attribute in
+                return attribute is HiddenAccountAttribute
+            })
+            if isHidden {
                 continue
             }
             var backupData: AccountBackupData?

@@ -1,10 +1,10 @@
 
 [submodule "submodules/rlottie/rlottie"]
 	path = submodules/rlottie/rlottie
-	url=../rlottie.git
+	url = ../rlottie.git
 [submodule "build-system/bazel-rules/rules_apple"]
 	path = build-system/bazel-rules/rules_apple
-url=https://github.com/bazelbuild/rules_apple.git
+	url=https://github.com/bazelbuild/rules_apple.git
 [submodule "build-system/bazel-rules/rules_swift"]
 	path = build-system/bazel-rules/rules_swift
 url=https://github.com/ali-fareed/rules_swift.git
@@ -19,7 +19,7 @@ url=https://github.com/ali-fareed/rules_swift.git
 url=https://github.com/bazelbuild/tulsi.git
 [submodule "submodules/TgVoipWebrtc/tgcalls"]
 	path = submodules/TgVoipWebrtc/tgcalls
-url=../tgcalls.git
+	url = ../tgcalls.git
 [submodule "third-party/libvpx/libvpx"]
 	path = third-party/libvpx/libvpx
 	url = https://github.com/webmproject/libvpx.git

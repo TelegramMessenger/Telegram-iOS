@@ -127,8 +127,6 @@ final class AuthorizedApplicationContext {
     private var displayAlertsDisposable: Disposable?
     private var removeNotificationsDisposable: Disposable?
     
-    private var applicationInForegroundDisposable: Disposable?
-    
     private var showCallsTab: Bool
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
@@ -853,7 +851,7 @@ final class AuthorizedApplicationContext {
     }
     
     func switchAccount() {
-        let _ = (activeAccountsAndPeers(context: self.context)
+        let _ = (visibleAccountsAndPeers(context: self.context)
         |> take(1)
         |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
             return primaryAndAccounts.1.first

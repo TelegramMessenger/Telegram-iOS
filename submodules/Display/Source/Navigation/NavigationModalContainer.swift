@@ -42,6 +42,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         }
     }
     
+    var allowInteractiveDismissal: Bool = true {
+        didSet {
+            self.scrollNode.view.isScrollEnabled = allowInteractiveDismissal
+        }
+    }
+    
     init(theme: NavigationControllerTheme, isFlat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
         self.isFlat = isFlat
@@ -144,6 +150,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        guard self.allowInteractiveDismissal else { return }
+        
         switch recognizer.state {
         case .began:
             self.horizontalDismissOffset = 0.0
@@ -187,6 +195,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+        guard self.allowInteractiveDismissal else { return }
+        
         if case .ended = recognizer.state {
             if !self.isDismissed {
                 self.dismissWithAnimation()

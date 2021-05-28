@@ -300,6 +300,7 @@ public final class ShareController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let forceTheme: PresentationTheme?
+    private var activeAccountsDisposable: Disposable?
     
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -355,6 +356,20 @@ public final class ShareController: ViewController {
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.activeAccountsDisposable = self.sharedContext.activeAccounts.start(next: { [weak self] (primary, accounts, _) in
+            guard let strongSelf = self else { return }
+            
+            guard let primary = primary else { return }
+
+            guard let account = accounts.first(where: { (accountId, account, _) -> Bool in
+                primary.id == accountId
+            })?.1 else { return }
+            
+            guard account.id != strongSelf.currentAccount.id else { return }
+            
+            strongSelf.switchToAccount(account: account, animateIn: false)
+        }, error: { _ in }, completed: {})
         
         switch subject {
             case let .url(text):
@@ -479,6 +494,7 @@ public final class ShareController: ViewController {
         self.peersDisposable.dispose()
         self.readyDisposable.dispose()
         self.accountActiveDisposable.dispose()
+        self.activeAccountsDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {

@@ -383,6 +383,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let updateVisibleDisposable = MetaDisposable()
     
     private var screenCaptureEventsDisposable: Disposable?
+    private var applicationInForegroundDisposable: Disposable?
     
     public var centralItemUpdated: ((MessageId) -> Void)?
     
@@ -430,6 +431,18 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     return messages.first(where: { $0.id == messageId })
                 }
         }
+        
+        self.applicationInForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+            |> filter({ !$0 })
+            |> deliverOnMainQueue)
+            .start(next: { [weak self] _ in
+                guard let strongSelf = self else { return }
+                
+                guard strongSelf.context.account.isHidden else { return }
+                
+                strongSelf.galleryNode.setControlsHidden(false, animated: false)
+                strongSelf.dismiss(forceAway: false)
+            })
         
         let messageView = message
         |> filter({ $0 != nil })
@@ -905,6 +918,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         }
         self.updateVisibleDisposable.dispose()
         self.screenCaptureEventsDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     @objc private func donePressed() {

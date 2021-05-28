@@ -165,6 +165,12 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         return false
     }
     
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let topController = self.controllers.last else { return true }
+        
+        return topController.allowInteractivePopFromNavigation()
+    }
+    
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
@@ -245,6 +251,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         strongSelf.controllerRemoved(top.value)
                         strongSelf.ignoreInputHeight = false
+                        topController.viewDidPopFromNavigationInteractively()
                     })
                 } else {
                     navigationTransitionCoordinator.animateCancel({ [weak self] in

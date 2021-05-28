@@ -56,15 +56,21 @@ public final class PasscodeEntryController: ViewController {
     private var skipNextBiometricsRequest = false
     
     private var inBackground: Bool = false
+    private var isActive: Bool = false
     private var inBackgroundDisposable: Disposable?
+    private var isActiveDisposable: Disposable?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
+    private var hasPublicAccounts: Bool = true
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
         self.presentationData = presentationData
         self.presentationDataSignal = presentationDataSignal
         self.challengeData = challengeData
+        self.hiddenAccountsAccessChallengeData = hiddenAccountsAccessChallengeData
         self.biometrics = biometrics
         self.arguments = arguments
         
@@ -90,12 +96,29 @@ public final class PasscodeEntryController: ViewController {
                 strongSelf.skipNextBiometricsRequest = false
             }
         })
+        
+        self.isActiveDisposable = (applicationBindings.applicationIsActive
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isActive = value
+        })
+        
+        _ = (hasPublicAccountsSignal
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.hasPublicAccounts = value
+        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
         self.biometricsDisposable.dispose()
         self.inBackgroundDisposable?.dispose()
+        self.isActiveDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -139,19 +162,40 @@ public final class PasscodeEntryController: ViewController {
             strongSelf.controllerNode.updateInvalidAttempts(attempts)
         })
         
+        func check(passcode: String, challengeData: PostboxAccessChallengeData) -> Bool {
+            switch challengeData {
+            case .none:
+                return true
+            case let .numericalPassword(code):
+                if passcodeType == .alphanumeric {
+                    return false
+                }
+                return passcode == normalizeArabicNumeralString(code, type: .western)
+            case let .plaintextPassword(code):
+                if passcodeType != .alphanumeric {
+                    return false
+                }
+                return passcode == code
+            }
+        }
+        
         self.controllerNode.checkPasscode = { [weak self] passcode in
             guard let strongSelf = self else {
                 return
             }
-    
-            var succeed = false
-            switch strongSelf.challengeData {
-                case .none:
-                    succeed = true
-                case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    succeed = passcode == code
+            
+            var succeed = check(passcode: passcode, challengeData: strongSelf.challengeData)
+            
+            if succeed {
+                strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
+            } else if strongSelf.hasPublicAccounts {
+                for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
+                    if check(passcode: passcode, challengeData: challengeData) {
+                        strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(id)
+                        succeed = true
+                        break
+                    }
+                }
             }
             
             if succeed {
@@ -187,7 +231,11 @@ public final class PasscodeEntryController: ViewController {
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.controllerNode.activateInput()
-        if self.arguments.animated {
+        if !isActive {
+            self.controllerNode.initialAppearance()
+            self.presentationCompleted?()
+        }
+        else if self.arguments.animated {
             self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
                 self?.presentationCompleted?()
             })

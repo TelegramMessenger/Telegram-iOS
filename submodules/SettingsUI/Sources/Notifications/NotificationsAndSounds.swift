@@ -907,7 +907,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             settings.channels.displayPreviews = value
             return settings
         }).start()
-    }, updateChannelSound: {value in
+    }, updateChannelSound: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.channels.sound = value
@@ -1070,7 +1070,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     
     let hasMoreThanOneAccount = context.sharedContext.activeAccounts
     |> map { _, accounts, _ -> Bool in
-        return accounts.count > 1
+        return accounts.filter { !$0.1.isHidden }.count > 1
     }
     |> distinctUntilChanged
     

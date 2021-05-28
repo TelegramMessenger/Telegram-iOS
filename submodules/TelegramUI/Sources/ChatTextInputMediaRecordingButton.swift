@@ -95,15 +95,29 @@ private final class ChatTextInputMediaRecordingButtonPresenterControllerNode: Vi
 }
 
 private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGModernConversationInputMicButtonPresentation {
+    private let context: AccountContext
     private let account: Account?
     private let presentController: (ViewController) -> Void
     private let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
+    private var applicationInForegroundDisposable: Disposable?
     
-    init(account: Account, presentController: @escaping (ViewController) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentController: @escaping (ViewController) -> Void) {
+        self.context = context
+        self.account = context.account
         self.presentController = presentController
         self.container = ChatTextInputMediaRecordingButtonPresenterContainer()
+        
+        super.init()
+        
+        self.applicationInForegroundDisposable = (self.context.sharedContext.applicationBindings.applicationInForeground
+            |> filter({ !$0 })
+            |> deliverOnMainQueue)
+            .start(next: { [weak self] _ in
+                guard let strongSelf = self, strongSelf.context.account.isHidden else { return }
+                
+                strongSelf.dismiss()
+            })
     }
     
     deinit {
@@ -112,6 +126,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
             self.presentationController = nil
         }
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     func view() -> UIView! {
@@ -155,7 +170,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
-    var account: Account?
+    var context: AccountContext?
     let presentController: (ViewController) -> Void
     var recordingDisabled: () -> Void = { }
     var beginRecording: () -> Void = { }
@@ -410,7 +425,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
-        return ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
+        return ChatTextInputMediaRecordingButtonPresenter(context: self.context!, presentController: self.presentController)
     }
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {

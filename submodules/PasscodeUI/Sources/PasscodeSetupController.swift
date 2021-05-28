@@ -19,11 +19,12 @@ public final class PasscodeSetupController: ViewController {
         return self.displayNode as! PasscodeSetupControllerNode
     }
     
-    private let context: AccountContext
+    private let context: SharedAccountContext
     private var mode: PasscodeSetupControllerMode
     
     public var complete: ((String, Bool) -> Void)?
     public var check: ((String) -> Bool)?
+    public var checkSetupPasscode: ((String) -> Bool)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -31,19 +32,22 @@ public final class PasscodeSetupController: ViewController {
     
     private var nextAction: UIBarButtonItem?
     
-    public init(context: AccountContext, mode: PasscodeSetupControllerMode) {
+    private let isChangeModeAllowed: Bool
+    
+    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode, isChangeModeAllowed: Bool = true, isOpaqueNavigationBar: Bool = false) {
         self.context = context
         self.mode = mode
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.isChangeModeAllowed = isChangeModeAllowed
+        self.presentationData = context.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: isOpaqueNavigationBar, hideBadge: false))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.nextAction = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
-        self.title = self.presentationData.strings.PasscodeSettings_Title
+        self.title = isOpaqueNavigationBar ? "" : self.presentationData.strings.PasscodeSettings_Title
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -51,7 +55,7 @@ public final class PasscodeSetupController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode)
+        self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode, isChangeModeAllowed: isChangeModeAllowed)
         self.displayNodeDidLoad()
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
@@ -124,6 +128,9 @@ public final class PasscodeSetupController: ViewController {
         }
         self.controllerNode.checkPasscode = { [weak self] passcode in
             return self?.check?(passcode) ?? false
+        }
+        self.controllerNode.checkSetupPasscode = { [weak self] passcode in
+            return self?.checkSetupPasscode?(passcode) ?? true
         }
     }
     

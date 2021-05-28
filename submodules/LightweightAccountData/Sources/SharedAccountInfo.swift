@@ -71,14 +71,16 @@ public struct StoredAccountInfo: Codable {
     public let peerName: String
     public let datacenters: [Int32: AccountDatacenterInfo]
     public let notificationKey: AccountNotificationKey
+    public let isHidden: Bool
     
-    public init(id: Int64, primaryId: Int32, isTestingEnvironment: Bool, peerName: String, datacenters: [Int32: AccountDatacenterInfo], notificationKey: AccountNotificationKey) {
+    public init(id: Int64, primaryId: Int32, isTestingEnvironment: Bool, peerName: String, datacenters: [Int32: AccountDatacenterInfo], notificationKey: AccountNotificationKey, isHidden: Bool) {
         self.id = id
         self.primaryId = primaryId
         self.isTestingEnvironment = isTestingEnvironment
         self.peerName = peerName
         self.datacenters = datacenters
         self.notificationKey = notificationKey
+        self.isHidden = isHidden
     }
 }
 
@@ -88,7 +90,9 @@ public struct StoredAccountInfos: Codable {
     
     public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo]) {
         self.proxy = proxy
-        self.accounts = accounts
+        self.accounts = accounts.sorted(by: { lhs, _ in
+            return !lhs.isHidden
+        })
     }
 }
 

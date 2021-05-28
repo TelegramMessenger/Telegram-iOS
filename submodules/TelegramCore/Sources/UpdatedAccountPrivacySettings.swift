@@ -277,3 +277,70 @@ public func updateSelectiveAccountPrivacySettings(account: Account, type: Update
     }
     |> switchToLatest
 }
+
+public func disablePhoneCallsAndCachePrivacyState(account: Account) {
+    guard UserDefaults.standard.data(forKey: "cachedPhoneCallsPrivacyStateData") == nil else { return }
+    
+    let type = UpdateSelectiveAccountPrivacySettingsType.voiceCalls
+    
+    let _ = (account.network.request(Api.functions.account.getPrivacy(key: type.apiKey))
+    |> retryRequest
+    |> mapToSignal { rules -> Signal<Void, NoError> in
+        
+        let buffer = Buffer()
+        rules.serialize(buffer, false)
+        let data = buffer.makeData()
+        
+        return account.network.request(Api.functions.account.setPrivacy(key: type.apiKey, rules: [Api.InputPrivacyRule.inputPrivacyValueDisallowAll]))
+        |> retryRequest
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            UserDefaults.standard.set(data, forKey: "cachedPhoneCallsPrivacyStateData")
+            return .complete()
+        }
+    }).start()
+}
+
+public func restoreCachedPhoneCallsPrivacyState(account: Account) {
+    guard let data = UserDefaults.standard.data(forKey: "cachedPhoneCallsPrivacyStateData") else { return }
+    
+    let buffer = Buffer(data: data)
+    let reader = BufferReader(buffer)
+    guard let rules = Api.account.PrivacyRules.parse_privacyRules(reader) else { return }
+    
+    let voiceRules: [Api.PrivacyRule]
+    var apiUsers: [Api.User] = []
+    var apiChats: [Api.Chat] = []
+    switch rules {
+        case let .privacyRules(rules, chats, users):
+            apiUsers.append(contentsOf: users)
+            apiChats.append(contentsOf: chats)
+            voiceRules = rules
+    }
+    
+    var peers: [SelectivePrivacyPeer] = []
+    for user in apiUsers {
+        peers.append(SelectivePrivacyPeer(peer: TelegramUser(user: user), participantCount: nil))
+    }
+    for chat in apiChats {
+        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+            var participantCount: Int32? = nil
+            switch chat {
+                case let .channel(channel):
+                    participantCount = channel.participantsCount
+                default:
+                    break
+            }
+            peers.append(SelectivePrivacyPeer(peer: peer, participantCount: participantCount))
+        }
+    }
+    var peerMap: [PeerId: SelectivePrivacyPeer] = [:]
+    for peer in peers {
+        peerMap[peer.peer.id] = peer
+    }
+    
+    let settings = SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap)
+    
+    let _ = updateSelectiveAccountPrivacySettings(account: account, type: .voiceCalls, settings: settings).start(completed: {
+        UserDefaults.standard.removeObject(forKey: "cachedPhoneCallsPrivacyStateData")
+    })
+}

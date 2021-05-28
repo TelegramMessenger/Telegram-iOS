@@ -598,6 +598,13 @@ public enum TabBarItemContextActionType {
     open func viewWillLeaveNavigation() {
     }
     
+    open func viewDidPopFromNavigationInteractively() {
+    }
+    
+    open func allowInteractivePopFromNavigation() -> Bool {
+        return true
+    }
+    
     open override func viewDidAppear(_ animated: Bool) {
         self.activeInputView = nil
         

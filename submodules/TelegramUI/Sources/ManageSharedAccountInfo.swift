@@ -52,6 +52,8 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
     
     let notificationKey = masterNotificationsKey(account: account, ignoreDisabled: false)
     
+    let isHidden = account.isHidden
+    
     return combineLatest(peerName, notificationKey)
     |> map { peerName, notificationKey -> StoredAccountInfo in
         return StoredAccountInfo(
@@ -60,7 +62,8 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
             isTestingEnvironment: account.testingEnvironment,
             peerName: peerName,
             datacenters: datacenters,
-            notificationKey: AccountNotificationKey(id: notificationKey.id, data: notificationKey.data)
+            notificationKey: AccountNotificationKey(id: notificationKey.id, data: notificationKey.data),
+			isHidden: isHidden
         )
     }
 }
