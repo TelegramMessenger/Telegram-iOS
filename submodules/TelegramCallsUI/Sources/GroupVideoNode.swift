@@ -250,6 +250,8 @@ final class GroupVideoNode: ASDisplayNode {
         rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
         rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
         rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
+
+        self.videoView.view.alpha = 0.995
         
         let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
         transition.updatePosition(layer: self.videoView.view.layer, position: rotatedVideoFrame.center)
@@ -258,7 +260,10 @@ final class GroupVideoNode: ASDisplayNode {
         let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
+
         if let backdropVideoView = self.backdropVideoView {
+            backdropVideoView.view.alpha = 0.995
+            
             rotatedVideoSize = filledSize
             var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
             rotatedVideoFrame.origin.x = floor(rotatedVideoFrame.origin.x)
