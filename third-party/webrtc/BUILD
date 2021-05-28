@@ -9,8 +9,8 @@ config_setting(
 )
 
 optimization_flags = select({
-    ":debug_build": ["-Os"],
-    "//conditions:default": [],
+    ":debug_build": ["-Os", "-DNDEBUG"],
+    "//conditions:default": ["-DNDEBUG"],
 })
 
 rnnoise_sources = [ "dependencies/third_party/rnnoise/src/" + x for x in [
