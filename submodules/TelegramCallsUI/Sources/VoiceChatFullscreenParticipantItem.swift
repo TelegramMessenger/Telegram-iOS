@@ -549,24 +549,25 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     let videoContainerScale = tileSize.width / videoSize.width
                     
+                    let appearanceDuration: Double = 0.25
+                    let apperanceTransition = ContainedViewLayoutTransition.animated(duration: appearanceDuration, curve: .easeInOut)
                     let videoNode = item.getVideo()
                     if let currentVideoNode = strongSelf.videoNode, currentVideoNode !== videoNode {
                         if videoNode == nil {
-                            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                             if strongSelf.avatarNode.alpha.isZero {
                                 strongSelf.animatingSelection = true
-                                strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: 0.2)
-                                strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                                strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: appearanceDuration)
+                                strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration, completion: { [weak self] _ in
                                     self?.animatingSelection = false
                                 })
-                                strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: 0.2, additive: true)
-                                strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                                strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: appearanceDuration, additive: true)
+                                strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration)
                             }
-                            transition.updateAlpha(node: currentVideoNode, alpha: 0.0)
-                            transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
-                            transition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
+                            apperanceTransition.updateAlpha(node: currentVideoNode, alpha: 0.0)
+                            apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
+                            apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
                             if let audioLevelView = strongSelf.audioLevelView {
-                                transition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
+                                apperanceTransition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
                             }
                         } else {
                             currentVideoNode.removeFromSupernode()
@@ -874,42 +875,41 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     let canUpdateAvatarVisibility = !strongSelf.isExtracted && !strongSelf.animatingExtraction
                     
                     if let videoNode = videoNode {
-                        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                         if !strongSelf.isExtracted && !strongSelf.animatingExtraction {
                             if currentItem != nil {
                                 if item.active {
                                     if strongSelf.avatarNode.alpha.isZero {
                                         strongSelf.animatingSelection = true
-                                        strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: 0.2)
-                                        strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                                        strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: appearanceDuration)
+                                        strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration, completion: { [weak self] _ in
                                             self?.animatingSelection = false
                                         })
-                                        strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: 0.2, additive: true)
-                                        strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+                                        strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: appearanceDuration, additive: true)
+                                        strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration)
                                     }
                                     if videoNodeUpdated {
                                         videoNode.alpha = 0.0
                                         strongSelf.videoFadeNode.alpha = 0.0
                                     } else {
-                                        transition.updateAlpha(node: videoNode, alpha: 0.0)
-                                        transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
+                                        apperanceTransition.updateAlpha(node: videoNode, alpha: 0.0)
+                                        apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
                                     }
-                                    transition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
+                                    apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
                                     if let audioLevelView = strongSelf.audioLevelView {
-                                        transition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
+                                        apperanceTransition.updateAlpha(layer: audioLevelView.layer, alpha: 1.0)
                                     }
                                 } else {
                                     if !strongSelf.avatarNode.alpha.isZero {
-                                        strongSelf.videoContainerNode.layer.animateScale(from: 0.001, to: videoContainerScale, duration: 0.2)
-                                        strongSelf.avatarNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
-                                        strongSelf.audioLevelView?.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2)
-                                        strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -9.0), to: CGPoint(), duration: 0.2, additive: true)
+                                        strongSelf.videoContainerNode.layer.animateScale(from: 0.001, to: videoContainerScale, duration: appearanceDuration)
+                                        strongSelf.avatarNode.layer.animateScale(from: 1.0, to: 0.001, duration: appearanceDuration)
+                                        strongSelf.audioLevelView?.layer.animateScale(from: 1.0, to: 0.001, duration: appearanceDuration)
+                                        strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -9.0), to: CGPoint(), duration: appearanceDuration, additive: true)
                                     }
-                                    transition.updateAlpha(node: videoNode, alpha: 1.0)
-                                    transition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 1.0)
-                                    transition.updateAlpha(node: strongSelf.avatarNode, alpha: 0.0)
+                                    apperanceTransition.updateAlpha(node: videoNode, alpha: 1.0)
+                                    apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 1.0)
+                                    apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 0.0)
                                     if let audioLevelView = strongSelf.audioLevelView {
-                                        transition.updateAlpha(layer: audioLevelView.layer, alpha: 0.0)
+                                        apperanceTransition.updateAlpha(layer: audioLevelView.layer, alpha: 0.0)
                                     }
                                 }
                             } else {
@@ -944,8 +944,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                 videoNode.alpha = 0.0
                             } else {
                                 strongSelf.avatarNode.alpha = 0.0
-                                strongSelf.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                                videoNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                                strongSelf.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: appearanceDuration)
+                                videoNode.layer.animateScale(from: 0.01, to: 1.0, duration: appearanceDuration)
                                 videoNode.alpha = 1.0
                             }
                         } else {

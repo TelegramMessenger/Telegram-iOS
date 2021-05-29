@@ -5621,7 +5621,8 @@ public final class VoiceChatController: ViewController {
                             self.mainStageNode.alpha = 1.0
                             
                             self.mainStageBackgroundNode.alpha = 1.0
-                            self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.13, completion: { _ in
+                            self.mainStageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.13, completion: { [weak otherItemNode] _ in
+                                otherItemNode?.alpha = 0.0
                                 completion()
                             })
                         } else {

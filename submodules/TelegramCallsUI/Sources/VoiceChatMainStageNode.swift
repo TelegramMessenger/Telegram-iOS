@@ -321,9 +321,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             infoFrame.origin.y = targetFrame.height - infoFrame.height - (sideInset.isZero ? bottomInset : 14.0)
             transition.updateFrame(view: snapshotView, frame: infoFrame)
         }
-        
-        sourceNode.alpha = 0.0
-        
+                
         self.animatingIn = true
         let startLocalFrame = sourceNode.view.convert(sourceNode.bounds, to: self.supernode?.view)
         self.update(size: startLocalFrame.size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, force: true, transition: .immediate)
@@ -695,15 +693,17 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 |> filter { $0 }
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-                                    Queue.mainQueue().after(0.07) {
+                                    Queue.mainQueue().after(0.1) {
                                         if let strongSelf = self {
                                             if let (size, sideInset, bottomInset, isLandscape) = strongSelf.validLayout {
                                                 strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
                                             }
                                         }
                                         
-                                        completion?()
-
+                                        Queue.mainQueue().after(0.02) {
+                                            completion?()
+                                        }
+                                        
                                         if delayTransition {
                                             if let videoNode = strongSelf.currentVideoNode {
                                                 videoNode.alpha = 1.0
