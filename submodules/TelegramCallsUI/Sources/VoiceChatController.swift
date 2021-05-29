@@ -4837,7 +4837,7 @@ public final class VoiceChatController: ViewController {
             }
             
             var waitForFullSize = waitForFullSize
-            if let (_, maybeVideoEndpointId) = effectiveSpeaker, let videoEndpointId = maybeVideoEndpointId, !self.readyVideoEndpointIds.contains(videoEndpointId) {
+            if let (_, maybeVideoEndpointId) = effectiveSpeaker, let videoEndpointId = maybeVideoEndpointId, !self.readyVideoEndpointIds.contains(videoEndpointId), entries == nil {
                 waitForFullSize = false
             }
             

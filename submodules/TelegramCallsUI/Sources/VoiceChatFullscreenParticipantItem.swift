@@ -334,7 +334,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     
                     self.videoFadeNode.alpha = 1.0
                     self.videoFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                } else if initialAnimate {
+                } else {
                     videoNode.updateLayout(size: videoSize, layoutMode: .fillOrFitToSquare, transition: .immediate)
                     self.videoFadeNode.alpha = 1.0
                 }
