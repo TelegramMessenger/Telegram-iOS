@@ -810,10 +810,8 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
                 c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             }
-        case .file:
+        case let .file(file):
             c.setFillColor(theme.chatList.backgroundColor.cgColor)
-            c.fill(drawingRect)
-        
             if let image = wallpaperImage, let cgImage = image.cgImage {
                 let size = image.size.aspectFilled(drawingRect.size)
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
@@ -1026,7 +1024,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                             let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                             
                             if wallpaper.wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
+                                return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
                                     if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
                                         return .single((theme, image, thumbnailData))
@@ -1325,7 +1323,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     
                                     if wallpaper.wallpaper.isPattern {
                                         if !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
+                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                             |> mapToSignal { _ in
                                                 return .single((effectiveBackgroundColor, incomingColor, outgoingColor, nil, rotation))
                                             }

@@ -69,10 +69,7 @@ final class ThemeAccentColorController: ViewController {
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        var section: ThemeColorSection = .accent
-        if case .background = mode {
-            section = .background
-        }
+        var section: ThemeColorSection = .background
         self.section = section
         
         self.segmentedTitleView = ThemeColorSegmentedTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings, selectedSection: section)
@@ -173,7 +170,7 @@ final class ThemeAccentColorController: ViewController {
                 let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, !state.backgroundColors.isEmpty {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: state.backgroundColors.count >= 1 ? state.backgroundColors[0] : 0, bottomColor: state.backgroundColors.count >= 2 ? state.backgroundColors[1] : 0, intensity: state.patternIntensity, rotation: state.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(colors: state.backgroundColors.count >= 1 ? state.backgroundColors : [0], intensity: state.patternIntensity, rotation: state.rotation)
                     
                     var data: Data?
                     if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -454,13 +451,15 @@ final class ThemeAccentColorController: ViewController {
                 if case .colors(_, true) = strongSelf.mode {
                     let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
                     accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
-                   
+
+                    var referenceTheme: PresentationTheme?
                     if let accentColor = themeSpecificAccentColor, let customWallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] {
                         wallpaper = customWallpaper
                     } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                         wallpaper = customWallpaper
                     } else {
                         let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper) ?? defaultPresentationTheme
+                        referenceTheme = theme
                         wallpaper = theme.chat.defaultWallpaper
                     }
                     
@@ -485,6 +484,8 @@ final class ThemeAccentColorController: ViewController {
                     } else {
                         if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
                             messageColors = (UIColor(rgb: 0xe1ffc7), nil)
+                        } else if let referenceTheme = referenceTheme {
+                            messageColors = (referenceTheme.chat.message.outgoing.bubble.withoutWallpaper.fill, referenceTheme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
                         } else {
                             messageColors = nil
                         }

@@ -167,7 +167,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                                                     let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                                                     if wallpaper.isPattern {
                                                         if !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true).start()
+                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true).start()
                                                         }
                                                     } else {
                                                         if file.settings.blur {

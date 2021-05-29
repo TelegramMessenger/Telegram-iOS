@@ -35,7 +35,7 @@ private func generateColorsImage(diameter: CGFloat, colors: [UIColor]) -> UIImag
 }
 
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let checkNode: CheckNode
     private let colorNode: ASImageNode
     private let textNode: ASTextNode
@@ -66,8 +66,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     init(title: String, value: WallpaperOptionButtonValue) {
         self._value = value
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.3))
         self.backgroundNode.cornerRadius = 14.0
         
         self.checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false, borderWidth: 1.5))
@@ -133,7 +132,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            self.backgroundNode.backgroundColor = self.buttonColor
+            self.backgroundNode.color = self.buttonColor
         }
     }
     
@@ -222,10 +221,11 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     override func layout() {
         super.layout()
-        
+
         self.backgroundNode.frame = self.bounds
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 15.0, transition: .immediate)
         
-        guard let textSize = self.textSize else {
+        guard let _ = self.textSize else {
             return
         }
         

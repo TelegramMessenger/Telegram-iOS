@@ -432,7 +432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.botStart = botStart
         self.peekData = peekData
 
-        self.chatBackgroundNode = WallpaperBackgroundNode(context: context)
+        self.chatBackgroundNode = WallpaperBackgroundNode(context: context, useSharedAnimationPhase: true)
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource
         var groupCallPanelSource: GroupCallPanelSource

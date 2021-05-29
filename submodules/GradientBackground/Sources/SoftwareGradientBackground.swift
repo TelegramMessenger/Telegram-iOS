@@ -180,14 +180,22 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     private let cloneNodes = SparseBag<Weak<CloneNode>>()
 
-    override public init() {
+    private let useSharedAnimationPhase: Bool
+    static var sharedPhase: Int = 0
+
+    public init(useSharedAnimationPhase: Bool = false) {
+        self.useSharedAnimationPhase = useSharedAnimationPhase
         self.contentView = UIImageView()
 
         super.init()
 
         self.view.addSubview(self.contentView)
 
-        self.phase = 0
+        if useSharedAnimationPhase {
+            self.phase = GradientBackgroundNode.sharedPhase
+        } else {
+            self.phase = 0
+        }
     }
 
     deinit {
@@ -279,6 +287,9 @@ public final class GradientBackgroundNode: ASDisplayNode {
             self.phase = 7
         } else {
             self.phase = self.phase - 1
+        }
+        if self.useSharedAnimationPhase {
+            GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: transition)

@@ -101,7 +101,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         let maskMode = self.fixedMaskMode ?? inputMaskMode
 
         if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics || self.backgroundNode !== backgroundNode {
-            let typeUpdated = self.currentType != type
+            let typeUpdated = self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.backgroundNode !== backgroundNode
 
             self.currentType = type
             self.theme = theme

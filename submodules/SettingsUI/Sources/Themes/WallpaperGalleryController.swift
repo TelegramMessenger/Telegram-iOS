@@ -360,7 +360,7 @@ public class WallpaperGalleryController: ViewController {
         }, replaceRootController: { controller, ready in
         }, editMedia: { _ in
         })
-        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
+        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0, disableTapNavigation: true)
         self.displayNodeDidLoad()
 
         (self.displayNode as? WallpaperGalleryControllerNode)?.nativeStatusBar = self.statusBar
@@ -369,10 +369,13 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
-        
+
+        var currentCentralItemIndex: Int?
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
-                strongSelf.bindCentralItemNode(animated: true)
+                let updated = currentCentralItemIndex != index
+                currentCentralItemIndex = index
+                strongSelf.bindCentralItemNode(animated: true, updated: updated)
             }
         }
         
@@ -498,7 +501,7 @@ public class WallpaperGalleryController: ViewController {
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
                                         if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                            let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors[0], bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: intensity, rotation: file.settings.rotation)
+                                            let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation)
                                             
                                             var data: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -585,10 +588,10 @@ public class WallpaperGalleryController: ViewController {
         super.viewDidAppear(animated)
         
         self.galleryNode.modalAnimateIn()
-        self.bindCentralItemNode(animated: false)
+        self.bindCentralItemNode(animated: false, updated: false)
     }
     
-    private func bindCentralItemNode(animated: Bool) {
+    private func bindCentralItemNode(animated: Bool, updated: Bool) {
         if let node = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
             self.centralItemSubtitle.set(node.subtitle.get())
             self.centralItemStatus.set(node.status.get())
@@ -599,6 +602,7 @@ public class WallpaperGalleryController: ViewController {
             node.requestPatternPanel = { [weak self] enabled, initialWallpaper in
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
                     strongSelf.colorsPanelEnabled = false
+                    strongSelf.colorsPanelNode?.view.endEditing(true)
 
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
@@ -637,12 +641,13 @@ public class WallpaperGalleryController: ViewController {
                 }
             }
 
-            node.requestColorsPanel = { [weak self] colors in
-                if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+            node.toggleColorsPanel = { [weak self] colors in
+                if let strongSelf = self, let (layout, _) = strongSelf.validLayout, let colors = colors, let itemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     strongSelf.patternPanelEnabled = false
-                    strongSelf.colorsPanelEnabled = colors != nil
-                    strongSelf.galleryNode.scrollView.isScrollEnabled = colors == nil
-                    if let colors = colors {
+                    strongSelf.colorsPanelEnabled = !strongSelf.colorsPanelEnabled
+                    strongSelf.galleryNode.scrollView.isScrollEnabled = !strongSelf.colorsPanelEnabled
+
+                    if strongSelf.colorsPanelEnabled {
                         strongSelf.colorsPanelNode?.updateState({ _ in
                             return WallpaperColorPanelNodeState(
                                 selection: 0,
@@ -654,9 +659,10 @@ public class WallpaperGalleryController: ViewController {
                                 simpleGradientGeneration: false
                             )
                         }, animated: false)
-                    } else {
-                        //strongSelf.updateEntries(pattern: .color(0), preview: false)
                     }
+
+                    itemNode.updateIsColorsPanelActive(strongSelf.colorsPanelEnabled, animated: true)
+
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
@@ -671,13 +677,24 @@ public class WallpaperGalleryController: ViewController {
             }
             
             if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry, case let .file(_, _, _, _, true, _, _, _ , settings) = wallpaper, !settings.colors.isEmpty {
-                if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
+                /*if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
                     self.patternPanelNode?.view.addSubview(snapshotView)
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false) { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     }
-                }
+                }*/
                 //self.patternPanelNode?.backgroundColors = ([settings.colors[0]], nil)
+            }
+
+            if updated {
+                if self.colorsPanelEnabled || self.patternPanelEnabled {
+                    self.colorsPanelEnabled = false
+                    self.patternPanelEnabled = false
+
+                    if let (layout, _) = self.validLayout {
+                        self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    }
+                }
             }
         }
     }

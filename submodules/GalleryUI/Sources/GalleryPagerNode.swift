@@ -78,6 +78,7 @@ public struct GalleryPagerTransaction {
 
 public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let pageGap: CGFloat
+    private let disableTapNavigation: Bool
     
     private let scrollView: UIScrollView
     
@@ -111,8 +112,10 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     
-    public init(pageGap: CGFloat) {
+    public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
+        self.disableTapNavigation = disableTapNavigation
+
         self.scrollView = UIScrollView()
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -434,6 +437,9 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     }
     
     private func canGoToPreviousItem() -> Bool {
+        if self.disableTapNavigation {
+            return false
+        }
         if let index = self.centralItemIndex, index > 0 {
             return true
         } else {
@@ -442,6 +448,9 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     }
     
     private func canGoToNextItem() -> Bool {
+        if self.disableTapNavigation {
+            return false
+        }
         if let index = self.centralItemIndex, index < self.items.count - 1 {
             return true
         } else {

@@ -38,7 +38,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
     }
     
-    public init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0) {
+    public init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0, disableTapNavigation: Bool = false) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
@@ -48,7 +48,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
 
-        self.pager = GalleryPagerNode(pageGap: pageGap)
+        self.pager = GalleryPagerNode(pageGap: pageGap, disableTapNavigation: disableTapNavigation)
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
         super.init()

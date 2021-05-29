@@ -19,6 +19,7 @@ import WallpaperResources
 import Svg
 import GZip
 import TelegramUniversalVideoContent
+import GradientBackground
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -480,11 +481,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
             let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
             let url = URL(fileURLWithPath: path)
             
-            var colors: [UIColor] = []
-            if let bottomColor = representation.bottomColor {
-                colors.append(UIColor(rgb: bottomColor))
-            }
-            colors.append(UIColor(rgb: representation.color))
+            let colors: [UIColor] = representation.colors.map(UIColor.init(rgb:))
             
             let intensity = CGFloat(representation.intensity) / 100.0
             
@@ -510,6 +507,16 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                     if colors.count == 1, let color = colors.first {
                         c.setFillColor(color.cgColor)
                         c.fill(rect)
+                    } else if colors.count >= 3 {
+                        let drawingRect = rect
+                        let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.draw(image.cgImage!, in: drawingRect)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                     } else {
                         let gradientColors = colors.map { $0.cgColor } as CFArray
                         let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
@@ -533,6 +540,10 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                     c.setBlendMode(.normal)
                     if let cgImage = maskImage?.cgImage {
                         c.clip(to: rect, mask: cgImage)
+                    }
+
+                    if colors.count >= 3 {
+                        c.setBlendMode(.softLight)
                     }
 
                     if colors.count == 1, let color = colors.first {

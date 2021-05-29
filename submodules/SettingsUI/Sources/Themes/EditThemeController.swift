@@ -514,7 +514,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     let prepare: Signal<CreateThemeResult, CreateThemeError>
                     if let resolvedWallpaper = resolvedWallpaper, case let .file(file) = resolvedWallpaper, resolvedWallpaper.isPattern {
                         let resource = file.file.resource
-                        let representation = CachedPatternWallpaperRepresentation(color: file.settings.colors.count >= 1 ? file.settings.colors[0] : 0xd6e2ee, bottomColor: file.settings.colors.count >= 2 ? file.settings.colors[1] : file.settings.colors[0], intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
+                        let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors.count >= 1 ? file.settings.colors : [0xd6e2ee], intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
                         
                         var data: Data?
                         if let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {

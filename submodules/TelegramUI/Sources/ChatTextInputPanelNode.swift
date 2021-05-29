@@ -2211,6 +2211,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         backgroundView.frame = self.textInputBackgroundNode.frame
 
         func updateIsCaretHidden(view: UIView, isHidden: Bool) {
+            return;
             if String(describing: type(of: view)).contains("TextSelectionView") {
                 view.isHidden = isHidden
             } else {
