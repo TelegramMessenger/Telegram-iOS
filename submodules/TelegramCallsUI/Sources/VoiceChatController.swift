@@ -3874,7 +3874,7 @@ public final class VoiceChatController: ViewController {
                 )
                 fullscreenListTransform = CATransform3DIdentity
                 fullscreenListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: fullscreenListHeight, height: layout.size.height), insets: UIEdgeInsets(top: fullscreenListInset, left: 0.0, bottom: fullscreenListInset, right: 0.0), duration: duration, curve: curve)
-                fullscreenListContainerFrame = CGRect(x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - fullscreenListHeight, y: layout.size.height / 2.0, width: layout.size.width, height: fullscreenListHeight)
+                fullscreenListContainerFrame = CGRect(x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - fullscreenListHeight, y: 0.0, width: fullscreenListHeight, height: layout.size.height)
             } else {
                 fullscreenListWidth = layout.size.width
                 fullscreenListPosition = CGPoint(
@@ -4835,6 +4835,12 @@ public final class VoiceChatController: ViewController {
             if updateMembers {
                 self.updateMembers(maybeUpdateVideo: false, force: force)
             }
+            
+            var waitForFullSize = waitForFullSize
+            if let (_, maybeVideoEndpointId) = effectiveSpeaker, let videoEndpointId = maybeVideoEndpointId, !self.readyVideoEndpointIds.contains(videoEndpointId) {
+                waitForFullSize = false
+            }
+            
             self.mainStageNode.update(peer: effectiveSpeaker, waitForFullSize: waitForFullSize, completion: {
                 completion?()
             })
@@ -5562,6 +5568,7 @@ public final class VoiceChatController: ViewController {
             }
             
             if case .fullscreen = previousDisplayMode, case .fullscreen = displayMode {
+                self.animatingExpansion = true
             } else {
                 self.animatingMainStage = true
             }
