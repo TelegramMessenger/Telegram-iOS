@@ -206,7 +206,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.activeDisposable.dispose()
     }
     
-    func updateLevel(_ level: CGFloat) {
+    func updateLevel(_ level: CGFloat, immediately: Bool = false) {
         self.backgroundNode.audioLevel = level
     }
     
@@ -545,9 +545,11 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     var audioLevel: CGFloat = 0.0  {
         didSet {
-            self.maskBlobView.updateLevel(audioLevel)
+            self.maskBlobView.updateLevel(self.audioLevel, immediately: false)
         }
     }
+    
+    
     
     var updatedActive: ((Bool) -> Void)?
     var updatedColors: ((UIColor?, UIColor?) -> Void)?
@@ -1299,13 +1301,16 @@ private final class VoiceBlobView: UIView {
         bigBlob.setColor(color.withAlphaComponent(0.21))
     }
     
-    public func updateLevel(_ level: CGFloat) {
+    public func updateLevel(_ level: CGFloat, immediately: Bool) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
         mediumBlob.updateSpeedLevel(to: normalizedLevel)
         bigBlob.updateSpeedLevel(to: normalizedLevel)
         
         audioLevel = normalizedLevel
+        if immediately {
+            presentationAudioLevel = normalizedLevel
+        }
     }
     
     public func startAnimating() {
@@ -1450,7 +1455,7 @@ final class BlobView: UIView {
         let animation = CABasicAnimation(keyPath: "path")
         let previousPath = self.shapeLayer.path
         self.shapeLayer.path = nextPath
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
+        animation.duration = CFTimeInterval(1.0 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
         animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         animation.fromValue = previousPath
         animation.toValue = nextPath

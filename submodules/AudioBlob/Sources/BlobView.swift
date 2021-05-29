@@ -94,6 +94,10 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func updateLevel(_ level: CGFloat) {
+        self.updateLevel(level, immediately: false)
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool = false) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
         smallBlob.updateSpeedLevel(to: normalizedLevel)
@@ -101,6 +105,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         bigBlob.updateSpeedLevel(to: normalizedLevel)
         
         audioLevel = normalizedLevel
+        if immediately {
+            presentationAudioLevel = normalizedLevel
+        }
     }
     
     public func startAnimating() {

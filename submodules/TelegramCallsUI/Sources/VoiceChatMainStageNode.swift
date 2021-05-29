@@ -290,12 +290,13 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private var animatingOut = false
     private var appeared = false
     
-    func animateTransitionIn(from sourceNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
+    func animateTransitionIn(from sourceNode: ASDisplayNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         guard let sourceNode = sourceNode as? VoiceChatTileItemNode, let _ = sourceNode.item, let (_, sideInset, bottomInset, isLandscape) = self.validLayout else {
             return
         }
         self.appeared = true
         
+        self.backgroundNode.alpha = 0.0
         self.topFadeNode.alpha = 0.0
         self.titleNode.alpha = 0.0
         self.microphoneNode.alpha = 0.0
@@ -331,6 +332,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         transition.updateFrame(node: self, frame: targetFrame, completion: { [weak self] _ in
             sourceNode.alpha = 1.0
             self?.animatingIn = false
+            completion()
         })
     }
     
@@ -346,6 +348,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             alphaTransition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
         } else {
             self.backgroundNode.alpha = 0.0
+            
+            self.microphoneNode.alpha = 1.0
+            self.titleNode.alpha = 1.0
+            self.bottomFadeNode.alpha = 1.0
+            self.bottomFillNode.alpha = 1.0
         }
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
@@ -572,14 +579,17 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, transition: .immediate)
         }
         
-        self.audioLevelNode.updateGlowAndGradientAnimations(type: gradient, animated: true)
-        
         self.pinButtonTitleNode.isHidden = !pinned
         self.pinButtonIconNode.image = !pinned ? generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white) : generateTintedImage(image: UIImage(bundleImageName: "Call/Unpin"), color: .white)
         
         self.audioLevelNode.startAnimating(immediately: true)
         
         if let getAudioLevel = self.getAudioLevel, previousPeerEntry?.peer.id != peerEntry.peer.id {
+            self.avatarNode.layer.removeAllAnimations()
+            self.avatarNode.transform = CATransform3DIdentity
+            self.audioLevelNode.updateGlowAndGradientAnimations(type: .active, animated: false)
+            self.audioLevelNode.updateLevel(0.0, immediately: true)
+            
             self.audioLevelNode.isHidden = self.currentPeer?.1 != nil
             self.audioLevelDisposable.set((getAudioLevel(peerEntry.peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -589,7 +599,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     
                 let level = min(1.5, max(0.0, CGFloat(value)))
                 
-                strongSelf.audioLevelNode.updateLevel(CGFloat(value))
+                strongSelf.audioLevelNode.updateLevel(CGFloat(value), immediately: false)
                     
                 let avatarScale: CGFloat
                 if value > 0.02 {
@@ -602,6 +612,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
             }))
         }
+        
+        self.audioLevelNode.updateGlowAndGradientAnimations(type: gradient, animated: true)
         
         self.microphoneNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: microphoneColor), animated: true)
     }
@@ -932,8 +944,8 @@ class VoiceChatBlobNode: ASDisplayNode {
         self.blobView.startAnimating(immediately: true)
     }
     
-    func updateLevel(_ level: CGFloat) {
-        self.blobView.updateLevel(level)
+    func updateLevel(_ level: CGFloat, immediately: Bool) {
+        self.blobView.updateLevel(level, immediately: immediately)
     }
     
     func startAnimating(immediately: Bool) {
@@ -996,9 +1008,14 @@ class VoiceChatBlobNode: ASDisplayNode {
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
         }
-        self.foregroundGradientLayer.colors = targetColors
         if animated {
+            self.foregroundGradientLayer.colors = targetColors
             self.foregroundGradientLayer.animate(from: initialColors as AnyObject, to: targetColors as AnyObject, keyPath: "colors", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+        } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.foregroundGradientLayer.colors = targetColors
+            CATransaction.commit()
         }
     }
     

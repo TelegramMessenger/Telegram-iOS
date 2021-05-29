@@ -13,6 +13,8 @@ import PresentationDataUtils
 import UIKitRuntimeUtils
 import ReplayKit
 
+private let accentColor: UIColor = UIColor(rgb: 0x007aff)
+
 final class VoiceChatCameraPreviewController: ViewController {
     private var controllerNode: VoiceChatCameraPreviewControllerNode {
         return self.displayNode as! VoiceChatCameraPreviewControllerNode
@@ -183,7 +185,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
                 
-        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: accentColor, foregroundColor: .white), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
         self.cameraButton.title = self.presentationData.strings.VoiceChat_VideoPreviewShareCamera
         
         self.screenButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
