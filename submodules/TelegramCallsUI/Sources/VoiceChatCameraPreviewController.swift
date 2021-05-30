@@ -13,6 +13,8 @@ import PresentationDataUtils
 import UIKitRuntimeUtils
 import ReplayKit
 
+private let accentColor: UIColor = UIColor(rgb: 0x007aff)
+
 final class VoiceChatCameraPreviewController: ViewController {
     private var controllerNode: VoiceChatCameraPreviewControllerNode {
         return self.displayNode as! VoiceChatCameraPreviewControllerNode
@@ -183,7 +185,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
                 
-        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: accentColor, foregroundColor: .white), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
         self.cameraButton.title = self.presentationData.strings.VoiceChat_VideoPreviewShareCamera
         
         self.screenButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
@@ -450,7 +452,6 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
             contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
         }
         
-        
         let previewInset: CGFloat = 16.0
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
@@ -478,7 +479,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
             previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, previewHeight * 1.7778), height: previewHeight)
             previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
         } else {
-            previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset)
+            previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset + (120.0 - buttonOffset))
             previewFrame = CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize)
         }
         transition.updateFrame(node: self.previewContainerNode, frame: previewFrame)

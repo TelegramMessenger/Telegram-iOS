@@ -69,13 +69,16 @@ final class VoiceChatTileItem: Equatable {
         if lhs.videoReady != rhs.videoReady {
             return false
         }
-        if lhs.speaking != rhs.speaking {
+        if lhs.icon != rhs.icon {
             return false
         }
         if lhs.text != rhs.text {
             return false
         }
         if lhs.additionalText != rhs.additionalText {
+            return false
+        }
+        if lhs.speaking != rhs.speaking {
             return false
         }
         if lhs.icon != rhs.icon {
@@ -113,7 +116,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     let fadeNode: ASDisplayNode
     private var shimmerNode: VoiceChatTileShimmeringNode?
     private let titleNode: ImmediateTextNode
-    private let iconNode: ASImageNode
+    private var iconNode: ASImageNode?
     private var animationNode: VoiceChatMicrophoneNode?
     var highlightNode: VoiceChatTileHighlightNode
     private let statusNode: VoiceChatParticipantStatusNode
@@ -157,10 +160,6 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         self.statusNode = VoiceChatParticipantStatusNode()
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-        
         self.highlightNode = VoiceChatTileHighlightNode()
         self.highlightNode.alpha = 0.0
         self.highlightNode.updateGlowAndGradientAnimations(type: .speaking)
@@ -179,11 +178,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.contentNode.addSubnode(self.fadeNode)
         self.contentNode.addSubnode(self.infoNode)
         self.infoNode.addSubnode(self.titleNode)
-        self.infoNode.addSubnode(self.iconNode)
         self.contentNode.addSubnode(self.highlightNode)
         
         self.containerNode.shouldBegin = { [weak self] location in
-            guard let _ = self else {
+            guard let strongSelf = self, let item = strongSelf.item, item.videoReady else {
                 return false
             }
             return true
@@ -378,6 +376,56 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 self.animationNode = nil
                 animationNode.removeFromSupernode()
             }
+            
+            var hadMicrophoneNode = false
+            var hadIconNode = false
+            var nodeToAnimateIn: ASDisplayNode?
+            
+            if case let .microphone(muted) = item.icon {
+                let animationNode: VoiceChatMicrophoneNode
+                if let current = self.animationNode {
+                    animationNode = current
+                } else {
+                    animationNode = VoiceChatMicrophoneNode()
+                    self.animationNode = animationNode
+                    self.infoNode.addSubnode(animationNode)
+                }
+                animationNode.alpha = 1.0
+                animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, filled: true, color: microphoneColor), animated: true)
+            } else if let animationNode = self.animationNode {
+                hadMicrophoneNode = true
+                self.animationNode = nil
+                animationNode.removeFromSupernode()
+            }
+            
+            if case .presentation = item.icon {
+                let iconNode: ASImageNode
+                if let current = self.iconNode {
+                    iconNode = current
+                } else {
+                    iconNode = ASImageNode()
+                    iconNode.displaysAsynchronously = false
+                    iconNode.contentMode = .center
+                    self.iconNode = iconNode
+                    self.infoNode.addSubnode(iconNode)
+                    
+                    nodeToAnimateIn = iconNode
+                }
+                
+                iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/StatusScreen"), color: .white)
+            } else if let iconNode = self.iconNode {
+                hadIconNode = true
+                self.iconNode = nil
+                iconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak iconNode] _ in
+                    iconNode?.removeFromSupernode()
+                })
+            }
+            
+            if let node = nodeToAnimateIn, hadMicrophoneNode || hadIconNode {
+                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                node.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+            }
         }
         
         let bounds = CGRect(origin: CGPoint(), size: size)
@@ -414,6 +462,10 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 50.0, height: size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: 30.0, y: size.height - titleSize.height - 8.0), size: titleSize)
+        
+        if let iconNode = self.iconNode, let image = iconNode.image {
+            transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(16.0 - image.size.width / 2.0), y: floorToScreenPixels(size.height - 15.0 - image.size.height / 2.0)), size: image.size))
+        }
         
         if let animationNode = self.animationNode {
             let animationSize = CGSize(width: 36.0, height: 36.0)

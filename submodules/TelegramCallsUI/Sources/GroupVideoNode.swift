@@ -226,7 +226,7 @@ final class GroupVideoNode: ASDisplayNode {
         
         let fittedSize = rotatedVideoSize.aspectFitted(containerSize)
         let filledSize = rotatedVideoSize.aspectFilled(containerSize)
-        let filledToSquareSize = rotatedVideoSize.aspectFilled(CGSize(width: containerSize.height, height: containerSize.height))
+        let filledToSquareSize = rotatedVideoSize.aspectFilled(CGSize(width: size.height, height: size.height))
         
         switch layoutMode {
             case .fillOrFitToSquare:
