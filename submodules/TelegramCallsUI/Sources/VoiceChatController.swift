@@ -884,6 +884,7 @@ public final class VoiceChatController: ViewController {
         private var ignoreConnectingTimer: SwiftSignalKit.Timer?
         
         private var displayUnmuteTooltipTimer: SwiftSignalKit.Timer?
+        private var dismissUnmuteTooltipTimer: SwiftSignalKit.Timer?
         private var lastUnmuteTooltipDisplayTimestamp: Double?
         
         private var displayMode: DisplayMode = .modal(isExpanded: false, isFilled: false) {
@@ -1945,29 +1946,50 @@ public final class VoiceChatController: ViewController {
                 }
                 if let state = strongSelf.callState, state.muteState == nil || strongSelf.pushingToTalk {
                     strongSelf.displayUnmuteTooltipTimer?.invalidate()
+                    strongSelf.displayUnmuteTooltipTimer = nil
+                    strongSelf.dismissUnmuteTooltipTimer?.invalidate()
+                    strongSelf.dismissUnmuteTooltipTimer = nil
                 } else {
                     if isSpeaking {
                         var shouldDisplayTooltip = false
-                        if let previousTimstamp = strongSelf.lastUnmuteTooltipDisplayTimestamp, CACurrentMediaTime() < previousTimstamp + 60.0 {
+                        if let previousTimstamp = strongSelf.lastUnmuteTooltipDisplayTimestamp, CACurrentMediaTime() > previousTimstamp + 45.0 {
                             shouldDisplayTooltip = true
                         } else if strongSelf.lastUnmuteTooltipDisplayTimestamp == nil {
                             shouldDisplayTooltip = true
                         }
                         if shouldDisplayTooltip {
-                            let timer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.lastUnmuteTooltipDisplayTimestamp = CACurrentMediaTime()
-                                strongSelf.displayUnmuteTooltip()
-                                strongSelf.displayUnmuteTooltipTimer?.invalidate()
-                                strongSelf.displayUnmuteTooltipTimer = nil
-                            }, queue: Queue.mainQueue())
-                            timer.start()
-                            strongSelf.displayUnmuteTooltipTimer = timer
+                            strongSelf.dismissUnmuteTooltipTimer?.invalidate()
+                            strongSelf.dismissUnmuteTooltipTimer = nil
+                            
+                            if strongSelf.displayUnmuteTooltipTimer == nil {
+                                let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.lastUnmuteTooltipDisplayTimestamp = CACurrentMediaTime()
+                                    strongSelf.displayUnmuteTooltip()
+                                    strongSelf.displayUnmuteTooltipTimer?.invalidate()
+                                    strongSelf.displayUnmuteTooltipTimer = nil
+                                    strongSelf.dismissUnmuteTooltipTimer?.invalidate()
+                                    strongSelf.dismissUnmuteTooltipTimer = nil
+                                }, queue: Queue.mainQueue())
+                                timer.start()
+                                strongSelf.displayUnmuteTooltipTimer = timer
+                            }
                         }
-                    } else {
-                        strongSelf.displayUnmuteTooltipTimer?.invalidate()
+                    } else if strongSelf.dismissUnmuteTooltipTimer == nil && strongSelf.displayUnmuteTooltipTimer != nil {
+                        let timer = SwiftSignalKit.Timer(timeout: 0.4, repeat: false, completion: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.displayUnmuteTooltipTimer?.invalidate()
+                            strongSelf.displayUnmuteTooltipTimer = nil
+                           
+                            strongSelf.dismissUnmuteTooltipTimer?.invalidate()
+                            strongSelf.dismissUnmuteTooltipTimer = nil
+                        }, queue: Queue.mainQueue())
+                        timer.start()
+                        strongSelf.dismissUnmuteTooltipTimer = timer
                     }
                 }
             })
@@ -2001,7 +2023,9 @@ public final class VoiceChatController: ViewController {
                 var visiblePeerIds = Set<PeerId>()
                 strongSelf.fullscreenListNode.forEachVisibleItemNode { itemNode in
                     if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode, let item = itemNode.item {
-                        visiblePeerIds.insert(item.peer.id)
+                        if item.videoEndpointId == nil {
+                            visiblePeerIds.insert(item.peer.id)
+                        }
                     }
                 }
                 strongSelf.mainStageNode.update(visiblePeerIds: visiblePeerIds)
@@ -3743,8 +3767,8 @@ public final class VoiceChatController: ViewController {
             
             self.switchCameraButton.update(size: audioButtonSize, content: CallControllerButtonItemNode.Content(appearance: normalButtonAppearance, image: .flipCamera), text: "", transition: transition)
                     
-            transition.updateAlpha(node: self.switchCameraButton, alpha: hasVideo ? 1.0 : 0.0)
-            transition.updateTransformScale(node: self.switchCameraButton, scale: hasVideo ? 1.0 : 0.0)
+            transition.updateAlpha(node: self.switchCameraButton, alpha: hasCameraButton && hasVideo ? 1.0 : 0.0)
+            transition.updateTransformScale(node: self.switchCameraButton, scale: hasCameraButton && hasVideo ? 1.0 : 0.0)
             
             transition.updateTransformScale(node: self.cameraButton, scale: hasCameraButton ? 1.0 : 0.0)
         
@@ -5487,8 +5511,16 @@ public final class VoiceChatController: ViewController {
         
         private func displayUnmuteTooltip() {
             let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view).center
-            let point = CGRect(origin: CGPoint(x: location.x - 5.0, y: location.y - 5.0 - 68.0), size: CGSize(width: 10.0, height: 10.0))
-            self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+            var point = CGRect(origin: CGPoint(x: location.x - 5.0, y: location.y - 5.0 - 68.0), size: CGSize(width: 10.0, height: 10.0))
+            var position: TooltipScreen.ArrowPosition = .bottom
+            if self.isLandscape {
+                point.origin.x = location.x - 5.0 - 36.0
+                point.origin.y = location.y - 5.0
+                position = .right
+            } else if case .fullscreen = self.displayMode {
+                point.origin.y += 32.0
+            }
+            self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
                 return .dismiss(consume: false)
             }), in: .window(.root))
         }
