@@ -189,9 +189,22 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: ([UInt32], Int32?)? = nil {
+    var backgroundColors: ([UInt32], Int32?, Int32?)? = nil {
         didSet {
+            var updated = false
             if oldValue?.0 != self.backgroundColors?.0 || oldValue?.1 != self.backgroundColors?.1 {
+                updated = true
+            } else if oldValue?.2 != self.backgroundColors?.2 {
+                if let oldIntensity = oldValue?.2, let newIntensity = self.backgroundColors?.2 {
+                    if (oldIntensity < 0) != (newIntensity < 0) {
+                        updated = true
+                    }
+                } else if (oldValue?.2 != nil) != (self.backgroundColors?.2 != nil) {
+                    updated = true
+                }
+            }
+
+            if updated {
                 self.updateWallpapers()
             }
         }
@@ -259,11 +272,14 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.scrollNode.view.alwaysBounceHorizontal = true
         
         let sliderView = TGPhotoEditorSliderView()
+        sliderView.disableSnapToPositions = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
         sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
         sliderView.maximumValue = 200.0
+        sliderView.positionsCount = 3
+        sliderView.useLinesForPositions = true
         sliderView.value = 150.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
@@ -284,7 +300,14 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? ([0xd6e2ee], nil)
+        let backgroundColors = self.backgroundColors ?? ([0xd6e2ee], nil, nil)
+        let intensity: Int32 = backgroundColors.2.flatMap { value in
+            if value < 0 {
+                return -80
+            } else {
+                return 80
+            }
+        } ?? 80
         
         var selectedFileId: Int64?
         if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
@@ -298,7 +321,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(colors: backgroundColors.0, intensity: 100, rotation: backgroundColors.1)
+                let settings = WallpaperSettings(colors: backgroundColors.0, intensity: intensity, rotation: backgroundColors.1)
                 updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             

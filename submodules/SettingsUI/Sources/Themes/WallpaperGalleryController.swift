@@ -315,7 +315,6 @@ public class WallpaperGalleryController: ViewController {
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.patternPanelNode?.updateTheme(self.presentationData.theme)
-        //self.patternPanelNode?.backgroundColors = self.presentationData.theme.overallDarkAppearance ? ([self.presentationData.theme.list.blocksBackgroundColor.rgb], nil) : nil
 
         self.colorsPanelNode?.updateTheme(self.presentationData.theme)
     }
@@ -619,11 +618,11 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
                     case let .color(color):
-                        strongSelf.patternPanelNode?.backgroundColors = ([color], nil)
+                        strongSelf.patternPanelNode?.backgroundColors = ([color], nil, nil)
                     case let .gradient(colors, settings):
-                        strongSelf.patternPanelNode?.backgroundColors = (colors, settings.rotation)
+                        strongSelf.patternPanelNode?.backgroundColors = (colors, settings.rotation, nil)
                     case let .file(file) where file.isPattern:
-                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors, file.settings.rotation)
+                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors, file.settings.rotation, file.settings.intensity)
                     default:
                         break
                     }
@@ -821,13 +820,16 @@ public class WallpaperGalleryController: ViewController {
             patternPanelNode.patternChanged = { [weak self] pattern, intensity, preview in
                 if let strongSelf = self, strongSelf.validLayout != nil, let patternInitialWallpaper = strongSelf.patternInitialWallpaper {
                     var colors: [UInt32] = []
+                    var rotation: Int32?
                     switch patternInitialWallpaper {
                     case let .color(color):
                         colors = [color]
                     case let .file(file):
                         colors = file.settings.colors
-                    case let .gradient(colorsValue, _):
+                        rotation = file.settings.rotation
+                    case let .gradient(colorsValue, settings):
                         colors = colorsValue
+                        rotation = settings.rotation
                     default:
                         break
                     }
@@ -841,9 +843,10 @@ public class WallpaperGalleryController: ViewController {
                     default:
                         break
                     }
+
+                    strongSelf.patternPanelNode?.backgroundColors = (colors, rotation, intensity)
                 }
             }
-            patternPanelNode.backgroundColors = self.presentationData.theme.overallDarkAppearance ? ([self.presentationData.theme.list.blocksBackgroundColor.rgb], nil) : nil
             self.patternPanelNode = patternPanelNode
             currentPatternPanelNode = patternPanelNode
             self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)

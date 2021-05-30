@@ -89,7 +89,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 - (void)setPositionsCount:(NSInteger)positionsCount
 {
     _positionsCount = positionsCount;
-    _tapGestureRecognizer.enabled = _positionsCount > 1;
+    _tapGestureRecognizer.enabled = !_disableSnapToPositions && _positionsCount > 1;
     _doubleTapGestureRecognizer.enabled = !_tapGestureRecognizer.enabled;
 }
 
@@ -158,7 +158,6 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         knobFrame = CGRectMake(knobFrame.origin.y, knobFrame.origin.x, knobFrame.size.width, knobFrame.size.height);
     }
     
-    CGFloat markPosition = visualMargin + visualTotalLength / (_maximumValue - _minimumValue) * (ABS(_minimumValue) + _startValue);
     if (_markValue > FLT_EPSILON)
     {
         CGContextSetFillColorWithColor(context, _backColor.CGColor);
@@ -174,60 +173,14 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         
         CGContextSetBlendMode(context, kCGBlendModeCopy);
     }
-    
-    if (false && _minimumUndottedValue > -1 && self.positionsCount > 1) {
-        CGContextSetLineWidth(context, backFrame.size.height);
-        CGContextSetLineCap(context, kCGLineCapRound);
-        
-        for (NSInteger i = 1; i < self.positionsCount; i++)
-        {
-            CGFloat previousX = margin + totalLength / (self.positionsCount - 1) * (i - 1);
-            CGFloat currentX = margin + totalLength / (self.positionsCount - 1) * i;
-            
-            if (_minimumUndottedValue < i) {
-                CGFloat normalDashWidth = 16.0f;
-                CGFloat dashFraction = 0.6f;
-                CGFloat totalLineWidth = currentX - previousX;
-                int numberOfDashes = (int)floor((double)(totalLineWidth / normalDashWidth));
-                CGFloat dashWidth = (totalLineWidth / (CGFloat)numberOfDashes);
-                
-                CGFloat innerWidth = dashWidth * dashFraction - 2.0f;
-                CGFloat innerOffset = (dashWidth - innerWidth) / 2.0f;
-                
-                CGFloat dottedX = previousX;
-                
-                while (dottedX + innerWidth < currentX) {
-                    bool highlighted = dottedX + dashWidth / 2.0f < CGRectGetMaxX(trackFrame);
-                    
-                    CGContextSetStrokeColorWithColor(context, highlighted ? _trackColor.CGColor : _backColor.CGColor);
-                    
-                    CGContextMoveToPoint(context, dottedX + innerOffset, CGRectGetMidY(backFrame));
-                    CGContextAddLineToPoint(context, dottedX + innerOffset + innerWidth, CGRectGetMidY(backFrame));
-                    CGContextStrokePath(context);
-                    
-                    dottedX += dashWidth;
-                }
-            } else {
-                bool highlighted = (previousX + (currentX - previousX) / 2.0f) < CGRectGetMaxX(trackFrame);
-                CGContextSetStrokeColorWithColor(context, highlighted ? _trackColor.CGColor : _backColor.CGColor);
-                
-                CGContextMoveToPoint(context, previousX, CGRectGetMidY(backFrame));
-                CGContextAddLineToPoint(context, currentX, CGRectGetMidY(backFrame));
-                CGContextStrokePath(context);
-            }
-        }
-    } else {
-        CGContextSetFillColorWithColor(context, _backColor.CGColor);
-        [self drawRectangle:backFrame cornerRadius:self.trackCornerRadius context:context];
-    }
+
+    CGContextSetFillColorWithColor(context, _backColor.CGColor);
+    [self drawRectangle:backFrame cornerRadius:self.trackCornerRadius context:context];
 
     CGContextSetBlendMode(context, kCGBlendModeNormal);
-    
-    if (false && _minimumUndottedValue > -1) {
-    } else {
-        CGContextSetFillColorWithColor(context, _trackColor.CGColor);
-        [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
-    }
+
+    CGContextSetFillColorWithColor(context, _trackColor.CGColor);
+    [self drawRectangle:trackFrame cornerRadius:self.trackCornerRadius context:context];
     
     if (!_startHidden || self.displayEdges)
     {
@@ -644,14 +597,14 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     totalLength -= _knobPadding * 2;
     
     CGFloat previousValue = self.value;
-    if (self.positionsCount > 1)
+    if (self.positionsCount > 1 && !self.disableSnapToPositions)
     {
         NSInteger position = (NSInteger)round((_knobDragCenter / totalLength) * (self.positionsCount - 1));
         _knobDragCenter = position * totalLength / (self.positionsCount - 1);
     }
     
     [self setValue:[self valueForCenterPosition:_knobDragCenter totalLength:totalLength knobSize:_knobView.image.size.width vertical:vertical]];
-    if (previousValue != self.value && (self.positionsCount > 1 || self.value == self.minimumValue || self.value == self.maximumValue || (self.minimumValue != self.startValue && self.value == self.startValue)))
+    if (previousValue != self.value && !self.disableSnapToPositions && (self.positionsCount > 1 || self.value == self.minimumValue || self.value == self.maximumValue || (self.minimumValue != self.startValue && self.value == self.startValue)))
     {
         [_feedbackGenerator selectionChanged];
         [_feedbackGenerator prepare];

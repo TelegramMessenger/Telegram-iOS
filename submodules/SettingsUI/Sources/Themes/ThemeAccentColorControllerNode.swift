@@ -183,7 +183,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var currentBackgroundColors: ([UInt32], Int32?)?
+    private var currentBackgroundColors: ([UInt32], Int32?, Int32?)?
     private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
     
     private var patternWallpaper: TelegramWallpaper?
@@ -506,11 +506,24 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !preview {
                 if !backgroundColors.isEmpty {
-                    strongSelf.currentBackgroundColors = (backgroundColors, strongSelf.state.rotation)
+                    strongSelf.currentBackgroundColors = (backgroundColors, strongSelf.state.rotation, strongSelf.state.patternIntensity)
                 } else {
                     strongSelf.currentBackgroundColors = nil
                 }
                 strongSelf.patternPanelNode.backgroundColors = strongSelf.currentBackgroundColors
+            } else {
+                let previousIntensity = strongSelf.patternPanelNode.backgroundColors?.2
+                let updatedIntensity = strongSelf.state.patternIntensity
+                if let previousIntensity = previousIntensity {
+                    if (previousIntensity < 0) != (updatedIntensity < 0) {
+                        if !backgroundColors.isEmpty {
+                            strongSelf.currentBackgroundColors = (backgroundColors, strongSelf.state.rotation, strongSelf.state.patternIntensity)
+                        } else {
+                            strongSelf.currentBackgroundColors = nil
+                        }
+                        strongSelf.patternPanelNode.backgroundColors = strongSelf.currentBackgroundColors
+                    }
+                }
             }
 
             if let _ = theme, let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
