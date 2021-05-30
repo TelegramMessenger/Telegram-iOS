@@ -156,7 +156,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     private var phase: Int = 0
 
-    private let contentView: UIImageView
+    public let contentView: UIImageView
     private var validPhase: Int?
     private var invalidated: Bool = false
 

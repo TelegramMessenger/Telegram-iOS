@@ -64,8 +64,9 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private weak var backgroundNode: WallpaperBackgroundNode?
     
     private var maskView: UIImageView?
-
     private var fixedMaskMode: Bool?
+
+    private var absolutePosition: (CGRect, CGSize)?
     
     var hasImage: Bool {
         return self.backgroundContent != nil
@@ -145,12 +146,18 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                 case .incoming:
                     if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .incoming) {
                         backgroundContent.frame = self.bounds
+                        if let (rect, containerSize) = self.absolutePosition {
+                            backgroundContent.update(rect: rect, within: containerSize)
+                        }
                         self.backgroundContent = backgroundContent
                         self.insertSubnode(backgroundContent, at: 0)
                     }
                 case .outgoing:
                     if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .outgoing) {
                         backgroundContent.frame = self.bounds
+                        if let (rect, containerSize) = self.absolutePosition {
+                            backgroundContent.update(rect: rect, within: containerSize)
+                        }
                         self.backgroundContent = backgroundContent
                         self.insertSubnode(backgroundContent, at: 0)
                     }
@@ -164,18 +171,15 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     }
     
     func update(rect: CGRect, within containerSize: CGSize) {
-        //self.backgroundContent.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+        self.absolutePosition = (rect, containerSize)
         self.backgroundContent?.update(rect: rect, within: containerSize)
     }
     
     func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        //let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-        //transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: -value.x, y: -value.y))
         self.backgroundContent?.offset(value: value, animationCurve: animationCurve, duration: duration)
     }
     
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-        //self.backgroundContent.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
         self.backgroundContent?.offsetSpring(value: value, duration: duration, damping: damping)
     }
     

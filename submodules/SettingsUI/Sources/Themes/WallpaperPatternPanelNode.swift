@@ -263,8 +263,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.lineSize = 2.0
         sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
-        sliderView.maximumValue = 100.0
-        sliderView.value = 40.0
+        sliderView.maximumValue = 200.0
+        sliderView.value = 150.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
         sliderView.backColor = self.theme.list.disclosureArrowColor
@@ -312,7 +312,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 if let strongSelf = self {
                     strongSelf.currentWallpaper = updatedWallpaper
                     if let sliderView = strongSelf.sliderView {
-                        strongSelf.patternChanged?(updatedWallpaper, Int32(sliderView.value), false)
+                        strongSelf.patternChanged?(updatedWallpaper, Int32(sliderView.value - 100.0), false)
                     }
                     if let subnodes = strongSelf.scrollNode.subnodes {
                         for case let subnode as SettingsThemeWallpaperNode in subnodes {
@@ -354,7 +354,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
         
         if let wallpaper = self.currentWallpaper {
-            self.patternChanged?(wallpaper, Int32(sliderView.value), sliderView.isTracking)
+            self.patternChanged?(wallpaper, Int32(sliderView.value - 100.0), sliderView.isTracking)
         }
     }
     
@@ -368,7 +368,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity ?? 50)
+            self.sliderView?.value = CGFloat(intensity.flatMap { $0 + 100 } ?? 150)
             
             self.scrollNode.view.contentOffset = CGPoint()
             
@@ -385,7 +385,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
                         
             if initialWallpaper == nil, let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
-                self.patternChanged?(wallpaper, Int32(sliderView.value), false)
+                self.patternChanged?(wallpaper, Int32(sliderView.value - 100.0), false)
             }
             
             if let selectedNode = selectedNode {

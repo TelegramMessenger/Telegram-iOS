@@ -246,7 +246,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true
-        self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        self.messagesContainerNode.transform = CATransform3DMakeScale(-1.0, -1.0, 1.0)
         
         self.colorPanelNode = WallpaperColorPanelNode(theme: self.theme, strings: self.presentationData.strings)
         self.patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: self.theme, strings: self.presentationData.strings)
@@ -400,12 +400,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
 
+        self.backgroundNode.update(wallpaper: self.wallpaper)
+        self.backgroundNode.updateBubbleTheme(bubbleTheme: self.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
+
         self.stateDisposable = (self.statePromise.get()
         |> deliverOn(self.queue)
         |> mapToThrottled { next -> Signal<ThemeColorState, NoError> in
             return .single(next) |> then(.complete() |> delay(0.0166667, queue: self.queue))
         }
-        |> map { [weak self] state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], PatternWallpaperArguments, Bool) in
+        |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], PatternWallpaperArguments, Bool) in
             let accentColor = state.accentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
@@ -494,6 +497,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.serviceBackgroundColorPromise.set(.single(serviceBackgroundColor))
 
             strongSelf.backgroundNode.update(wallpaper: wallpaper)
+            strongSelf.backgroundNode.updateBubbleTheme(bubbleTheme: strongSelf.theme, bubbleCorners: strongSelf.presentationData.chatBubbleCorners)
 
             strongSelf.ready.set(.single(true))
 
@@ -871,7 +875,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     itemNode = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
-                itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                //itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 messageNodes.append(itemNode!)
                 self.messagesContainerNode.addSubnode(itemNode!)
             }
@@ -881,9 +885,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         var bottomOffset: CGFloat = 9.0 + bottomInset
         if let messageNodes = self.messageNodes {
             for itemNode in messageNodes {
+                let previousFrame = itemNode.frame
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
                 bottomOffset += itemNode.frame.height
                 itemNode.updateFrame(itemNode.frame, within: layout.size)
+                if case let .animated(duration, curve) = transition {
+                    itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -itemNode.frame.minY + previousFrame.minY), animationCurve: curve, duration: duration)
+                }
             }
         }
         
@@ -893,7 +901,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
         } else {
             dateHeaderNode = headerItem.node()
-            dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+            //dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode
         }
@@ -954,7 +962,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
         
-        transition.updateFrame(node: self.messagesContainerNode, frame: CGRect(x: 0.0, y: navigationBarHeight, width: bounds.width, height: bounds.height - bottomInset - navigationBarHeight))
+        transition.updateBounds(node: self.messagesContainerNode, bounds: CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height))
+        transition.updatePosition(node: self.messagesContainerNode, position: CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height).center)
         
         let backgroundSize = CGSize(width: bounds.width, height: bounds.height - (colorPanelHeight - colorPanelOffset))
         transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(), size: backgroundSize))
@@ -967,12 +976,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateBounds(node: self.backgroundWrapperNode, bounds: CGRect(origin: CGPoint(), size: layout.size))
     
         let displayOptionButtons = self.state.section == .background
-        var messagesBottomInset: CGFloat = 0.0
+        var messagesBottomInset: CGFloat = bottomInset
         
         if displayOptionButtons {
-            messagesBottomInset = 46.0
+            messagesBottomInset += 46.0
         } else if chatListPreviewAvailable {
-            messagesBottomInset = 37.0
+            messagesBottomInset += 37.0
         }
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
         self.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: messagesTransition)

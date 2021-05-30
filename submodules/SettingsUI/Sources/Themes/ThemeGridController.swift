@@ -375,7 +375,9 @@ final class ThemeGridController: ViewController {
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         self.searchContentNode?.setIsEnabled(false, animated: true)
         self.controllerNode.updateState { state in
-            return state.withUpdatedEditing(true)
+            var state = state
+            state.editing = true
+            return state
         }
     }
     
@@ -384,7 +386,9 @@ final class ThemeGridController: ViewController {
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         self.searchContentNode?.setIsEnabled(true, animated: true)
         self.controllerNode.updateState { state in
-            return state.withUpdatedEditing(false)
+            var state = state
+            state.editing = false
+            return state
         }
     }
 }

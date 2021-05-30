@@ -174,6 +174,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedPeerExportedInvitations.self, f: { CachedPeerExportedInvitations(decoder: $0) })
     declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
     declareEncodable(CachedDisplayAsPeers.self, f: { CachedDisplayAsPeers(decoder: $0) })
+    declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
     
     return
 }()

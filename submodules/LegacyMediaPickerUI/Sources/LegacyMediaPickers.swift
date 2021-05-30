@@ -20,8 +20,6 @@ public func guessMimeTypeByFileExtension(_ ext: String) -> String {
 }
 
 public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, chatLocation: ChatLocation, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?) {
-    let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
-    
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.presentStickersController = { completion in
         return presentStickers({ file, animated, view, rect in

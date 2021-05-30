@@ -336,7 +336,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            signal = solidColorImage(UIColor(rgb: color))
+                            signal = .single({ _ in nil })
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -346,11 +346,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .gradient(colors, settings):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            if colors.count >= 2 {
-                                signal = gradientImage([UIColor(rgb: colors[0]), UIColor(rgb: colors[1])], rotation: settings.rotation)
-                            } else {
-                                signal = solidColorImage(UIColor(rgb: colors[0]))
-                            }
+                            signal = .single({ _ in nil })
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -389,7 +385,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
-                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.colors != previousFile.settings.colors || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
+                                /*if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.colors != previousFile.settings.colors || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
                                     
                                     let makeImageLayout = self.imageNode.asyncLayout()
                                     Queue.concurrentDefaultQueue().async {
@@ -405,15 +401,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     return
                                 } else {
                                     patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
-                                }
+                                }*/
                                 
                                 self.colorPreview = self.arguments.colorPreview
 
-                                if file.settings.colors.count >= 3 {
+                                signal = .single({ _ in nil })
+                                /*if file.settings.colors.count >= 3 {
                                     signal = .single({ _ in nil })
                                 } else {
                                     signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                                }
+                                }*/
                                 colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false

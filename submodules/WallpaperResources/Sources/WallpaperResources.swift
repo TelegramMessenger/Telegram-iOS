@@ -314,6 +314,9 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
         let array = NSMutableArray()
         array.addObjects(from: self.colors)
         array.add(NSNumber(value: self.rotation ?? 0))
+        if let customPatternColor = customPatternColor {
+            array.add(NSNumber(value: customPatternColor.argb))
+        }
         array.add(NSNumber(value: self.preview))
         return array
     }
@@ -500,7 +503,11 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.interpolationQuality = customArguments.preview ? .low : .medium
                         c.clip(to: fittedRect, mask: image)
 
-                        c.setBlendMode(.normal)
+                        if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                            c.setBlendMode(.copy)
+                        } else {
+                            c.setBlendMode(.normal)
+                        }
 
                         if colors.count >= 3 && customArguments.customPatternColor == nil {
                             c.setBlendMode(.softLight)

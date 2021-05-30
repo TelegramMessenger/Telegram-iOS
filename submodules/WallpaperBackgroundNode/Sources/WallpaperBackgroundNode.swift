@@ -28,6 +28,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         private weak var backgroundNode: WallpaperBackgroundNode?
         private var index: SparseBag<BubbleBackgroundNode>.Index?
 
+        private var currentLayout: (rect: CGRect, containerSize: CGSize)?
+
         init(backgroundNode: WallpaperBackgroundNode, bubbleType: BubbleType) {
             self.backgroundNode = backgroundNode
             self.bubbleType = bubbleType
@@ -135,9 +137,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     cleanWallpaperNode.removeFromSupernode()
                 }
             }
+
+            if let (rect, containerSize) = self.currentLayout {
+                self.update(rect: rect, within: containerSize)
+            }
         }
 
         public func update(rect: CGRect, within containerSize: CGSize) {
+            self.currentLayout = (rect, containerSize)
+
             self.contentNode.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
             if let cleanWallpaperNode = self.cleanWallpaperNode {
                 cleanWallpaperNode.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
@@ -183,6 +191,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private let contentNode: ASDisplayNode
     private var gradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: TransformImageNode
+    private var invertPattern: Bool = false
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
@@ -255,7 +264,6 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode.contentMode = self.imageContentMode
 
         self.patternImageNode = TransformImageNode()
-        self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
         
         super.init()
         
@@ -369,10 +377,31 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                 self.patternImageNode.setSignal(signal)
             }
-            self.patternImageNode.alpha = CGFloat(settings.intensity ?? 50) / 100.0
+            let intensity = CGFloat(settings.intensity ?? 50) / 100.0
+            if intensity < 0 {
+                self.patternImageNode.alpha = 1.0
+                self.patternImageNode.layer.compositingFilter = nil
+            } else {
+                self.patternImageNode.alpha = intensity
+                self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
+            }
             self.patternImageNode.isHidden = false
+            self.invertPattern = intensity < 0
+            if self.invertPattern {
+                self.backgroundColor = .black
+                let contentAlpha = abs(intensity)
+                self.gradientBackgroundNode?.contentView.alpha = contentAlpha
+                self.contentNode.alpha = contentAlpha
+            } else {
+                self.backgroundColor = nil
+                self.gradientBackgroundNode?.contentView.alpha = 1.0
+                self.contentNode.alpha = 1.0
+            }
         default:
             self.patternImageNode.isHidden = true
+            self.backgroundColor = nil
+            self.gradientBackgroundNode?.contentView.alpha = 1.0
+            self.contentNode.alpha = 1.0
         }
 
         self.updateBubbles()
@@ -395,7 +424,16 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
 
         let makeImageLayout = self.patternImageNode.asyncLayout()
-        let applyImage = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: .black, preview: false)))
+        let patternBackgroundColor: UIColor
+        let patternColor: UIColor
+        if self.invertPattern {
+            patternColor = .clear
+            patternBackgroundColor = .black
+        } else {
+            patternColor = .black
+            patternBackgroundColor = .clear
+        }
+        let applyImage = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false)))
         applyImage()
         transition.updateFrame(node: self.patternImageNode, frame: CGRect(origin: CGPoint(), size: size))
         

@@ -75,10 +75,12 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
 
         var colors: [UInt32] = []
+        var intensity: CGFloat = 0.5
         if case let .gradient(value, _) = wallpaper {
             colors = value
         } else if case let .file(file) = wallpaper {
             colors = file.settings.colors
+            intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
         } else if case let .color(color) = wallpaper {
             colors = [color]
         }
@@ -93,7 +95,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 self.insertSubnode(gradientNode, belowSubnode: self.imageNode)
             }
 
-            self.imageNode.layer.compositingFilter = "softLightBlendMode"
+            if intensity < 0.0 {
+                self.imageNode.layer.compositingFilter = nil
+            } else {
+                self.imageNode.layer.compositingFilter = "softLightBlendMode"
+            }
             self.backgroundNode.image = nil
         } else {
             if let gradientNode = self.gradientNode {
@@ -101,13 +107,17 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 gradientNode.removeFromSupernode()
             }
 
-            if colors.count >= 2 {
+            if intensity < 0.0 {
+                self.imageNode.layer.compositingFilter = nil
+            } else {
                 self.imageNode.layer.compositingFilter = "softLightBlendMode"
+            }
+
+            if colors.count >= 2 {
                 self.backgroundNode.image = generateGradientImage(size: CGSize(width: 80.0, height: 80.0), colors: colors.map(UIColor.init(rgb:)), locations: [0.0, 1.0], direction: .vertical)
                 self.backgroundNode.backgroundColor = nil
             } else if colors.count >= 1 {
                 self.backgroundNode.image = nil
-                self.imageNode.layer.compositingFilter = "softLightBlendMode"
                 self.backgroundNode.backgroundColor = UIColor(rgb: colors[0])
             }
         }
@@ -147,24 +157,20 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                     if wallpaper.isPattern {
-                        var patternColors: [UIColor] = []
-                        var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                         var patternIntensity: CGFloat = 0.5
                         if !file.settings.colors.isEmpty {
                             if let intensity = file.settings.intensity {
                                 patternIntensity = CGFloat(intensity) / 100.0
                             }
-                            patternColor = UIColor(rgb: file.settings.colors[0], alpha: patternIntensity)
-                            patternColors.append(patternColor)
-                            
-                            if file.settings.colors.count >= 2 {
-                                patternColors.append(UIColor(rgb: file.settings.colors[1], alpha: patternIntensity))
-                            }
                         }
 
-                        self.imageNode.alpha = CGFloat(file.settings.intensity ?? 50) / 100.0
-
-                        self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0))
+                        if patternIntensity < 0.0 {
+                            self.imageNode.alpha = 1.0
+                            self.arguments = PatternWallpaperArguments(colors: [.black], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0 + patternIntensity))
+                        } else {
+                            self.imageNode.alpha = CGFloat(file.settings.intensity ?? 50) / 100.0
+                            self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0))
+                        }
                         imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.imageNode.alpha = 1.0
