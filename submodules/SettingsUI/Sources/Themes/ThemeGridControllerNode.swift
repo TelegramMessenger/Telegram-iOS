@@ -246,8 +246,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let wallpapersPromise = Promise<[Wallpaper]>()
         self.wallpapersPromise = wallpapersPromise
         
-        let deletedWallpaperSlugsValue = Atomic<Set<String>>(value: Set())
-        let deletedWallpaperSlugsPromise = ValuePromise<Set<String>>(Set())
+        let deletedWallpaperIdsValue = Atomic<Set<ThemeGridControllerEntry.StableId>>(value: Set())
+        let deletedWallpaperIdsPromise = ValuePromise<Set<ThemeGridControllerEntry.StableId>>(Set())
         
         super.init()
         
@@ -306,16 +306,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
 
                 deleteWallpapers(wallpapers, { [weak self] in
                     if let strongSelf = self {
-                        var updatedDeletedSlugs = deletedWallpaperSlugsValue.with { $0 }
+                        var updatedDeletedIds = deletedWallpaperIdsValue.with { $0 }
                         
                         for entry in entries {
-                            if case let .file(file) = entry.wallpaper, strongSelf.currentState.selectedIds.contains(entry.stableId) {
-                                updatedDeletedSlugs.insert(file.slug)
+                            if strongSelf.currentState.selectedIds.contains(entry.stableId) {
+                                updatedDeletedIds.insert(entry.stableId)
                             }
                         }
                         
-                        let _ = deletedWallpaperSlugsValue.swap(updatedDeletedSlugs)
-                        deletedWallpaperSlugsPromise.set(updatedDeletedSlugs)
+                        let _ = deletedWallpaperIdsValue.swap(updatedDeletedIds)
+                        deletedWallpaperIdsPromise.set(updatedDeletedIds)
 
                         let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
                             WallpapersState.update(transaction: transaction, { state in
@@ -341,8 +341,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let transition = combineLatest(self.wallpapersPromise.get(), deletedWallpaperSlugsPromise.get(), context.sharedContext.presentationData)
-        |> map { wallpapers, deletedWallpaperSlugs, presentationData -> (ThemeGridEntryTransition, Bool) in
+        let transition = combineLatest(self.wallpapersPromise.get(), deletedWallpaperIdsPromise.get(), context.sharedContext.presentationData)
+        |> map { wallpapers, deletedWallpaperIds, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
             
@@ -399,7 +399,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.colors.isEmpty) {
+                if case let .file(file) = wallpaper, (wallpaper.isPattern && file.settings.colors.isEmpty) {
                     continue
                 }
                 let selected = presentationData.chatWallpaper.isBasicallyEqual(to: wallpaper)
@@ -416,6 +416,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 }
                 if !selected && !isDefault {
                     let entry = ThemeGridControllerEntry(index: index, wallpaper: wallpaper, isEditable: isEditable, isSelected: false)
+                    if deletedWallpaperIds.contains(entry.stableId) {
+                        continue
+                    }
                     if !entries.contains(where: { $0.stableId == entry.stableId }) {
                         entries.append(entry)
                         index += 1

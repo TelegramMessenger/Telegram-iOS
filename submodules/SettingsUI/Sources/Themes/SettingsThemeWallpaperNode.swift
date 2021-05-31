@@ -166,7 +166,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
                         if patternIntensity < 0.0 {
                             self.imageNode.alpha = 1.0
-                            self.arguments = PatternWallpaperArguments(colors: [.black], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0 + patternIntensity))
+                            self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0 + patternIntensity))
                         } else {
                             self.imageNode.alpha = CGFloat(file.settings.intensity ?? 50) / 100.0
                             self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0))

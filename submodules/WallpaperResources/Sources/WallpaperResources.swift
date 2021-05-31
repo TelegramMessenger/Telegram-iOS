@@ -450,7 +450,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                 let context = DrawingContext(size: arguments.drawingSize, scale: fullSizeImage == nil ? 1.0 : scale, clear: !arguments.corners.isEmpty)
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
-                    
+
                     if colors.count == 1 {
                         if customArguments.colors[0].alpha.isZero {
                             c.clear(arguments.drawingRect)
@@ -486,53 +486,71 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                         c.restoreGState()
                     }
-                    
-                    let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
-                    if let image = image {
-                        var fittedSize = CGSize(width: image.width, height: image.height)
-                        if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
-                            fittedSize.width = arguments.boundingSize.width
-                        }
-                        if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
-                            fittedSize.height = arguments.boundingSize.height
-                        }
-                        fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
-                        
-                        let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
 
-                        c.interpolationQuality = customArguments.preview ? .low : .medium
-                        c.clip(to: fittedRect, mask: image)
-
-                        if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
-                            c.setBlendMode(.copy)
-                        } else {
-                            c.setBlendMode(.normal)
-                        }
-
-                        if colors.count >= 3 && customArguments.customPatternColor == nil {
-                            c.setBlendMode(.softLight)
-                            c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-                            c.fill(arguments.drawingRect)
-                        } else if colors.count == 1 {
-                            c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
-                            c.fill(arguments.drawingRect)
-                        } else {
-                            let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
-                            let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-                            
-                            var locations: [CGFloat] = []
-                            for i in 0 ..< colors.count {
-                                locations.append(delta * CGFloat(i))
+                    let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
+                        c.clear(CGRect(origin: CGPoint(), size: size))
+                        let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
+                        if let image = image {
+                            var fittedSize = CGSize(width: image.width, height: image.height)
+                            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                                fittedSize.width = arguments.boundingSize.width
                             }
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                            
-                            c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
-                            c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
-                            c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
-                            
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                                fittedSize.height = arguments.boundingSize.height
+                            }
+                            fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+
+                            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+
+                            if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                                c.setBlendMode(.copy)
+                                c.setFillColor(UIColor.black.cgColor)
+                                c.fill(CGRect(origin: CGPoint(), size: size))
+                            } else {
+                                c.setBlendMode(.normal)
+                            }
+
+                            c.interpolationQuality = customArguments.preview ? .low : .medium
+                            c.clip(to: fittedRect, mask: image)
+
+                            if colors.count >= 3 && customArguments.customPatternColor == nil {
+                                c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                            } else if colors.count == 1 {
+                                c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
+                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                            } else {
+                                let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
+                                let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
+
+                                var locations: [CGFloat] = []
+                                for i in 0 ..< colors.count {
+                                    locations.append(delta * CGFloat(i))
+                                }
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                                c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
+                                c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
+                                c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
+
+                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                            }
                         }
+                    })
+                    if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                        c.setBlendMode(.normal)
+                    } else {
+                        c.setBlendMode(.softLight)
+                    }
+                    if let overlayImage = overlayImage {
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.draw(overlayImage.cgImage!, in: drawingRect)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                     }
                 }
                 addCorners(context, arguments: arguments)
@@ -818,11 +836,16 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             }
         case let .file(file):
-            c.setFillColor(theme.chatList.backgroundColor.cgColor)
-            if let image = wallpaperImage, let cgImage = image.cgImage {
-                let size = image.size.aspectFilled(drawingRect.size)
-                c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
+            if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
+                c.setFillColor(UIColor.black.cgColor)
+                c.fill(CGRect(origin: CGPoint(), size: size))
+            } else {
+                if let image = wallpaperImage, let cgImage = image.cgImage {
+                    let size = image.size.aspectFilled(drawingRect.size)
+                    c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
+                }
             }
+            c.setFillColor(theme.chatList.backgroundColor.cgColor)
         default:
             break
     }
@@ -1223,14 +1246,20 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     }
                     rotation = settings.rotation
                 case let .file(file):
-                    colors = file.settings.colors
-                    if !file.settings.colors.isEmpty {
-                        topBackgroundColor = UIColor(rgb: file.settings.colors[0])
-                        if file.settings.colors.count >= 2 {
-                            bottomBackgroundColor = UIColor(rgb: file.settings.colors[1])
+                    if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
+                        colors = [0x000000]
+                        topBackgroundColor = .black
+                        bottomBackgroundColor = .black
+                    } else {
+                        colors = file.settings.colors
+                        if !file.settings.colors.isEmpty {
+                            topBackgroundColor = UIColor(rgb: file.settings.colors[0])
+                            if file.settings.colors.count >= 2 {
+                                bottomBackgroundColor = UIColor(rgb: file.settings.colors[1])
+                            }
                         }
+                        rotation = file.settings.rotation
                     }
-                    rotation = file.settings.rotation
                 default:
                     colors = [0xd6e2ee]
                     topBackgroundColor = UIColor(rgb: 0xd6e2ee)
@@ -1297,7 +1326,9 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         backgroundColor = (.black, nil, [])
                     case let .file(file):
                         rotation = file.settings.rotation
-                        if !file.settings.colors.isEmpty {
+                        if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
+                            backgroundColor = (.black, nil, [])
+                        } else if !file.settings.colors.isEmpty {
                             var bottomColor: UIColor?
                             if file.settings.colors.count >= 2 {
                                 bottomColor = UIColor(rgb: file.settings.colors[1])
@@ -1330,9 +1361,13 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     
                                     if wallpaper.wallpaper.isPattern {
                                         if !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
-                                            |> mapToSignal { _ in
-                                                return .single((effectiveBackgroundColor, incomingColor, outgoingColor, nil, rotation))
+                                            if intensity < 0 {
+                                                return .single(((.black, nil, []), incomingColor, outgoingColor, nil, rotation))
+                                            } else {
+                                                return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
+                                                |> mapToSignal { _ in
+                                                    return .single((effectiveBackgroundColor, incomingColor, outgoingColor, nil, rotation))
+                                                }
                                             }
                                         } else {
                                             return .complete()

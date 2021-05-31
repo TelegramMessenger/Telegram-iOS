@@ -623,12 +623,12 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
                         var accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
-                        if let customThemeIndex = accentColor?.themeIndex {
+                        /*if let customThemeIndex = accentColor?.themeIndex {
                             if let customTheme = themes[customThemeIndex] {
                                 theme = customTheme
                             }
                             accentColor = nil
-                        }
+                        }*/
 
                         var themeWallpaper: TelegramWallpaper?
                         if case let .cloud(theme) = theme {

@@ -428,7 +428,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         let patternColor: UIColor
         if self.invertPattern {
             patternColor = .clear
-            patternBackgroundColor = .black
+            patternBackgroundColor = .clear
         } else {
             patternColor = .black
             patternBackgroundColor = .clear

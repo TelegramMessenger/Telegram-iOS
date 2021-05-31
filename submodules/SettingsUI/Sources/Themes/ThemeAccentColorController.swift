@@ -156,9 +156,9 @@ final class ThemeAccentColorController: ViewController {
                 var coloredWallpaper: TelegramWallpaper?
                 if !state.backgroundColors.isEmpty {
                     if let patternWallpaper = state.patternWallpaper {
-                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, colors: state.backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: state.backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
                     } else if state.backgroundColors.count >= 2 {
-                        coloredWallpaper = .gradient(state.backgroundColors, WallpaperSettings(motion: state.motion, rotation: state.rotation))
+                        coloredWallpaper = .gradient(state.backgroundColors, WallpaperSettings(rotation: state.rotation))
                     } else {
                         coloredWallpaper = .color(state.backgroundColors[0])
                     }
@@ -602,7 +602,7 @@ final class ThemeAccentColorController: ViewController {
                 messageColors = nil
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, motion: motion, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors, rotation: rotation)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors, rotation: rotation)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState

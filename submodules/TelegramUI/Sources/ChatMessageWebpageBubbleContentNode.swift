@@ -173,11 +173,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if webpage.type == "telegram_background" {
                         var colors: [UInt32] = []
                         var rotation: Int32?
-                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, colorsValue, intensity, rotationValue) = wallpaper {
+                        var intensity: Int32?
+                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, colorsValue, intensityValue, rotationValue) = wallpaper {
                             colors = colorsValue
                             rotation = rotationValue
+                            intensity = intensityValue
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, colors, rotation, false, false))
+                        let media = WallpaperPreviewMedia(content: .file(file: file, colors: colors, rotation: rotation, intensity: intensity, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
@@ -251,7 +253,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             file = contentFile
                         }
                         if let file = file {
-                            let media = WallpaperPreviewMedia(content: .file(file, [], nil, true, isSupported))
+                            let media = WallpaperPreviewMedia(content: .file(file: file, colors: [],  rotation: nil, intensity: nil, true, isSupported))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         } else if let settings = settings {
                             let media = WallpaperPreviewMedia(content: .themeSettings(settings))

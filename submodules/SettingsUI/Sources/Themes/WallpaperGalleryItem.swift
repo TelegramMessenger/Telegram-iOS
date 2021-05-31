@@ -308,6 +308,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                     }
+                } else if case .color = wallpaper {
+                    self.nativeNode.isHidden = false
+                    self.nativeNode.update(wallpaper: wallpaper)
+                    self.patternButtonNode.isSelected = false
                 } else {
                     self.nativeNode.isHidden = true
                     self.patternButtonNode.isSelected = false

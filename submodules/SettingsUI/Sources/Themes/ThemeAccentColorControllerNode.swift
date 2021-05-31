@@ -48,7 +48,6 @@ struct ThemeColorState {
     fileprivate var previousPatternWallpaper: TelegramWallpaper?
     var patternWallpaper: TelegramWallpaper?
     var patternIntensity: Int32
-    var motion: Bool
     
     var defaultMessagesColor: UIColor?
     var messagesColors: (UIColor, UIColor?)?
@@ -66,13 +65,12 @@ struct ThemeColorState {
         self.previousPatternWallpaper = nil
         self.patternWallpaper = nil
         self.patternIntensity = 50
-        self.motion = false
         self.defaultMessagesColor = nil
         self.messagesColors = nil
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, motion: Bool, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?, rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?, rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
@@ -83,7 +81,6 @@ struct ThemeColorState {
         self.previousPatternWallpaper = nil
         self.patternWallpaper = patternWallpaper
         self.patternIntensity = patternIntensity
-        self.motion = motion
         self.defaultMessagesColor = defaultMessagesColor
         self.messagesColors = messagesColors
         self.rotation = rotation
@@ -159,7 +156,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let scrollNode: ASScrollNode
     private let pageControlBackgroundNode: ASDisplayNode
     private let pageControlNode: PageControlNode
-    private var motionButtonNode: WallpaperOptionButtonNode
     private var patternButtonNode: WallpaperOptionButtonNode
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
@@ -233,8 +229,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.pageControlBackgroundNode.cornerRadius = 10.5
         
         self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
-        
-        self.motionButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Motion, value: .check(false))
+
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         
         self.chatListBackgroundNode = ASDisplayNode()
@@ -280,7 +275,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.chatListBackgroundNode.addSubnode(self.maskNode)
         self.addSubnode(self.pageControlBackgroundNode)
         self.addSubnode(self.pageControlNode)
-        self.addSubnode(self.motionButtonNode)
         self.addSubnode(self.patternButtonNode)
         self.addSubnode(self.colorPanelNode)
         self.addSubnode(self.patternPanelNode)
@@ -292,21 +286,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.backgroundContainerNode.addSubnode(self.backgroundWrapperNode)
         self.backgroundWrapperNode.addSubnode(self.backgroundNode)
-        
-        self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
+
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
-               
-        /*self.colorPanelNode.colorAdded = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
-            }
-        }
-        
-        self.colorPanelNode.colorRemoved = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
-            }
-        }*/
         
         self.colorPanelNode.colorsChanged = { [weak self] colors, ended in
             if let strongSelf = self, let section = strongSelf.state.section {
@@ -422,7 +403,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !backgroundColors.isEmpty {
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper {
-                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, colors: backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
 
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -543,7 +524,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.patternPanelNode.serviceBackgroundColor = color
                 strongSelf.pageControlBackgroundNode.backgroundColor = color
                 strongSelf.patternButtonNode.buttonColor = color
-                strongSelf.motionButtonNode.buttonColor = color
             }
         })
     }
@@ -592,11 +572,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         if (previousState.patternWallpaper != nil) != (self.state.patternWallpaper != nil) {
             self.patternButtonNode.setSelected(self.state.patternWallpaper != nil, animated: animated)
-        }
-        
-        if previousState.motion != self.state.motion {
-            self.motionButtonNode.setSelected(self.state.motion, animated: animated)
-            self.setMotionEnabled(self.state.motion, animated: animated)
         }
         
         let sectionChanged = previousState.section != self.state.section
@@ -1012,42 +987,19 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - bottomInset - 80.0, width: bounds.width, height: 80.0))
         
         let patternButtonSize = self.patternButtonNode.measure(layout.size)
-        let motionButtonSize = self.motionButtonNode.measure(layout.size)
-        let maxButtonWidth = max(patternButtonSize.width, motionButtonSize.width)
+        let maxButtonWidth = patternButtonSize.width
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
         
         let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
         let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
         let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
-
-        var hasMotion: Bool = self.state.patternWallpaper != nil || self.state.displayPatternPanel
-        if self.state.backgroundColors.count >= 3 {
-            hasMotion = false
-        }
         
         var patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
-        var motionAlpha: CGFloat = displayOptionButtons && hasMotion ? 1.0 : 0.0
         
-        var patternFrame = hasMotion ? leftButtonFrame : centerButtonFrame
-        var motionFrame = hasMotion ? rightButtonFrame : centerButtonFrame
+        var patternFrame = centerButtonFrame
         
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha)
-        
-        transition.updateFrame(node: self.motionButtonNode, frame: motionFrame)
-        transition.updateAlpha(node: self.motionButtonNode, alpha: motionAlpha)
-        
-        if isFirstLayout {
-            self.setMotionEnabled(self.state.motion, animated: false)
-        }
-    }
-        
-    @objc private func toggleMotion() {
-        self.updateState({ current in
-            var updated = current
-            updated.motion = !updated.motion
-            return updated
-        }, animated: true)
     }
     
     @objc private func togglePattern() {
@@ -1083,52 +1035,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         if appeared {
             self.patternPanelNode.didAppear(initialWallpaper: wallpaper, intensity: self.state.patternIntensity)
-        }
-    }
-    
-    private let motionAmount: CGFloat = 32.0
-    private func setMotionEnabled(_ enabled: Bool, animated: Bool) {
-        guard let (layout, _, _) = self.validLayout else {
-            return
-        }
-        
-        if enabled {
-            let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
-            horizontal.minimumRelativeValue = motionAmount
-            horizontal.maximumRelativeValue = -motionAmount
-            
-            let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
-            vertical.minimumRelativeValue = motionAmount
-            vertical.maximumRelativeValue = -motionAmount
-            
-            let group = UIMotionEffectGroup()
-            group.motionEffects = [horizontal, vertical]
-            self.backgroundWrapperNode.view.addMotionEffect(group)
-            
-            let scale = (layout.size.width + motionAmount * 2.0) / layout.size.width
-            if animated {
-                self.backgroundWrapperNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
-                self.backgroundWrapperNode.layer.animateScale(from: 1.0, to: scale, duration: 0.2)
-            } else {
-                self.backgroundWrapperNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            }
-        } else {
-            let position = self.backgroundWrapperNode.layer.presentation()?.position
-            
-            for effect in self.backgroundWrapperNode.view.motionEffects {
-                self.backgroundWrapperNode.view.removeMotionEffect(effect)
-            }
-            
-            let scale = (layout.size.width + motionAmount * 2.0) / layout.size.width
-            if animated {
-                self.backgroundWrapperNode.transform = CATransform3DIdentity
-                self.backgroundWrapperNode.layer.animateScale(from: scale, to: 1.0, duration: 0.2)
-                if let position = position {
-                    self.backgroundWrapperNode.layer.animatePosition(from: position, to: self.backgroundWrapperNode.layer.position, duration: 0.2)
-                }
-            } else {
-                self.backgroundWrapperNode.transform = CATransform3DIdentity
-            }
         }
     }
 }
