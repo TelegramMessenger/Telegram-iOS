@@ -251,15 +251,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if wallpaper.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                }/* else if strongSelf.instantChatBackgroundNode.image == nil {
-                    signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
-                        |> afterNext { next in
-                            if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
-                            } else if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
-                            }
-                    }
-                }*/ else {
+                } else {
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)

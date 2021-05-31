@@ -201,6 +201,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var bubbleTheme: PresentationTheme?
     private var bubbleCorners: PresentationChatBubbleCorners?
     private var bubbleBackgroundNodeReferences = SparseBag<BubbleBackgroundNodeReference>()
+
+    private let wallpaperDisposable = MetaDisposable()
     
     private var motionEnabled: Bool = false {
         didSet {
@@ -275,6 +277,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
     deinit {
         self.patternImageDisposable.dispose()
+        self.wallpaperDisposable.dispose()
     }
 
     public func update(wallpaper: TelegramWallpaper) {
@@ -311,6 +314,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
             self.motionEnabled = false
+            self.wallpaperDisposable.set(nil)
         } else {
             if let gradientBackgroundNode = self.gradientBackgroundNode {
                 self.gradientBackgroundNode = nil
@@ -335,12 +339,28 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
                     context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                 })?.cgImage
+                self.wallpaperDisposable.set(nil)
             } else if gradientColors.count >= 1 {
                 self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
                 self.contentNode.contents = nil
+                self.wallpaperDisposable.set(nil)
             } else {
                 self.contentNode.backgroundColor = .white
-                self.contentNode.contents = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false)?.cgImage
+                if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
+                    self.contentNode.contents = image.cgImage
+                    self.wallpaperDisposable.set(nil)
+                } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
+                    self.contentNode.contents = image.cgImage
+                    self.wallpaperDisposable.set(nil)
+                } else {
+                    self.wallpaperDisposable.set((chatControllerBackgroundImageSignal(wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox)
+                    |> deliverOnMainQueue).start(next: { [weak self] image in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.contentNode.contents = image?.0?.cgImage
+                    }))
+                }
                 self.contentNode.isHidden = false
             }
         }

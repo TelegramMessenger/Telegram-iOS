@@ -257,6 +257,23 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             |> afterNext { image in
                                 cacheWallpaper(image?.0)
                             }
+                        } else {
+                            return Signal { subscriber in
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.standalone(resource: file.file.resource)).start()
+                                let data = accountMediaBox.resourceData(file.file.resource).start(next: { data in
+                                    if data.complete {
+                                        if let image = UIImage(contentsOfFile: data.path)?.precomposed() {
+                                            mediaBox.copyResourceData(file.file.resource.id, fromTempPath: data.path)
+                                            subscriber.putNext((image, true))
+                                        }
+                                    }
+                                })
+
+                                return ActionDisposable {
+                                    fetch.dispose()
+                                    data.dispose()
+                                }
+                            }
                         }
                     }
                 }
