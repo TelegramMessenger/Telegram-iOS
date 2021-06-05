@@ -376,6 +376,30 @@ plist_fragment(
     ])
 )
 
+watch_extension_app_id_fragment = """
+    <key>application-identifier</key>
+    <string>{telegram_team_id}.{telegram_bundle_id}.watchkitapp.watchkitextension</string>
+""".format(
+    telegram_team_id=telegram_team_id,
+    telegram_bundle_id=telegram_bundle_id
+)
+
+watch_extension_associated_domains_fragment = """
+<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:nicegram.app</string>
+</array>
+"""
+
+plist_fragment(
+    name = "TelegramWatchEntitlements",
+    extension = "entitlements",
+    template = "".join([
+        watch_extension_app_id_fragment,
+        watch_extension_associated_domains_fragment,
+    ])
+)
+
 filegroup(
     name = "TelegramWatchExtensionResources",
     srcs = glob([
@@ -409,6 +433,7 @@ objc_library(
     srcs = glob([
         "Watch/Extension/**/*.m",
         "Watch/SSignalKit/**/*.m",
+        "Watch/FlickTypeKit/**/*.m",
         "Watch/Bridge/**/*.m",
         "Watch/WatchCommonWatch/**/*.m",
         "Watch/Extension/**/*.h",
@@ -537,6 +562,7 @@ watchos_extension(
         telegram_bundle_id = telegram_bundle_id,
     ),
     bundle_name = "TelegramWatchExtension",
+    entitlements = ":TelegramWatchEntitlements.entitlements",
     infoplists = [
         ":WatchExtensionInfoPlist",
         ":VersionInfoPlist",
