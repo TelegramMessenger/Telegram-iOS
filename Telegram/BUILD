@@ -428,19 +428,20 @@ filegroup(
     ]),
 )
 
+FLICK_TYPE_SRCS = glob(["Watch/FlickTypeKit/**/*.m"])
+
 objc_library(
     name = "TelegramWatchLib",
     srcs = glob([
         "Watch/Extension/**/*.m",
         "Watch/SSignalKit/**/*.m",
-        "Watch/FlickTypeKit/**/*.m",
         "Watch/Bridge/**/*.m",
         "Watch/WatchCommonWatch/**/*.m",
         "Watch/Extension/**/*.h",
         "Watch/SSignalKit/**/*.h",
         "Watch/Bridge/**/*.h",
         "Watch/WatchCommonWatch/**/*.h",
-    ]),
+    ]) + FLICK_TYPE_SRCS,
     copts = [
         "-DTARGET_OS_WATCH=1",
         "-ITelegram/Watch",
