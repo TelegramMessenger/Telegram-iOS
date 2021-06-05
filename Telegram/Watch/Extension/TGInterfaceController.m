@@ -1,5 +1,6 @@
 #import "TGInterfaceController.h"
 #import "WKInterfaceTable+TGDataDrivenTable.h"
+#import "FlickTypeKit/FlickTypeKit.h"
 
 @interface TGInterfaceControllerContext : NSObject
 
@@ -123,7 +124,7 @@
 {
     [self _willPresentController];
     
-    [super presentTextInputControllerWithSuggestions:suggestions allowedInputMode:inputMode completion:completion];
+    [super presentTextInputControllerWithSuggestions:suggestions allowedInputMode:inputMode flickType:FlickTypeModeAsk completion:completion];
 }
 
 - (void)performInterfaceUpdate:(void (^)(bool))updates
