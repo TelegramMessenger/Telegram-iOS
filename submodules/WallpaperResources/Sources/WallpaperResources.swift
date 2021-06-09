@@ -434,6 +434,9 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
         
         return { arguments in
             var scale = scale
+            if scale.isZero {
+                scale = arguments.scale ?? UIScreenScale
+            }
             
             let drawingRect = arguments.drawingRect
          
@@ -513,7 +516,10 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                             c.interpolationQuality = customArguments.preview ? .low : .medium
                             c.clip(to: fittedRect, mask: image)
 
-                            if colors.count >= 3 && customArguments.customPatternColor == nil {
+                            if let customPatternColor = customArguments.customPatternColor {
+                                c.setFillColor(customPatternColor.cgColor)
+                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                            } else if colors.count >= 3 && customArguments.customPatternColor == nil {
                                 c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
                                 c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
                             } else if colors.count == 1 {
@@ -539,6 +545,8 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         }
                     })
                     if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                        c.setBlendMode(.normal)
+                    } else if customArguments.colors.count == 1 && customArguments.colors[0].alpha.isZero {
                         c.setBlendMode(.normal)
                     } else {
                         c.setBlendMode(.softLight)
@@ -1466,5 +1474,102 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             addCorners(context, arguments: arguments)
             return context
         }
+    }
+}
+
+public func wallpaperThumbnail(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, wallpaper: TelegramWallpaper, synchronousLoad: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    switch wallpaper {
+    case let .file(_, _, _, _, _, _, _, file, settings):
+        guard let thumbnail = smallestImageRepresentation(file.previewRepresentations) else {
+            return .single({ _ in nil })
+        }
+        let signal: Signal<Data?, NoError> = Signal { subscriber in
+            let data = account.postbox.mediaBox.resourceData(thumbnail.resource).start(next: { data in
+                if data.complete {
+                    if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                        subscriber.putNext(fileData)
+                    }
+                }
+            })
+            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnail.resource)).start()
+
+            return ActionDisposable {
+                data.dispose()
+                fetch.dispose()
+            }
+        }
+        return signal
+        |> map { thumbnailData in
+            return { arguments in
+                let drawingRect = arguments.drawingRect
+
+                var thumbnailImage: CGImage?
+                if let thumbnailData = thumbnailData {
+                    if let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                        thumbnailImage = image
+                    }
+                }
+
+                let context = DrawingContext(size: arguments.boundingSize, clear: true)
+
+                context.withFlippedContext { c in
+                    let colors = settings.colors.map(UIColor.init(rgb:))
+
+                    if colors.count == 1 {
+                        c.setFillColor(colors[0].cgColor)
+                        c.fill(arguments.drawingRect)
+                    } else if settings.colors.count >= 3 {
+                        let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.draw(image.cgImage!, in: drawingRect)
+                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                    } else if settings.colors.count >= 2 {
+                        let gradientColors = settings.colors.map { UIColor(rgb: $0).cgColor } as CFArray
+                        let delta: CGFloat = 1.0 / (CGFloat(settings.colors.count) - 1.0)
+
+                        var locations: [CGFloat] = []
+                        for i in 0 ..< settings.colors.count {
+                            locations.append(delta * CGFloat(i))
+                        }
+                        let colorSpace = CGColorSpaceCreateDeviceRGB()
+                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                        c.saveGState()
+                        c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
+                        c.rotate(by: CGFloat(settings.rotation ?? 0) * CGFloat.pi / -180.0)
+                        c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
+
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                        c.restoreGState()
+                    }
+
+                    if let thumbnailImage = thumbnailImage {
+                        let fittedSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height).aspectFilled(arguments.boundingSize)
+                        let fittedRect = CGRect(origin: CGPoint(x: (arguments.boundingSize.width - fittedSize.width) / 2.0, y: (arguments.boundingSize.height - fittedSize.height) / 2.0), size: fittedSize)
+
+                        c.clip(to: fittedRect, mask: thumbnailImage)
+
+                        c.setBlendMode(.softLight)
+
+                        if UIColor.average(of: colors).hsb.b > 0.3 {
+                            c.setFillColor(UIColor(white: 0.0, alpha: 0.6).cgColor)
+                        } else {
+                            c.setFillColor(UIColor(white: 1.0, alpha: 0.6).cgColor)
+                        }
+                        c.fill(fittedRect)
+                    }
+                }
+
+                addCorners(context, arguments: arguments)
+
+                return context
+            }
+        }
+    default:
+        return .single({ _ in nil })
     }
 }

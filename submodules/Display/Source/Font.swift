@@ -58,7 +58,13 @@ public struct Font {
     
     public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
         if #available(iOS 13.0, *) {
-            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+            let descriptor: UIFontDescriptor
+            if #available(iOS 14.0, *) {
+                descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+            } else {
+                descriptor = UIFont.systemFont(ofSize: size, weight: weight.weight).fontDescriptor
+            }
+
             var symbolicTraits = descriptor.symbolicTraits
             if traits.contains(.italic) {
                 symbolicTraits.insert(.traitItalic)
@@ -83,10 +89,12 @@ public struct Font {
                 default:
                     updatedDescriptor = updatedDescriptor?.withDesign(.default)
             }
-            if weight != .regular {
-                updatedDescriptor = updatedDescriptor?.addingAttributes([
-                    UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: weight.weight]
-                ])
+            if #available(iOS 14.0, *) {
+                if weight != .regular {
+                    updatedDescriptor = updatedDescriptor?.addingAttributes([
+                        UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: weight.weight]
+                    ])
+                }
             }
          
             if let updatedDescriptor = updatedDescriptor {

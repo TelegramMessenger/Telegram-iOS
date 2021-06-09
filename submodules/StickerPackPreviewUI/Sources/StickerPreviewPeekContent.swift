@@ -70,7 +70,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
-    private var imageNode: TransformImageNode
+    public var imageNode: TransformImageNode
     public var animationNode: AnimatedStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?

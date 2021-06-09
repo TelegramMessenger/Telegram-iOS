@@ -121,7 +121,7 @@ public func peerAvatarCompleteImage(account: Account, peer: Peer, size: CGSize, 
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), round: round, font: font, letters: displayLetters, peerId: peerId)
                 if blurred {
-                    context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.45).cgColor)
+                    context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 }
             })?.withRenderingMode(.alwaysOriginal)

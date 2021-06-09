@@ -3,8 +3,9 @@ import UIKit
 import TelegramCore
 import SyncCore
 import TelegramUIPreferences
+import Postbox
 
-public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
+public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
@@ -30,7 +31,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             let accentColor = accentColor ?? defaultDayAccentColor
             bubbleColors = (accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98), accentColor)
         } else {
-            if let accentColor = accentColor {
+            if let accentColor = accentColor, !accentColor.alpha.isZero {
                 let hsb = accentColor.hsb
                 bubbleColors = (UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
                 if accentColor.lightness > 0.705 {
@@ -38,10 +39,8 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 } else {
                     outgoingAccent = accentColor
                 }
-                
-                let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
-                let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                suggestedWallpaper = .gradient([topColor.argb, bottomColor.argb], WallpaperSettings())
+
+                suggestedWallpaper = .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
                 suggestedWallpaper = .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
@@ -639,7 +638,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x939fab, alpha: 0.5), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: UIColor(rgb: 0x748391, alpha: 0.45), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x939fab, alpha: 0.5), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: UIColor(rgb: 0x000000, alpha: 0.2), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
         unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
         unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
         unreadBarTextColor: UIColor(rgb: 0x86868d),
@@ -712,9 +711,11 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         badgeStrokeColor: UIColor(rgb: 0x007ee5),
         badgeTextColor: UIColor(rgb: 0xffffff)
     )
-    
+
+    let defaultPatternWallpaper: TelegramWallpaper = .file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: "fqv01SQemVIBAAAApND8LDRUhRU", file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 36542425), partialReference: nil, resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 600, height: 800), resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/tgv", size: nil, attributes: []), settings: WallpaperSettings(colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), intensity: 50))
+
     let chat = PresentationThemeChat(
-        defaultWallpaper: day ? .color(0xffffff) : .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings()),
+        defaultWallpaper: day ? .color(0xffffff) : defaultPatternWallpaper,
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,
@@ -809,8 +810,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 }
 
 public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
-    UIColor(rgb: 0x7FA381),
-    UIColor(rgb: 0xFFF5C5),
-    UIColor(rgb: 0x336F55),
-    UIColor(rgb: 0xFBE37D)
+    UIColor(rgb: 0xdbddbb),
+    UIColor(rgb: 0x6ba587),
+    UIColor(rgb: 0xd5d88d),
+    UIColor(rgb: 0x88b884)
 ]

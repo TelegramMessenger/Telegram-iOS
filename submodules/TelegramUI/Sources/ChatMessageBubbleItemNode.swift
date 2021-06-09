@@ -3763,8 +3763,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
     
     private func updateAbsoluteRectInternal(_ rect: CGRect, within containerSize: CGSize) {
-        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + self.backgroundWallpaperNode.frame.minX, y: rect.minY + self.backgroundWallpaperNode.frame.minY), size: rect.size)
-        self.backgroundWallpaperNode.update(rect: mappedRect, within: containerSize)
+        var backgroundWallpaperFrame = self.backgroundWallpaperNode.frame
+        backgroundWallpaperFrame.origin.x += rect.minX
+        backgroundWallpaperFrame.origin.y += rect.minY
+        self.backgroundWallpaperNode.update(rect: backgroundWallpaperFrame, within: containerSize)
+        for contentNode in self.contentNodes {
+            contentNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + contentNode.frame.minX, y: rect.minY + contentNode.frame.minY), size: rect.size), within: containerSize)
+        }
     }
     
     override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
@@ -3775,10 +3780,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     private func applyAbsoluteOffsetInternal(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         self.backgroundWallpaperNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+
+        for contentNode in self.contentNodes {
+            contentNode.applyAbsoluteOffset(value: value, animationCurve: animationCurve, duration: duration)
+        }
     }
     
     private func applyAbsoluteOffsetSpringInternal(value: CGFloat, duration: Double, damping: CGFloat) {
         self.backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
+
+        for contentNode in self.contentNodes {
+            contentNode.applyAbsoluteOffsetSpring(value: value, duration: duration, damping: damping)
+        }
     }
     
     override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {

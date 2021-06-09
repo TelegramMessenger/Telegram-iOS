@@ -371,14 +371,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.historyNodeContainer)
         self.addSubnode(self.navigateButtons)
 
-        if let navigationBar = self.navigationBar {
-            self.addSubnode(navigationBar)
-        }
-
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
 
         self.addSubnode(self.inputContextPanelContainer)
+
+        if let navigationBar = self.navigationBar {
+            self.addSubnode(navigationBar)
+        }
 
         self.addSubnode(self.messageTransitionNode)
         self.addSubnode(self.presentationContextMarker)
@@ -738,7 +738,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelNodeBaseHeight += secondaryInputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
         }
         
-        let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight, layout.safeInsets.top) - inputPanelNodeBaseHeight
+        let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0), layout.safeInsets.top) - inputPanelNodeBaseHeight
         
         var dismissedInputNode: ChatInputNode?
         var immediatelyLayoutInputNodeAndAnimateAppearance = false

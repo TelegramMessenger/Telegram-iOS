@@ -8,6 +8,12 @@ import AccountContext
 private let tileSpacing: CGFloat = 4.0
 let tileHeight: CGFloat = 180.0
 
+enum VoiceChatTileLayoutMode {
+    case pairs
+    case rows
+    case grid
+}
+
 final class VoiceChatTileGridNode: ASDisplayNode {
     private let context: AccountContext
     
@@ -17,12 +23,24 @@ final class VoiceChatTileGridNode: ASDisplayNode {
     
     private var absoluteLocation: (CGRect, CGSize)?
     
+    var tileNodes: [VoiceChatTileItemNode] {
+        return Array(self.itemNodes.values)
+    }
+    
     init(context: AccountContext) {
         self.context = context
         
         super.init()
         
         self.clipsToBounds = true
+    }
+    
+    var visiblity = true {
+        didSet {
+            for (_, tileNode) in self.itemNodes {
+                tileNode.visiblity = self.visiblity
+            }
+        }
     }
     
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -35,32 +53,68 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, items: [VoiceChatTileItem], transition: ContainedViewLayoutTransition) -> CGSize {
+    func update(size: CGSize, layoutMode: VoiceChatTileLayoutMode, items: [VoiceChatTileItem], transition: ContainedViewLayoutTransition) -> CGSize {
         self.items = items
         
         var validIds: [String] = []
-
-        let halfWidth = floorToScreenPixels((size.width - tileSpacing) / 2.0)
-        let lastItemIsWide = items.count % 2 != 0
+        
+        let colsCount: CGFloat
+        if case .grid = layoutMode {
+            if items.count < 3 {
+                colsCount = 1
+            } else if items.count < 5 {
+                colsCount = 2
+            } else {
+                colsCount = 3
+            }
+        } else {
+            colsCount = 2
+        }
+        let rowsCount = ceil(CGFloat(items.count) / colsCount)
+        
+        let genericItemWidth = floorToScreenPixels((size.width - tileSpacing * (colsCount - 1)) / colsCount)
+        let lastRowItemsAreWide: Bool
+        let lastRowItemWidth: CGFloat
+        if case .grid = layoutMode {
+            lastRowItemsAreWide = [1, 2].contains(items.count) || items.count % Int(colsCount) != 0
+            var lastRowItemsCount = CGFloat(items.count % Int(colsCount))
+            if lastRowItemsCount.isZero {
+                lastRowItemsCount = colsCount
+            }
+            lastRowItemWidth = floorToScreenPixels((size.width - tileSpacing * (lastRowItemsCount - 1)) / lastRowItemsCount)
+        } else {
+            lastRowItemsAreWide = items.count == 1 || items.count % Int(colsCount) != 0
+            lastRowItemWidth = size.width
+        }
 
         let isFirstTime = self.isFirstTime
         if isFirstTime {
             self.isFirstTime = false
         }
         
-        let availableWidth = min(size.width, size.height)
+        var availableWidth = min(size.width, size.height)
+        var itemHeight = tileHeight
+        if case .grid = layoutMode {
+            itemHeight = size.height / rowsCount - (tileSpacing * (rowsCount - 1))
+        }
         
         for i in 0 ..< self.items.count {
             let item = self.items[i]
-            let isLast = i == self.items.count - 1
+            let col = CGFloat(i % Int(colsCount))
+            let row = floor(CGFloat(i) / colsCount)
+            let isLastRow = row == (rowsCount - 1)
             
+            let rowItemWidth = isLastRow && lastRowItemsAreWide ? lastRowItemWidth : genericItemWidth
             let itemSize = CGSize(
-                width: isLast && lastItemIsWide ? size.width : halfWidth,
-                height: tileHeight
+                width: rowItemWidth,
+                height: itemHeight
             )
-            let col = CGFloat(i % 2)
-            let row = floor(CGFloat(i) / 2.0)
-            let itemFrame = CGRect(origin: CGPoint(x: col * (halfWidth + tileSpacing), y: row * (tileHeight + tileSpacing)), size: itemSize)
+            
+            if case .grid = layoutMode {
+                availableWidth = rowItemWidth
+            }
+
+            let itemFrame = CGRect(origin: CGPoint(x: col * (rowItemWidth + tileSpacing), y: row * (itemHeight + tileSpacing)), size: itemSize)
             
             validIds.append(item.id)
             var itemNode: VoiceChatTileItemNode?
@@ -77,6 +131,7 @@ final class VoiceChatTileGridNode: ASDisplayNode {
                 self.addSubnode(addedItemNode)
             }
             if let itemNode = itemNode {
+                itemNode.visiblity = self.visiblity
                 if wasAdded {
                     itemNode.frame = itemFrame
                     if !isFirstTime {
@@ -112,18 +167,20 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         }
         
         let rowCount = ceil(CGFloat(self.items.count) / 2.0)
-        return CGSize(width: size.width, height: rowCount * (tileHeight + tileSpacing))
+        return CGSize(width: size.width, height: rowCount * (itemHeight + tileSpacing))
     }
 }
 
 final class VoiceChatTilesGridItem: ListViewItem {
     let context: AccountContext
     let tiles: [VoiceChatTileItem]
+    let layoutMode: VoiceChatTileLayoutMode
     let getIsExpanded: () -> Bool
     
-    init(context: AccountContext, tiles: [VoiceChatTileItem], getIsExpanded: @escaping () -> Bool) {
+    init(context: AccountContext, tiles: [VoiceChatTileItem], layoutMode: VoiceChatTileLayoutMode, getIsExpanded: @escaping () -> Bool) {
         self.context = context
         self.tiles = tiles
+        self.layoutMode = layoutMode
         self.getIsExpanded = getIsExpanded
     }
     
@@ -227,6 +284,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.cornersNode.image = decorationCornersImage(top: true, bottom: false, dark: item.getIsExpanded())
                         
                         tileGridNode = VoiceChatTileGridNode(context: item.context)
+                        tileGridNode.visiblity = strongSelf.gridVisiblity
                         strongSelf.addSubnode(tileGridNode)
                         strongSelf.tileGridNode = tileGridNode
                     }
@@ -237,7 +295,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                     }
                     
                     let transition: ContainedViewLayoutTransition = currentItem == nil ? .immediate : .animated(duration: 0.3, curve: .easeInOut)
-                    let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: params.availableHeight), items: item.tiles, transition: transition)
+                    let tileGridSize = tileGridNode.update(size: CGSize(width: params.width - params.leftInset - params.rightInset, height: params.availableHeight), layoutMode: item.layoutMode, items: item.tiles, transition: transition)
                     if currentItem == nil {
                         tileGridNode.frame = CGRect(x: params.leftInset, y: 0.0, width: tileGridSize.width, height: tileGridSize.height)
                         strongSelf.backgroundNode.frame = tileGridNode.frame
@@ -255,5 +313,17 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteLocation = (rect, containerSize)
         self.tileGridNode?.updateAbsoluteRect(rect, within: containerSize)
+    }
+    
+    var gridVisiblity: Bool = true {
+        didSet {
+            self.tileGridNode?.visiblity = self.gridVisiblity
+        }
+    }
+    
+    func snapshotForDismissal() {
+        if let snapshotView = self.tileGridNode?.view.snapshotView(afterScreenUpdates: false) {
+            self.tileGridNode?.view.addSubview(snapshotView)
+        }
     }
 }

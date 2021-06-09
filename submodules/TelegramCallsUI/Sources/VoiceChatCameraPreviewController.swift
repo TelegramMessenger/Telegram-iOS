@@ -426,10 +426,16 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.containerLayout = (layout, navigationBarHeight)
         
         let isLandscape: Bool
-        if layout.size.width > layout.size.height, case .compact = layout.metrics.widthClass {
+        if layout.size.width > layout.size.height {
             isLandscape = true
         } else {
             isLandscape = false
+        }
+        let isTablet: Bool
+        if case .regular = layout.metrics.widthClass {
+            isTablet = true
+        } else {
+            isTablet = false
         }
         
         var insets = layout.insets(options: [.statusBar, .input])
@@ -440,28 +446,44 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         if let _ = self.broadcastPickerView {
             buttonOffset *= 2.0
         }
-        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        let bottomInset: CGFloat = isTablet ? 31.0 : 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let innerContentHeight: CGFloat = layout.size.height - contentHeight - 160.0
         var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
         if isLandscape {
-            contentHeight = layout.size.height
-            width = layout.size.width
+            if isTablet {
+                width = 870.0
+                contentHeight = 690.0
+            } else {
+                contentHeight = layout.size.height
+                width = layout.size.width
+            }
         } else {
-            contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
+            if isTablet {
+                width = 600.0
+                contentHeight = 960.0
+            } else {
+                contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
+            }
         }
         
         let previewInset: CGFloat = 16.0
         let sideInset = floor((layout.size.width - width) / 2.0)
-        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
-        let contentFrame = contentContainerFrame
-        
-        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height + 2000.0))
+        let contentFrame: CGRect
+        if isTablet {
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((layout.size.height - contentHeight) / 2.0)), size: CGSize(width: width, height: contentHeight))
+        } else {
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
+        }
+        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height))
+        if !isTablet {
+            backgroundFrame.size.height += 2000.0
+        }
         if backgroundFrame.minY < contentFrame.minY {
             backgroundFrame.origin.y = contentFrame.minY
         }
-        transition.updateAlpha(node: self.titleNode, alpha: isLandscape ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.titleNode, alpha: isLandscape && !isTablet ? 0.0 : 1.0)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
@@ -472,14 +494,24 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let previewSize: CGSize
-        let previewFrame: CGRect
+        var previewSize: CGSize
+        var previewFrame: CGRect
         if isLandscape {
-            let previewHeight = contentHeight - layout.intrinsicInsets.bottom - 52.0 - 10.0
+            let previewHeight = contentHeight - 21.0 - 52.0 - 10.0
             previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, previewHeight * 1.7778), height: previewHeight)
+            if isTablet {
+                previewSize.width -= previewInset * 2.0
+                previewSize.height -= 46.0
+            }
             previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
+            if isTablet {
+                previewFrame.origin.y += 56.0
+            }
         } else {
             previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset + (120.0 - buttonOffset))
+            if isTablet {
+                previewSize.height += 17.0
+            }
             previewFrame = CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize)
         }
         transition.updateFrame(node: self.previewContainerNode, frame: previewFrame)
@@ -508,40 +540,49 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
             } else {
                 self.screenButton.isHidden = true
             }
-            let buttonInset: CGFloat = 6.0
             
-            let buttonWidth = floorToScreenPixels((contentFrame.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(buttonsCount + 1) * buttonInset) / CGFloat(buttonsCount))
+            let buttonInset: CGFloat = 6.0
+            var leftButtonInset = buttonInset
+            let availableWidth: CGFloat
+            if isTablet {
+                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right - previewInset * 2.0
+                leftButtonInset += previewInset
+            } else {
+                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right
+            }
+            let buttonWidth = floorToScreenPixels((availableWidth - CGFloat(buttonsCount + 1) * buttonInset) / CGFloat(buttonsCount))
             
             let cameraButtonHeight = self.cameraButton.updateLayout(width: buttonWidth, transition: transition)
             let screenButtonHeight = self.screenButton.updateLayout(width: buttonWidth, transition: transition)
             let cancelButtonHeight = self.cancelButton.updateLayout(width: buttonWidth, transition: transition)
             
-            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: layout.safeInsets.left + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cancelButtonHeight))
+            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cancelButtonHeight))
             if let broadcastPickerView = self.broadcastPickerView {
-                transition.updateFrame(node: self.screenButton, frame: CGRect(x: layout.safeInsets.left + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight))
-                broadcastPickerView.frame = CGRect(x: layout.safeInsets.left + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight)
-                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + buttonInset + buttonWidth + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
+                transition.updateFrame(node: self.screenButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight))
+                broadcastPickerView.frame = CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight)
+                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
             } else {
-                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
+                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
             }
             
         } else {
+            let bottomInset = isTablet ? 21.0 : insets.bottom + 16.0
             let buttonInset: CGFloat = 16.0
             let cameraButtonHeight = self.cameraButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.cameraButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: cameraButtonHeight))
+            transition.updateFrame(node: self.cameraButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - bottomInset - buttonOffset, width: contentFrame.width, height: cameraButtonHeight))
             
             let screenButtonHeight = self.screenButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: screenButtonHeight))
+            transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - bottomInset, width: contentFrame.width, height: screenButtonHeight))
             if let broadcastPickerView = self.broadcastPickerView {
-                broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+                broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - bottomInset, width: contentFrame.width + 1000.0, height: screenButtonHeight)
             } else {
                 self.screenButton.isHidden = true
             }
            
             let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: cancelButtonHeight))
+            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - bottomInset, width: contentFrame.width, height: cancelButtonHeight))
         }
         
-        transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
+        transition.updateFrame(node: self.contentContainerNode, frame: contentFrame)
     }
 }

@@ -210,7 +210,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                                   
             transition.updateCornerRadius(node: self.backgroundImageNode, cornerRadius: 0.0)
               
-            let initialRect = sourceNode.frame
+            let initialRect = sourceRect
             let initialScale: CGFloat = sourceRect.width / targetRect.width
             
             let targetSize = CGSize(width: targetRect.size.width, height: targetRect.size.width)
@@ -254,6 +254,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
             self.avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: initialRect.center), to: NSValue(cgPoint: self.avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, completion: { [weak self] _ in
                 if let strongSelf = self {
+                    strongSelf.avatarListNode.updateCustomItemsOnlySynchronously = false
                     strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
                 }
             })
@@ -268,6 +269,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
             self.avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
             
+            self.avatarListNode.updateCustomItemsOnlySynchronously = true
             self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: self.customNode, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
             
             let backgroundTargetRect = CGRect(x: 0.0, y: targetSize.height - backgroundCornerRadius * 2.0, width: targetRect.width, height: targetRect.height - targetSize.height + backgroundCornerRadius * 2.0)
@@ -334,6 +336,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListWrapperNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
             self.avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: initialRect.center), to: NSValue(cgPoint: self.avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, completion: { [weak self] _ in
                 if let strongSelf = self {
+                    strongSelf.avatarListNode.updateCustomItemsOnlySynchronously = false
 //                    strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
                 }
             })
@@ -348,6 +351,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
             self.avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
             
+            self.avatarListNode.updateCustomItemsOnlySynchronously = true
             self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: nil, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
             
             let backgroundTargetRect = CGRect(x: 0.0, y: targetSize.height - backgroundCornerRadius * 2.0, width: targetRect.width, height: targetRect.height - targetSize.height + backgroundCornerRadius * 2.0)
@@ -362,7 +366,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         self.appeared = true
     }
     
-    func animateOut(to targetNode: ASDisplayNode, targetRect: CGRect, transition: ContainedViewLayoutTransition) {
+    func animateOut(to targetNode: ASDisplayNode, targetRect: CGRect, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         let radiusTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let springDuration: Double = 0.3
         let springDamping: CGFloat = 1000.0
@@ -383,12 +387,13 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                 if let targetNode = targetNode {
                     targetNode.contentNode.insertSubnode(targetNode.videoContainerNode, aboveSubnode: targetNode.backgroundNode)
                 }
+                completion()
                 self?.removeFromSupernode()
             })
             
             radiusTransition.updateCornerRadius(node: self.avatarListContainerNode, cornerRadius: backgroundCornerRadius)
             
-            if let snapshotView = targetNode.infoNode.view.snapshotView(afterScreenUpdates: false) {
+            if let snapshotView = targetNode.infoNode.view.snapshotView(afterScreenUpdates: true) {
                 self.view.insertSubview(snapshotView, aboveSubview: targetNode.videoContainerNode.view)
                 let snapshotFrame = snapshotView.frame
                 snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: initialSize.width - snapshotView.frame.size.height), size: snapshotView.frame.size)
@@ -439,6 +444,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                 if let targetNode = targetNode {
                     targetNode.offsetContainerNode.insertSubnode(targetNode.videoContainerNode, at: 0)
                 }
+                completion()
                 self?.removeFromSupernode()
             })
             

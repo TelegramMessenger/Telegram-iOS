@@ -1259,9 +1259,9 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.postbox.mediaBox.preFetchedResourcePath = preFetchedResourcePath
     account.postbox.mediaBox.fetchResource = { [weak account] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
+            if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
+            } else if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
                 return result
             } else {
                 return .never()

@@ -31,8 +31,6 @@ public func customizePresentationTheme(_ theme: PresentationTheme, editing: Bool
         case .nightAccent:
             return customizeDefaultDarkTintedPresentationTheme(theme: theme, editing: editing, title: title, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, wallpaper: wallpaper)
     }
-    
-    return theme
 }
 
 public func makePresentationTheme(settings: TelegramThemeSettings, title: String? = nil, serviceBackgroundColor: UIColor? = nil) -> PresentationTheme? {

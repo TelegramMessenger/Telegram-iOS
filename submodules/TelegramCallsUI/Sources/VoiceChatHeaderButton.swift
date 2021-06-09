@@ -17,26 +17,34 @@ func optionsBackgroundImage(dark: Bool) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 14, topCapHeight: 14)
 }
 
-func optionsButtonImage(dark: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(x: 6.0, y: 12.0, width: 4.0, height: 4.0))
-        context.fillEllipse(in: CGRect(x: 12.0, y: 12.0, width: 4.0, height: 4.0))
-        context.fillEllipse(in: CGRect(x: 18.0, y: 12.0, width: 4.0, height: 4.0))
-    })
-}
-
 func optionsCircleImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    })
+}
+
+func panelButtonImage(dark: Bool) -> UIImage? {
+    return generateImage(CGSize(width: 38.0, height: 28.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 14.0).cgPath)
+        context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
+        context.fillPath()
+        
+        context.setFillColor(UIColor.white.cgColor)
+        
+        if let image = UIImage(bundleImageName: "Call/PanelIcon") {
+            let imageSize = image.size
+            let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+            context.saveGState()
+            context.translateBy(x: 7.0, y: 2.0)
+            context.clip(to: imageRect, mask: image.cgImage!)
+            context.fill(imageRect)
+            context.restoreGState()
+        }
     })
 }
 
@@ -76,9 +84,12 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    init(context: AccountContext) {
+    private let wide: Bool
+    
+    init(context: AccountContext, wide: Bool = false) {
         self.context = context
         self.theme = context.sharedContext.currentPresentationData.with { $0 }.theme
+        self.wide = wide
         
         self.referenceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
@@ -111,9 +122,9 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
         
-        self.iconNode.image = optionsButtonImage(dark: false)
+        self.iconNode.image = optionsCircleImage(dark: false)
         
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 28.0, height: 28.0))
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: wide ? 38.0 : 28.0, height: 28.0))
         self.referenceNode.frame = self.containerNode.bounds
         self.iconNode.frame = self.containerNode.bounds
         self.avatarNode.frame = self.containerNode.bounds
@@ -182,7 +193,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: 28.0, height: 28.0)
+        return CGSize(width: wide ? 38.0 : 28.0, height: 28.0)
     }
         
     func onLayout() {

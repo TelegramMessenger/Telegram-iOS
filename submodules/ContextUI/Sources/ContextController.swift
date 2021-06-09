@@ -497,7 +497,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             if let takenViewInfo = takenViewInfo, let parentSupernode = takenViewInfo.contentContainingNode.supernode {
                 self.contentContainerNode.contentNode = .extracted(node: takenViewInfo.contentContainingNode, keepInPlace: source.keepInPlace)
-                if source.keepInPlace {
+                if source.keepInPlace || takenViewInfo.maskView != nil {
+                    self.clippingNode.view.mask = takenViewInfo.maskView
                     self.clippingNode.addSubnode(self.contentContainerNode)
                 } else {
                     self.scrollNode.addSubnode(self.contentContainerNode)
@@ -687,7 +688,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.clippingNode.view.mask = nil
+                    })
                     contentParentNode.applyAbsoluteOffsetSpring?(-contentContainerOffset.y, springDuration, springDamping)
                 }
                 
@@ -849,6 +852,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 updatedContentAreaInScreenSpace.origin.x = 0.0
                 updatedContentAreaInScreenSpace.size.width = self.bounds.width
                 
+                self.clippingNode.view.mask = putBackInfo.maskView
                 self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: updatedContentAreaInScreenSpace, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
             }
@@ -1726,18 +1730,22 @@ public protocol ContextReferenceContentSource: class {
 public final class ContextControllerTakeViewInfo {
     public let contentContainingNode: ContextExtractedContentContainingNode
     public let contentAreaInScreenSpace: CGRect
+    public let maskView: UIView?
     
-    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect) {
+    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
         self.contentContainingNode = contentContainingNode
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
+        self.maskView = maskView
     }
 }
 
 public final class ContextControllerPutBackViewInfo {
     public let contentAreaInScreenSpace: CGRect
+    public let maskView: UIView?
     
-    public init(contentAreaInScreenSpace: CGRect) {
+    public init(contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
+        self.maskView = maskView
     }
 }
 

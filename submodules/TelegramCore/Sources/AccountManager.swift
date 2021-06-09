@@ -175,6 +175,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
     declareEncodable(CachedDisplayAsPeers.self, f: { CachedDisplayAsPeers(decoder: $0) })
     declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
+    declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
     
     return
 }()
@@ -189,6 +190,24 @@ public func rootPathForBasePath(_ appGroupPath: String) -> String {
 
 public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: rootPath), withIntermediateDirectories: true, attributes: nil)
+
+    if let items = FileManager.default.enumerator(at: URL(fileURLWithPath: appGroupPath), includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+        let allowedDirectories: [String] = [
+            "telegram-data",
+            "Library"
+        ]
+
+        for url in items {
+            guard let url = url as? URL else {
+                continue
+            }
+            if let isDirectory = try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory, isDirectory {
+                if !allowedDirectories.contains(url.lastPathComponent) {
+                    let _ = try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+    }
     
     do {
         var resourceValues = URLResourceValues()

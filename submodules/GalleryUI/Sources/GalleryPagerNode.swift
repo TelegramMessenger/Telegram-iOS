@@ -107,6 +107,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var centralItemIndexOffsetUpdated: (([GalleryItem]?, Int, CGFloat)?) -> Void = { _ in }
     public var toggleControlsVisibility: () -> Void = { }
     public var updateControlsVisibility: (Bool) -> Void = { _ in }
+    public var updateOrientation: (UIInterfaceOrientation) -> Void = { _ in }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
@@ -474,6 +475,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         let node = self.items[index].node(synchronous: synchronous)
         node.toggleControlsVisibility = self.toggleControlsVisibility
         node.updateControlsVisibility = self.updateControlsVisibility
+        node.updateOrientation = self.updateOrientation
         node.dismiss = self.dismiss
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss

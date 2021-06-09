@@ -164,9 +164,14 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
-
+        var orientation = CGImagePropertyOrientation.up
+        if #available(iOS 11.0, *) {
+            if let orientationAttachment = CMGetAttachment(sampleBuffer, key: RPVideoSampleOrientationKey as CFString, attachmentModeOut: nil) as? NSNumber {
+                orientation = CGImagePropertyOrientation(rawValue: orientationAttachment.uint32Value) ?? .up
+            }
+        }
         if let data = serializePixelBuffer(buffer: pixelBuffer) {
-            self.screencastBufferClientContext?.setCurrentFrame(data: data)
+            self.screencastBufferClientContext?.setCurrentFrame(data: data, orientation: orientation)
         }
 
         //self.videoCapturer?.injectSampleBuffer(sampleBuffer)

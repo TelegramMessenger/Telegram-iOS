@@ -9,6 +9,9 @@ import MusicAlbumArtResources
 import LocalMediaResources
 import LocationResources
 import ChatInterfaceState
+import WallpaperResources
+import AppBundle
+import SwiftSignalKit
 
 public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
     if interfaceState == nil {
@@ -39,6 +42,25 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchEmojiSpriteResource(account: account, resource: resource)
     } else if let resource = resource as? VenueIconResource {
         return fetchVenueIconResource(account: account, resource: resource)
+    } else if let wallpaperResource = resource as? WallpaperDataResource {
+        let builtinWallpapers: [String] = [
+            "fqv01SQemVIBAAAApND8LDRUhRU"
+        ]
+        if builtinWallpapers.contains(wallpaperResource.slug) {
+            if let url = getAppBundle().url(forResource: wallpaperResource.slug, withExtension: "tgv") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+        return nil
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in

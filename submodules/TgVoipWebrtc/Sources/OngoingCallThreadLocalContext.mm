@@ -10,6 +10,7 @@
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
+#import "platform/darwin/VideoCameraCapturer.h"
 
 #ifndef WEBRTC_IOS
 #import "platform/darwin/VideoMetalViewMac.h"
@@ -22,6 +23,7 @@
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
 #import "platform/darwin/VideoSampleBufferView.h"
+#import "platform/darwin/VideoCaptureView.h"
 #import "platform/darwin/CustomExternalCapturer.h"
 #endif
 
@@ -201,6 +203,7 @@
 
 @end
 
+
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     bool _keepLandscape;
     std::shared_ptr<std::vector<uint8_t>> _croppingBuffer;
@@ -265,16 +268,32 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     });
 }
 
-- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer {
+- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation {
     if (!pixelBuffer) {
         return;
     }
+    
+    RTCVideoRotation videoRotation = RTCVideoRotation_0;
+    switch (rotation) {
+    case OngoingCallVideoOrientation0:
+        videoRotation = RTCVideoRotation_0;
+        break;
+    case OngoingCallVideoOrientation90:
+        videoRotation = RTCVideoRotation_90;
+        break;
+    case OngoingCallVideoOrientation180:
+        videoRotation = RTCVideoRotation_180;
+        break;
+    case OngoingCallVideoOrientation270:
+        videoRotation = RTCVideoRotation_270;
+        break;
+    }
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer]() {
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation]() {
         auto capture = GetVideoCaptureAssumingSameThread(interface.get());
         auto source = capture->source();
         if (source) {
-            [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer toSource:source croppingBuffer:*croppingBuffer];
+            [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer rotation:videoRotation toSource:source croppingBuffer:*croppingBuffer];
         }
         CFRelease(pixelBuffer);
     });
@@ -305,29 +324,75 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 #endif
 }
 
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
-    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = _interface;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([VideoMetalView isSupported]) {
-            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-            
-            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setOutput(sink);
-            
-            completion(remoteRenderer);
-        } else {
-            GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-#ifndef WEBRTC_IOS
-            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-#endif
-
-            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setOutput(sink);
-            
-            completion(remoteRenderer);
+- (void)setOnIsActiveUpdated:(void (^)(bool))onIsActiveUpdated {
+    _interface->setOnIsActiveUpdated([onIsActiveUpdated](bool isActive) {
+        if (onIsActiveUpdated) {
+            onIsActiveUpdated(isActive);
         }
     });
+}
+
+- (void)makeOutgoingVideoView:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+    __weak OngoingCallThreadLocalContextVideoCapturer *weakSelf = self;
+
+    void (^makeDefault)() = ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong OngoingCallThreadLocalContextVideoCapturer *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+            std::shared_ptr<tgcalls::VideoCaptureInterface> interface = strongSelf->_interface;
+
+            if (false && requestClone) {
+                VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                interface->setOutput(sink);
+
+                VideoSampleBufferView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                    [remoteRenderer setCloneTarget:cloneRenderer];
+                }
+
+                completion(remoteRenderer, cloneRenderer);
+            } else if ([VideoMetalView isSupported]) {
+                VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                VideoMetalView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#ifdef WEBRTC_IOS
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+#else
+                    cloneRenderer.videoContentMode = kCAGravityResizeAspectFill;
+#endif
+                    [remoteRenderer setClone:cloneRenderer];
+                }
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+
+                interface->setOutput(sink);
+
+                completion(remoteRenderer, cloneRenderer);
+            } else {
+                GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
+    #ifndef WEBRTC_IOS
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+    #endif
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                interface->setOutput(sink);
+
+                completion(remoteRenderer, nil);
+            }
+        });
+    };
+
+    makeDefault();
 }
 
 @end
@@ -1041,9 +1106,13 @@ private:
 
         int minOutgoingVideoBitrateKbit = 500;
 
+        tgcalls::GroupConfig config;
+        config.need_log = false;
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
+            .config = config,
             .networkStateUpdated = [weakSelf, queue, networkStateUpdated](tgcalls::GroupNetworkState networkState) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
@@ -1243,18 +1312,43 @@ private:
         for (OngoingGroupCallRequestedVideoChannel *channel : requestedVideoChannels) {
             tgcalls::VideoChannelDescription description;
             description.audioSsrc = channel.audioSsrc;
-            description.videoInformation = channel.videoInformation.UTF8String ?: "";
-            switch (channel.quality) {
+            description.endpointId = channel.endpointId.UTF8String ?: "";
+            for (OngoingGroupCallSsrcGroup *group in channel.ssrcGroups) {
+                tgcalls::MediaSsrcGroup parsedGroup;
+                parsedGroup.semantics = group.semantics.UTF8String ?: "";
+                for (NSNumber *ssrc in group.ssrcs) {
+                    parsedGroup.ssrcs.push_back([ssrc unsignedIntValue]);
+                }
+                description.ssrcGroups.push_back(std::move(parsedGroup));
+            }
+            switch (channel.minQuality) {
                 case OngoingGroupCallRequestedVideoQualityThumbnail: {
-                    description.quality = tgcalls::VideoChannelDescription::Quality::Thumbnail;
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Thumbnail;
                     break;
                 }
                 case OngoingGroupCallRequestedVideoQualityMedium: {
-                    description.quality = tgcalls::VideoChannelDescription::Quality::Medium;
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Medium;
                     break;
                 }
                 case OngoingGroupCallRequestedVideoQualityFull: {
-                    description.quality = tgcalls::VideoChannelDescription::Quality::Full;
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Full;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            switch (channel.maxQuality) {
+                case OngoingGroupCallRequestedVideoQualityThumbnail: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Thumbnail;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityMedium: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Medium;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityFull: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Full;
                     break;
                 }
                 default: {
@@ -1283,11 +1377,24 @@ private:
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (false) {
+            BOOL useSampleBuffer = NO;
+#ifdef WEBRTC_IOS
+            useSampleBuffer = YES;
+#endif
+            if (useSampleBuffer) {
                 VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+
+                VideoSampleBufferView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+#ifdef WEBRTC_IOS
+                    [remoteRenderer setCloneTarget:cloneRenderer];
+#endif
+                }
 
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
@@ -1296,15 +1403,23 @@ private:
                     }
                 }];
 
-                completion(remoteRenderer, nil);
+                completion(remoteRenderer, cloneRenderer);
             } else if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#ifdef WEBRTC_IOS
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
+#else
+                remoteRenderer.videoContentMode = kCAGravityResizeAspectFill;
+#endif
 
                 VideoMetalView *cloneRenderer = nil;
                 if (requestClone) {
                     cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#ifdef WEBRTC_IOS
                     cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+#else
+                    cloneRenderer.videoContentMode = kCAGravityResizeAspectFill;
+#endif
                 }
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
@@ -1372,14 +1487,29 @@ private:
 
 @end
 
+@implementation OngoingGroupCallSsrcGroup
+
+- (instancetype)initWithSemantics:(NSString * _Nonnull)semantics ssrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs {
+    self = [super init];
+    if (self != nil) {
+        _semantics = semantics;
+        _ssrcs = ssrcs;
+    }
+    return self;
+}
+
+@end
+
 @implementation OngoingGroupCallRequestedVideoChannel
 
-- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc videoInformation:(NSString * _Nonnull)videoInformation quality:(OngoingGroupCallRequestedVideoQuality)quality {
+- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc endpointId:(NSString * _Nonnull)endpointId ssrcGroups:(NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull)ssrcGroups minQuality:(OngoingGroupCallRequestedVideoQuality)minQuality maxQuality:(OngoingGroupCallRequestedVideoQuality)maxQuality {
     self = [super init];
     if (self != nil) {
         _audioSsrc = audioSsrc;
-        _videoInformation = videoInformation;
-        _quality = quality;
+        _endpointId = endpointId;
+        _ssrcGroups = ssrcGroups;
+        _minQuality = minQuality;
+        _maxQuality = maxQuality;
     }
     return self;
 }

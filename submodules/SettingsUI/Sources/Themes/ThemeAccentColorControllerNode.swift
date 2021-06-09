@@ -156,7 +156,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let scrollNode: ASScrollNode
     private let pageControlBackgroundNode: ASDisplayNode
     private let pageControlNode: PageControlNode
+
     private var patternButtonNode: WallpaperOptionButtonNode
+    private var colorsButtonNode: WallpaperOptionButtonNode
+
+    private var playButtonNode: HighlightableButtonNode
+    private let playButtonBackgroundNode: NavigationBackgroundNode
+    private let playButtonPlayImage: UIImage?
+    private let playButtonRotateImage: UIImage?
+
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
@@ -231,6 +239,40 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
 
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
+        self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, []))
+
+        self.playButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
+        self.playButtonNode = HighlightableButtonNode()
+        self.playButtonNode.insertSubnode(self.playButtonBackgroundNode, at: 0)
+
+        self.playButtonPlayImage = generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.white.cgColor)
+
+            let diameter = size.width
+
+            let factor = diameter / 50.0
+
+            let size = CGSize(width: 15.0, height: 18.0)
+            context.translateBy(x: (diameter - size.width) / 2.0 + 1.5, y: (diameter - size.height) / 2.0)
+            if (diameter < 40.0) {
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: factor, y: factor)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+            }
+            let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
+            context.fillPath()
+            if (diameter < 40.0) {
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+            }
+            context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
+        })
+
+        self.playButtonRotateImage = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: .white)
+
+        self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
         
         self.chatListBackgroundNode = ASDisplayNode()
         
@@ -276,6 +318,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.addSubnode(self.pageControlBackgroundNode)
         self.addSubnode(self.pageControlNode)
         self.addSubnode(self.patternButtonNode)
+        self.addSubnode(self.colorsButtonNode)
+        self.addSubnode(self.playButtonNode)
         self.addSubnode(self.colorPanelNode)
         self.addSubnode(self.patternPanelNode)
         self.addSubnode(self.toolbarNode)
@@ -288,6 +332,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.backgroundWrapperNode.addSubnode(self.backgroundNode)
 
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
+        self.colorsButtonNode.addTarget(self, action: #selector(self.toggleColors), forControlEvents: .touchUpInside)
+        self.playButtonNode.addTarget(self, action: #selector(self.playPressed), forControlEvents: .touchUpInside)
         
         self.colorPanelNode.colorsChanged = { [weak self] colors, ended in
             if let strongSelf = self, let section = strongSelf.state.section {
@@ -389,7 +435,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         |> mapToThrottled { next -> Signal<ThemeColorState, NoError> in
             return .single(next) |> then(.complete() |> delay(0.0166667, queue: self.queue))
         }
-        |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], PatternWallpaperArguments, Bool) in
+        |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], Int32, PatternWallpaperArguments, Bool) in
             let accentColor = state.accentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
@@ -455,9 +501,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             let patternArguments = PatternWallpaperArguments(colors: calcPatternColors(for: state), rotation: wallpaper.settings?.rotation ?? 0, preview: state.preview)
 
-            return (updatedTheme, wallpaper, serviceBackgroundColor, backgroundColors, patternArguments, state.preview)
+            return (updatedTheme, wallpaper, serviceBackgroundColor, backgroundColors, state.rotation, patternArguments, state.preview)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaper, serviceBackgroundColor, backgroundColors, patternArguments, preview in
+        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaper, serviceBackgroundColor, backgroundColors, rotation, patternArguments, preview in
             guard let strongSelf = self else {
                 return
             }
@@ -484,6 +530,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             strongSelf.wallpaper = wallpaper
             strongSelf.patternArguments = patternArguments
+
+            strongSelf.colorsButtonNode.colors = backgroundColors.map(UIColor.init(rgb:))
 
             if !preview {
                 if !backgroundColors.isEmpty {
@@ -524,6 +572,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.patternPanelNode.serviceBackgroundColor = color
                 strongSelf.pageControlBackgroundNode.backgroundColor = color
                 strongSelf.patternButtonNode.buttonColor = color
+                strongSelf.colorsButtonNode.buttonColor = color
+                strongSelf.playButtonBackgroundNode.color = color
             }
         })
     }
@@ -687,6 +737,20 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if (previousState.patternWallpaper == nil) != (self.state.patternWallpaper == nil) {
             needsLayout = true
         }
+
+        if (previousState.backgroundColors.count >= 2) != (self.state.backgroundColors.count >= 2) {
+            needsLayout = true
+        }
+
+        if previousState.backgroundColors.count != self.state.backgroundColors.count {
+            if self.state.backgroundColors.count <= 2 {
+                self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
+            } else {
+                self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
+            }
+        }
+
+        self.colorsButtonNode.isSelected = !self.state.colorPanelCollapsed
         
         if needsLayout, let (layout, navigationBarHeight, _) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: animated ? .animated(duration: animationDuration, curve: animationCurve) : .immediate)
@@ -701,6 +765,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
             updated.section = section
             updated.displayPatternPanel = false
+            updated.colorPanelCollapsed = false
             return updated
         }, animated: true)
     }
@@ -825,13 +890,24 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         items = sampleMessages.reversed().map { message in
             let item = self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.theme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: { [weak self] message in
-                if message.flags.contains(.Incoming) {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updateState({ state in
+                    var state = state
+                    if state.section == .background {
+                        state.colorPanelCollapsed = true
+                        state.displayPatternPanel = false
+                    }
+                    return state
+                }, animated: true)
+                /*if message.flags.contains(.Incoming) {
                     self?.updateSection(.accent)
                     self?.requestSectionUpdate?(.accent)
                 } else {
                     self?.updateSection(.messages)
                     self?.requestSectionUpdate?(.messages)
-                }
+                }*/
             }, clickThroughMessage: { [weak self] in
                 self?.updateSection(.background)
                 self?.requestSectionUpdate?(.background)
@@ -929,7 +1005,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         var colorPanelOffset: CGFloat = 0.0
         if self.state.colorPanelCollapsed {
-            colorPanelOffset = colorPanelHeight - inputFieldPanelHeight
+            colorPanelOffset = colorPanelHeight
         }
         let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - colorPanelHeight + colorPanelOffset), size: CGSize(width: layout.size.width, height: colorPanelHeight))
         bottomInset += (colorPanelHeight - colorPanelOffset)
@@ -967,7 +1043,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         var messagesBottomInset: CGFloat = bottomInset
         
         if displayOptionButtons {
-            messagesBottomInset += 46.0
+            messagesBottomInset += 56.0
         } else if chatListPreviewAvailable {
             messagesBottomInset += 37.0
         }
@@ -987,19 +1063,42 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - bottomInset - 80.0, width: bounds.width, height: 80.0))
         
         let patternButtonSize = self.patternButtonNode.measure(layout.size)
-        let maxButtonWidth = patternButtonSize.width
+        let colorsButtonSize = self.colorsButtonNode.measure(layout.size)
+        let maxButtonWidth = max(patternButtonSize.width, colorsButtonSize.width)
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
+
+        let patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
+        let colorsAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
-        let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
-        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
-        
-        var patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
-        
-        var patternFrame = centerButtonFrame
+        let patternFrame: CGRect
+        let colorsFrame: CGRect
+
+        let playButtonSize = CGSize(width: 48.0, height: 48.0)
+        var centerDistance: CGFloat = 40.0
+        let buttonsVerticalOffset: CGFloat = 5.0
+
+        let playFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - playButtonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset + floor((buttonSize.height - playButtonSize.height) / 2.0)), size: playButtonSize)
+
+        let playAlpha: CGFloat
+        if self.state.backgroundColors.count >= 2 {
+            playAlpha = displayOptionButtons ? 1.0 : 0.0
+            centerDistance += playButtonSize.width
+        } else {
+            playAlpha = 0.0
+        }
+
+        patternFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width * 2.0 - centerDistance) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
+        colorsFrame = CGRect(origin: CGPoint(x: patternFrame.maxX + centerDistance, y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
         
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha)
+        transition.updateFrame(node: self.colorsButtonNode, frame: colorsFrame)
+        transition.updateAlpha(node: self.colorsButtonNode, alpha: colorsAlpha)
+
+        transition.updateFrame(node: self.playButtonNode, frame: playFrame)
+        transition.updateFrame(node: self.playButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: playFrame.size))
+        self.playButtonBackgroundNode.update(size: playFrame.size, cornerRadius: playFrame.size.height / 2.0, transition: transition)
+        transition.updateAlpha(node: self.playButtonNode, alpha: playAlpha)
     }
     
     @objc private func togglePattern() {
@@ -1011,11 +1110,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         var appeared = false
         self.updateState({ current in
             var updated = current
-            if updated.patternWallpaper != nil {
-                updated.previousPatternWallpaper = updated.patternWallpaper
-                updated.patternWallpaper = nil
-                updated.displayPatternPanel = false
-            } else {
+            if !updated.displayPatternPanel {
                 updated.colorPanelCollapsed = false
                 updated.displayPatternPanel = true
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
@@ -1029,6 +1124,27 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     }
                     appeared = true
                 }
+            } else {
+                updated.colorPanelCollapsed = true
+                if updated.patternWallpaper != nil {
+                    updated.previousPatternWallpaper = updated.patternWallpaper
+                    updated.patternWallpaper = nil
+                    updated.displayPatternPanel = false
+                } else {
+                    updated.colorPanelCollapsed = false
+                    updated.displayPatternPanel = true
+                    if current.patternWallpaper == nil, let wallpaper = wallpaper {
+                        updated.patternWallpaper = wallpaper
+                        if updated.backgroundColors.isEmpty {
+                            if let backgroundColors = backgroundColors {
+                                updated.backgroundColors = backgroundColors.0
+                            } else {
+                                updated.backgroundColors = []
+                            }
+                        }
+                        appeared = true
+                    }
+                }
             }
             return updated
         }, animated: true)
@@ -1036,5 +1152,39 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if appeared {
             self.patternPanelNode.didAppear(initialWallpaper: wallpaper, intensity: self.state.patternIntensity)
         }
+    }
+
+    @objc private func toggleColors() {
+        self.updateState({ current in
+            var updated = current
+            if updated.displayPatternPanel {
+                updated.displayPatternPanel = false
+                updated.colorPanelCollapsed = false
+            } else {
+                if updated.colorPanelCollapsed {
+                    updated.colorPanelCollapsed = false
+                } else {
+                    updated.colorPanelCollapsed = true
+                }
+            }
+            updated.displayPatternPanel = false
+            return updated
+        }, animated: true)
+    }
+
+    @objc private func playPressed() {
+        if self.state.backgroundColors.count >= 3 {
+            self.backgroundNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+        } else {
+            self.updateState({ state in
+                var state = state
+                state.rotation = (state.rotation + 90) % 360
+                return state
+            }, animated: true)
+        }
+    }
+
+    func animateWallpaperAppeared() {
+        self.backgroundNode.animateEvent(transition: .animated(duration: 2.0, curve: .spring), extendAnimation: true)
     }
 }

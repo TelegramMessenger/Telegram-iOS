@@ -119,13 +119,14 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
 
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+- (void)makeOutgoingVideoView:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
--(void)setOnFatalError:(dispatch_block_t _Nullable)onError;
+- (void)setOnFatalError:(dispatch_block_t _Nullable)onError;
+- (void)setOnIsActiveUpdated:(void (^_Nonnull)(bool))onIsActiveUpdated;
 
 #if TARGET_OS_IOS
 - (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer;
-- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer;
+- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation;
 #endif
 
 @end
@@ -233,13 +234,25 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     OngoingGroupCallRequestedVideoQualityFull,
 };
 
+@interface OngoingGroupCallSsrcGroup : NSObject
+
+@property (nonatomic, strong, readonly) NSString * _Nonnull semantics;
+@property (nonatomic, strong, readonly) NSArray<NSNumber *> * _Nonnull ssrcs;
+
+- (instancetype _Nonnull)initWithSemantics:(NSString * _Nonnull)semantics ssrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+
+@end
+
 @interface OngoingGroupCallRequestedVideoChannel : NSObject
 
 @property (nonatomic, readonly) uint32_t audioSsrc;
-@property (nonatomic, strong, readonly) NSString * _Nonnull videoInformation;
-@property (nonatomic, readonly) OngoingGroupCallRequestedVideoQuality quality;
+@property (nonatomic, strong, readonly) NSString * _Nonnull endpointId;
+@property (nonatomic, strong, readonly) NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull ssrcGroups;
 
-- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc videoInformation:(NSString * _Nonnull)videoInformation quality:(OngoingGroupCallRequestedVideoQuality)quality;
+@property (nonatomic, readonly) OngoingGroupCallRequestedVideoQuality minQuality;
+@property (nonatomic, readonly) OngoingGroupCallRequestedVideoQuality maxQuality;
+
+- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc endpointId:(NSString * _Nonnull)endpointId ssrcGroups:(NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull)ssrcGroups minQuality:(OngoingGroupCallRequestedVideoQuality)minQuality maxQuality:(OngoingGroupCallRequestedVideoQuality)maxQuality;
 
 @end
 

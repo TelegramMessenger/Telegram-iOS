@@ -92,7 +92,7 @@ final class ChatPanelInterfaceInteraction {
     let displayVideoUnmuteTip: (CGPoint?) -> Void
     let switchMediaRecordingMode: () -> Void
     let setupMessageAutoremoveTimeout: () -> Void
-    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
+    let sendSticker: (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
     let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
     let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
@@ -175,7 +175,7 @@ final class ChatPanelInterfaceInteraction {
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,
         setupMessageAutoremoveTimeout: @escaping () -> Void,
-        sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,

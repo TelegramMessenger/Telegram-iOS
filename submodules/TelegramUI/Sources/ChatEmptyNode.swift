@@ -134,7 +134,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self, self.stickerNode.bounds)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self, self.stickerNode.bounds)
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -291,7 +291,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), self, self.stickerNode.bounds)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self, self.stickerNode.bounds)
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -771,7 +771,7 @@ final class ChatEmptyNode: ASDisplayNode {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: NavigationBackgroundNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
@@ -782,10 +782,7 @@ final class ChatEmptyNode: ASDisplayNode {
         self.context = context
         self.interaction = interaction
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         super.init()
         
@@ -798,9 +795,8 @@ final class ChatEmptyNode: ASDisplayNode {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
-            
-            let graphics = PresentationResourcesChat.additionalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper, bubbleCorners: interfaceState.bubbleCorners)
-            self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
+
+            self.backgroundNode.color = interfaceState.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
         }
         
         var isScheduledMessages = false
@@ -891,7 +887,6 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 10.0, transition: transition)
     }
 }
-
-

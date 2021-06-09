@@ -47,7 +47,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private var secretProgressIcon: UIImage?
     
     private let fetchDisposable = MetaDisposable()
-    
+
+    private var durationBackgroundNode: NavigationBackgroundNode?
     private var durationNode: ChatInstantVideoMessageDurationNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
@@ -358,28 +359,51 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let telegramFile = updatedFile {
                         if updatedMedia {
                             let durationTextColor: UIColor
-                            let durationFillColor: UIColor
+                            let durationBlurColor: UIColor?
                             switch statusDisplayType {
                                 case .free:
                                      let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                                     durationTextColor = serviceColor.primaryText
-                                    durationFillColor = serviceColor.fill
+                                    durationBlurColor = theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
                                 case .bubble:
-                                    durationFillColor = .clear
+                                    durationBlurColor = nil
                                     if item.message.effectivelyIncoming(item.context.account.peerId) {
                                         durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                                     } else {
                                         durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
                                     }
                             }
+
+                            if let durationBlurColor = durationBlurColor {
+                                if let durationBackgroundNode = strongSelf.durationBackgroundNode {
+                                    durationBackgroundNode.color = durationBlurColor
+                                } else {
+                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor)
+                                    strongSelf.durationBackgroundNode = durationBackgroundNode
+                                    strongSelf.addSubnode(durationBackgroundNode)
+                                }
+                            } else if let durationBackgroundNode = strongSelf.durationBackgroundNode {
+                                strongSelf.durationBackgroundNode = nil
+                                durationBackgroundNode.removeFromSupernode()
+                            }
+
                             let durationNode: ChatInstantVideoMessageDurationNode
                             if let current = strongSelf.durationNode {
                                 durationNode = current
-                                current.updateTheme(textColor: durationTextColor, fillColor: durationFillColor)
+                                current.updateTheme(textColor: durationTextColor)
                             } else {
-                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationTextColor, fillColor: durationFillColor)
+                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationTextColor)
                                 strongSelf.durationNode = durationNode
                                 strongSelf.addSubnode(durationNode)
+                                durationNode.sizeUpdated = { [weak strongSelf] size in
+                                    guard let strongSelf = strongSelf else {
+                                        return
+                                    }
+                                    if let durationBackgroundNode = strongSelf.durationBackgroundNode, let durationNode = strongSelf.durationNode {
+                                        durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
+                                        durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                                    }
+                                }
                             }
                             durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
                             
@@ -449,6 +473,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let durationNode = strongSelf.durationNode {
                         durationNode.frame = CGRect(origin: CGPoint(x: videoFrame.midX - 56.0, y: videoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
                         durationNode.isSeen = !notConsumed
+                        let size = durationNode.size
+                        if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
+                            durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
+                            durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                        }
                     }
                     
                     if let videoNode = strongSelf.videoNode {

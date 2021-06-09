@@ -4428,6 +4428,8 @@ Sorry for the inconvenience.";
 "Appearance.AppIconClassicX" = "Classic X";
 "Appearance.AppIconFilled" = "Filled";
 "Appearance.AppIconFilledX" = "Filled X";
+"Appearance.AppIconNew1" = "New 1";
+"Appearance.AppIconNew2" = "New 2";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
 "Appearance.ThemeCarouselDay" = "Day";
@@ -6479,3 +6481,15 @@ Sorry for the inconvenience.";
 "VoiceChat.UnmuteSuggestion" = "You are on mute. Tap here to speak.";
 
 "VoiceChat.ContextAudio" = "Audio";
+
+"VoiceChat.VideoPaused" = "Video is paused";
+"VoiceChat.YouAreSharingScreen" = "You are sharing your screen";
+"VoiceChat.StopScreenSharingShort" = "Stop Sharing";
+
+"VoiceChat.OpenGroup" = "Open Group";
+
+"VoiceChat.NoiseSuppression" = "Noise Suppression";
+"VoiceChat.NoiseSuppressionEnabled" = "Enabled";
+"VoiceChat.NoiseSuppressionDisabled" = "Disabled";
+
+"VoiceChat.Unpin" = "Unpin";

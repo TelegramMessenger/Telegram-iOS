@@ -333,8 +333,8 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
-        if layer.position.equalTo(position) {
+    func updatePosition(layer: CALayer, position: CGPoint, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if layer.position.equalTo(position) && !force {
             completion?(true)
         } else {
             switch self {
@@ -543,6 +543,15 @@ public extension ContainedViewLayoutTransition {
                 layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { result in
                     completion?(result)
                 })
+        }
+    }
+
+    func animateContentsRectPositionAdditive(layer: CALayer, offset: CGPoint, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            completion?(true)
+        case let .animated(duration, curve):
+            layer.animate(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "contentsRect.origin", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
         }
     }
     
@@ -1284,9 +1293,6 @@ public struct CombinedTransition {
             completeKey(.positionY, result)
         })
 
-        //self.horizontal.animateHorizontalOffsetAdditive(layer: layer, offset: (fromFrame.width - toFrame.width) / 4.0)
-        //self.vertical.animateOffsetAdditive(layer: layer, offset: (fromFrame.height - toFrame.height) / 2.0)
-
         self.horizontal.animateWidthAdditive(layer: layer, value: fromFrame.width - toFrame.width, completion: { result in
             completeKey(.sizeWidth, result)
         })
@@ -1299,6 +1305,12 @@ public struct CombinedTransition {
         let fromFrame = layer.frame
         layer.frame = frame
         self.animateFrame(layer: layer, from: fromFrame, completion: completion)
+    }
+
+    public func updateFrame(node: ASDisplayNode, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        let fromFrame = node.frame
+        node.frame = frame
+        self.animateFrame(layer: node.layer, from: fromFrame, completion: completion)
     }
 
     public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)? = nil) {

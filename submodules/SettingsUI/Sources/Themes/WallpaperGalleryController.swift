@@ -199,6 +199,9 @@ public class WallpaperGalleryController: ViewController {
     private var patternInitialWallpaper: TelegramWallpaper?
     private var patternPanelEnabled = false
     private var colorsPanelEnabled = false
+
+    private var savedPatternWallpaper: TelegramWallpaper?
+    private var savedPatternIntensity: Int32?
     
     public init(context: AccountContext, source: WallpaperListSource) {
         self.context = context
@@ -600,6 +603,10 @@ public class WallpaperGalleryController: ViewController {
         
         self.galleryNode.modalAnimateIn()
         self.bindCentralItemNode(animated: false, updated: false)
+
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+            centralItemNode.animateWallpaperAppeared()
+        }
     }
     
     private func bindCentralItemNode(animated: Bool, updated: Bool) {
@@ -614,6 +621,11 @@ public class WallpaperGalleryController: ViewController {
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
                     strongSelf.colorsPanelEnabled = false
                     strongSelf.colorsPanelNode?.view.endEditing(true)
+
+                    if !enabled {
+                        strongSelf.savedPatternWallpaper = initialWallpaper
+                        strongSelf.savedPatternIntensity = initialWallpaper.settings?.intensity
+                    }
 
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
@@ -631,7 +643,7 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.galleryNode.scrollView.isScrollEnabled = !enabled
                     if enabled {
                         strongSelf.patternPanelNode?.updateWallpapers()
-                        strongSelf.patternPanelNode?.didAppear()
+                        strongSelf.patternPanelNode?.didAppear(initialWallpaper: strongSelf.savedPatternWallpaper, intensity: strongSelf.savedPatternIntensity)
                     } else {
                         switch initialWallpaper {
                         case .color, .gradient:
@@ -657,6 +669,9 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.patternPanelEnabled = false
                     strongSelf.colorsPanelEnabled = !strongSelf.colorsPanelEnabled
                     strongSelf.galleryNode.scrollView.isScrollEnabled = !strongSelf.colorsPanelEnabled
+                    if !strongSelf.colorsPanelEnabled {
+                        strongSelf.colorsPanelNode?.view.endEditing(true)
+                    }
 
                     if strongSelf.colorsPanelEnabled {
                         strongSelf.colorsPanelNode?.updateState({ _ in
@@ -700,6 +715,7 @@ public class WallpaperGalleryController: ViewController {
             if updated {
                 if self.colorsPanelEnabled || self.patternPanelEnabled {
                     self.colorsPanelEnabled = false
+                    self.colorsPanelNode?.view.endEditing(true)
                     self.patternPanelEnabled = false
 
                     if let (layout, _) = self.validLayout {
@@ -838,6 +854,10 @@ public class WallpaperGalleryController: ViewController {
                         if let pattern = pattern, case let .file(file) = pattern {
                             let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, colors: colors, intensity: intensity)
                             let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
+
+                            strongSelf.savedPatternWallpaper = newWallpaper
+                            strongSelf.savedPatternIntensity = intensity
+
                             strongSelf.updateEntries(wallpaper: newWallpaper, preview: preview)
                         }
                     default:

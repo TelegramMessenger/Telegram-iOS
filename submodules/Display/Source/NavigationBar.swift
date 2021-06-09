@@ -117,6 +117,8 @@ enum NavigationPreviousAction: Equatable {
     }
 }
 
+private var sharedIsReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
+
 public final class NavigationBackgroundNode: ASDisplayNode {
     private var _color: UIColor
     public var color: UIColor {
@@ -148,14 +150,9 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     }
 
     private func updateBackgroundBlur(forceKeepBlur: Bool) {
-        if self.enableBlur && ((self.color.alpha > 0.1 && self.color.alpha < 0.95) || forceKeepBlur) {
+        if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self.color.alpha > .ulpOfOne && self.color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
-                let effectView: UIVisualEffectView
-                if self.color.lightness > 0.6 {
-                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
-                } else {
-                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
-                }
+                let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
 
                 for subview in effectView.subviews {
                     if subview.description.contains("VisualEffectSubview") {
@@ -164,6 +161,8 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                 }
 
                 if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
+                    sublayer.backgroundColor = nil
+                    sublayer.isOpaque = false
                     let allowedKeys: [String] = [
                         "colorSaturate",
                         "gaussianBlur"
@@ -176,11 +175,6 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                         if !allowedKeys.contains(filterName) {
                             return false
                         }
-                        /*if filterName == "colorSaturate" {
-                            filter.setValue(2.8 as NSNumber, forKey: "inputAmount")
-                        } else if filterName == "gaussianBlur" {
-                            filter.setValue(5.0 as NSNumber, forKey: "inputRadius")
-                        }*/
                         return true
                     }
                 }
@@ -205,7 +199,11 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
         self._color = color
 
-        transition.updateBackgroundColor(node: self.backgroundNode, color: self.color)
+        if sharedIsReduceTransparencyEnabled {
+            transition.updateBackgroundColor(node: self.backgroundNode, color: self.color.withAlphaComponent(1.0))
+        } else {
+            transition.updateBackgroundColor(node: self.backgroundNode, color: self.color)
+        }
 
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
     }

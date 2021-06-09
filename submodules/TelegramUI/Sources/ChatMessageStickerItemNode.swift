@@ -38,7 +38,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
-    private var replyBackgroundNode: ASImageNode?
+    private var replyBackgroundNode: NavigationBackgroundNode?
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
@@ -294,9 +294,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
-        let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
-        let currentItem = self.item
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
@@ -485,8 +483,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: ASImageNode?
-            var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
@@ -535,16 +531,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
+
+            var needsReplyBackground = false
             
             if replyInfoApply != nil || viaBotApply != nil {
-                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                    updatedReplyBackgroundNode = currentReplyBackgroundNode
-                } else {
-                    updatedReplyBackgroundNode = ASImageNode()
-                }
-                
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+                needsReplyBackground = true
             }
             
             var updatedShareButtonNode: ChatMessageShareButton?
@@ -689,13 +680,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         strongSelf.shareButtonNode = nil
                     }
                     
-                    if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
-                        if strongSelf.replyBackgroundNode == nil {
-                            strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                            strongSelf.contextSourceNode.contentNode.addSubnode(updatedReplyBackgroundNode)
-                            updatedReplyBackgroundNode.image = replyBackgroundImage
+                    if needsReplyBackground {
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.color = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
                         } else {
-                            strongSelf.replyBackgroundNode?.image = replyBackgroundImage
+                            let replyBackgroundNode = NavigationBackgroundNode(color: item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic)
+                            strongSelf.replyBackgroundNode = replyBackgroundNode
+                            strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
                     } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
                         replyBackgroundNode.removeFromSupernode()
@@ -709,7 +700,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(viaBotNode)
                         }
                         viaBotNode.frame = viaBotFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                     } else if let viaBotNode = strongSelf.viaBotNode {
                         viaBotNode.removeFromSupernode()
                         strongSelf.viaBotNode = nil
@@ -722,7 +716,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
                         }
                         replyInfoNode.frame = replyInfoFrame
-                        strongSelf.replyBackgroundNode?.frame = replyBackgroundFrame ?? CGRect()
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode, let replyBackgroundFrame = replyBackgroundFrame {
+                            replyBackgroundNode.frame = replyBackgroundFrame
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                         
                         if isEmoji && !incoming {
                             if let _ = item.controllerInteraction.selectionState {

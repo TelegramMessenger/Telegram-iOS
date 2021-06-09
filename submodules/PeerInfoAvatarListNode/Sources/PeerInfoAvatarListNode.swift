@@ -1107,6 +1107,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
     }
     
+    public var updateCustomItemsOnlySynchronously = false
+    
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
         var validIds: [WrappedMediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
@@ -1121,6 +1123,10 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 if let current = self.itemNodes[self.items[i].id] {
                     itemNode = current
                     if update {
+                        var synchronous = synchronous && i == self.currentIndex
+                        if case .custom = self.items[i], self.updateCustomItemsOnlySynchronously {
+                            synchronous = true
+                        }
                         current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     }
                 } else if let peer = self.peer {

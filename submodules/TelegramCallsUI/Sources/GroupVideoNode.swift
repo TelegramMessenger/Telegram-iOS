@@ -30,7 +30,7 @@ final class GroupVideoNode: ASDisplayNode {
     
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
-    
+        
     private var validLayout: (CGSize, LayoutMode)?
     
     var tapped: (() -> Void)?
@@ -40,7 +40,7 @@ final class GroupVideoNode: ASDisplayNode {
         return self.readyPromise.get()
     }
     
-    init(videoView: PresentationCallVideoView, backdropVideoView: PresentationCallVideoView?) {
+    init(videoView: PresentationCallVideoView, backdropVideoView: PresentationCallVideoView?, disabledText: String? = nil) {
         self.sourceContainerNode = PinchSourceContainerNode()
         self.containerNode = ASDisplayNode()
         self.videoViewContainer = UIView()
@@ -50,7 +50,7 @@ final class GroupVideoNode: ASDisplayNode {
         self.backdropVideoViewContainer = UIView()
         self.backdropVideoViewContainer.isUserInteractionEnabled = false
         self.backdropVideoView = backdropVideoView
-        
+                
         super.init()
                 
         if let backdropVideoView = backdropVideoView {
@@ -72,7 +72,7 @@ final class GroupVideoNode: ASDisplayNode {
         self.addSubnode(self.sourceContainerNode)
         self.containerNode.view.addSubview(self.videoViewContainer)
         self.sourceContainerNode.contentNode.addSubnode(self.containerNode)
-        
+                
         self.clipsToBounds = true
         
         videoView.setOnFirstFrameReceived({ [weak self] _ in
@@ -139,14 +139,30 @@ final class GroupVideoNode: ASDisplayNode {
         if withBackground {
             self.backgroundColor = .black
         }
+        var snapshotView: UIView?
+        if let snapshot = self.videoView.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView = snapshot
+            snapshot.transform = self.videoView.view.transform
+            snapshot.frame = self.videoView.view.frame
+            self.videoView.view.superview?.insertSubview(snapshot, aboveSubview: self.videoView.view)
+        }
         UIView.transition(with: withBackground ? self.videoViewContainer : self.view, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
             UIView.performWithoutAnimation {
                 self.updateIsBlurred(isBlurred: true, light: false, animated: false)
             }
         }) { finished in
             self.backgroundColor = nil
-            Queue.mainQueue().after(0.4) {
-                self.updateIsBlurred(isBlurred: false)
+            if let snapshotView = snapshotView {
+                Queue.mainQueue().after(0.3) {
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    self.updateIsBlurred(isBlurred: false)
+                }
+            } else {
+                Queue.mainQueue().after(0.4) {
+                    self.updateIsBlurred(isBlurred: false)
+                }
             }
         }
     }
@@ -260,9 +276,10 @@ final class GroupVideoNode: ASDisplayNode {
         let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
-
         if let backdropVideoView = self.backdropVideoView {
             backdropVideoView.view.alpha = 0.995
+
+            let topFrame = rotatedVideoFrame
             
             rotatedVideoSize = filledSize
             var rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - rotatedVideoSize.width) / 2.0), y: floor((size.height - rotatedVideoSize.height) / 2.0)), size: rotatedVideoSize)
@@ -270,12 +287,29 @@ final class GroupVideoNode: ASDisplayNode {
             rotatedVideoFrame.origin.y = floor(rotatedVideoFrame.origin.y)
             rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
             rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
+
+            let isEnabled = !topFrame.contains(rotatedVideoFrame)
             
             let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
-            transition.updatePosition(layer: backdropVideoView.view.layer, position: rotatedVideoFrame.center)
+            if isEnabled {
+                self.backdropVideoView?.updateIsEnabled(true)
+                self.backdropVideoView?.view.isHidden = false
+                self.backdropEffectView?.isHidden = false
+            }
+            transition.updatePosition(layer: backdropVideoView.view.layer, position: rotatedVideoFrame.center, force: true, completion: { [weak self] value in
+                guard let strongSelf = self, value else {
+                    return
+                }
+                if !isEnabled {
+                    strongSelf.backdropVideoView?.updateIsEnabled(false)
+                    strongSelf.backdropVideoView?.view.isHidden = true
+                    strongSelf.backdropEffectView?.isHidden = false
+                }
+            })
             transition.updateBounds(layer: backdropVideoView.view.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
             
             let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
+
             transition.updateTransformScale(layer: self.backdropVideoViewContainer.layer, scale: transformScale)
             
             let transition: ContainedViewLayoutTransition = .immediate
@@ -287,18 +321,9 @@ final class GroupVideoNode: ASDisplayNode {
             let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.height - maxSide) / 2.0, width: maxSide, height: maxSide)
             
             if case let .animated(duration, .spring) = transition {
-                if false, #available(iOS 10.0, *) {
-                    let timing = UISpringTimingParameters(mass: 3.0, stiffness: 1000.0, damping: 500.0, initialVelocity: CGVector(dx: 0.0, dy: 0.0))
-                    let animator = UIViewPropertyAnimator(duration: 0.34, timingParameters: timing)
-                    animator.addAnimations {
-                        backdropEffectView.frame = squareBounds
-                    }
-                    animator.startAnimation()
-                } else {
-                    UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 500.0, initialSpringVelocity: 0.0, options: .layoutSubviews, animations: {
-                        backdropEffectView.frame = squareBounds
-                    })
-                }
+                UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 500.0, initialSpringVelocity: 0.0, options: .layoutSubviews, animations: {
+                    backdropEffectView.frame = squareBounds
+                })
             } else {
                 transition.animateView {
                     backdropEffectView.frame = squareBounds
@@ -306,11 +331,19 @@ final class GroupVideoNode: ASDisplayNode {
             }
         }
         
+        if let effectView = self.effectView {
+            if case let .animated(duration, .spring) = transition {
+                UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 500.0, initialSpringVelocity: 0.0, options: .layoutSubviews, animations: {
+                    effectView.frame = bounds
+                })
+            } else {
+                transition.animateView {
+                    effectView.frame = bounds
+                }
+            }
+        }
+        
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
-        
-        if let effectView = self.effectView {
-             transition.updateFrame(view: effectView, frame: bounds)
-        }
     }
 }

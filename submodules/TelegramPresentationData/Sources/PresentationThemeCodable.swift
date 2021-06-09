@@ -111,7 +111,7 @@ extension TelegramWallpaper: Codable {
                                 if let bottomColor = bottomColor {
                                     colors.append(bottomColor)
                                 }
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -157,6 +157,12 @@ extension TelegramWallpaper: Codable {
                     }
                     if file.settings.colors.count >= 2 {
                         components.append(String(format: "%06x", file.settings.colors[1]))
+                    }
+                    if file.settings.colors.count >= 3 {
+                        components.append(String(format: "%06x", file.settings.colors[2]))
+                    }
+                    if file.settings.colors.count >= 4 {
+                        components.append(String(format: "%06x", file.settings.colors[3]))
                     }
                     if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")

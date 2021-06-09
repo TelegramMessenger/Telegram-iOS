@@ -133,7 +133,7 @@ public extension UIColor {
         }
     }
     
-    var hsb: (CGFloat, CGFloat, CGFloat) {
+    var hsb: (h: CGFloat, s: CGFloat, b: CGFloat) {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0
         var brightness: CGFloat = 0.0
@@ -283,6 +283,27 @@ public extension UIColor {
         let g = e1.g - e2.g
         let b = e1.b - e2.b
         return ((512 + rMean) * r * r) >> 8 + 4 * g * g + ((767 - rMean) * b * b) >> 8
+    }
+
+    static func average(of colors: [UIColor]) -> UIColor {
+        var sr: CGFloat = 0.0
+        var sg: CGFloat = 0.0
+        var sb: CGFloat = 0.0
+        var sa: CGFloat = 0.0
+
+        for color in colors {
+            var r: CGFloat = 0.0
+            var g: CGFloat = 0.0
+            var b: CGFloat = 0.0
+            var a: CGFloat = 0.0
+            color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            sr += r
+            sg += g
+            sb += b
+            sa += a
+        }
+
+        return UIColor(red: sr / CGFloat(colors.count), green: sg / CGFloat(colors.count), blue: sb / CGFloat(colors.count), alpha: sa / CGFloat(colors.count))
     }
 }
 

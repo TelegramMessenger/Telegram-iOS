@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import CoreMedia
+import ImageIO
 
 private struct PayloadDescription: Codable {
     var id: UInt32
@@ -626,8 +627,8 @@ public final class IpcGroupCallBufferAppContext {
     }
     private var isActiveCheckTimer: SwiftSignalKit.Timer?
 
-    private let framesPipe = ValuePipe<CVPixelBuffer>()
-    public var frames: Signal<CVPixelBuffer, NoError> {
+    private let framesPipe = ValuePipe<(CVPixelBuffer, CGImagePropertyOrientation)>()
+    public var frames: Signal<(CVPixelBuffer, CGImagePropertyOrientation), NoError> {
         return self.framesPipe.signal()
     }
 
@@ -661,9 +662,12 @@ public final class IpcGroupCallBufferAppContext {
                 return
             }
 
-            let data = Data(bytesNoCopy: mappedFile.memory, count: mappedFile.size, deallocator: .none)
+            var orientationValue: Int32 = 0
+            mappedFile.read(at: 0 ..< 4, to: &orientationValue)
+            let orientation = CGImagePropertyOrientation(rawValue: UInt32(bitPattern: orientationValue)) ?? .up
+            let data = Data(bytesNoCopy: mappedFile.memory.advanced(by: 4), count: mappedFile.size - 4, deallocator: .none)
             if let frame = deserializePixelBuffer(data: data) {
-                strongSelf.framesPipe.putNext(frame)
+                strongSelf.framesPipe.putNext((frame, orientation))
             }
         }, queue: .mainQueue())
         self.framePollTimer = framePollTimer
@@ -814,12 +818,14 @@ public final class IpcGroupCallBufferBroadcastContext {
         }
     }
 
-    public func setCurrentFrame(data: Data) {
+    public func setCurrentFrame(data: Data, orientation: CGImagePropertyOrientation) {
         //let _ = try? data.write(to: URL(fileURLWithPath: dataPath), options: [])
 
         if let mappedFile = self.mappedFile, mappedFile.size >= data.count {
             let _ = data.withUnsafeBytes { bytes in
-                memcpy(mappedFile.memory, bytes.baseAddress!, data.count)
+                var orientationValue = Int32(bitPattern: orientation.rawValue)
+                memmove(mappedFile.memory, &orientationValue, 4)
+                memcpy(mappedFile.memory.advanced(by: 4), bytes.baseAddress!, data.count)
             }
         }
 

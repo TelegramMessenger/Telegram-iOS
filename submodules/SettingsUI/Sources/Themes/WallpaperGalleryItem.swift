@@ -126,6 +126,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
     private let playButtonPlayImage: UIImage?
     private let playButtonRotateImage: UIImage?
+
+    private var isReadyDisposable: Disposable?
     
     init(context: AccountContext) {
         self.context = context
@@ -154,6 +156,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode.setEnabled(false)
 
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
+
         self.playButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
         self.playButtonNode = HighlightableButtonNode()
         self.playButtonNode.insertSubnode(self.playButtonBackgroundNode, at: 0)
@@ -192,15 +195,23 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.clipsToBounds = true
         self.backgroundColor = .black
         
-        self.imageNode.imageUpdated = { [weak self] _ in
-            self?._ready.set(.single(Void()))
+        self.imageNode.imageUpdated = { [weak self] image in
+            if image != nil {
+                self?._ready.set(.single(Void()))
+            }
         }
+        self.isReadyDisposable = (self.nativeNode.isReady
+        |> filter { $0 }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?._ready.set(.single(Void()))
+        })
         
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
         
         self.addSubnode(self.wrapperNode)
-        self.addSubnode(self.statusNode)
+        //self.addSubnode(self.statusNode)
         self.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.blurButtonNode)
@@ -220,6 +231,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
         self.colorDisposable.dispose()
+        self.isReadyDisposable?.dispose()
     }
     
     var cropRect: CGRect? {
@@ -1158,5 +1170,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
+    }
+
+    func animateWallpaperAppeared() {
+        self.nativeNode.animateEvent(transition: .animated(duration: 2.0, curve: .spring), extendAnimation: true)
     }
 }

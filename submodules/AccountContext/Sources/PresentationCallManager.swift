@@ -321,57 +321,51 @@ public struct PresentationGroupCallRequestedVideo {
         case full
     }
 
+    public struct SsrcGroup {
+        public var semantics: String
+        public var ssrcs: [UInt32]
+    }
+
     public var audioSsrc: UInt32
     public var endpointId: String
-    public var videoInformation: String
-    public var quality: Quality
+    public var ssrcGroups: [SsrcGroup]
+    public var minQuality: Quality
+    public var maxQuality: Quality
 }
 
 public extension GroupCallParticipantsContext.Participant {
     var videoEndpointId: String? {
-        if let jsonParams = self.videoJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
-            if let endpoint = json["endpoint"] as? String {
-                return endpoint
-            }
-        }
-        return nil
+        return self.videoDescription?.endpointId
     }
 
     var presentationEndpointId: String? {
-        if let jsonParams = self.presentationJsonDescription, let jsonData = jsonParams.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
-            if let endpoint = json["endpoint"] as? String {
-                return endpoint
-            }
-        }
-        return nil
+        return self.presentationDescription?.endpointId
     }
 }
 
 public extension GroupCallParticipantsContext.Participant {
-    func requestedVideoChannel(quality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
+    func requestedVideoChannel(minQuality: PresentationGroupCallRequestedVideo.Quality, maxQuality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
         guard let audioSsrc = self.ssrc else {
             return nil
         }
-        guard let videoInformation = self.videoJsonDescription else {
+        guard let videoDescription = self.videoDescription else {
             return nil
         }
-        guard let videoEndpointId = self.videoEndpointId else {
-            return nil
-        }
-        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: videoEndpointId, videoInformation: videoInformation, quality: quality)
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: videoDescription.endpointId, ssrcGroups: videoDescription.ssrcGroups.map { group in
+            PresentationGroupCallRequestedVideo.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
+        }, minQuality: minQuality, maxQuality: maxQuality)
     }
 
-    func requestedPresentationVideoChannel(quality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
+    func requestedPresentationVideoChannel(minQuality: PresentationGroupCallRequestedVideo.Quality, maxQuality: PresentationGroupCallRequestedVideo.Quality) -> PresentationGroupCallRequestedVideo? {
         guard let audioSsrc = self.ssrc else {
             return nil
         }
-        guard let videoInformation = self.presentationJsonDescription else {
+        guard let presentationDescription = self.presentationDescription else {
             return nil
         }
-        guard let presentationEndpointId = self.presentationEndpointId else {
-            return nil
-        }
-        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: presentationEndpointId, videoInformation: videoInformation, quality: quality)
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: presentationDescription.endpointId, ssrcGroups: presentationDescription.ssrcGroups.map { group in
+            PresentationGroupCallRequestedVideo.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
+        }, minQuality: minQuality, maxQuality: maxQuality)
     }
 }
 
@@ -438,7 +432,7 @@ public protocol PresentationGroupCall: class {
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
     
     func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void)
-    func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
+    func makeOutgoingVideoView(requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void)
     
     func loadMoreMembers(token: String)
 }

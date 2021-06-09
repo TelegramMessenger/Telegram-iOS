@@ -807,14 +807,14 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private var strings: PresentationStrings?
     private let cancelText: String?
     
-    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, cancelText: String? = nil) {
+    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, displayBackground: Bool = true, cancelText: String? = nil) {
         self.fieldStyle = fieldStyle
         self.forceSeparator = forceSeparator
         self.cancelText = cancelText
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.background)
         self.backgroundNode.isUserInteractionEnabled = false
-        //self.backgroundNode.isHidden = true
+        self.backgroundNode.isHidden = !displayBackground
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true

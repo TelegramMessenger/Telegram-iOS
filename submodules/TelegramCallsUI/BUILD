@@ -47,6 +47,7 @@ swift_library(
         "//submodules/MapResourceToAvatarSizes:MapResourceToAvatarSizes",
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",
+        "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
     ],
     visibility = [
         "//visibility:public",

@@ -157,7 +157,7 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
 
 public final class LinkHighlightingNode: ASDisplayNode {
     private var rects: [CGRect] = []
-    private let imageNode: ASImageNode
+    public let imageNode: ASImageNode
     
     public var innerRadius: CGFloat = 4.0
     public var outerRadius: CGFloat = 4.0
@@ -196,7 +196,7 @@ public final class LinkHighlightingNode: ASDisplayNode {
     }
     
     private func updateImage() {
-        if rects.isEmpty {
+        if self.rects.isEmpty {
             self.imageNode.image = nil
         }
         let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius)
@@ -204,6 +204,19 @@ public final class LinkHighlightingNode: ASDisplayNode {
         if let image = image {
             self.imageNode.image = image
             self.imageNode.frame = CGRect(origin: offset, size: image.size)
+        }
+    }
+
+    public static func generateImage(color: UIColor, inset: CGFloat, innerRadius: CGFloat, outerRadius: CGFloat, rects: [CGRect]) -> (CGPoint, UIImage)? {
+        if rects.isEmpty {
+           return nil
+        }
+        let (offset, image) = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius)
+
+        if let image = image {
+            return (offset, image)
+        } else {
+            return nil
         }
     }
     

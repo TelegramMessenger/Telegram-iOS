@@ -51,7 +51,7 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
 }
 
 class ChatMessageShareButton: HighlightableButtonNode {
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: NavigationBackgroundNode
     private let iconNode: ASImageNode
     
     private var theme: PresentationTheme?
@@ -60,7 +60,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
     private var textNode: ImmediateTextNode?
     
     init() {
-        self.backgroundNode = ASImageNode()
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.iconNode = ASImageNode()
         
         super.init(pointerStyle: nil)
@@ -95,19 +95,22 @@ class ChatMessageShareButton: HighlightableButtonNode {
             self.isReplies = isReplies
             
             let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
-            var updatedShareButtonBackground: UIImage?
+            //var updatedShareButtonBackground: UIImage?
             var updatedIconImage: UIImage?
             if case .pinnedMessages = subject {
-                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                //updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else if isReplies {
-                updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                //updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
-                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                //updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else {
-                updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                //updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
             }
-            self.backgroundNode.image = updatedShareButtonBackground
+            self.backgroundNode.color = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
             self.iconNode.image = updatedIconImage
         }
         var size = CGSize(width: 30.0, height: 30.0)
@@ -144,6 +147,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             textNode.removeFromSupernode()
         }
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0)), size: image.size)
         }
@@ -174,12 +178,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let disposable = MetaDisposable()
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
-    private var forwardBackgroundNode: ASImageNode?
+    private var forwardBackgroundNode: NavigationBackgroundNode?
     
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
-    private var replyBackgroundNode: ASImageNode?
+    private var replyBackgroundNode: NavigationBackgroundNode?
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
@@ -635,13 +639,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
-        let currentForwardBackgroundNode = self.forwardBackgroundNode
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
-        let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
-        let currentItem = self.item
         let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
@@ -836,8 +837,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: ASImageNode?
-            var replyBackgroundImage: UIImage?
+            var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var ignoreForward = self.telegramDice == nil
@@ -903,14 +903,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             if replyInfoApply != nil || viaBotApply != nil {
-                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                    updatedReplyBackgroundNode = currentReplyBackgroundNode
-                } else {
-                    updatedReplyBackgroundNode = ASImageNode()
-                }
-                
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+                needsReplyBackground = true
             }
             
             var updatedShareButtonNode: ChatMessageShareButton?
@@ -930,8 +923,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var forwardPsaType: String?
             
             var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
-            var updatedForwardBackgroundNode: ASImageNode?
-            var forwardBackgroundImage: UIImage?
+            var needsForwardBackground = false
             
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
                 forwardPsaType = forwardInfo.psaType
@@ -956,15 +948,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 let availableWidth = max(60.0, availableContentWidth + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
-                
-                if let currentForwardBackgroundNode = currentForwardBackgroundNode {
-                    updatedForwardBackgroundNode = currentForwardBackgroundNode
-                } else {
-                    updatedForwardBackgroundNode = ASImageNode()
-                }
-                
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                forwardBackgroundImage = graphics.chatServiceBubbleFillImage
+
+                needsForwardBackground = true
             }
             
             var maxContentWidth = imageSize.width
@@ -1056,18 +1041,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     dateAndStatusApply(false)
                     strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
-                    
-                    if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
-                        if strongSelf.replyBackgroundNode == nil {
-                            strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                            strongSelf.contextSourceNode.contentNode.addSubnode(updatedReplyBackgroundNode)
-                            updatedReplyBackgroundNode.image = replyBackgroundImage
+
+                    if needsReplyBackground {
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.color = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
                         } else {
-                            strongSelf.replyBackgroundNode?.image = replyBackgroundImage
+                            let replyBackgroundNode = NavigationBackgroundNode(color: item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic)
+                            strongSelf.replyBackgroundNode = replyBackgroundNode
+                            strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
                     } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        replyBackgroundNode.removeFromSupernode()
                         strongSelf.replyBackgroundNode = nil
+                        replyBackgroundNode.removeFromSupernode()
                     }
                     
                     if let (viaBotLayout, viaBotApply) = viaBotApply {
@@ -1078,7 +1063,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 14.0)), y: 8.0), size: viaBotLayout.size)
                         viaBotNode.frame = viaBotFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                     } else if let viaBotNode = strongSelf.viaBotNode {
                         viaBotNode.removeFromSupernode()
                         strongSelf.viaBotNode = nil
@@ -1101,7 +1089,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         replyInfoNode.frame = replyInfoFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                         
                         if let _ = item.controllerInteraction.selectionState, isEmoji {
                             replyInfoNode.alpha = 0.0
@@ -1142,16 +1133,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             deliveryFailedNode?.removeFromSupernode()
                         })
                     }
-                    
-                    if let updatedForwardBackgroundNode = updatedForwardBackgroundNode {
-                        if strongSelf.forwardBackgroundNode == nil {
-                            strongSelf.forwardBackgroundNode = updatedForwardBackgroundNode
-                            strongSelf.addSubnode(updatedForwardBackgroundNode)
-                            updatedForwardBackgroundNode.image = forwardBackgroundImage
+
+                    if needsForwardBackground {
+                        if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                            forwardBackgroundNode.color = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                        } else {
+                            let forwardBackgroundNode = NavigationBackgroundNode(color: item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic)
+                            strongSelf.forwardBackgroundNode = forwardBackgroundNode
+                            strongSelf.addSubnode(forwardBackgroundNode)
                         }
-                    } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
-                        forwardBackgroundNode.removeFromSupernode()
-                        strongSelf.forwardBackgroundNode = nil
                     }
                     
                     if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
@@ -1162,7 +1152,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                         forwardInfoNode.frame = forwardInfoFrame
-                        strongSelf.forwardBackgroundNode?.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                        if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                            forwardBackgroundNode.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                            forwardBackgroundNode.update(size: forwardBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
                         forwardInfoNode.removeFromSupernode()
                         strongSelf.forwardInfoNode = nil

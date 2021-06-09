@@ -13,6 +13,29 @@ import MergeLists
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0
 
+private func intensityToSliderValue(_ value: Int32, allowDark: Bool) -> CGFloat {
+    if allowDark {
+        if value < 0 {
+            return max(0.0, min(100.0, CGFloat(abs(value))))
+        } else {
+            return 100.0 + max(0.0, min(100.0, CGFloat(value)))
+        }
+    } else {
+        return CGFloat(max(value, 0)) * 2.0
+    }
+}
+
+private func sliderValueToIntensity(_ value: CGFloat, allowDark: Bool) -> Int32 {
+    if allowDark {
+        if value < 100.0 {
+            return -Int32(value)
+        } else {
+            return Int32(value - 100.0)
+        }
+    } else {
+        return Int32(value / 2.0)
+    }
+}
 
 private struct WallpaperPatternEntry: Comparable, Identifiable {
     let index: Int
@@ -214,9 +237,12 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var patternChanged: ((TelegramWallpaper?, Int32?, Bool) -> Void)?
 
+    private let allowDark: Bool
+
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
+        self.allowDark = theme.overallDarkAppearance
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
@@ -275,16 +301,18 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.disableSnapToPositions = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
-        sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
+        sliderView.minimumValue = 0.0
         sliderView.maximumValue = 200.0
-        sliderView.positionsCount = 3
+        if self.allowDark {
+            sliderView.positionsCount = 3
+        }
         sliderView.useLinesForPositions = true
-        sliderView.value = 150.0
+        sliderView.value = intensityToSliderValue(50, allowDark: self.allowDark)
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
         sliderView.backColor = self.theme.list.disclosureArrowColor
-        sliderView.trackColor = self.theme.list.itemAccentColor
+        sliderView.trackColor = sliderView.backColor//self.theme.list.itemAccentColor
         
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -335,7 +363,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 if let strongSelf = self {
                     strongSelf.currentWallpaper = updatedWallpaper
                     if let sliderView = strongSelf.sliderView {
-                        strongSelf.patternChanged?(updatedWallpaper, Int32(sliderView.value - 100.0), false)
+                        strongSelf.patternChanged?(updatedWallpaper, sliderValueToIntensity(sliderView.value, allowDark: strongSelf.allowDark), false)
                     }
                     if let subnodes = strongSelf.scrollNode.subnodes {
                         for case let subnode as SettingsThemeWallpaperNode in subnodes {
@@ -377,12 +405,19 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
         
         if let wallpaper = self.currentWallpaper {
-            self.patternChanged?(wallpaper, Int32(sliderView.value - 100.0), sliderView.isTracking)
+            self.patternChanged?(wallpaper, sliderValueToIntensity(sliderView.value, allowDark: self.allowDark), sliderView.isTracking)
         }
     }
     
     func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
-        var wallpaper = initialWallpaper ?? self.wallpapers.first
+        let wallpaper: TelegramWallpaper?
+
+        switch initialWallpaper {
+        case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
+            wallpaper = .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: self.wallpapers[0].settings ?? WallpaperSettings())
+        default:
+            wallpaper = self.wallpapers.first
+        }
         
         if let wallpaper = wallpaper {
             var selectedFileId: Int64?
@@ -391,7 +426,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity.flatMap { $0 + 100 } ?? 150)
+            self.sliderView?.value = intensity.flatMap { intensityToSliderValue($0, allowDark: self.allowDark) } ?? intensityToSliderValue(50, allowDark: self.allowDark)
             
             self.scrollNode.view.contentOffset = CGPoint()
             
@@ -407,8 +442,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 }
             }
                         
-            if initialWallpaper == nil, let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
-                self.patternChanged?(wallpaper, Int32(sliderView.value - 100.0), false)
+            if let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
+                self.patternChanged?(wallpaper, sliderValueToIntensity(sliderView.value, allowDark: self.allowDark), false)
             }
             
             if let selectedNode = selectedNode {

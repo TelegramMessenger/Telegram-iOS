@@ -528,7 +528,9 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
         if updateLayout, let size = self.validLayout {
             if let index = self.state.selection {
-                self.colorPickerNode.color = UIColor(rgb: self.state.colors[index])
+                if self.state.colors.count > index {
+                    self.colorPickerNode.color = UIColor(rgb: self.state.colors[index])
+                }
             }
             
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)

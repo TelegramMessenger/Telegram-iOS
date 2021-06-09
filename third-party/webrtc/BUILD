@@ -9,7 +9,8 @@ config_setting(
 )
 
 optimization_flags = select({
-    ":debug_build": ["-Os", "-DNDEBUG"],
+    ":debug_build": ["-O2", "-DNDEBUG"],
+    #":debug_build": [],
     "//conditions:default": ["-DNDEBUG"],
 })
 
@@ -59,7 +60,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/debugging/internal/examine_stack.cc",
     "absl/debugging/internal/stack_consumption.cc",
     "absl/debugging/internal/vdso_support.cc",
-    "absl/debugging/leak_check.cc",
     "absl/debugging/leak_check_disable.cc",
     "absl/debugging/stacktrace.cc",
     "absl/debugging/symbolize.cc",
@@ -123,7 +123,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/synchronization/internal/graphcycles.cc",
     "absl/synchronization/internal/per_thread_sem.cc",
     "absl/synchronization/internal/waiter.cc",
-    "absl/synchronization/mutex.cc",
     "absl/synchronization/notification.cc",
     "absl/time/civil_time.cc",
     "absl/time/clock.cc",
@@ -171,7 +170,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/time/civil_time.h",
     "absl/synchronization/blocking_counter.h",
     "absl/synchronization/barrier.h",
-    "absl/synchronization/mutex.h",
     "absl/base/internal/low_level_alloc.h",
     "absl/strings/str_replace.h",
     "absl/strings/substitute.h",
@@ -209,7 +207,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/flags/internal/usage.h",
     "absl/flags/internal/registry.h",
     "absl/debugging/internal/vdso_support.h",
-    "absl/debugging/leak_check.h",
     "absl/debugging/stacktrace.h",
     "absl/flags/flag.h",
     "absl/debugging/internal/elf_mem_image.h",
@@ -351,7 +348,6 @@ webrtc_sources = [
     "rtc_base/task_queue.h",
     "rtc_base/system/file_wrapper.h",
     "rtc_base/task_utils/repeating_task.h",
-    "rtc_base/task_queue_stdlib.h",
     "rtc_base/synchronization/yield_policy.h",
     "rtc_base/string_utils.h",
     "rtc_base/strings/audio_format_to_string.h",
@@ -431,7 +427,7 @@ webrtc_sources = [
     "rtc_base/third_party/sigslot/sigslot.h",
     "rtc_base/timestamp_aligner.h",
     "rtc_base/ssl_stream_adapter.h",
-    "rtc_base/task_queue_libevent.h",
+    "rtc_base/task_queue_gcd.h",
     "rtc_base/string_encode.h",
     "rtc_base/ssl_fingerprint.h",
     "rtc_base/rtc_certificate_generator.h",
@@ -548,8 +544,7 @@ webrtc_sources = [
     "rtc_base/synchronization/yield.cc",
     "rtc_base/system/file_wrapper.cc",
     "rtc_base/task_queue.cc",
-    "rtc_base/task_queue_libevent.cc",
-    "rtc_base/task_queue_stdlib.cc",
+    "rtc_base/task_queue_gcd.cc",
     "rtc_base/task_utils/repeating_task.cc",
     "rtc_base/third_party/base64/base64.cc",
     "rtc_base/third_party/sigslot/sigslot.cc",
@@ -626,7 +621,7 @@ webrtc_sources = [
     "api/rtp_transceiver_interface.cc",
     "api/sctp_transport_interface.cc",
     "api/stats_types.cc",
-    "api/task_queue/default_task_queue_factory_libevent.cc",
+    "api/task_queue/default_task_queue_factory_gcd.cc",
     "api/task_queue/task_queue_base.cc",
     "api/transport/bitrate_settings.cc",
     "api/transport/field_trial_based_config.cc",
@@ -1497,7 +1492,6 @@ webrtc_sources = [
     "logging/rtc_event_log/fake_rtc_event_log.cc",
     "logging/rtc_event_log/fake_rtc_event_log_factory.cc",
     "logging/rtc_event_log/ice_logger.cc",
-    "logging/rtc_event_log/rtc_event_log_impl.cc",
     "logging/rtc_event_log/rtc_stream_config.cc",
     "video/adaptation/encode_usage_resource.cc",
     "video/adaptation/overuse_frame_detector.cc",
@@ -2725,21 +2719,22 @@ webrtc_sources = [
     "modules/rtp_rtcp/source/rtp_rtcp_interface.h",
     "rtc_base/boringssl_identity.h",
     "rtc_base/boringssl_identity.cc",
-    "rtc_base/deprecated/recursive_critical_section.h",
-    "rtc_base/deprecated/recursive_critical_section.cc",
     "rtc_base/network_monitor_factory.h",
     "rtc_base/network_monitor_factory.cc",
     "rtc_base/openssl_key_pair.h",
     "rtc_base/openssl_key_pair.cc",
     "rtc_base/synchronization/mutex.h",
     "rtc_base/synchronization/mutex.cc",
+    "rtc_base/synchronization/mutex_critical_section.h",
+    "rtc_base/synchronization/mutex_pthread.h",
+    "rtc_base/deprecated/recursive_critical_section.h",
+    "rtc_base/deprecated/recursive_critical_section.cc",
     "rtc_base/task_utils/pending_task_safety_flag.h",
     "rtc_base/task_utils/pending_task_safety_flag.cc",
     "api/video/video_frame_metadata.h",
     "api/video/video_frame_metadata.cc",
     "modules/rtp_rtcp/source/rtp_rtcp_impl2.h",
     "modules/rtp_rtcp/source/rtp_rtcp_impl2.cc",
-    "rtc_base/synchronization/mutex_pthread.h",
     "api/set_local_description_observer_interface.h",
     "common_video/frame_counts.h",
     "rtc_base/system/no_unique_address.h",
@@ -2892,6 +2887,8 @@ webrtc_sources = [
     "modules/audio_processing/capture_levels_adjuster/capture_levels_adjuster.cc",
     "modules/audio_processing/capture_levels_adjuster/audio_samples_scaler.h",
     "modules/audio_processing/capture_levels_adjuster/audio_samples_scaler.cc",
+    "rtc_base/system/gcd_helpers.h",
+    "rtc_base/system/gcd_helpers.m",
 ]
 
 ios_objc_sources = [
@@ -3221,6 +3218,17 @@ common_flags = [
     "-DHAVE_WEBRTC_VIDEO",
     "-DRTC_ENABLE_VP9",
     "-DHAVE_SCTP",
+    "-DWEBRTC_NS_FLOAT",
+    "-DRTC_DISABLE_TRACE_EVENTS",
+    "-DWEBRTC_OPUS_SUPPORT_120MS_PTIME=1",
+    "-DWEBRTC_APM_DEBUG_DUMP=0",
+    "-DBWE_TEST_LOGGING_COMPILE_TIME_ENABLE=0",
+    "-DABSL_ALLOCATOR_NOTHROW=1",
+    "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+    "-DNS_BLOCK_ASSERTIONS=1",
+    "-DWEBRTC_ENABLE_PROTOBUF=0",
+    "-DWEBRTC_ENABLE_AVX2",
+    "-DWEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0",
 ]
 
 arm_specific_flags = [
@@ -3232,6 +3240,7 @@ arm_specific_flags = [
 arm64_specific_flags = [
     "-DWEBRTC_ARCH_ARM64",
     "-DWEBRTC_HAS_NEON",
+    "-mfpu=neon",
 ]
 
 x86_64_specific_flags = [
@@ -3339,6 +3348,7 @@ cc_library(
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION=''",
         "-DHAVE_SCTP",
+        "-DNON_WINDOWS_DEFINE",
     ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )
@@ -3426,49 +3436,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libevent",
-    srcs = [ "dependencies/base/third_party/libevent/" + path for path in [
-        "buffer.c",
-        "evbuffer.c",
-        "evdns.c",
-        "evdns.h",
-        "event-config.h",
-        "event-internal.h",
-        "event.c",
-        "event.h",
-        "event_tagging.c",
-        "evhttp.h",
-        "evrpc-internal.h",
-        "evrpc.c",
-        "evrpc.h",
-        "evsignal.h",
-        "evutil.c",
-        "evutil.h",
-        "http-internal.h",
-        "http.c",
-        "log.c",
-        "log.h",
-        "min_heap.h",
-        "poll.c",
-        "select.c",
-        "signal.c",
-        "strlcpy-internal.h",
-        "strlcpy.c",
-        "kqueue.c",
-        "mac/config.h",
-        "mac/event-config.h",
-    ]],
-    copts = [
-        "-DHAVE_CONFIG_H",
-        "-Ithird-party/webrtc/dependencies/base/third_party/libevent/mac",
-        "-Ithird-party/webrtc/dependencies/base/third_party/libevent",
-        "-Ithird-party/webrtc/dependencies",
-        "-Ithird-party/webrtc/" + webrtc_source_dir,
-    ] + arch_specific_cflags + optimization_flags,
-    visibility = ["//visibility:public"],
-)
-
-cc_library(
     name = "libyuv",
     srcs = [ "dependencies/third_party/libyuv/" + path for path in [
         # Headers
@@ -3542,6 +3509,7 @@ cc_library(
     copts = [
         "-ffp-contract=fast",
         "-Ithird-party/webrtc/dependencies/third_party/libyuv/include",
+        "-DLIBYUV_NEON",
     ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )
@@ -3586,6 +3554,9 @@ objc_library(
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
         "-DHAVE_SCTP",
+        "-DNO_MAIN_THREAD_WRAPPING",
+        "-DRTC_DISABLE_TRACE_EVENTS",
+        "-DRTC_DISABLE_METRICS",
     ] + arch_specific_cflags + optimization_flags,
     deps = [
         "//third-party/boringssl:crypto",
@@ -3593,7 +3564,6 @@ objc_library(
         "//third-party/opus:opus",
         ":usrsctp",
         ":libsrtp",
-        ":libevent",
         ":libyuv",
         "//third-party/libvpx:vpx",
     ],

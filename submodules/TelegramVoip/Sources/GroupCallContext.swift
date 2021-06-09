@@ -194,14 +194,28 @@ public final class OngoingGroupCallContext {
             case full
         }
 
-        public var audioSsrc: UInt32
-        public var videoDescription: String
-        public var quality: Quality
+        public struct SsrcGroup: Equatable {
+            public var semantics: String
+            public var ssrcs: [UInt32]
 
-        public init(audioSsrc: UInt32, videoDescription: String, quality: Quality) {
+            public init(semantics: String, ssrcs: [UInt32]) {
+                self.semantics = semantics
+                self.ssrcs = ssrcs
+            }
+        }
+
+        public var audioSsrc: UInt32
+        public var endpointId: String
+        public var ssrcGroups: [SsrcGroup]
+        public var minQuality: Quality
+        public var maxQuality: Quality
+
+        public init(audioSsrc: UInt32, endpointId: String, ssrcGroups: [SsrcGroup], minQuality: Quality, maxQuality: Quality) {
             self.audioSsrc = audioSsrc
-            self.videoDescription = videoDescription
-            self.quality = quality
+            self.endpointId = endpointId
+            self.ssrcGroups = ssrcGroups
+            self.minQuality = minQuality
+            self.maxQuality = maxQuality
         }
     }
     
@@ -376,19 +390,34 @@ public final class OngoingGroupCallContext {
                 self.currentRequestedVideoChannels = channels
 
                 self.context.setRequestedVideoChannels(channels.map { channel -> OngoingGroupCallRequestedVideoChannel in
-                    let mappedQuality: OngoingGroupCallRequestedVideoQuality
-                    switch channel.quality {
+                    let mappedMinQuality: OngoingGroupCallRequestedVideoQuality
+                    switch channel.minQuality {
                     case .thumbnail:
-                        mappedQuality = .thumbnail
+                        mappedMinQuality = .thumbnail
                     case .medium:
-                        mappedQuality = .medium
+                        mappedMinQuality = .medium
                     case .full:
-                        mappedQuality = .full
+                        mappedMinQuality = .full
+                    }
+                    let mappedMaxQuality: OngoingGroupCallRequestedVideoQuality
+                    switch channel.maxQuality {
+                    case .thumbnail:
+                        mappedMaxQuality = .thumbnail
+                    case .medium:
+                        mappedMaxQuality = .medium
+                    case .full:
+                        mappedMaxQuality = .full
                     }
                     return OngoingGroupCallRequestedVideoChannel(
                         audioSsrc: channel.audioSsrc,
-                        videoInformation: channel.videoDescription,
-                        quality: mappedQuality
+                        endpointId: channel.endpointId,
+                        ssrcGroups: channel.ssrcGroups.map { group in
+                            return OngoingGroupCallSsrcGroup(
+                                semantics: group.semantics,
+                                ssrcs: group.ssrcs.map { $0 as NSNumber })
+                        },
+                        minQuality: mappedMinQuality,
+                        maxQuality: mappedMaxQuality
                     )
                 })
             }
@@ -542,38 +571,74 @@ public final class OngoingGroupCallContext {
                     }
                     completion(mainVideoView, cloneVideoView)
                     #else
-                    completion(OngoingCallContextPresentationCallVideoView(
-                        view: view,
-                        setOnFirstFrameReceived: { [weak view] f in
-                            view?.setOnFirstFrameReceived(f)
+                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: mainView,
+                        setOnFirstFrameReceived: { [weak mainView] f in
+                            mainView?.setOnFirstFrameReceived(f)
                         },
-                        getOrientation: { [weak view] in
-                            if let view = view {
-                                return OngoingCallVideoOrientation(view.orientation)
+                        getOrientation: { [weak mainView] in
+                            if let mainView = mainView {
+                                return OngoingCallVideoOrientation(mainView.orientation)
                             } else {
                                 return .rotation0
                             }
                         },
-                        getAspect: { [weak view] in
-                            if let view = view {
-                                return view.aspect
+                        getAspect: { [weak mainView] in
+                            if let mainView = mainView {
+                                return mainView.aspect
                             } else {
                                 return 0.0
                             }
                         },
-                        setOnOrientationUpdated: { [weak view] f in
-                            view?.setOnOrientationUpdated { value, aspect in
+                        setOnOrientationUpdated: { [weak mainView] f in
+                            mainView?.setOnOrientationUpdated { value, aspect in
                                 f?(OngoingCallVideoOrientation(value), aspect)
                             }
-                        }, setVideoContentMode: { [weak view] mode in
-                            view?.setVideoContentMode(mode)
+                        }, setVideoContentMode: { [weak mainView] mode in
+                            mainView?.setVideoContentMode(mode)
                         },
-                        setOnIsMirroredUpdated: { [weak view] f in
-                            view?.setOnIsMirroredUpdated { value in
+                        setOnIsMirroredUpdated: { [weak mainView] f in
+                            mainView?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
                         }
-                    ))
+                    )
+                    var cloneVideoView: OngoingCallContextPresentationCallVideoView?
+                    if let cloneView = cloneView {
+                        cloneVideoView = OngoingCallContextPresentationCallVideoView(
+                            view: cloneView,
+                            setOnFirstFrameReceived: { [weak cloneView] f in
+                                cloneView?.setOnFirstFrameReceived(f)
+                            },
+                            getOrientation: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return OngoingCallVideoOrientation(cloneView.orientation)
+                                } else {
+                                    return .rotation0
+                                }
+                            },
+                            getAspect: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return cloneView.aspect
+                                } else {
+                                    return 0.0
+                                }
+                            },
+                            setOnOrientationUpdated: { [weak cloneView] f in
+                                cloneView?.setOnOrientationUpdated { value, aspect in
+                                    f?(OngoingCallVideoOrientation(value), aspect)
+                                }
+                            }, setVideoContentMode: { [weak cloneView] mode in
+                                cloneView?.setVideoContentMode(mode)
+                            },
+                            setOnIsMirroredUpdated: { [weak cloneView] f in
+                                cloneView?.setOnIsMirroredUpdated { value in
+                                    f?(value)
+                                }
+                            }
+                        )
+                    }
+                    completion(mainVideoView, cloneVideoView)
                     #endif
                 } else {
                     completion(nil, nil)

@@ -2112,6 +2112,24 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
 }
 
+static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
+    if (data1.length != data2.length) {
+        return false;
+    }
+
+    uint8_t const *bytes1 = data1.bytes;
+    uint8_t const *bytes2 = data2.bytes;
+
+    int result = 0;
+    for (int i = 0; i < data1.length; i++) {
+        if (bytes1[i] != bytes2[i]) {
+            result |= i + 1;
+        }
+    }
+
+    return result == 0;
+}
+
 - (NSData *)_decryptIncomingTransportData:(NSData *)transportData address:(MTDatacenterAddress *)address authKey:(MTDatacenterAuthKey *)authKey
 {
     MTDatacenterAuthKey *effectiveAuthKey = authKey;
@@ -2146,7 +2164,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     NSData *msgKeyLarge = MTSha256(msgKeyLargeData);
     NSData *messageKey = [msgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
     
-    if (![messageKey isEqualToData:embeddedMessageKey]) {
+    if (!isDataEqualToDataConstTime(messageKey, embeddedMessageKey)) {
         return nil;
     }
 

@@ -77,7 +77,7 @@ extension TelegramWallpaper {
                     //assertionFailure()
                     self = .color(0xffffff)
                 }
-            case let .wallPaperNoFile(_, settings):
+            case let .wallPaperNoFile(_, _, settings):
                 if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation) = settings {
                     let colors: [UInt32] = ([backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor] as [Int32?]).compactMap({ color -> UInt32? in
                         return color.flatMap(UInt32.init(bitPattern:))
@@ -103,9 +103,9 @@ extension TelegramWallpaper {
         case let .file(_, _, _, _, _, _, slug, _, settings):
             return (.inputWallPaperSlug(slug: slug), apiWallpaperSettings(settings))
         case let .color(color):
-            return (.inputWallPaperNoFile, apiWallpaperSettings(WallpaperSettings(colors: [color])))
+            return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(colors: [color])))
         case let .gradient(colors, settings):
-            return (.inputWallPaperNoFile, apiWallpaperSettings(WallpaperSettings(colors: colors, rotation: settings.rotation)))
+            return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(colors: colors, rotation: settings.rotation)))
         default:
             return nil
         }

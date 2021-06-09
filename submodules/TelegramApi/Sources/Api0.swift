@@ -142,7 +142,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
     dict[1304052993] = { return Api.account.Takeout.parse_takeout($0) }
     dict[-1456996667] = { return Api.messages.InactiveChats.parse_inactiveChats($0) }
-    dict[-1464184409] = { return Api.GroupCallParticipant.parse_groupCallParticipant($0) }
+    dict[-341428482] = { return Api.GroupCallParticipant.parse_groupCallParticipant($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
     dict[289586518] = { return Api.SavedContact.parse_savedPhoneContact($0) }
@@ -283,6 +283,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[192428418] = { return Api.Update.parse_updateGroupCallConnection($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
+    dict[-592373577] = { return Api.GroupCallParticipantVideoSourceGroup.parse_groupCallParticipantVideoSourceGroup($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
@@ -579,11 +580,12 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-1392895362] = { return Api.InputMessage.parse_inputMessageCallbackQuery($0) }
+    dict[2028213859] = { return Api.GroupCallParticipantVideo.parse_groupCallParticipantVideo($0) }
     dict[-58224696] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-275956116] = { return Api.messages.AffectedFoundMessages.parse_affectedFoundMessages($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
-    dict[-1963717851] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
+    dict[-528465642] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[978610270] = { return Api.messages.Messages.parse_messagesSlice($0) }
     dict[1682413576] = { return Api.messages.Messages.parse_channelMessages($0) }
@@ -690,7 +692,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[-433014407] = { return Api.InputWallPaper.parse_inputWallPaper($0) }
     dict[1913199744] = { return Api.InputWallPaper.parse_inputWallPaperSlug($0) }
-    dict[-2077770836] = { return Api.InputWallPaper.parse_inputWallPaperNoFile($0) }
+    dict[-1770371538] = { return Api.InputWallPaper.parse_inputWallPaperNoFile($0) }
     dict[-1118798639] = { return Api.InputThemeSettings.parse_inputThemeSettings($0) }
     dict[1251549527] = { return Api.InputStickeredMedia.parse_inputStickeredMediaPhoto($0) }
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
@@ -1085,6 +1087,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PopularContact:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.GroupCallParticipantVideoSourceGroup:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.FolderPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelParticipant:
@@ -1332,6 +1336,8 @@ public struct Api {
             case let _1 as Api.help.CountryCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.GroupCallParticipantVideo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallProtocol:
                 _1.serialize(buffer, boxed)

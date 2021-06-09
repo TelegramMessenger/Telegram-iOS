@@ -192,11 +192,13 @@ final class BlobView: UIView {
     
     var level: CGFloat = 0 {
         didSet {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            let lv = self.minScale + (self.maxScale - self.minScale) * self.level
-            self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
-            CATransaction.commit()
+            if abs(self.level - oldValue) > 0.01 {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                let lv = self.minScale + (self.maxScale - self.minScale) * self.level
+                self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+                CATransaction.commit()
+            }
         }
     }
     

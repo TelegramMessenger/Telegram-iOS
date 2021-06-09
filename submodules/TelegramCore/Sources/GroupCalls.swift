@@ -142,29 +142,17 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
-                        var videoJsonDescription: String? = nil
-                        var presentationJsonDescription: String? = nil
-                        if let video = video {
-                            switch video {
-                            case let .dataJSON(data):
-                                videoJsonDescription = data
-                            }
-                        }
-                        if let presentation = presentation {
-                            switch presentation {
-                            case let .dataJSON(data):
-                                presentationJsonDescription = data
-                            }
-                        }
+                        var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                        var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                         if muteState?.canUnmute == false {
-                            videoJsonDescription = nil
-                            presentationJsonDescription = nil
+                            videoDescription = nil
+                            presentationDescription = nil
                         }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
-                            videoJsonDescription: videoJsonDescription,
-                            presentationJsonDescription: presentationJsonDescription,
+                            videoDescription: videoDescription,
+                            presentationDescription: presentationDescription,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
                             hasRaiseHand: raiseHandRating != nil,
@@ -471,29 +459,17 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                         } else if mutedByYou {
                             muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                         }
-                        var videoJsonDescription: String? = nil
-                        var presentationJsonDescription: String? = nil
-                        if let video = video {
-                            switch video {
-                            case let .dataJSON(data):
-                                videoJsonDescription = data
-                            }
-                        }
-                        if let presentation = presentation {
-                            switch presentation {
-                            case let .dataJSON(data):
-                                presentationJsonDescription = data
-                            }
-                        }
+                        var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                        var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                         if muteState?.canUnmute == false {
-                            videoJsonDescription = nil
-                            presentationJsonDescription = nil
+                            videoDescription = nil
+                            presentationDescription = nil
                         }
                         parsedParticipants.append(GroupCallParticipantsContext.Participant(
                             peer: peer,
                             ssrc: ssrc,
-                            videoJsonDescription: videoJsonDescription,
-                            presentationJsonDescription: presentationJsonDescription,
+                            videoDescription: videoDescription,
+                            presentationDescription: presentationDescription,
                             joinTimestamp: date,
                             raiseHandRating: raiseHandRating,
                             hasRaiseHand: raiseHandRating != nil,
@@ -735,30 +711,18 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                     } else if mutedByYou {
                                         muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                                     }
-                                    var videoJsonDescription: String? = nil
-                                    var presentationJsonDescription: String? = nil
-                                    if let video = video {
-                                        switch video {
-                                        case let .dataJSON(data):
-                                            videoJsonDescription = data
-                                        }
-                                    }
-                                    if let presentation = presentation {
-                                        switch presentation {
-                                        case let .dataJSON(data):
-                                            presentationJsonDescription = data
-                                        }
-                                    }
+                                    var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                                    var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                                     if muteState?.canUnmute == false {
-                                        videoJsonDescription = nil
-                                        presentationJsonDescription = nil
+                                        videoDescription = nil
+                                        presentationDescription = nil
                                     }
                                     if !state.participants.contains(where: { $0.peer.id == peer.id }) {
                                         state.participants.append(GroupCallParticipantsContext.Participant(
                                             peer: peer,
                                             ssrc: ssrc,
-                                            videoJsonDescription: videoJsonDescription,
-                                            presentationJsonDescription: presentationJsonDescription,
+                                            videoDescription: videoDescription,
+                                            presentationDescription: presentationDescription,
                                             joinTimestamp: date,
                                             raiseHandRating: raiseHandRating,
                                             hasRaiseHand: raiseHandRating != nil,
@@ -960,11 +924,22 @@ public final class GroupCallParticipantsContext {
                 self.mutedByYou = mutedByYou
             }
         }
+
+        public struct VideoDescription: Equatable {
+            public struct SsrcGroup: Equatable {
+                public var semantics: String
+                public var ssrcs: [UInt32]
+            }
+
+            public var endpointId: String
+            public var ssrcGroups: [SsrcGroup]
+            public var isPaused: Bool
+        }
         
         public var peer: Peer
         public var ssrc: UInt32?
-        public var videoJsonDescription: String?
-        public var presentationJsonDescription: String?
+        public var videoDescription: VideoDescription?
+        public var presentationDescription: VideoDescription?
         public var joinTimestamp: Int32
         public var raiseHandRating: Int64?
         public var hasRaiseHand: Bool
@@ -977,8 +952,8 @@ public final class GroupCallParticipantsContext {
         public init(
             peer: Peer,
             ssrc: UInt32?,
-            videoJsonDescription: String?,
-            presentationJsonDescription: String?,
+            videoDescription: VideoDescription?,
+            presentationDescription: VideoDescription?,
             joinTimestamp: Int32,
             raiseHandRating: Int64?,
             hasRaiseHand: Bool,
@@ -990,8 +965,8 @@ public final class GroupCallParticipantsContext {
         ) {
             self.peer = peer
             self.ssrc = ssrc
-            self.videoJsonDescription = videoJsonDescription
-            self.presentationJsonDescription = presentationJsonDescription
+            self.videoDescription = videoDescription
+            self.presentationDescription = presentationDescription
             self.joinTimestamp = joinTimestamp
             self.raiseHandRating = raiseHandRating
             self.hasRaiseHand = hasRaiseHand
@@ -1020,10 +995,10 @@ public final class GroupCallParticipantsContext {
             if lhs.ssrc != rhs.ssrc {
                 return false
             }
-            if lhs.videoJsonDescription != rhs.videoJsonDescription {
+            if lhs.videoDescription != rhs.videoDescription {
                 return false
             }
-            if lhs.presentationJsonDescription != rhs.presentationJsonDescription {
+            if lhs.presentationDescription != rhs.presentationDescription {
                 return false
             }
             if lhs.joinTimestamp != rhs.joinTimestamp {
@@ -1225,8 +1200,8 @@ public final class GroupCallParticipantsContext {
                 
                 public var peerId: PeerId
                 public var ssrc: UInt32?
-                public var videoJsonDescription: String?
-                public var presentationJsonDescription: String?
+                public var videoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
+                public var presentationDescription: GroupCallParticipantsContext.Participant.VideoDescription?
                 public var joinTimestamp: Int32
                 public var activityTimestamp: Double?
                 public var raiseHandRating: Int64?
@@ -1239,8 +1214,8 @@ public final class GroupCallParticipantsContext {
                 init(
                     peerId: PeerId,
                     ssrc: UInt32?,
-                    videoJsonDescription: String?,
-                    presentationJsonDescription: String?,
+                    videoDescription: GroupCallParticipantsContext.Participant.VideoDescription?,
+                    presentationDescription: GroupCallParticipantsContext.Participant.VideoDescription?,
                     joinTimestamp: Int32,
                     activityTimestamp: Double?,
                     raiseHandRating: Int64?,
@@ -1252,8 +1227,8 @@ public final class GroupCallParticipantsContext {
                 ) {
                     self.peerId = peerId
                     self.ssrc = ssrc
-                    self.videoJsonDescription = videoJsonDescription
-                    self.presentationJsonDescription = presentationJsonDescription
+                    self.videoDescription = videoDescription
+                    self.presentationDescription = presentationDescription
                     self.joinTimestamp = joinTimestamp
                     self.activityTimestamp = activityTimestamp
                     self.raiseHandRating = raiseHandRating
@@ -1380,6 +1355,9 @@ public final class GroupCallParticipantsContext {
     private let updateDefaultMuteDisposable = MetaDisposable()
     private let resetInviteLinksDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
+
+    private var localVideoIsMuted: Bool = true
+    private var localIsVideoPaused: Bool = true
 
     public struct ServiceState {
         fileprivate var nextActivityRank: Int = 0
@@ -1791,8 +1769,8 @@ public final class GroupCallParticipantsContext {
                     let participant = Participant(
                         peer: peer,
                         ssrc: participantUpdate.ssrc,
-                        videoJsonDescription: participantUpdate.videoJsonDescription,
-                        presentationJsonDescription: participantUpdate.presentationJsonDescription,
+                        videoDescription: participantUpdate.videoDescription,
+                        presentationDescription: participantUpdate.presentationDescription,
                         joinTimestamp: previousJoinTimestamp ?? participantUpdate.joinTimestamp,
                         raiseHandRating: participantUpdate.raiseHandRating,
                         hasRaiseHand: participantUpdate.raiseHandRating != nil,
@@ -1938,7 +1916,7 @@ public final class GroupCallParticipantsContext {
                 raiseHandApi = nil
             }
                         
-            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: muted, volume: volume, raiseHand: raiseHandApi, videoMuted: nil))
+            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: muted, volume: volume, raiseHand: raiseHandApi, videoStopped: nil, videoPaused: nil, presentationPaused: nil))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
@@ -1978,7 +1956,13 @@ public final class GroupCallParticipantsContext {
         }))
     }
 
-    public func updateVideoState(peerId: PeerId, isVideoMuted: Bool) {
+    public func updateVideoState(peerId: PeerId, isVideoMuted: Bool, isVideoPaused: Bool) {
+        if self.localVideoIsMuted == isVideoMuted && self.localIsVideoPaused == isVideoPaused {
+            return
+        }
+        self.localVideoIsMuted = isVideoMuted
+        self.localIsVideoPaused = isVideoPaused
+
         let disposable = MetaDisposable()
 
         let account = self.account
@@ -1998,7 +1982,13 @@ public final class GroupCallParticipantsContext {
             videoMuted = isVideoMuted ? .boolTrue : .boolFalse
             flags |= 1 << 3
 
-            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: nil, volume: nil, raiseHand: nil, videoMuted: videoMuted))
+            var videoPaused: Api.Bool?
+            if !isVideoMuted {
+                videoPaused = isVideoPaused ? .boolTrue : .boolFalse
+                flags |= 1 << 4
+            }
+
+            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: nil, volume: nil, raiseHand: nil, videoStopped: videoMuted, videoPaused: videoPaused, presentationPaused: nil))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
@@ -2148,29 +2138,17 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 participationStatusChange = .none
             }
             
-            var videoJsonDescription: String? = nil
-            var presentationJsonDescription: String? = nil
-            if let video = video {
-                switch video {
-                case let .dataJSON(data):
-                    videoJsonDescription = data
-                }
-            }
-            if let presentation = presentation {
-                switch presentation {
-                case let .dataJSON(data):
-                    presentationJsonDescription = data
-                }
-            }
+            var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+            var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
             if muteState?.canUnmute == false {
-                videoJsonDescription = nil
-                presentationJsonDescription = nil
+                videoDescription = nil
+                presentationDescription = nil
             }
             self.init(
                 peerId: peerId,
                 ssrc: ssrc,
-                videoJsonDescription: videoJsonDescription,
-                presentationJsonDescription: presentationJsonDescription,
+                videoDescription: videoDescription,
+                presentationDescription: presentationDescription,
                 joinTimestamp: date,
                 activityTimestamp: activeDate.flatMap(Double.init),
                 raiseHandRating: raiseHandRating,
@@ -2214,29 +2192,17 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     participationStatusChange = .none
                 }
                 
-                var videoJsonDescription: String? = nil
-                var presentationJsonDescription: String? = nil
-                if let video = video {
-                    switch video {
-                    case let .dataJSON(data):
-                        videoJsonDescription = data
-                    }
-                }
-                if let presentation = presentation {
-                    switch presentation {
-                    case let .dataJSON(data):
-                        presentationJsonDescription = data
-                    }
-                }
+                var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                 if muteState?.canUnmute == false {
-                    videoJsonDescription = nil
-                    presentationJsonDescription = nil
+                    videoDescription = nil
+                    presentationDescription = nil
                 }
                 participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
                     peerId: peerId,
                     ssrc: ssrc,
-                    videoJsonDescription: videoJsonDescription,
-                    presentationJsonDescription: presentationJsonDescription,
+                    videoDescription: videoDescription,
+                    presentationDescription: presentationDescription,
                     joinTimestamp: date,
                     activityTimestamp: activeDate.flatMap(Double.init),
                     raiseHandRating: raiseHandRating,
@@ -2581,6 +2547,23 @@ public func getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: 
                 status: .resyncNeeded,
                 responseTimestamp: responseTimestamp
             ))
+        }
+    }
+}
+
+private extension GroupCallParticipantsContext.Participant.VideoDescription {
+    init(_ apiVideo: Api.GroupCallParticipantVideo) {
+        switch apiVideo {
+        case let .groupCallParticipantVideo(flags, endpoint, sourceGroups):
+            var parsedSsrcGroups: [SsrcGroup] = []
+            for group in sourceGroups {
+                switch group {
+                case let .groupCallParticipantVideoSourceGroup(semantics, sources):
+                    parsedSsrcGroups.append(SsrcGroup(semantics: semantics, ssrcs: sources.map(UInt32.init(bitPattern:))))
+                }
+            }
+            let isPaused = (flags & (1 << 0)) != 0
+            self.init(endpointId: endpoint, ssrcGroups: parsedSsrcGroups, isPaused: isPaused)
         }
     }
 }

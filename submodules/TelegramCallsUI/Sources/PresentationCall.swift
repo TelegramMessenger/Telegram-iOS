@@ -1017,7 +1017,7 @@ public final class PresentationCallImpl: PresentationCall {
             self.videoCapturer = videoCapturer
         }
         
-        self.videoCapturer?.makeOutgoingVideoView(completion: { view in
+        self.videoCapturer?.makeOutgoingVideoView(requestClone: false, completion: { view, _ in
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated

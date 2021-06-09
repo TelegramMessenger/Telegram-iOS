@@ -16,8 +16,10 @@ devnull='> /dev/null 2>&1'
 BUILD_ROOT="_iosbuild"
 CONFIGURE_ARGS="--disable-docs
                 --disable-examples
-                --disable-libyuv
-                --disable-unit-tests"
+                --enable-libyuv
+                --disable-unit-tests
+                --enable-realtime-only
+                --enable-multi-res-encoding"
 DIST_DIR="_dist"
 FRAMEWORK_DIR="VPX.framework"
 FRAMEWORK_LIB="VPX.framework/VPX"

@@ -386,6 +386,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
     
     public var centralItemUpdated: ((MessageId) -> Void)?
     
+    private var initialOrientation: UIInterfaceOrientation?
+    
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
@@ -897,6 +899,10 @@ public class GalleryController: ViewController, StandalonePresentableController 
     }
     
     deinit {
+        if let initialOrientation = self.initialOrientation {
+            self.context.sharedContext.applicationBindings.forceOrientation(initialOrientation)
+        }
+        
         self.accountInUseDisposable.dispose()
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
@@ -1017,6 +1023,17 @@ public class GalleryController: ViewController, StandalonePresentableController 
         self.galleryNode.controlsVisibilityChanged = { [weak self] visible in
             self?.prefersOnScreenNavigationHidden = !visible
             self?.galleryNode.pager.centralItemNode()?.controlsVisibilityUpdated(isVisible: visible)
+        }
+        
+        self.galleryNode.updateOrientation = { [weak self] orientation in
+            if let strongSelf = self {
+                if strongSelf.initialOrientation == nil {
+                    strongSelf.initialOrientation = orientation == .portrait ? .landscapeRight : .portrait
+                } else if strongSelf.initialOrientation == orientation {
+                    strongSelf.initialOrientation = nil
+                }
+                strongSelf.context.sharedContext.applicationBindings.forceOrientation(orientation)
+            }
         }
         
         let baseNavigationController = self.baseNavigationController

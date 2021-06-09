@@ -586,6 +586,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 } else {
                                     colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
                                 }
+                                let isLight = UIColor.average(of: patternColors.map(UIColor.init(rgb:))).hsb.b > 0.3
+                                customPatternColor = isLight ? .black : .white
                             }
                             patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation, customPatternColor: customPatternColor)
                         }
