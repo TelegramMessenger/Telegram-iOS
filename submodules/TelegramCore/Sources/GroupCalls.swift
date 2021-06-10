@@ -1277,9 +1277,9 @@ public final class GroupCallParticipantsContext {
     private let resetInviteLinksDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
 
-    private var localVideoIsMuted: Bool = true
-    private var localIsVideoPaused: Bool = true
-
+    private var localVideoIsMuted: Bool? = nil
+    private var localIsVideoPaused: Bool? = nil
+    private var localIsPresentationPaused: Bool? = nil
     public struct ServiceState {
         fileprivate var nextActivityRank: Int = 0
     }
@@ -1877,13 +1877,14 @@ public final class GroupCallParticipantsContext {
         }))
     }
 
-    public func updateVideoState(peerId: PeerId, isVideoMuted: Bool, isVideoPaused: Bool) {
-        if self.localVideoIsMuted == isVideoMuted && self.localIsVideoPaused == isVideoPaused {
+    public func updateVideoState(peerId: PeerId, isVideoMuted: Bool?, isVideoPaused: Bool?, isPresentationPaused: Bool?) {
+        if self.localVideoIsMuted == isVideoMuted && self.localIsVideoPaused == isVideoPaused && self.localIsPresentationPaused == isPresentationPaused {
             return
         }
         self.localVideoIsMuted = isVideoMuted
         self.localIsVideoPaused = isVideoPaused
-
+        self.localIsPresentationPaused = isPresentationPaused
+        
         let disposable = MetaDisposable()
 
         let account = self.account
@@ -1900,16 +1901,24 @@ public final class GroupCallParticipantsContext {
             var flags: Int32 = 0
             var videoMuted: Api.Bool?
 
-            videoMuted = isVideoMuted ? .boolTrue : .boolFalse
-            flags |= 1 << 3
+            if let isVideoMuted = isVideoMuted {
+                videoMuted = isVideoMuted ? .boolTrue : .boolFalse
+                flags |= 1 << 3
+            }
 
             var videoPaused: Api.Bool?
-            if !isVideoMuted {
+            if isVideoMuted != nil, let isVideoPaused = isVideoPaused {
                 videoPaused = isVideoPaused ? .boolTrue : .boolFalse
                 flags |= 1 << 4
             }
+            var presentationPaused: Api.Bool?
 
-            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: nil, volume: nil, raiseHand: nil, videoStopped: videoMuted, videoPaused: videoPaused, presentationPaused: nil))
+            if let isPresentationPaused = isPresentationPaused {
+                presentationPaused = isPresentationPaused ? .boolTrue : .boolFalse
+                flags |= 1 << 5
+            }
+
+            return account.network.request(Api.functions.phone.editGroupCallParticipant(flags: flags, call: .inputGroupCall(id: id, accessHash: accessHash), participant: inputPeer, muted: nil, volume: nil, raiseHand: nil, videoStopped: videoMuted, videoPaused: videoPaused, presentationPaused: presentationPaused))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
