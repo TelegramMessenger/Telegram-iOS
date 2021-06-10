@@ -830,7 +830,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 return
                             }
                             
-                            videoNode.isMainstageExclusive = isMyPeer
+                            videoNode.isMainstageExclusive = isMyPeer && !isPresentation
+                            if videoNode.isMainstageExclusive {
+                                videoNode.storeSnapshot()
+                            }
                             videoNode.tapped = { [weak self] in
                                 guard let strongSelf = self else {
                                     return

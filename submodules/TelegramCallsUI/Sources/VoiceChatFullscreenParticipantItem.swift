@@ -483,9 +483,12 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     let videoNode = item.getVideo()
                     if let currentVideoNode = strongSelf.videoNode, currentVideoNode !== videoNode {
                         if videoNode == nil {
+                            let snapshotView = currentVideoNode.snapshotView
                             if strongSelf.avatarNode.alpha.isZero {
                                 strongSelf.animatingSelection = true
-                                strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: appearanceDuration)
+                                strongSelf.videoContainerNode.layer.animateScale(from: videoContainerScale, to: 0.001, duration: appearanceDuration, completion: { _ in
+                                    snapshotView?.removeFromSuperview()
+                                })
                                 strongSelf.avatarNode.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration, completion: { [weak self] _ in
                                     self?.animatingSelection = false
                                 })
@@ -494,6 +497,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             }
                             if currentVideoNode.supernode === strongSelf.videoContainerNode {
                                 apperanceTransition.updateAlpha(node: currentVideoNode, alpha: 0.0)
+                            } else if let snapshotView = snapshotView {
+                                strongSelf.videoContainerNode.view.insertSubview(snapshotView, at: 0)
+                                apperanceTransition.updateAlpha(layer: snapshotView.layer, alpha: 0.0)
                             }
                             apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
                             apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
@@ -873,7 +879,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                         if !strongSelf.isExtracted && !strongSelf.animatingExtraction {
                             if videoNode.supernode !== strongSelf.videoContainerNode {
                                 videoNode.clipsToBounds = true
-                                strongSelf.videoContainerNode.addSubnode(videoNode)
+                                strongSelf.videoContainerNode.insertSubnode(videoNode, at: 0)
                             }
                             
                             videoNode.position = CGPoint(x: videoSize.width / 2.0, y: videoSize.height / 2.0)
