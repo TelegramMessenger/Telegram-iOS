@@ -40,7 +40,9 @@ final class GroupVideoNode: ASDisplayNode {
         return self.readyPromise.get()
     }
     
-    init(videoView: PresentationCallVideoView, backdropVideoView: PresentationCallVideoView?, disabledText: String? = nil) {
+    public var isMainstageExclusive = false
+    
+    init(videoView: PresentationCallVideoView, backdropVideoView: PresentationCallVideoView?) {
         self.sourceContainerNode = PinchSourceContainerNode()
         self.containerNode = ASDisplayNode()
         self.videoViewContainer = UIView()
@@ -193,7 +195,6 @@ final class GroupVideoNode: ASDisplayNode {
         return rotatedAspect
     }
     
-    var keepBackdropSize = false
     func updateLayout(size: CGSize, layoutMode: LayoutMode, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, layoutMode)
         let bounds = CGRect(origin: CGPoint(), size: size)

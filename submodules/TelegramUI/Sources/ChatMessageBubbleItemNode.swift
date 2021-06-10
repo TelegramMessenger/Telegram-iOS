@@ -414,7 +414,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private var mosaicStatusNode: ChatMessageDateAndStatusNode?
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
-    private var shareButtonNode: HighlightableButtonNode?
+    private var shareButtonNode: ChatMessageShareButton?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
 
@@ -1068,8 +1068,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let mosaicStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.mosaicStatusNode)
         
-        let currentShareButtonNode = self.shareButtonNode
-        
         let layoutConstants = self.layoutConstants
         
         let currentItem = self.appliedItem
@@ -1089,7 +1087,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 replyInfoLayout: replyInfoLayout,
                 actionButtonsLayout: actionButtonsLayout,
                 mosaicStatusLayout: mosaicStatusLayout,
-                currentShareButtonNode: currentShareButtonNode,
                 layoutConstants: layoutConstants,
                 currentItem: currentItem,
                 currentForwardInfo: currentForwardInfo,
@@ -1106,7 +1103,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
         mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
-        currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
@@ -2155,38 +2151,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             layoutInsets.top += layoutConstants.timestampHeaderHeight
         }
         
-        var updatedShareButtonBackground: UIImage?
-        
-        var updatedShareButtonNode: HighlightableButtonNode?
-        if needShareButton {
-            if currentShareButtonNode != nil {
-                updatedShareButtonNode = currentShareButtonNode
-                if item.presentationData.theme !== currentItem?.presentationData.theme {
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                    if case .pinnedMessages = item.associatedData.subject {
-                        updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
-                    } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                        updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
-                    } else {
-                        updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
-                    }
-                }
-            } else {
-                let buttonNode = HighlightableButtonNode()
-                let buttonIcon: UIImage?
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                if case .pinnedMessages = item.associatedData.subject {
-                    buttonIcon = graphics.chatBubbleNavigateButtonImage
-                } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                    buttonIcon = graphics.chatBubbleNavigateButtonImage
-                } else {
-                    buttonIcon = graphics.chatBubbleShareButtonImage
-                }
-                buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
-                updatedShareButtonNode = buttonNode
-            }
-        }
-        
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
@@ -2241,8 +2205,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
-                updatedShareButtonNode: updatedShareButtonNode,
-                updatedShareButtonBackground: updatedShareButtonBackground
+                needsShareButton: needShareButton
             )
         })
     }
@@ -2282,8 +2245,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentContainerNodeFrames: [(UInt32, CGRect, Bool?, CGFloat)],
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (Bool) -> ChatMessageDateAndStatusNode)?,
-        updatedShareButtonNode: HighlightableButtonNode?,
-        updatedShareButtonBackground: UIImage?
+        needsShareButton: Bool
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -2737,22 +2699,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
         }
-        
-        if let updatedShareButtonNode = updatedShareButtonNode {
-            if updatedShareButtonNode !== strongSelf.shareButtonNode {
-                if let shareButtonNode = strongSelf.shareButtonNode {
-                    shareButtonNode.removeFromSupernode()
-                }
-                strongSelf.shareButtonNode = updatedShareButtonNode
-                strongSelf.insertSubnode(updatedShareButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
-                updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+
+        if needsShareButton {
+            if strongSelf.shareButtonNode == nil {
+                let shareButtonNode = ChatMessageShareButton()
+                strongSelf.shareButtonNode = shareButtonNode
+                strongSelf.insertSubnode(shareButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                shareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
             }
-            if let updatedShareButtonBackground = updatedShareButtonBackground {
-                strongSelf.shareButtonNode?.setBackgroundImage(updatedShareButtonBackground, for: [.normal])
-            }
+
         } else if let shareButtonNode = strongSelf.shareButtonNode {
-            shareButtonNode.removeFromSupernode()
             strongSelf.shareButtonNode = nil
+            shareButtonNode.removeFromSupernode()
         }
         
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -2761,7 +2719,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
+                shareButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
             }
         } else {
             if let _ = strongSelf.backgroundFrameTransition {
@@ -2770,7 +2729,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
             if let shareButtonNode = strongSelf.shareButtonNode {
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
+                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
             }
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -2963,8 +2923,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             self.messageAccessibilityArea.frame = backgroundFrame
             
-            if let shareButtonNode = self.shareButtonNode {
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+            if let item = self.item, let shareButtonNode = self.shareButtonNode {
+                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
+                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
             }
             
             if CGFloat(1.0).isLessThanOrEqualTo(progress) {
