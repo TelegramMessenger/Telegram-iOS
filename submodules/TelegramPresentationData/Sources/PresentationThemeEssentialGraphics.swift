@@ -503,9 +503,13 @@ public final class PrincipalThemeAdditionalGraphics {
 
     public let chatBubbleNavigateButtonImage: UIImage
     public let chatBubbleActionButtonIncomingMiddleImage: UIImage
+    public let chatBubbleActionButtonMiddleMaskImage: UIImage
     public let chatBubbleActionButtonIncomingBottomLeftImage: UIImage
+    public let chatBubbleActionButtonBottomLeftMaskImage: UIImage
     public let chatBubbleActionButtonIncomingBottomRightImage: UIImage
+    public let chatBubbleActionButtonBottomRightMaskImage: UIImage
     public let chatBubbleActionButtonIncomingBottomSingleImage: UIImage
+    public let chatBubbleActionButtonBottomSingleMaskImage: UIImage
     public let chatBubbleActionButtonOutgoingMiddleImage: UIImage
     public let chatBubbleActionButtonOutgoingBottomLeftImage: UIImage
     public let chatBubbleActionButtonOutgoingBottomRightImage: UIImage
@@ -549,9 +553,13 @@ public final class PrincipalThemeAdditionalGraphics {
         
         self.chatBubbleNavigateButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), iconOffset: CGPoint(x: 0.0, y: 1.0))!
         self.chatBubbleActionButtonIncomingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .middle, bubbleCorners: bubbleCorners)
+        self.chatBubbleActionButtonMiddleMaskImage = messageBubbleActionButtonImage(color: .white, strokeColor: .clear, position: .middle, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonIncomingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomLeft, bubbleCorners: bubbleCorners)
+        self.chatBubbleActionButtonBottomLeftMaskImage = messageBubbleActionButtonImage(color: .black, strokeColor: .clear, position: .bottomLeft, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonIncomingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomRight, bubbleCorners: bubbleCorners)
+        self.chatBubbleActionButtonBottomRightMaskImage = messageBubbleActionButtonImage(color: .black, strokeColor: .clear, position: .bottomRight, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonIncomingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomSingle, bubbleCorners: bubbleCorners)
+        self.chatBubbleActionButtonBottomSingleMaskImage = messageBubbleActionButtonImage(color: .black, strokeColor: .clear, position: .bottomSingle, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonOutgoingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .middle, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonOutgoingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomLeft, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonOutgoingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomRight, bubbleCorners: bubbleCorners)
