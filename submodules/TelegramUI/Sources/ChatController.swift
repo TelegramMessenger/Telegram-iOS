@@ -2700,6 +2700,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return true
                 }), in: .current)
             }
+        }, isAnimatingMessage: { [weak self] stableId in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.chatDisplayNode.messageTransitionNode.isAnimatingMessage(stableId: stableId)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

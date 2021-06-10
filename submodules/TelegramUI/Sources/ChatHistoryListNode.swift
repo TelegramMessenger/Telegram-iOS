@@ -480,7 +480,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let historyDisposable = MetaDisposable()
     private let readHistoryDisposable = MetaDisposable()
     
-    private let messageViewQueue = Queue(name: "ChatHistoryListNode processing")
+    //private let messageViewQueue = Queue(name: "ChatHistoryListNode processing")
     
     private var dequeuedInitialTransitionOnLayout = false
     private var enqueuedHistoryViewTransitions: [ChatHistoryListViewTransition] = []
@@ -610,7 +610,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let clientId: Atomic<Int32>
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNode? = { nil }) {
         var tagMask = tagMask
         var appendMessagesFromTheSameGroup = false
         if case .pinnedMessages = subject {
@@ -1032,7 +1032,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                     }
                 }
-                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages)
+                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode())
                 let mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
                 Queue.mainQueue().async {
                     guard let strongSelf = self else {
@@ -2130,6 +2130,56 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     switch historyView.filteredEntries[i] {
                         case let .MessageEntry(message, presentationData, read, _, selection, attributes):
                             if message.id == id {
+                                let index = historyView.filteredEntries.count - 1 - i
+                                let item: ListViewItem
+                                switch self.mode {
+                                    case .bubbles:
+                                        item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes))
+                                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                                        let displayHeader: Bool
+                                        switch displayHeaders {
+                                        case .none:
+                                            displayHeader = false
+                                        case .all:
+                                            displayHeader = true
+                                        case .allButLast:
+                                            displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != historyView.lastHeaderId
+                                        }
+                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                                }
+                                let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
+                                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                break loop
+                            }
+                        default:
+                            break
+                    }
+                }
+            }
+        }
+    }
+
+    func requestMessageUpdate(stableId: UInt32) {
+        if let historyView = self.historyView {
+            var messageItem: ChatMessageItem?
+            self.forEachItemNode({ itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                    for (message, _) in item.content {
+                        if message.stableId == stableId {
+                            messageItem = item
+                            break
+                        }
+                    }
+                }
+            })
+
+            if let messageItem = messageItem {
+                let associatedData = messageItem.associatedData
+
+                loop: for i in 0 ..< historyView.filteredEntries.count {
+                    switch historyView.filteredEntries[i] {
+                        case let .MessageEntry(message, presentationData, read, _, selection, attributes):
+                            if message.stableId == stableId {
                                 let index = historyView.filteredEntries.count - 1 - i
                                 let item: ListViewItem
                                 switch self.mode {

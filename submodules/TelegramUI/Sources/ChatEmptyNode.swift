@@ -887,6 +887,6 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 20.0, transition: transition)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
     }
 }

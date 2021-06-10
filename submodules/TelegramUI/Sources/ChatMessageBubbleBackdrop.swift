@@ -211,7 +211,13 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
             transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
         }
         if let backgroundContent = self.backgroundContent {
-            transition.updateFrame(node: backgroundContent, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            transition.updateFrame(layer: backgroundContent.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }
         }
         transition.updateFrame(node: self, frame: value, completion: { _ in
             completion()
@@ -223,7 +229,13 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
             transition.updateFrame(layer: maskView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
         }
         if let backgroundContent = self.backgroundContent {
-            transition.updateFrame(node: backgroundContent, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            transition.updateFrame(layer: backgroundContent.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }
         }
         transition.updateFrame(layer: self.layer, frame: value, completion: { _ in
             completion()
