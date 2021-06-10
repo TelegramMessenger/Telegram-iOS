@@ -901,8 +901,10 @@ public final class VoiceChatController: ViewController {
         private var wideVideoNodes = Set<String>()
         private var videoOrder: [String] = []
         private var readyVideoEndpointIds = Set<String>()
+        private var readyVideoEndpointIdsPromise = ValuePromise<Set<String>>(Set())
         private var timeoutedEndpointIds = Set<String>()
         private var readyVideoDisposables = DisposableDict<String>()
+        private var myPeerVideoReadyDisposable = MetaDisposable()
         
         private var peerIdToEndpointId: [PeerId: String] = [:]
                 
@@ -1761,7 +1763,9 @@ public final class VoiceChatController: ViewController {
                     return nil
                 }
                 var ignore = false
-                if case .fullscreen = strongSelf.displayMode, !strongSelf.isPanning {
+                if case .mainstage = position {
+                    ignore = false
+                } else if case .fullscreen = strongSelf.displayMode, !strongSelf.isPanning {
                     ignore = ![.mainstage, .list].contains(position)
                 } else {
                     ignore = position != .tile
@@ -1774,6 +1778,9 @@ public final class VoiceChatController: ViewController {
                 }
                 for (listEndpointId, videoNode) in strongSelf.videoNodes {
                     if listEndpointId == endpointId {
+                        if position != .mainstage && videoNode.isMainstageExclusive {
+                            return nil
+                        }
                         return videoNode
                     }
                 }
@@ -2276,6 +2283,33 @@ public final class VoiceChatController: ViewController {
                 return self?.itemInteraction?.getAudioLevel(peerId) ?? .single(0.0)
             }
             
+            self.mainStageNode.getVideo = { [weak self] endpointId, isMyPeer, completion in
+                if let strongSelf = self {
+                    if isMyPeer {
+                        if strongSelf.readyVideoEndpointIds.contains(endpointId) {
+                            completion(strongSelf.itemInteraction?.getPeerVideo(endpointId, .mainstage))
+                        } else {
+                            strongSelf.myPeerVideoReadyDisposable.set((strongSelf.readyVideoEndpointIdsPromise.get()
+                            |> filter { $0.contains(endpointId) }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                if let strongSelf = self {
+                                    completion(strongSelf.itemInteraction?.getPeerVideo(endpointId, .mainstage))
+                                }
+                            }))
+                        }
+                    } else {
+                        strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: true, completion: { videoView, backdropVideoView in
+                            if let videoView = videoView {
+                                completion(GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView))
+                            } else {
+                                completion(nil)
+                            }
+                        })
+                    }
+                }
+            }
+            
             self.applicationStateDisposable = (self.context.sharedContext.applicationBindings.applicationIsActive
             |> deliverOnMainQueue).start(next: { [weak self] active in
                 guard let strongSelf = self else {
@@ -2305,6 +2339,7 @@ public final class VoiceChatController: ViewController {
             self.ignoreConnectingTimer?.invalidate()
             self.readyVideoDisposables.dispose()
             self.applicationStateDisposable?.dispose()
+            self.myPeerVideoReadyDisposable.dispose()
         }
         
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -3621,7 +3656,7 @@ public final class VoiceChatController: ViewController {
             if !self.mainStageNode.animating {
                 transition.updateFrame(node: self.mainStageNode, frame: videoFrame)
             }
-            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: self.isLandscape, isTablet: isTablet, transition: transition)
+            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: videoFrame.width > videoFrame.height, isTablet: isTablet, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             
@@ -3633,8 +3668,13 @@ public final class VoiceChatController: ViewController {
                 leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY - additionalInset), size: CGSize(width: (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
                 rightBorderFrame = CGRect(origin: CGPoint(x: size.width - (size.width - contentWidth) / 2.0 - sideInset, y: topPanelFrame.maxY - additionalInset), size: CGSize(width: layout.safeInsets.right + (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
             } else {
-                leftBorderFrame = CGRect(origin: CGPoint(x: -additionalInset, y: topPanelFrame.maxY - additionalInset * 0.6), size: CGSize(width: sideInset + additionalInset + (contentLeftInset.isZero ? additionalSideInset : contentLeftInset), height: layout.size.height))
-                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset - (contentLeftInset.isZero ? additionalSideInset : 0.0), y: topPanelFrame.maxY - additionalInset * 0.6), size: CGSize(width: sideInset + additionalInset + additionalSideInset, height: layout.size.height))
+                var isFullscreen = false
+                if case .fullscreen = self.displayMode {
+                    isFullscreen = true
+                    forceUpdate = true
+                }
+                leftBorderFrame = CGRect(origin: CGPoint(x: -additionalInset, y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + (contentLeftInset.isZero ? additionalSideInset : contentLeftInset), height: layout.size.height))
+                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset - (contentLeftInset.isZero ? additionalSideInset : 0.0), y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalSideInset, height: layout.size.height))
             }
             
             let topCornersFrame = CGRect(x: sideInset + (contentLeftInset.isZero ? floorToScreenPixels((size.width - contentWidth) / 2.0) : contentLeftInset), y: topPanelFrame.maxY - 60.0, width: contentWidth - sideInset * 2.0, height: 50.0 + 60.0)
@@ -5079,11 +5119,10 @@ public final class VoiceChatController: ViewController {
                     self.requestedVideoSources.insert(channel.endpointId)
                     self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
-                            print("create video \(channel.endpointId)")
                             guard let strongSelf = self, let videoView = videoView else {
                                 return
                             }
-                            let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView, disabledText: strongSelf.presentationData.strings.VoiceChat_VideoPaused)
+                            let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView)
                             
                             strongSelf.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))
                             |> deliverOnMainQueue
@@ -5093,11 +5132,13 @@ public final class VoiceChatController: ViewController {
                                         if timeouted && !ready {
                                             strongSelf.timeoutedEndpointIds.insert(channel.endpointId)
                                             strongSelf.readyVideoEndpointIds.remove(channel.endpointId)
+                                            strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
                                             strongSelf.wideVideoNodes.remove(channel.endpointId)
                                             
                                             strongSelf.updateMembers()
                                         } else if ready {
                                             strongSelf.readyVideoEndpointIds.insert(channel.endpointId)
+                                            strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
                                             strongSelf.timeoutedEndpointIds.remove(channel.endpointId)
                                             if videoNode.aspectRatio <= 0.77 {
                                                 strongSelf.wideVideoNodes.insert(channel.endpointId)
@@ -5152,6 +5193,7 @@ public final class VoiceChatController: ViewController {
                     self.videoNodes[videoEndpointId] = nil
                     self.videoOrder.removeAll(where: { $0 == videoEndpointId })
                     self.readyVideoEndpointIds.remove(videoEndpointId)
+                    self.readyVideoEndpointIdsPromise.set(self.readyVideoEndpointIds)
                     self.readyVideoDisposables.set(nil, forKey: videoEndpointId)
                 }
             }

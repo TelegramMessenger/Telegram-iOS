@@ -315,6 +315,10 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             videoNode = item.getVideo()
         }
         
+        if videoNode?.isMainstageExclusive == true && active {
+            videoNode = nil
+        }
+        
         if let videoNode = videoNode {
             if active {
                 self.avatarNode.alpha = 1.0
@@ -488,7 +492,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -9.0), duration: appearanceDuration, additive: true)
                                 strongSelf.audioLevelView?.layer.animateScale(from: 0.0, to: 1.0, duration: appearanceDuration)
                             }
-                            apperanceTransition.updateAlpha(node: currentVideoNode, alpha: 0.0)
+                            if currentVideoNode.supernode === strongSelf.videoContainerNode {
+                                apperanceTransition.updateAlpha(node: currentVideoNode, alpha: 0.0)
+                            }
                             apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 0.0)
                             apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 1.0)
                             if let audioLevelView = strongSelf.audioLevelView {

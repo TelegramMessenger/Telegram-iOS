@@ -78,6 +78,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     var controlsHidden: ((Bool) -> Void)?
     
     var getAudioLevel: ((PeerId) -> Signal<Float, NoError>)?
+    var getVideo: ((String, Bool, @escaping (GroupVideoNode?) -> Void) -> Void)?
     private let videoReadyDisposable = MetaDisposable()
     private var silenceTimer: SwiftSignalKit.Timer?
         
@@ -116,8 +117,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.bottomFadeNode.backgroundColor = UIColor(patternImage: image)
-            self.bottomFadeNode.view.layer.rasterizationScale = UIScreen.main.scale
-            self.bottomFadeNode.view.layer.shouldRasterize = true
         }
         
         self.bottomFillNode = ASDisplayNode()
@@ -287,6 +286,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if #available(iOS 13.0, *) {
             self.layer.cornerCurve = .continuous
         }
+        
+        self.topFadeNode.view.layer.rasterizationScale = UIScreen.main.scale
+        self.topFadeNode.view.layer.shouldRasterize = true
+        self.bottomFadeNode.view.layer.rasterizationScale = UIScreen.main.scale
+        self.bottomFadeNode.view.layer.shouldRasterize = true
         
         let speakingEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         speakingEffectView.layer.cornerRadius = 19.0
@@ -479,7 +483,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.animatingOut = true
         let targetFrame = targetNode.view.convert(targetNode.bounds, to: self.supernode?.view)
         
-        self.currentVideoNode?.keepBackdropSize = true
+        let currentVideoNode = self.currentVideoNode
         
         var infoView: UIView?
         if let snapshotView = targetNode.infoNode.view.snapshotView(afterScreenUpdates: false) {
@@ -525,6 +529,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 
                 infoView?.removeFromSuperview()
                 textView?.removeFromSuperview()
+                currentVideoNode?.isMainstageExclusive = false
+                targetNode.transitionIn(from: nil)
                 targetNode.alpha = 1.0
                 targetNode.highlightNode.layer.animateAlpha(from: 0.0, to: targetNode.highlightNode.alpha, duration: 0.2)
                 strongSelf.animatingOut = false
@@ -812,13 +818,19 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     if !delayTransition {
                         self.setAvatarHidden(true)
                     }
-                    self.call.makeIncomingVideoView(endpointId: endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
+                    
+                    var waitForFullSize = waitForFullSize
+                    if isMyPeer && !isPresentation && isReady && !self.appeared {
+                        waitForFullSize = false
+                    }
+                    
+                    self.getVideo?(endpointId, isMyPeer && !isPresentation, { [weak self] videoNode in
                         Queue.mainQueue().async {
-                            guard let strongSelf = self, let videoView = videoView else {
+                            guard let strongSelf = self, let videoNode = videoNode else {
                                 return
                             }
-
-                            let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView, disabledText: presentationData.strings.VoiceChat_VideoPaused)
+                            
+                            videoNode.isMainstageExclusive = isMyPeer
                             videoNode.tapped = { [weak self] in
                                 guard let strongSelf = self else {
                                     return
@@ -846,20 +858,31 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                             videoNode.updateIsBlurred(isBlurred: isPaused, light: true, animated: false)
                             videoNode.isUserInteractionEnabled = true
                             let previousVideoNode = strongSelf.currentVideoNode
+                            var previousVideoNodeSnapshot: UIView?
+                            if let previousVideoNode = previousVideoNode, previousVideoNode.isMainstageExclusive, let snapshotView = previousVideoNode.view.snapshotView(afterScreenUpdates: false) {
+                                previousVideoNodeSnapshot = snapshotView
+                                snapshotView.frame = previousVideoNode.frame
+                                previousVideoNode.view.superview?.insertSubview(snapshotView, aboveSubview: previousVideoNode.view)
+                            }
                             strongSelf.currentVideoNode = videoNode
                             strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.backdropAvatarNode)
 
-                            if !isReady {
+                            if delayTransition {
+                                videoNode.alpha = 0.0
+                            } else if !isReady {
                                 videoNode.alpha = 0.0
                                 strongSelf.topFadeNode.isHidden = true
                                 strongSelf.bottomFadeNode.isHidden = true
                                 strongSelf.bottomFillNode.isHidden = true
-                            } else if delayTransition {
-                                videoNode.alpha = 0.0
+                            } else if isMyPeer {
+                                videoNode.layer.removeAnimation(forKey: "opacity")
+                                videoNode.alpha = 1.0
                             }
                             if waitForFullSize {
+                                previousVideoNode?.isMainstageExclusive = false
                                 Queue.mainQueue().after(2.0) {
-                                    if let previousVideoNode = previousVideoNode {
+                                    previousVideoNodeSnapshot?.removeFromSuperview()
+                                    if let previousVideoNode = previousVideoNode, previousVideoNode.supernode === strongSelf && !previousVideoNode.isMainstageExclusive {
                                         previousVideoNode.removeFromSupernode()
                                     }
                                 }
@@ -881,23 +904,36 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                         }
                                         
                                         if videoNode.alpha.isZero {
-                                            strongSelf.topFadeNode.isHidden = true
-                                            strongSelf.bottomFadeNode.isHidden = true
-                                            strongSelf.bottomFillNode.isHidden = true
+                                            if delayTransition {
+                                                strongSelf.topFadeNode.isHidden = false
+                                                strongSelf.bottomFadeNode.isHidden = false
+                                                strongSelf.bottomFillNode.isHidden = false
+                                                strongSelf.topFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                                strongSelf.bottomFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                                strongSelf.bottomFillNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                               
+                                                strongSelf.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                                                strongSelf.audioLevelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                                            }
                                             if let videoNode = strongSelf.currentVideoNode {
                                                 videoNode.alpha = 1.0
                                                 videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
                                                     if let strongSelf = self {
                                                         strongSelf.setAvatarHidden(true)
-                                                        if let previousVideoNode = previousVideoNode {
+                                                        strongSelf.avatarNode.layer.removeAllAnimations()
+                                                        strongSelf.audioLevelNode.layer.removeAllAnimations()
+                                                        previousVideoNodeSnapshot?.removeFromSuperview()
+                                                        if let previousVideoNode = previousVideoNode, previousVideoNode.supernode === strongSelf {
                                                             previousVideoNode.removeFromSupernode()
                                                         }
                                                     }
                                                 })
                                             }
                                         } else {
+                                            previousVideoNodeSnapshot?.removeFromSuperview()
+                                            previousVideoNode?.isMainstageExclusive = false
                                             Queue.mainQueue().after(0.07) {
-                                                if let previousVideoNode = previousVideoNode {
+                                                if let previousVideoNode = previousVideoNode, previousVideoNode.supernode === strongSelf {
                                                     previousVideoNode.removeFromSupernode()
                                                 }
                                             }
@@ -909,7 +945,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                     strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, isTablet: isTablet, transition: .immediate)
                                 }
                                 if let previousVideoNode = previousVideoNode {
-                                    previousVideoNode.removeFromSupernode()
+                                    previousVideoNodeSnapshot?.removeFromSuperview()
+                                    previousVideoNode.isMainstageExclusive = false
+                                    if previousVideoNode.supernode === strongSelf {
+                                        previousVideoNode.removeFromSupernode()
+                                    }
                                 }
                                 strongSelf.videoReadyDisposable.set(nil)
                                 completion?()
@@ -918,7 +958,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     })
                 } else {
                     if let currentVideoNode = self.currentVideoNode {
-                        currentVideoNode.removeFromSupernode()
+                        currentVideoNode.isMainstageExclusive = false
+                        if currentVideoNode.supernode === self {
+                            currentVideoNode.removeFromSupernode()
+                        }
                         self.currentVideoNode = nil
                     }
                     self.setAvatarHidden(false)
@@ -970,7 +1013,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         } else {
             self.videoReadyDisposable.set(nil)
             if let currentVideoNode = self.currentVideoNode {
-                currentVideoNode.removeFromSupernode()
+                currentVideoNode.isMainstageExclusive = false
+                if currentVideoNode.supernode === self {
+                    currentVideoNode.removeFromSupernode()
+                }
                 self.currentVideoNode = nil
             }
             completion?()

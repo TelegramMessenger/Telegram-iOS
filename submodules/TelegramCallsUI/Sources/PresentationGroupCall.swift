@@ -2556,6 +2556,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func disableVideo() {
         self.hasVideo = false
+        self.useFrontCamera = true;
         if let _ = self.videoCapturer {
             self.videoCapturer = nil
             self.isVideoMutedDisposable.set(nil)
