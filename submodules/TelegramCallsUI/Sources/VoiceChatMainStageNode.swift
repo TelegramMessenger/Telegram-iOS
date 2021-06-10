@@ -39,6 +39,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
     private let bottomFadeNode: ASDisplayNode
+    private let bottomGradientNode: ASDisplayNode
     private let bottomFillNode: ASDisplayNode
     private let headerNode: ASDisplayNode
     private let backButtonNode: HighlightableButtonNode
@@ -106,7 +107,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         self.bottomFadeNode = ASDisplayNode()
-        self.bottomFadeNode.displaysAsynchronously = false
+        
+        self.bottomGradientNode = ASDisplayNode()
+        self.bottomGradientNode.displaysAsynchronously = false
         if let image = generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
@@ -116,7 +119,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
-            self.bottomFadeNode.backgroundColor = UIColor(patternImage: image)
+            self.bottomGradientNode.backgroundColor = UIColor(patternImage: image)
         }
         
         self.bottomFillNode = ASDisplayNode()
@@ -200,7 +203,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.addSubnode(self.backdropAvatarNode)
         self.addSubnode(self.topFadeNode)
         self.addSubnode(self.bottomFadeNode)
-        self.addSubnode(self.bottomFillNode)
+        self.bottomFadeNode.addSubnode(self.bottomGradientNode)
+        self.bottomFadeNode.addSubnode(self.bottomFillNode)
         self.addSubnode(self.audioLevelNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -433,7 +437,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.microphoneNode.alpha = 1.0
             self.titleNode.alpha = 1.0
             self.bottomFadeNode.alpha = 1.0
-            self.bottomFillNode.alpha = 1.0
         }
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
@@ -766,7 +769,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private func setAvatarHidden(_ hidden: Bool) {
         self.topFadeNode.isHidden = !hidden
         self.bottomFadeNode.isHidden = !hidden
-        self.bottomFillNode.isHidden = !hidden
         self.avatarNode.isHidden = hidden
         self.audioLevelNode.isHidden = hidden
     }
@@ -830,7 +832,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 return
                             }
                             
-                            videoNode.isMainstageExclusive = isMyPeer
+                            videoNode.isMainstageExclusive = isMyPeer && !isPresentation
+                            if videoNode.isMainstageExclusive {
+                                videoNode.storeSnapshot()
+                            }
                             videoNode.tapped = { [weak self] in
                                 guard let strongSelf = self else {
                                     return
@@ -873,7 +878,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 videoNode.alpha = 0.0
                                 strongSelf.topFadeNode.isHidden = true
                                 strongSelf.bottomFadeNode.isHidden = true
-                                strongSelf.bottomFillNode.isHidden = true
                             } else if isMyPeer {
                                 videoNode.layer.removeAnimation(forKey: "opacity")
                                 videoNode.alpha = 1.0
@@ -907,11 +911,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                             if delayTransition {
                                                 strongSelf.topFadeNode.isHidden = false
                                                 strongSelf.bottomFadeNode.isHidden = false
-                                                strongSelf.bottomFillNode.isHidden = false
                                                 strongSelf.topFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                                                 strongSelf.bottomFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                                                strongSelf.bottomFillNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                                               
                                                 strongSelf.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                                                 strongSelf.audioLevelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                                             }
@@ -992,7 +993,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 videoNode.updateIsBlurred(isBlurred: isPaused, light: true, animated: false)
                                 strongSelf.topFadeNode.isHidden = true
                                 strongSelf.bottomFadeNode.isHidden = true
-                                strongSelf.bottomFillNode.isHidden = true
                                 if let videoNode = strongSelf.currentVideoNode {
                                     videoNode.alpha = 1.0
                                     videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
@@ -1031,7 +1031,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         transition.updateAlpha(node: self.titleNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
         transition.updateAlpha(node: self.microphoneNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
         transition.updateAlpha(node: self.bottomFadeNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
-        transition.updateAlpha(node: self.bottomFillNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isLandscape: Bool, isTablet: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
@@ -1081,8 +1080,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if size.height != tileHeight && size.width < size.height {
             totalFadeHeight += bottomInset
         }
-        transition.updateFrame(node: self.bottomFadeNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight, width: size.width, height: fadeHeight))
-        transition.updateFrame(node: self.bottomFillNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight + fadeHeight, width: size.width, height: max(0.0, totalFadeHeight - fadeHeight)))
+        transition.updateFrame(node: self.bottomFadeNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight, width: size.width, height: totalFadeHeight))
+        transition.updateFrame(node: self.bottomGradientNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: fadeHeight))
+        transition.updateFrame(node: self.bottomFillNode, frame: CGRect(x: 0.0, y: fadeHeight, width: size.width, height: max(0.0, totalFadeHeight - fadeHeight)))
         transition.updateFrame(node: self.topFadeNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: 50.0))
         
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))

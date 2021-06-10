@@ -347,4 +347,11 @@ final class GroupVideoNode: ASDisplayNode {
         let transition: ContainedViewLayoutTransition = .immediate
         transition.updateTransformRotation(view: self.videoView.view, angle: angle)
     }
+    
+    var snapshotView: UIView?
+    func storeSnapshot() {
+        if self.frame.size.width == 180.0 {
+            self.snapshotView = self.view.snapshotView(afterScreenUpdates: false)
+        }
+    }
 }

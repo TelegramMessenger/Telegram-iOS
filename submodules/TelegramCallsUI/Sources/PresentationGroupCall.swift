@@ -2568,7 +2568,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func updateLocalVideoState() {
-        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted, isPresentationPaused: nil)
+        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted, isPresentationPaused: false)
     }
     
     public func switchVideoCamera() {
