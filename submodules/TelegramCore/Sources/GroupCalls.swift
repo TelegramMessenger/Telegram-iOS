@@ -122,49 +122,8 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 })
                 updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                 
-                var parsedParticipants: [GroupCallParticipantsContext.Participant] = []
-                
-                loop: for participant in participants {
-                    switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, video, presentation):
-                        let peerId: PeerId = apiPeerId.peerId
-                        
-                        let ssrc = UInt32(bitPattern: source)
-                        guard let peer = transaction.getPeer(peerId) else {
-                            continue loop
-                        }
-                        let muted = (flags & (1 << 0)) != 0
-                        let mutedByYou = (flags & (1 << 9)) != 0
-                        var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                        if muted {
-                            let canUnmute = (flags & (1 << 2)) != 0
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
-                        } else if mutedByYou {
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
-                        }
-                        var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                        var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                        if muteState?.canUnmute == false {
-                            videoDescription = nil
-                            presentationDescription = nil
-                        }
-                        parsedParticipants.append(GroupCallParticipantsContext.Participant(
-                            peer: peer,
-                            ssrc: ssrc,
-                            videoDescription: videoDescription,
-                            presentationDescription: presentationDescription,
-                            joinTimestamp: date,
-                            raiseHandRating: raiseHandRating,
-                            hasRaiseHand: raiseHandRating != nil,
-                            activityTimestamp: activeDate.flatMap(Double.init),
-                            activityRank: nil,
-                            muteState: muteState,
-                            volume: volume,
-                            about: about
-                        ))
-                    }
-                }
-                
+                let parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
+
                 return GroupCallSummary(
                     info: info,
                     topParticipants: parsedParticipants
@@ -442,45 +401,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 })
                 updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                 
-                loop: for participant in participants {
-                    switch participant {
-                    case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, video, presentation):
-                        let peerId: PeerId = apiPeerId.peerId
-                        let ssrc = UInt32(bitPattern: source)
-                        guard let peer = transaction.getPeer(peerId) else {
-                            continue loop
-                        }
-                        let muted = (flags & (1 << 0)) != 0
-                        let mutedByYou = (flags & (1 << 9)) != 0
-                        var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                        if muted {
-                            let canUnmute = (flags & (1 << 2)) != 0
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
-                        } else if mutedByYou {
-                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
-                        }
-                        var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                        var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                        if muteState?.canUnmute == false {
-                            videoDescription = nil
-                            presentationDescription = nil
-                        }
-                        parsedParticipants.append(GroupCallParticipantsContext.Participant(
-                            peer: peer,
-                            ssrc: ssrc,
-                            videoDescription: videoDescription,
-                            presentationDescription: presentationDescription,
-                            joinTimestamp: date,
-                            raiseHandRating: raiseHandRating,
-                            hasRaiseHand: raiseHandRating != nil,
-                            activityTimestamp: activeDate.flatMap(Double.init),
-                            activityRank: nil,
-                            muteState: muteState,
-                            volume: volume,
-                            about: about
-                        ))
-                    }
-                }
+                parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
             }
 
             parsedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: sortAscendingValue) })
@@ -2164,59 +2085,8 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
 
 extension GroupCallParticipantsContext.Update.StateUpdate {
     init(participants: [Api.GroupCallParticipant], version: Int32, removePendingMuteStates: Set<PeerId> = Set()) {
-        var participantUpdates: [GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate] = []
-        for participant in participants {
-            switch participant {
-            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, video, presentation):
-                let peerId: PeerId = apiPeerId.peerId
-                let ssrc = UInt32(bitPattern: source)
-                let muted = (flags & (1 << 0)) != 0
-                let mutedByYou = (flags & (1 << 9)) != 0
-                var muteState: GroupCallParticipantsContext.Participant.MuteState?
-                if muted {
-                    let canUnmute = (flags & (1 << 2)) != 0
-                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
-                } else if mutedByYou {
-                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
-                }
-                let isRemoved = (flags & (1 << 1)) != 0
-                let justJoined = (flags & (1 << 4)) != 0
-                let isMin = (flags & (1 << 8)) != 0
-                
-                let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
-                if isRemoved {
-                    participationStatusChange = .left
-                } else if justJoined {
-                    participationStatusChange = .joined
-                } else {
-                    participationStatusChange = .none
-                }
-                
-                var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
-                if muteState?.canUnmute == false {
-                    videoDescription = nil
-                    presentationDescription = nil
-                }
-                participantUpdates.append(GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(
-                    peerId: peerId,
-                    ssrc: ssrc,
-                    videoDescription: videoDescription,
-                    presentationDescription: presentationDescription,
-                    joinTimestamp: date,
-                    activityTimestamp: activeDate.flatMap(Double.init),
-                    raiseHandRating: raiseHandRating,
-                    muteState: muteState,
-                    participationStatusChange: participationStatusChange,
-                    volume: volume,
-                    about: about,
-                    isMin: isMin
-                ))
-            }
-        }
-        
         self.init(
-            participantUpdates: participantUpdates,
+            participantUpdates: participants.map { GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate($0) },
             version: version,
             removePendingMuteStates: removePendingMuteStates
         )
@@ -2547,6 +2417,48 @@ public func getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: 
                 status: .resyncNeeded,
                 responseTimestamp: responseTimestamp
             ))
+        }
+    }
+}
+
+extension GroupCallParticipantsContext.Participant {
+     init?(_ apiParticipant: Api.GroupCallParticipant, transaction: Transaction) {
+        switch apiParticipant {
+            case let .groupCallParticipant(flags, apiPeerId, date, activeDate, source, volume, about, raiseHandRating, video, presentation):
+                let peerId: PeerId = apiPeerId.peerId
+                let ssrc = UInt32(bitPattern: source)
+                guard let peer = transaction.getPeer(peerId) else {
+                    return nil
+                }
+                let muted = (flags & (1 << 0)) != 0
+                let mutedByYou = (flags & (1 << 9)) != 0
+                var muteState: GroupCallParticipantsContext.Participant.MuteState?
+                if muted {
+                    let canUnmute = (flags & (1 << 2)) != 0
+                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute, mutedByYou: mutedByYou)
+                } else if mutedByYou {
+                    muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
+                }
+                var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
+                if muteState?.canUnmute == false {
+                    videoDescription = nil
+                    presentationDescription = nil
+                }
+                self.init(
+                    peer: peer,
+                    ssrc: ssrc,
+                    videoDescription: videoDescription,
+                    presentationDescription: presentationDescription,
+                    joinTimestamp: date,
+                    raiseHandRating: raiseHandRating,
+                    hasRaiseHand: raiseHandRating != nil,
+                    activityTimestamp: activeDate.flatMap(Double.init),
+                    activityRank: nil,
+                    muteState: muteState,
+                    volume: volume,
+                    about: about
+                )
         }
     }
 }

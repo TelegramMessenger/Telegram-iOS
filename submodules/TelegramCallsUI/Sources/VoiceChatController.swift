@@ -816,7 +816,6 @@ public final class VoiceChatController: ViewController {
         
         private var animatingInsertion = false
         private var animatingExpansion = false
-        private var expansionVelocity: CGFloat?
         private var animatingAppearance = false
         private var animatingButtonsSwap = false
         private var animatingMainStage = false
@@ -3530,6 +3529,8 @@ public final class VoiceChatController: ViewController {
                 } else {
                     topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
                 }
+            } else if case .regular = layout.metrics.widthClass {
+                topInset = 0.0
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
@@ -4057,6 +4058,8 @@ public final class VoiceChatController: ViewController {
                 } else {
                     topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
                 }
+            } else if case .regular = layout.metrics.widthClass {
+                topInset = 0.0
             } else if let currentTopInset = self.topInset {
                 topInset = self.isExpanded ? 0.0 : currentTopInset
             } else {
@@ -5275,7 +5278,9 @@ public final class VoiceChatController: ViewController {
             switch recognizer.state {
                 case .began:
                     let topInset: CGFloat
-                    if self.isExpanded {
+                    if case .regular = layout.metrics.widthClass {
+                        topInset = 0.0
+                    } else if self.isExpanded {
                         topInset = 0.0
                     } else if let currentTopInset = self.topInset {
                         topInset = currentTopInset
@@ -5448,14 +5453,20 @@ public final class VoiceChatController: ViewController {
                             self.animatingExpansion = true
                             self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
                             
-                            self.expansionVelocity = velocity.y
-                            if let (layout, navigationHeight) = self.validLayout {
-                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                            let distance: CGFloat
+                            if let topInset = self.topInset {
+                                distance = topInset - offset
+                            } else {
+                                distance = 0.0
                             }
-                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
+                            let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
+                            }
+                            self.updateDecorationsLayout(transition: transition, completion: {
                                 self.animatingExpansion = false
                             })
-                            self.expansionVelocity = nil
                         } else {
                             self.displayMode = .modal(isExpanded: true, isFilled: true)
                             self.updateDecorationsColors()
@@ -5490,8 +5501,9 @@ public final class VoiceChatController: ViewController {
                                     self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                                 }
                             }
-                            
-                            self.expansionVelocity = velocity.y
+                                                        
+                            let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
+                            let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                             if case .modal = self.displayMode {
                                 self.displayMode = .modal(isExpanded: true, isFilled: true)
                             }
@@ -5499,12 +5511,11 @@ public final class VoiceChatController: ViewController {
                             self.animatingExpansion = true
                             
                             if let (layout, navigationHeight) = self.validLayout {
-                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
                             }
-                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                            self.updateDecorationsLayout(transition: transition, completion: {
                                 self.animatingExpansion = false
                             })
-                            self.expansionVelocity = nil
                         } else if !self.isScheduling {
                             self.updateDecorationsColors()
                             self.animatingExpansion = true
