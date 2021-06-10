@@ -324,6 +324,13 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 #endif
 }
 
+-(void)setOnPause:(void (^)(bool))onPause {
+#if TARGET_OS_IOS
+#else
+    _interface->setOnPause(onPause);
+#endif
+}
+
 - (void)setOnIsActiveUpdated:(void (^)(bool))onIsActiveUpdated {
     _interface->setOnIsActiveUpdated([onIsActiveUpdated](bool isActive) {
         if (onIsActiveUpdated) {
@@ -354,7 +361,9 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
                 if (requestClone) {
                     cloneRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
                     cloneRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+#ifdef WEBRTC_IOS
                     [remoteRenderer setCloneTarget:cloneRenderer];
+#endif
                 }
 
                 completion(remoteRenderer, cloneRenderer);
@@ -367,10 +376,10 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
                     cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
 #ifdef WEBRTC_IOS
                     cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+                    [remoteRenderer setClone:cloneRenderer];
 #else
                     cloneRenderer.videoContentMode = kCAGravityResizeAspectFill;
 #endif
-                    [remoteRenderer setClone:cloneRenderer];
                 }
 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
