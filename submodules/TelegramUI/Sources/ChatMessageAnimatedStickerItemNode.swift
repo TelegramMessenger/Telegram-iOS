@@ -95,20 +95,16 @@ class ChatMessageShareButton: HighlightableButtonNode {
             self.isReplies = isReplies
             
             let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
-            //var updatedShareButtonBackground: UIImage?
+            
             var updatedIconImage: UIImage?
             if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-                //updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else if isReplies {
-                //updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-                //updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-                //updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
             }
             self.backgroundNode.color = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
             self.iconNode.image = updatedIconImage
