@@ -121,6 +121,7 @@ public final class ChatControllerInteraction {
     let editMessageMedia: (MessageId, Bool) -> Void
     let copyText: (String) -> Void
     let displayUndo: (UndoOverlayContent) -> Void
+    let isAnimatingMessage: (UInt32) -> Bool
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -213,6 +214,7 @@ public final class ChatControllerInteraction {
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         copyText: @escaping (String) -> Void,
         displayUndo: @escaping (UndoOverlayContent) -> Void,
+        isAnimatingMessage: @escaping (UInt32) -> Bool,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -292,6 +294,7 @@ public final class ChatControllerInteraction {
         self.editMessageMedia = editMessageMedia
         self.copyText = copyText
         self.displayUndo = displayUndo
+        self.isAnimatingMessage = isAnimatingMessage
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -346,6 +349,8 @@ public final class ChatControllerInteraction {
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
         }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

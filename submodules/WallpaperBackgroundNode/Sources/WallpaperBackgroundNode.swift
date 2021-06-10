@@ -162,16 +162,36 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func update(rect: CGRect, within containerSize: CGSize) {
+        public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
 
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
             self.contentNode.layer.contentsRect = shiftedContentsRect
             if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
                 cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
             }
             if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
+                gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+        }
+
+        public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+            self.currentLayout = (rect, containerSize)
+
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
+
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
+            self.contentNode.layer.contentsRect = shiftedContentsRect
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
+                cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
                 gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
             }
         }

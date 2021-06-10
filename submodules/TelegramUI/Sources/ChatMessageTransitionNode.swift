@@ -81,7 +81,7 @@ private final class OverlayTransitionContainerController: ViewController, Standa
     }
 }
 
-final class ChatMessageTransitionNode: ASDisplayNode {
+public final class ChatMessageTransitionNode: ASDisplayNode {
     static let animationDuration: Double = 0.3
 
     static let verticalAnimationControlPoints: (Float, Float, Float, Float) = (0.19919472913616398, 0.010644531250000006, 0.27920937042459737, 0.91025390625)
@@ -174,7 +174,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
     }
 
     private final class AnimatingItemNode: ASDisplayNode {
-        private let itemNode: ChatMessageItemView
+        let itemNode: ChatMessageItemView
         private let contextSourceNode: ContextExtractedContentContainingNode
         private let source: ChatMessageTransitionNode.Source
         private let getContentAreaInScreenSpace: () -> CGRect
@@ -186,6 +186,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         weak var overlayController: OverlayTransitionContainerController?
 
         var animationEnded: (() -> Void)?
+        var updateAfterCompletion: Bool = false
 
         init(itemNode: ChatMessageItemView, contextSourceNode: ContextExtractedContentContainingNode, source: ChatMessageTransitionNode.Source, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
@@ -284,6 +285,18 @@ final class ChatMessageTransitionNode: ASDisplayNode {
 
                 let combinedTransition = CombinedTransition(horizontal: horizontalTransition, vertical: verticalTransition)
 
+                self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
+                self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: verticalCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.endAnimation()
+                })
+                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), horizontalCurve, horizontalDuration)
+                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), verticalCurve, verticalDuration)
+
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                     itemNode.animateContentFromTextInputField(textInput: textInput, transition: combinedTransition)
                     if let sourceReplyPanel = sourceReplyPanel {
@@ -300,18 +313,6 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                         itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
                     }
                 }
-
-                self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
-                self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
-                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: verticalCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.endAnimation()
-                })
-                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), horizontalCurve, horizontalDuration)
-                self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), verticalCurve, verticalDuration)
             case let .stickerMediaInput(stickerMediaInput, replyPanel):
                 self.itemNode.cancelInsertionAnimations()
 
@@ -557,6 +558,10 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         return self.currentPendingItem != nil
     }
 
+    var hasOngoingTransitions: Bool {
+        return !self.animatingItemNodes.isEmpty
+    }
+
     init(listNode: ChatHistoryListNode, getContentAreaInScreenSpace: @escaping () -> CGRect, onTransitionEvent: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.listNode = listNode
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
@@ -617,6 +622,13 @@ final class ChatMessageTransitionNode: ASDisplayNode {
                 if let index = strongSelf.animatingItemNodes.firstIndex(where: { $0 === animatingItemNode }) {
                     strongSelf.animatingItemNodes.remove(at: index)
                 }
+
+                if animatingItemNode.updateAfterCompletion, let item = animatingItemNode.itemNode.item {
+                    for (message, _) in item.content {
+                        strongSelf.listNode.requestMessageUpdate(stableId: message.stableId)
+                        break
+                    }
+                }
             }
 
             animatingItemNode.frame = self.bounds
@@ -626,7 +638,7 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         }
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return nil
     }
 
@@ -640,5 +652,43 @@ final class ChatMessageTransitionNode: ASDisplayNode {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addContentOffset(offset: offset, itemNode: itemNode)
         }
+    }
+
+    func isAnimatingMessage(stableId: UInt32) -> Bool {
+        for itemNode in self.animatingItemNodes {
+            if let item = itemNode.itemNode.item {
+                for (message, _) in item.content {
+                    if message.stableId == stableId {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    func scheduleUpdateMessageAfterAnimationCompleted(stableId: UInt32) {
+        for itemNode in self.animatingItemNodes {
+            if let item = itemNode.itemNode.item {
+                for (message, _) in item.content {
+                    if message.stableId == stableId {
+                        itemNode.updateAfterCompletion = true
+                    }
+                }
+            }
+        }
+    }
+
+    func hasScheduledUpdateMessageAfterAnimationCompleted(stableId: UInt32) -> Bool {
+        for itemNode in self.animatingItemNodes {
+            if let item = itemNode.itemNode.item {
+                for (message, _) in item.content {
+                    if message.stableId == stableId {
+                        return itemNode.updateAfterCompletion
+                    }
+                }
+            }
+        }
+        return false
     }
 }

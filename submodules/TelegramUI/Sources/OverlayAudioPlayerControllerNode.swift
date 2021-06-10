@@ -144,6 +144,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
         }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(backgroundNode: nil))
