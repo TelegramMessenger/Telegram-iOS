@@ -1434,7 +1434,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
                         
                         if contentContainerFrame.maxX > layout.size.width {
-                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentContainerFrame.width) / 2.0), y: contentContainerFrame.minY), size: contentContainerFrame.size)
+                            contentContainerFrame = CGRect(origin: CGPoint(x: layout.size.width - contentContainerFrame.width - 11.0, y: contentContainerFrame.minY), size: contentContainerFrame.size)
                         }
                     }
                     

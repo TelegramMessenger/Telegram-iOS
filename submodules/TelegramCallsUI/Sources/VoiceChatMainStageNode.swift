@@ -1090,11 +1090,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         let initialBottomInset = bottomInset
-        var bottomInset = bottomInset
-        if !sideInset.isZero {
-            bottomInset = 14.0
-        }
-        
+        var bottomInset = bottomInset        
         let layoutMode: GroupVideoNode.LayoutMode
         if case .immediate = transition, self.animatingIn {
             layoutMode = .fillOrFitToSquare

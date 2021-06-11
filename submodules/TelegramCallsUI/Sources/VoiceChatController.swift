@@ -491,7 +491,7 @@ public final class VoiceChatController: ViewController {
                     text = .text(about, textIcon, .generic)
                 }
                 
-                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
+                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isVideoLimit: false, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
                     interaction.switchToPeer(peer.id, videoEndpointId, !secondary)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture, false)
@@ -3647,8 +3647,8 @@ public final class VoiceChatController: ViewController {
                 videoContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: videoTopEdgeY), size: CGSize(width: contentLeftInset, height: layout.size.height))
             } else {
                 let videoTopEdgeY = isLandscape ? 0.0 : layoutTopInset
-                let videoBottomEdgeY = self.isLandscape ? layout.size.height : layout.size.height - layout.intrinsicInsets.bottom - 84.0
-                videoFrame = CGRect(x: 0.0, y: videoTopEdgeY, width: isLandscape ? max(0.0, layout.size.width - layout.safeInsets.right - 84.0) : layout.size.width, height: videoBottomEdgeY - videoTopEdgeY)
+                let videoBottomEdgeY = self.isLandscape ? layout.size.height : layout.size.height - layout.intrinsicInsets.bottom - 92.0
+                videoFrame = CGRect(x: 0.0, y: videoTopEdgeY, width: isLandscape ? max(0.0, layout.size.width - layout.safeInsets.right - 92.0) : layout.size.width, height: videoBottomEdgeY - videoTopEdgeY)
                 videoContainerFrame = CGRect(origin: CGPoint(), size: layout.size)
             }
             transition.updateFrame(node: self.mainStageContainerNode, frame: videoContainerFrame)
@@ -3656,7 +3656,7 @@ public final class VoiceChatController: ViewController {
             if !self.mainStageNode.animating {
                 transition.updateFrame(node: self.mainStageNode, frame: videoFrame)
             }
-            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, isLandscape: videoFrame.width > videoFrame.height, isTablet: isTablet, transition: transition)
+            self.mainStageNode.update(size: videoFrame.size, sideInset: layout.safeInsets.left, bottomInset: self.isLandscape ? 0.0 : bottomInset, isLandscape: videoFrame.width > videoFrame.height, isTablet: isTablet, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: size.width, height: layout.size.height))
             
@@ -4140,12 +4140,12 @@ public final class VoiceChatController: ViewController {
                 fullscreenListWidth = layout.size.height
                 fullscreenListTransform = CATransform3DIdentity
                 fullscreenListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: fullscreenListHeight, height: layout.size.height), insets: UIEdgeInsets(top: fullscreenListInset, left: 0.0, bottom: fullscreenListInset, right: 0.0), duration: duration, curve: curve)
-                fullscreenListContainerFrame = CGRect(x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - fullscreenListHeight, y: 0.0, width: fullscreenListHeight, height: layout.size.height)
+                fullscreenListContainerFrame = CGRect(x: layout.size.width - min(self.effectiveBottomAreaHeight, fullscreenBottomAreaHeight) - layout.safeInsets.right - fullscreenListHeight - 4.0, y: 0.0, width: fullscreenListHeight, height: layout.size.height)
             } else {
                 fullscreenListWidth = layout.size.width
                 fullscreenListTransform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
                 fullscreenListUpdateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: fullscreenListHeight, height: layout.size.width), insets: UIEdgeInsets(top: fullscreenListInset + layout.safeInsets.left, left: 0.0, bottom: fullscreenListInset + layout.safeInsets.left, right: 0.0), duration: duration, curve: curve)
-                fullscreenListContainerFrame = CGRect(x: 0.0, y: layout.size.height - min(bottomPanelHeight, fullscreenBottomAreaHeight + layout.intrinsicInsets.bottom) - fullscreenListHeight + 4.0, width: layout.size.width, height: fullscreenListHeight)
+                fullscreenListContainerFrame = CGRect(x: 0.0, y: layout.size.height - min(bottomPanelHeight, fullscreenBottomAreaHeight + layout.intrinsicInsets.bottom) - fullscreenListHeight - 4.0, width: layout.size.width, height: fullscreenListHeight)
             }
             
             transition.updateFrame(node: self.fullscreenListContainer, frame: fullscreenListContainerFrame)
@@ -5310,6 +5310,11 @@ public final class VoiceChatController: ViewController {
                 let bottomPanelLocation = gestureRecognizer.location(in: self.bottomPanelNode.view)
                 let containerLocation = gestureRecognizer.location(in: self.contentContainer.view)
                 let mainStageLocation = gestureRecognizer.location(in: self.mainStageNode.view)
+                
+                if self.isLandscape && self.mainStageContainerNode.isUserInteractionEnabled && mainStageLocation.x > self.mainStageNode.frame.width - 80.0 {
+                    return false
+                }
+                
                 if self.audioButton.frame.contains(bottomPanelLocation) || (!self.cameraButton.isHidden && self.cameraButton.frame.contains(bottomPanelLocation)) || self.leaveButton.frame.contains(bottomPanelLocation) || self.pickerView?.frame.contains(containerLocation) == true || (self.mainStageContainerNode.isUserInteractionEnabled && (mainStageLocation.y < 44.0 || mainStageLocation.y > self.mainStageNode.frame.height - 100.0)) {
                     return false
                 }
