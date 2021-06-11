@@ -510,6 +510,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                             return
                         }
                         strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
+                        strongSelf.validPatternGeneratedImage = nil
                         if let size = strongSelf.validLayout {
                             strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
                         } else {
