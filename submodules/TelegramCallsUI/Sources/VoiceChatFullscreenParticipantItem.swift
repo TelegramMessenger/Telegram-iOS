@@ -335,6 +335,22 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    var gridVisibility = true {
+        didSet {
+            self.updateIsEnabled()
+        }
+    }
+    
+    func updateIsEnabled() {
+        guard let (rect, containerSize) = self.absoluteLocation else {
+            return
+        }
+        let isVisibleInContainer = rect.maxY >= 0.0 && rect.minY <= containerSize.height
+        if let videoNode = self.videoNode, videoNode.supernode === self.videoContainerNode {
+            videoNode.updateIsEnabled(self.gridVisibility && isVisibleInContainer)
+        }
+    }
+    
     private func updateIsExtracted(_ isExtracted: Bool, transition: ContainedViewLayoutTransition) {
         guard self.isExtracted != isExtracted,  let extractedRect = self.extractedRect, let nonExtractedRect = self.nonExtractedRect, let item = self.item else {
             return
@@ -959,5 +975,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         var rect = rect
         rect.origin.y += self.insets.top
         self.absoluteLocation = (rect, containerSize)
+        
+        self.updateIsEnabled()
     }
 }

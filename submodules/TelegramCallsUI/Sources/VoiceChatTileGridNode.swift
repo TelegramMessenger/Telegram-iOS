@@ -35,10 +35,10 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         self.clipsToBounds = true
     }
     
-    var visiblity = true {
+    var visibility = true {
         didSet {
             for (_, tileNode) in self.itemNodes {
-                tileNode.visiblity = self.visiblity
+                tileNode.visibility = self.visibility
             }
         }
     }
@@ -132,7 +132,7 @@ final class VoiceChatTileGridNode: ASDisplayNode {
                 self.addSubnode(addedItemNode)
             }
             if let itemNode = itemNode {
-                itemNode.visiblity = self.visiblity
+                itemNode.visibility = self.visibility
                 if wasAdded {
                     itemNode.frame = itemFrame
                     if !isFirstTime {
@@ -293,7 +293,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.cornersNode.image = decorationCornersImage(top: true, bottom: false, dark: item.getIsExpanded())
                         
                         tileGridNode = VoiceChatTileGridNode(context: item.context)
-                        tileGridNode.visiblity = strongSelf.gridVisiblity
+                        tileGridNode.visibility = strongSelf.gridVisibility
                         strongSelf.addSubnode(tileGridNode)
                         strongSelf.tileGridNode = tileGridNode
                     }
@@ -324,9 +324,9 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
         self.tileGridNode?.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    var gridVisiblity: Bool = true {
+    var gridVisibility: Bool = true {
         didSet {
-            self.tileGridNode?.visiblity = self.gridVisiblity
+            self.tileGridNode?.visibility = self.gridVisibility
         }
     }
     
