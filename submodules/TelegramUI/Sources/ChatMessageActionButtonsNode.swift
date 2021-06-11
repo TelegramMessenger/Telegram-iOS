@@ -100,11 +100,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .url, .urlAuth:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
                 case .requestPhone:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingPhoneIconImage
                 case .requestMap:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLocationIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLocationIconImage : graphics.chatBubbleActionButtonOutgoingLocationIconImage
                 case .switchInline:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingShareIconImage
                 case .payment:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
                 default:

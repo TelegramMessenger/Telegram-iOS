@@ -1221,7 +1221,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                 
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
+                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):
