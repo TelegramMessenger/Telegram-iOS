@@ -2562,13 +2562,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isVideoMutedDisposable.set(nil)
             self.genericCallContext?.disableVideo()
             self.isVideoMuted = true
-
+        
             self.updateLocalVideoState()
         }
     }
 
     private func updateLocalVideoState() {
-        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted, isPresentationPaused: false)
+        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted, isPresentationPaused: nil)
     }
     
     public func switchVideoCamera() {

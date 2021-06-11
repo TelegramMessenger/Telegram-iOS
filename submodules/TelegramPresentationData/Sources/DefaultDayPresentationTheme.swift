@@ -565,7 +565,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
         mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
-        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor.withAlphaComponent(0.3), withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.25)),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.25)),
         stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.2), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.1))
     )
     
