@@ -2299,7 +2299,7 @@ public final class VoiceChatController: ViewController {
                             }))
                         }
                     } else {
-                        strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: true, completion: { videoView, backdropVideoView in
+                        strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { videoView, backdropVideoView in
                             if let videoView = videoView {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView))
                             } else {
@@ -5117,7 +5117,7 @@ public final class VoiceChatController: ViewController {
 
                 if !self.requestedVideoSources.contains(channel.endpointId) {
                     self.requestedVideoSources.insert(channel.endpointId)
-                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: true, completion: { [weak self] videoView, backdropVideoView in
+                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
                             guard let strongSelf = self, let videoView = videoView else {
                                 return

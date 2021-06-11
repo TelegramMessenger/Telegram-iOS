@@ -7,6 +7,8 @@ import AccountContext
 import ContextUI
 
 final class GroupVideoNode: ASDisplayNode {
+    static let useBlurTransparency: Bool = UIAccessibility.isReduceTransparencyEnabled
+
     enum Position {
         case tile
         case list
