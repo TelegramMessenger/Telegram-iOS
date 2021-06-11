@@ -4502,13 +4502,19 @@ public final class VoiceChatController: ViewController {
         private func updateVisibility() {
             let visible = self.appIsActive && self.visibility
             if self.tileGridNode.isHidden {
-                self.tileGridNode.visiblity = false
+                self.tileGridNode.visibility = false
             } else {
-                self.tileGridNode.visiblity = isVisible
+                self.tileGridNode.visibility = visible
             }
+            self.mainStageNode.visibility = visible
             self.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? VoiceChatTilesGridItemNode {
-                    itemNode.gridVisiblity = visible
+                    itemNode.gridVisibility = visible
+                }
+            }
+            self.fullscreenListNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? VoiceChatFullscreenParticipantItemNode {
+                    itemNode.gridVisibility = visible
                 }
             }
         }

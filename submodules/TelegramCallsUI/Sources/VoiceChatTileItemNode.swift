@@ -323,7 +323,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.updateIsEnabled()
     }
     
-    var visiblity = true {
+    var visibility = true {
         didSet {
             self.updateIsEnabled()
         }
@@ -335,7 +335,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         }
         let isVisibleInContainer = rect.maxY >= 0.0 && rect.minY <= containerSize.height
         if let videoNode = self.videoNode, videoNode.supernode === self.videoContainerNode {
-            videoNode.updateIsEnabled(self.visiblity && isVisibleInContainer)
+            videoNode.updateIsEnabled(self.visibility && isVisibleInContainer)
         }
     }
     

@@ -378,9 +378,18 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.stopScreencast?()
     }
     
+    var visibility = true {
+        didSet {
+            if let videoNode = self.currentVideoNode, videoNode.supernode === self {
+                videoNode.updateIsEnabled(self.visibility)
+            }
+        }
+    }
+    
     var animating: Bool {
         return self.animatingIn || self.animatingOut
     }
+    
     private var animatingIn = false
     private var animatingOut = false
     private var appeared = false
