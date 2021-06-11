@@ -3664,6 +3664,7 @@ public final class VoiceChatController: ViewController {
             let rightBorderFrame: CGRect
             let additionalInset: CGFloat = 60.0
             let additionalSideInset = (size.width - contentWidth) / 2.0
+            let additionalLeftInset = size.width / 2.0
             if isLandscape {
                 leftBorderFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY - additionalInset), size: CGSize(width: (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
                 rightBorderFrame = CGRect(origin: CGPoint(x: size.width - (size.width - contentWidth) / 2.0 - sideInset, y: topPanelFrame.maxY - additionalInset), size: CGSize(width: layout.safeInsets.right + (size.width - contentWidth) / 2.0 + sideInset, height: layout.size.height))
@@ -3673,7 +3674,7 @@ public final class VoiceChatController: ViewController {
                     isFullscreen = true
                     forceUpdate = true
                 }
-                leftBorderFrame = CGRect(origin: CGPoint(x: -additionalInset, y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + (contentLeftInset.isZero ? additionalSideInset : contentLeftInset), height: layout.size.height))
+                leftBorderFrame = CGRect(origin: CGPoint(x: -additionalInset - additionalLeftInset, y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalLeftInset + (contentLeftInset.isZero ? additionalSideInset : contentLeftInset), height: layout.size.height))
                 rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset - (contentLeftInset.isZero ? additionalSideInset : 0.0), y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalSideInset, height: layout.size.height))
             }
             
@@ -4110,11 +4111,18 @@ public final class VoiceChatController: ViewController {
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: contentLeftInset.isZero ? floorToScreenPixels((size.width - contentWidth) / 2.0) : contentLeftInset, y: listTopInset + topInset), size: listSize))
             
             let tileGridSize = CGSize(width: max(0.0, contentLeftInset - sideInset), height: size.height - layout.intrinsicInsets.bottom - listTopInset - topInset)
+            
+            if contentLeftInset > 0.0 {
+                self.tileGridNode.isHidden = false
+            }
             if !self.tileGridNode.isHidden {
-                let _ = self.tileGridNode.update(size: tileGridSize, layoutMode: .grid, items: self.currentTileItems, transition: transition)
+                let _ = self.tileGridNode.update(size: tileGridSize, layoutMode: .grid, items: self.currentTileItems, transition: transition, completion: { [weak self] in
+                    if contentLeftInset.isZero && transition.isAnimated {
+                        self?.tileGridNode.isHidden = true
+                    }
+                })
             }
             transition.updateFrame(node: self.tileGridNode, frame: CGRect(origin: CGPoint(x: sideInset, y: listTopInset + topInset), size: tileGridSize))
-            self.tileGridNode.isHidden = contentLeftInset.isZero
             self.tileGridNode.updateAbsoluteRect(CGRect(origin: CGPoint(), size: tileGridSize), within: tileGridSize)
             
             listInsets.bottom = bottomGradientHeight
@@ -4992,17 +5000,15 @@ public final class VoiceChatController: ViewController {
                 animatingLayout = true
                 updateLayout = true
             }
-            if !tileItems.isEmpty || !gridTileItems.isEmpty {
-                if isTablet {
-                    updateLayout = true
-                    self.currentTileItems = gridTileItems
-                    if displayPanelVideos && !tileItems.isEmpty {
-                        entries.insert(.tiles(tileItems, .pairs), at: 0)
-                    }
-                } else {
-                    if !tileItems.isEmpty {
-                        entries.insert(.tiles(tileItems, .pairs), at: 0)
-                    }
+            if isTablet {
+                updateLayout = true
+                self.currentTileItems = gridTileItems
+                if displayPanelVideos && !tileItems.isEmpty {
+                    entries.insert(.tiles(tileItems, .pairs), at: 0)
+                }
+            } else {
+                if !tileItems.isEmpty {
+                    entries.insert(.tiles(tileItems, .pairs), at: 0)
                 }
             }
             

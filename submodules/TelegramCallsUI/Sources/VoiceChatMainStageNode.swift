@@ -559,7 +559,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             return
         }
         var effectiveSpeakingPeerId = self.speakingPeerId
-        if let peerId = effectiveSpeakingPeerId, self.visiblePeerIds.contains(peerId) || self.currentPeer?.0 == peerId || self.callState?.myPeerId == peerId || isTablet {
+        if let peerId = effectiveSpeakingPeerId, self.currentPeer?.0 == peerId || self.callState?.myPeerId == peerId || isTablet {
             effectiveSpeakingPeerId = nil
         }
         guard self.effectiveSpeakingPeerId != effectiveSpeakingPeerId else {
