@@ -364,7 +364,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 case .free:
                                      let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                                     durationTextColor = serviceColor.primaryText
-                                    durationBlurColor = theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                                    durationBlurColor = selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper)
                                 case .bubble:
                                     durationBlurColor = nil
                                     if item.message.effectivelyIncoming(item.context.account.peerId) {

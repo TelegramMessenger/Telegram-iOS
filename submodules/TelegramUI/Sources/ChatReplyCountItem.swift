@@ -169,7 +169,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
                     let labelFrame = CGRect(origin: CGPoint(x: floor((params.width - backgroundSize.width) / 2.0) + 8.0, y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
 
-                    strongSelf.backgroundColorNode.backgroundColor = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                    strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 
                     let baseBackgroundFrame = CGRect(origin: CGPoint(x: labelFrame.minX - 6.0, y: labelFrame.minY - 2.0), size: CGSize(width: labelFrame.width + 6.0 * 2.0, height: labelFrame.height + 2.0 * 2.0))
 
