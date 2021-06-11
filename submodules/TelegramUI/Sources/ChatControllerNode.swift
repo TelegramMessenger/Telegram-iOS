@@ -1608,10 +1608,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if themeUpdated {
                 if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                    self.inputPanelBackgroundNode.updateColor(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper, transition: .immediate)
                     self.usePlainInputSeparator = true
                 } else {
-                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                    self.inputPanelBackgroundNode.updateColor(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
                     self.usePlainInputSeparator = false
                     self.plainInputSeparatorAlpha = nil
                 }

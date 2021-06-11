@@ -121,15 +121,8 @@ private var sharedIsReduceTransparencyEnabled = UIAccessibility.isReduceTranspar
 
 public final class NavigationBackgroundNode: ASDisplayNode {
     private var _color: UIColor
-    public var color: UIColor {
-        get {
-            return self._color
-        } set(value) {
-            self.updateColor(color: value, transition: .immediate)
-        }
-    }
 
-    private let enableBlur: Bool
+    private var enableBlur: Bool
 
     private var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
@@ -150,7 +143,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     }
 
     private func updateBackgroundBlur(forceKeepBlur: Bool) {
-        if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self.color.alpha > .ulpOfOne && self.color.alpha < 0.95) || forceKeepBlur) {
+        if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self._color.alpha > .ulpOfOne && self._color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
 
@@ -193,16 +186,19 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func updateColor(color: UIColor, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
-        if self._color.isEqual(color) {
+    public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
+        let effectiveEnableBlur = enableBlur ?? self.enableBlur
+
+        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur {
             return
         }
         self._color = color
+        self.enableBlur = effectiveEnableBlur
 
         if sharedIsReduceTransparencyEnabled {
-            transition.updateBackgroundColor(node: self.backgroundNode, color: self.color.withAlphaComponent(1.0))
+            transition.updateBackgroundColor(node: self.backgroundNode, color: self._color.withAlphaComponent(1.0))
         } else {
-            transition.updateBackgroundColor(node: self.backgroundNode, color: self.color)
+            transition.updateBackgroundColor(node: self.backgroundNode, color: self._color)
         }
 
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
@@ -906,7 +902,7 @@ open class NavigationBar: ASDisplayNode {
         if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
             self.presentationData = presentationData
             
-            self.backgroundNode.color = self.presentationData.theme.backgroundColor
+            self.backgroundNode.updateColor(color: self.presentationData.theme.backgroundColor, transition: .immediate)
             
             self.backButtonNode.color = self.presentationData.theme.buttonColor
             self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor

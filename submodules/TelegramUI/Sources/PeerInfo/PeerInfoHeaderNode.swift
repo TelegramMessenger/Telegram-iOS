@@ -1951,7 +1951,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var transitionSourceTitleFrame = CGRect()
         var transitionSourceSubtitleFrame = CGRect()
         
-        self.backgroundNode.color = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+        self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         
         if let navigationTransition = self.navigationTransition, let sourceAvatarNode = (navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height

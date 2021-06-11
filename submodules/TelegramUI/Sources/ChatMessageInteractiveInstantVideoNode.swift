@@ -359,12 +359,12 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let telegramFile = updatedFile {
                         if updatedMedia {
                             let durationTextColor: UIColor
-                            let durationBlurColor: UIColor?
+                            let durationBlurColor: (UIColor, Bool)?
                             switch statusDisplayType {
                                 case .free:
                                      let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                                     durationTextColor = serviceColor.primaryText
-                                    durationBlurColor = selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper)
+                                    durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                                 case .bubble:
                                     durationBlurColor = nil
                                     if item.message.effectivelyIncoming(item.context.account.peerId) {
@@ -376,9 +376,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
 
                             if let durationBlurColor = durationBlurColor {
                                 if let durationBackgroundNode = strongSelf.durationBackgroundNode {
-                                    durationBackgroundNode.color = durationBlurColor
+                                    durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1, transition: .immediate)
                                 } else {
-                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor)
+                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor.0, enableBlur: durationBlurColor.1)
                                     strongSelf.durationBackgroundNode = durationBackgroundNode
                                     strongSelf.addSubnode(durationBackgroundNode)
                                 }
