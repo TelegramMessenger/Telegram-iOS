@@ -70,7 +70,7 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
         self.isPinned = pinned
         
         self.pinButtonTitleNode.alpha = self.isPinned ? 1.0 : 0.0
-        if animated {
+        if animated && pinned != wasPinned {
             if wasPinned {
                 self.pinButtonTitleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 self.pinButtonTitleNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.pinButtonTitleNode.frame.width, y: 0.0), duration: 0.2, additive: true)
