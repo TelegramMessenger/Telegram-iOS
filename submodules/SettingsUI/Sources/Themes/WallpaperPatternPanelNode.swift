@@ -312,7 +312,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
         sliderView.backColor = self.theme.list.disclosureArrowColor
-        sliderView.trackColor = sliderView.backColor//self.theme.list.itemAccentColor
+        if self.allowDark {
+            sliderView.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            sliderView.trackColor = self.theme.list.itemAccentColor
+        }
         
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -390,7 +394,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
         self.sliderView?.backColor = self.theme.list.disclosureArrowColor
-        self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        if self.allowDark {
+            self.sliderView?.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        }
         self.titleNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         
