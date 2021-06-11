@@ -109,7 +109,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
-            self.backgroundNode.color = selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+            self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
             self.iconNode.image = updatedIconImage
         }
         var size = CGSize(width: 30.0, height: 30.0)
@@ -1065,9 +1065,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                            replyBackgroundNode.color = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.replyBackgroundNode = replyBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
@@ -1157,9 +1157,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
                     if needsForwardBackground {
                         if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
-                            forwardBackgroundNode.color = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                            forwardBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            let forwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            let forwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.forwardBackgroundNode = forwardBackgroundNode
                             strongSelf.addSubnode(forwardBackgroundNode)
                         }

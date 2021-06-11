@@ -386,7 +386,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.color = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
         self.sliderView?.backColor = self.theme.list.disclosureArrowColor

@@ -132,7 +132,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            self.backgroundNode.color = self.buttonColor
+            self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
         }
     }
     

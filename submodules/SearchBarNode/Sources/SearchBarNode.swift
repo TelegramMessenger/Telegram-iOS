@@ -887,7 +887,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
         }
         if self.theme != theme {
-            self.backgroundNode.color = theme.background
+            self.backgroundNode.updateColor(color: theme.background, transition: .immediate) 
             if self.fieldStyle != .modern || self.forceSeparator {
                 self.separatorNode.backgroundColor = theme.separator
             }

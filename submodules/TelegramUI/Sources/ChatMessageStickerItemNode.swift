@@ -705,9 +705,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                            replyBackgroundNode.color = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.replyBackgroundNode = replyBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }

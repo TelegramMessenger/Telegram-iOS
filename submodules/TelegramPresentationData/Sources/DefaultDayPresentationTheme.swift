@@ -8,8 +8,18 @@ import Postbox
 public func selectDateFillStaticColor(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIColor {
     if case .color(0xffffff) = wallpaper {
         return theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+    } else if case .builtin = wallpaper {
+        return UIColor(rgb: 0x748391, alpha: 0.45)
     } else {
         return theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
+    }
+}
+
+public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
+    if case .builtin = wallpaper {
+        return false
+    } else {
+        return true
     }
 }
 

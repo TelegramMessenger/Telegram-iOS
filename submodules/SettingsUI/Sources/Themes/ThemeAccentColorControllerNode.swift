@@ -573,7 +573,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.pageControlBackgroundNode.backgroundColor = color
                 strongSelf.patternButtonNode.buttonColor = color
                 strongSelf.colorsButtonNode.buttonColor = color
-                strongSelf.playButtonBackgroundNode.color = color
+                strongSelf.playButtonBackgroundNode.updateColor(color: color, transition: .immediate)
             }
         })
     }
