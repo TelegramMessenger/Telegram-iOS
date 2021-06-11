@@ -524,7 +524,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                             }
                         } else {
                             if currentItem?.peer.id == item.peer.id {
-                                currentVideoNode.layer.animateScale(from: 1.0, to: 0.0, duration: appearanceDuration, completion: { [weak self, weak currentVideoNode] _ in
+                                currentVideoNode.layer.animateScale(from: 1.0, to: 0.0, duration: appearanceDuration, removeOnCompletion: false, completion: { [weak self, weak currentVideoNode] _ in
+                                    currentVideoNode?.layer.removeAllAnimations()
                                     if currentVideoNode !== self?.videoNode {
                                         currentVideoNode?.removeFromSupernode()
                                     }
@@ -871,7 +872,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                         strongSelf.audioLevelView?.layer.animateScale(from: 1.0, to: 0.001, duration: appearanceDuration)
                                         strongSelf.videoContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -9.0), to: CGPoint(), duration: appearanceDuration, additive: true)
                                     }
-                                    apperanceTransition.updateAlpha(node: videoNode, alpha: 1.0)
+                                    if videoNode.supernode === strongSelf.videoContainerNode {
+                                        apperanceTransition.updateAlpha(node: videoNode, alpha: 1.0)
+                                    }
                                     apperanceTransition.updateAlpha(node: strongSelf.videoFadeNode, alpha: 1.0)
                                     apperanceTransition.updateAlpha(node: strongSelf.avatarNode, alpha: 0.0)
                                     if let audioLevelView = strongSelf.audioLevelView {

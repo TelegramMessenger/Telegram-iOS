@@ -7,6 +7,8 @@ import SyncCore
 public enum ServerProvidedSuggestion: String {
     case autoarchivePopular = "AUTOARCHIVE_POPULAR"
     case newcomerTicks = "NEWCOMER_TICKS"
+    case validatePhoneNumber = "VALIDATE_PHONE_NUMBER"
+    case validatePassword = "VALIDATE_PASSWORD"
 }
 
 public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProvidedSuggestion], NoError> {

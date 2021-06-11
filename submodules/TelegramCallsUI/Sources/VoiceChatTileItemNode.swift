@@ -28,6 +28,7 @@ final class VoiceChatTileItem: Equatable {
     let videoEndpointId: String
     let videoReady: Bool
     let videoTimeouted: Bool
+    let isVideoLimit: Bool
     let isPaused: Bool
     let isOwnScreencast: Bool
     let strings: PresentationStrings
@@ -47,12 +48,13 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
         self.videoReady = videoReady
         self.videoTimeouted = videoTimeouted
+        self.isVideoLimit = isVideoLimit
         self.isPaused = isPaused
         self.isOwnScreencast = isOwnScreencast
         self.strings = strings
