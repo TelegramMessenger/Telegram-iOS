@@ -6493,3 +6493,5 @@ Sorry for the inconvenience.";
 "VoiceChat.NoiseSuppressionDisabled" = "Disabled";
 
 "VoiceChat.Unpin" = "Unpin";
+
+"VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first 30 members";
