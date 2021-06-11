@@ -302,12 +302,14 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
     let rotation: Int32?
     let preview: Bool
     let customPatternColor: UIColor?
+    let bakePatternAlpha: CGFloat
     
-    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false) {
+    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0) {
         self.colors = colors
         self.rotation = rotation
         self.customPatternColor = customPatternColor
         self.preview = preview
+        self.bakePatternAlpha = bakePatternAlpha
     }
     
     public func serialized() -> NSArray {
@@ -318,6 +320,7 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
             array.add(NSNumber(value: customPatternColor.argb))
         }
         array.add(NSNumber(value: self.preview))
+        array.add(NSNumber(value: Double(self.bakePatternAlpha)))
         return array
     }
 }
@@ -552,6 +555,9 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.setBlendMode(.softLight)
                     }
                     if let overlayImage = overlayImage {
+                        if customArguments.bakePatternAlpha != 1.0 {
+                            c.setAlpha(customArguments.bakePatternAlpha)
+                        }
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
@@ -559,6 +565,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.setAlpha(1.0)
                     }
                 }
                 addCorners(context, arguments: arguments)
