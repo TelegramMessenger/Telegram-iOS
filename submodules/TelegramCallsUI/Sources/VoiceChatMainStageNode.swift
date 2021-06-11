@@ -69,18 +69,15 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
         self.pinButtonIconNode.update(state: .init(pinned: pinned, color: .white), animated: true)
         self.isPinned = pinned
         
+        self.pinButtonTitleNode.alpha = self.isPinned ? 1.0 : 0.0
         if animated {
             if wasPinned {
-                self.pinButtonTitleNode.alpha = 0.0
                 self.pinButtonTitleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 self.pinButtonTitleNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.pinButtonTitleNode.frame.width, y: 0.0), duration: 0.2, additive: true)
             } else {
-                self.pinButtonTitleNode.alpha = 1.0
                 self.pinButtonTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 self.pinButtonTitleNode.layer.animatePosition(from: CGPoint(x: self.pinButtonTitleNode.frame.width, y: 0.0), to: CGPoint(), duration: 0.2, additive: true)
             }
-        } else {
-            self.pinButtonTitleNode.alpha = isPinned ? 1.0 : 0.0
         }
     }
     
