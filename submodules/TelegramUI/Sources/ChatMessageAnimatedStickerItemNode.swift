@@ -22,6 +22,7 @@ import ManagedAnimationNode
 import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
+import WallpaperBackgroundNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -158,6 +159,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
     private var enableSynchronousImageApply: Bool = false
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
@@ -592,6 +594,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            
+            if let backgroundNode = self.backgroundNode {
+                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            }
+        }
+    }
+    
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -1001,6 +1013,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let file = file, let immediateThumbnailData = file.immediateThumbnailData {
+                        if strongSelf.backgroundNode == nil {
+                            if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                strongSelf.backgroundNode = backgroundNode
+                                strongSelf.placeholderNode.addBackdropNode(backgroundNode)
+                                
+                                if let (rect, size) = strongSelf.absoluteRect {
+                                    strongSelf.updateAbsoluteRect(rect, within: size)
+                                }
+                            }
+                        }
+                        
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))

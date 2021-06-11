@@ -13,6 +13,7 @@ import StickerResources
 import ContextUI
 import Markdown
 import ShimmerEffect
+import WallpaperBackgroundNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -22,6 +23,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private var placeholderNode: StickerShimmerEffectNode
     var textNode: TextNode?
     
@@ -249,6 +251,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            
+            if let backgroundNode = self.backgroundNode {
+                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            }
+        }
+    }
+    
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -644,6 +656,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.enableSynchronousImageApply = false
                     
                     if let immediateThumbnailData = telegramFile?.immediateThumbnailData {
+                        if strongSelf.backgroundNode == nil {
+                            if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                strongSelf.backgroundNode = backgroundNode
+                                strongSelf.placeholderNode.addBackdropNode(backgroundNode)
+                                
+                                if let (rect, size) = strongSelf.absoluteRect {
+                                    strongSelf.updateAbsoluteRect(rect, within: size)
+                                }
+                            }
+                        }
+                        
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         
