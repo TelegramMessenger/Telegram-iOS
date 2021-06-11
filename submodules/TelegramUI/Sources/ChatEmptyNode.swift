@@ -796,7 +796,8 @@ final class ChatEmptyNode: ASDisplayNode {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
 
-            self.backgroundNode.color = interfaceState.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+
+            self.backgroundNode.color = selectDateFillStaticColor(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
         }
         
         var isScheduledMessages = false

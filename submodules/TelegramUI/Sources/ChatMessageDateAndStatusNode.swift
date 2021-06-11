@@ -327,8 +327,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
-                    //backgroundImage = graphics.dateAndStatusFreeBackground
-                    blurredBackgroundColor = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+
+                    blurredBackgroundColor = selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -350,7 +350,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = serviceColor.primaryText
                     outgoingStatus = status
                     //backgroundImage = graphics.dateAndStatusFreeBackground
-                    blurredBackgroundColor = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                    blurredBackgroundColor = selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)

@@ -193,7 +193,7 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         let backgroundFillLayout = self.filledBackgroundFillNode.asyncLayout()
-        let backgroundApply = backgroundLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic, labelRects, 10.0, 10.0, 0.0)
+        let backgroundApply = backgroundLayout(selectDateFillStaticColor(theme: theme, wallpaper: wallpaper), labelRects, 10.0, 10.0, 0.0)
         let backgroundFillApply = backgroundFillLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating, labelRects, 10.0, 10.0, 0.0)
         backgroundApply()
         backgroundFillApply()

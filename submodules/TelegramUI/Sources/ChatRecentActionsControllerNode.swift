@@ -128,6 +128,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.backgroundNode.update(wallpaper: self.state.chatWallpaper)
+        self.backgroundNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)

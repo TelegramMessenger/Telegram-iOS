@@ -163,7 +163,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
 
                     node.backgroundBlurNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
                     node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, transition: .immediate)
-                    node.backgroundBlurNode.color = theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                    node.backgroundBlurNode.color = selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper)
                     
                     if iconImage != nil {
                         if node.iconNode == nil {

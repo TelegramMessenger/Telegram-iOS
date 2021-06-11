@@ -705,9 +705,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                            replyBackgroundNode.color = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                            replyBackgroundNode.color = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                         } else {
-                            let replyBackgroundNode = NavigationBackgroundNode(color: item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic)
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.replyBackgroundNode = replyBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
