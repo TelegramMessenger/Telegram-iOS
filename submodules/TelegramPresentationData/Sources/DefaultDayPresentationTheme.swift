@@ -18,6 +18,8 @@ public func selectDateFillStaticColor(theme: PresentationTheme, wallpaper: Teleg
 public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
     if case .builtin = wallpaper {
         return false
+    } else if case .color = wallpaper {
+        return false
     } else {
         return true
     }

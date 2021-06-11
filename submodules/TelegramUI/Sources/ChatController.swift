@@ -201,6 +201,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private let cachedDataReady = Promise<Bool>()
     private var didSetCachedDataReady = false
+
+    private let wallpaperReady = Promise<Bool>()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var presentationInterfaceStatePromise: ValuePromise<ChatPresentationInterfaceState>
@@ -433,6 +435,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.peekData = peekData
 
         self.chatBackgroundNode = WallpaperBackgroundNode(context: context, useSharedAnimationPhase: true)
+        self.wallpaperReady.set(chatBackgroundNode.isReady)
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource
         var groupCallPanelSource: GroupCallPanelSource
@@ -4451,11 +4454,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.historyState.get(),
             self._chatLocationInfoReady.get(),
             effectiveCachedDataReady,
-            initialData
+            initialData,
+            self.wallpaperReady.get()
         )
-        |> map { _, chatLocationInfoReady, cachedDataReady, _ in
-            return chatLocationInfoReady && cachedDataReady
-        })
+        |> map { _, chatLocationInfoReady, cachedDataReady, _, wallpaperReady in
+            return chatLocationInfoReady && cachedDataReady && wallpaperReady
+        }
+        |> distinctUntilChanged)
         
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()

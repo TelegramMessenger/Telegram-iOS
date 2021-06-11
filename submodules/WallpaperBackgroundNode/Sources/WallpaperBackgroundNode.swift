@@ -243,12 +243,32 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     
     private let contentNode: ASDisplayNode
     private var gradientBackgroundNode: GradientBackgroundNode?
-    private let patternImageNode: TransformImageNode
-    private var invertPattern: Bool = false
-    private var patternIsLight: Bool = false
+    private let patternImageNode: ASImageNode
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
+
+    private struct CachedValidPatternImage {
+        let generate: (TransformImageArguments) -> DrawingContext?
+        let generated: ValidPatternGeneratedImage
+        let image: UIImage
+    }
+
+    private static var cachedValidPatternImage: CachedValidPatternImage?
+
+    private struct ValidPatternImage {
+        let wallpaper: TelegramWallpaper
+        let generate: (TransformImageArguments) -> DrawingContext?
+    }
+    private var validPatternImage: ValidPatternImage?
+
+    private struct ValidPatternGeneratedImage: Equatable {
+        let wallpaper: TelegramWallpaper
+        let size: CGSize
+        let patternColor: UInt32
+        let backgroundColor: UInt32
+    }
+    private var validPatternGeneratedImage: ValidPatternGeneratedImage?
 
     private let patternImageDisposable = MetaDisposable()
 
@@ -257,6 +277,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var bubbleBackgroundNodeReferences = SparseBag<BubbleBackgroundNodeReference>()
 
     private let wallpaperDisposable = MetaDisposable()
+
+    private let imageDisposable = MetaDisposable()
     
     private var motionEnabled: Bool = false {
         didSet {
@@ -330,7 +352,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode = ASDisplayNode()
         self.contentNode.contentMode = self.imageContentMode
 
-        self.patternImageNode = TransformImageNode()
+        self.patternImageNode = ASImageNode()
         
         super.init()
         
@@ -343,10 +365,10 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     deinit {
         self.patternImageDisposable.dispose()
         self.wallpaperDisposable.dispose()
+        self.imageDisposable.dispose()
     }
 
     public func update(wallpaper: TelegramWallpaper) {
-        let previousWallpaper = self.wallpaper
         if self.wallpaper == wallpaper {
             return
         }
@@ -430,11 +452,25 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: .immediate)
+            self.updateBubbles()
+        }
+    }
+
+    private func loadPatternForSizeIfNeeded(size: CGSize, transition: ContainedViewLayoutTransition) {
+        guard let wallpaper = self.wallpaper else {
+            return
+        }
+
+        var invertPattern: Bool = false
+        var patternIsLight: Bool = false
+
         switch wallpaper {
         case let .file(_, _, _, _, isPattern, _, _, file, settings) where isPattern:
             var updated = true
             let isLight = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b > 0.3
-            if let previousWallpaper = previousWallpaper {
+            if let previousWallpaper = self.validPatternImage?.wallpaper {
                 switch previousWallpaper {
                 case let .file(_, _, _, _, _, _, _, previousFile, _):
                     if file.id == previousFile.id {
@@ -444,35 +480,43 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     break
                 }
             }
-            self.patternIsLight = isLight
+            patternIsLight = isLight
 
             if updated {
-                /*let cacheKey = PatternKey(mediaId: file.id ?? MediaId(namespace: 0, id: 0), isLight: isLight)
-                if let (currentKey, currentImage) = WallpaperBackgroundNode.cachedSharedPattern, currentKey == cacheKey {
-                }*/
+                self.validPatternGeneratedImage = nil
+                self.validPatternImage = nil
 
-                func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
-                    if let message = message {
-                        return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
+                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
+                    self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, generate: cachedValidPatternImage.generate)
+                } else {
+                    func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
+                        if let message = message {
+                            return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
+                        }
+                        return .wallpaper(wallpaper: nil, resource: resource)
                     }
-                    return .wallpaper(wallpaper: nil, resource: resource)
-                }
 
-                var convertedRepresentations: [ImageRepresentationWithReference] = []
-                for representation in file.previewRepresentations {
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file, message: nil)))
-                }
-                let dimensions = file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.resource, media: file, message: nil)))
-
-                let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                self.patternImageNode.imageUpdated = { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
+                    var convertedRepresentations: [ImageRepresentationWithReference] = []
+                    for representation in file.previewRepresentations {
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file, message: nil)))
                     }
-                    strongSelf._isReady.set(true)
+                    let dimensions = file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.resource, media: file, message: nil)))
+
+                    let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+                    self.patternImageDisposable.set((signal
+                    |> deliverOnMainQueue).start(next: { [weak self] generator in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
+                        if let size = strongSelf.validLayout {
+                            strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
+                        } else {
+                            strongSelf._isReady.set(true)
+                        }
+                    }))
                 }
-                self.patternImageNode.setSignal(signal)
             }
             let intensity = CGFloat(settings.intensity ?? 50) / 100.0
             if intensity < 0 {
@@ -483,8 +527,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
             }
             self.patternImageNode.isHidden = false
-            self.invertPattern = intensity < 0
-            if self.invertPattern {
+            invertPattern = intensity < 0
+            if invertPattern {
                 self.backgroundColor = .black
                 let contentAlpha = abs(intensity)
                 self.gradientBackgroundNode?.contentView.alpha = contentAlpha
@@ -495,6 +539,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.contentNode.alpha = 1.0
             }
         default:
+            self.patternImageDisposable.set(nil)
+            self.validPatternImage = nil
             self.patternImageNode.isHidden = true
             self.backgroundColor = nil
             self.gradientBackgroundNode?.contentView.alpha = 1.0
@@ -502,11 +548,46 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self._isReady.set(true)
         }
 
-        self.updateBubbles()
+        if let validPatternImage = self.validPatternImage {
+            let patternBackgroundColor: UIColor
+            let patternColor: UIColor
+            if invertPattern {
+                patternColor = .clear
+                patternBackgroundColor = .clear
+            } else {
+                if patternIsLight {
+                    patternColor = .black
+                } else {
+                    patternColor = .white
+                }
+                patternBackgroundColor = .clear
+            }
 
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+            let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb)
+
+            if self.validPatternGeneratedImage != updatedGeneratedImage {
+                self.validPatternGeneratedImage = updatedGeneratedImage
+
+                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
+                    self.patternImageNode.image = cachedValidPatternImage.image
+                } else {
+                    let patternArguments = TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false), scale: min(2.0, UIScreenScale))
+                    if let drawingContext = validPatternImage.generate(patternArguments) {
+                        if let image = drawingContext.generateImage() {
+                            self.patternImageNode.image = image
+
+                            if self.useSharedAnimationPhase {
+                                WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                            }
+                        }
+                    }
+                }
+
+                self._isReady.set(true)
+            }
         }
+
+        transition.updateFrame(node: self.patternImageNode, frame: CGRect(origin: CGPoint(), size: size))
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -521,23 +602,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             gradientBackgroundNode.updateLayout(size: size, transition: transition)
         }
 
-        let makeImageLayout = self.patternImageNode.asyncLayout()
-        let patternBackgroundColor: UIColor
-        let patternColor: UIColor
-        if self.invertPattern {
-            patternColor = .clear
-            patternBackgroundColor = .clear
-        } else {
-            if self.patternIsLight {
-                patternColor = .black
-            } else {
-                patternColor = .white
-            }
-            patternBackgroundColor = .clear
-        }
-        let applyImage = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false), scale: min(2.0, UIScreenScale)))
-        applyImage()
-        transition.updateFrame(node: self.patternImageNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.loadPatternForSizeIfNeeded(size: size, transition: transition)
         
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
