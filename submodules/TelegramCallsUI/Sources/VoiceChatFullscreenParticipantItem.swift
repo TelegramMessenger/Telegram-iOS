@@ -358,8 +358,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.isExtracted = isExtracted
         
         if item.peer.smallProfileImage != nil {
+            let springDuration: Double = 0.42
+            let springDamping: CGFloat = 124.0
+            
             if isExtracted {
-                let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
+                let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, sourceSize: nonExtractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
                     self?.contextSourceNode.requestDismiss?()
                 })
                 profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
@@ -367,6 +370,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 self.contextSourceNode.contentNode.addSubnode(profileNode)
 
                 profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
+                var appearenceTransition = transition
+                if transition.isAnimated {
+                    appearenceTransition = .animated(duration: springDuration, curve: .customSpring(damping: springDamping, initialVelocity: 0.0))
+                }
+                appearenceTransition.updateFrame(node: profileNode, frame: extractedRect)
                 
                 self.contextSourceNode.contentNode.customHitTest = { [weak self] point in
                     if let strongSelf = self, let profileNode = strongSelf.profileNode {
@@ -377,9 +385,18 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     return nil
                 }
                 self.highlightNode.isHidden = true
+                self.backgroundImageNode.isHidden = true
             } else if let profileNode = self.profileNode {
                 self.profileNode = nil
-                profileNode.animateOut(to: self, targetRect: nonExtractedRect, transition: transition)
+                profileNode.animateOut(to: self, targetRect: nonExtractedRect, transition: transition, completion: { [weak self] in
+                    self?.backgroundImageNode.isHidden = false
+                })
+                
+                var appearenceTransition = transition
+                if transition.isAnimated {
+                    appearenceTransition = .animated(duration: 0.2, curve: .easeInOut)
+                }
+                appearenceTransition.updateFrame(node: profileNode, frame: nonExtractedRect)
                 
                 self.contextSourceNode.contentNode.customHitTest = nil
                 self.highlightNode.isHidden = !item.active

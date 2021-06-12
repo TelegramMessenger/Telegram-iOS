@@ -39,7 +39,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
     
     private var appeared = false
     
-    init(context: AccountContext, size: CGSize, peer: Peer, text: VoiceChatParticipantItem.ParticipantText, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError>, requestDismiss: (() -> Void)?) {
+    init(context: AccountContext, size: CGSize, sourceSize: CGSize, peer: Peer, text: VoiceChatParticipantItem.ParticipantText, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError>, requestDismiss: (() -> Void)?) {
         self.context = context
         self.size = size
         self.peer = peer
@@ -73,6 +73,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         }
         
         self.infoNode = ASDisplayNode()
+        self.infoNode.clipsToBounds = true
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -122,10 +123,10 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             strongSelf.avatarListNode.controlsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         }
         
-        self.updateInfo(size: size, animate: false)
+        self.updateInfo(size: size, sourceSize: sourceSize, animate: false)
     }
     
-    func updateInfo(size: CGSize, animate: Bool) {
+    func updateInfo(size: CGSize, sourceSize: CGSize, animate: Bool) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         let titleFont = Font.regular(17.0)
@@ -169,7 +170,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         self.statusNode.frame = CGRect(origin: CGPoint(x: 14.0, y: titleSize.height + 3.0), size: statusLayout)
         
         let totalHeight = titleSize.height + statusLayout.height + 3.0 + 8.0
-        let infoFrame = CGRect(x: 0.0, y: size.height - totalHeight, width: self.size.width, height: totalHeight)
+        let infoFrame = CGRect(x: 0.0, y: size.height - totalHeight, width: sourceSize.width, height: totalHeight)
 
         if animate {
             let springDuration: Double = !self.appeared ? 0.42 : 0.3
@@ -195,8 +196,8 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         if let sourceNode = sourceNode as? VoiceChatTileItemNode {
             let sourceRect = sourceNode.bounds
             self.backgroundImageNode.frame = sourceNode.bounds
-            self.updateInfo(size: sourceNode.bounds.size, animate: false)
-            self.updateInfo(size: targetRect.size, animate: true)
+            self.updateInfo(size: sourceNode.bounds.size, sourceSize: sourceNode.bounds.size, animate: false)
+            self.updateInfo(size: targetRect.size, sourceSize: targetRect.size, animate: true)
                         
             self.backgroundImageNode.image = generateImage(CGSize(width: backgroundCornerRadius * 2.0, height: backgroundCornerRadius * 2.0), rotatedContext: { (size, context) in
                 let bounds = CGRect(origin: CGPoint(), size: size)
@@ -221,15 +222,15 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
-            var appearenceTransition = transition
+            var appearanceTransition = transition
             if transition.isAnimated {
-                appearenceTransition = .animated(duration: springDuration, curve: .customSpring(damping: springDamping, initialVelocity: 0.0))
+                appearanceTransition = .animated(duration: springDuration, curve: .customSpring(damping: springDamping, initialVelocity: 0.0))
             }
             
             if let videoNode = sourceNode.videoNode {
-                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: appearenceTransition)
-                appearenceTransition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
-                appearenceTransition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
+                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: appearanceTransition)
+                appearanceTransition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
+                appearanceTransition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
             }
             self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
@@ -242,11 +243,11 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                 self.insertSubnode(self.videoFadeNode, aboveSubnode: sourceNode.videoContainerNode)
                 self.view.insertSubview(snapshotView, aboveSubview: sourceNode.videoContainerNode.view)
                 snapshotView.frame = sourceRect
-                appearenceTransition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - snapshotView.frame.size.height), size: snapshotView.frame.size))
+                appearanceTransition.updateFrame(view: snapshotView, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - snapshotView.frame.size.height), size: snapshotView.frame.size))
                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                     snapshotView.removeFromSuperview()
                 })
-                appearenceTransition.updateFrame(node: self.videoFadeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - self.videoFadeNode.frame.size.height), size: CGSize(width: targetSize.width, height: self.videoFadeNode.frame.height)))
+                appearanceTransition.updateFrame(node: self.videoFadeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetSize.height - self.videoFadeNode.frame.size.height), size: CGSize(width: targetSize.width, height: self.videoFadeNode.frame.height)))
                 self.videoFadeNode.alpha = 0.0
                 self.videoFadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             }
@@ -283,9 +284,9 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         } else if let sourceNode = sourceNode as? VoiceChatFullscreenParticipantItemNode {
             let sourceRect = sourceNode.bounds
             self.backgroundImageNode.frame = sourceNode.bounds
-            self.updateInfo(size: sourceNode.bounds.size, animate: false)
-            self.updateInfo(size: targetRect.size, animate: true)
-                        
+            self.updateInfo(size: sourceNode.bounds.size, sourceSize: sourceNode.bounds.size, animate: false)
+            self.updateInfo(size: targetRect.size, sourceSize: targetRect.size, animate: true)
+            
             self.backgroundImageNode.image = generateImage(CGSize(width: backgroundCornerRadius * 2.0, height: backgroundCornerRadius * 2.0), rotatedContext: { (size, context) in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
@@ -298,8 +299,13 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
                                   
             transition.updateCornerRadius(node: self.backgroundImageNode, cornerRadius: 0.0)
               
-            let initialRect = sourceNode.frame
-            let initialScale: CGFloat = sourceRect.width / targetRect.width
+            let initialRect: CGRect
+            if let videoNode = sourceNode.videoNode, videoNode.supernode == sourceNode.videoContainerNode, !videoNode.alpha.isZero {
+                initialRect = sourceRect
+            } else {
+                initialRect = sourceNode.avatarNode.frame
+            }
+            let initialScale = initialRect.width / targetRect.width
             
             let targetSize = CGSize(width: targetRect.size.width, height: targetRect.size.width)
             self.avatarListWrapperNode.update(size: targetSize, transition: .immediate)
@@ -309,14 +315,30 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.avatarListContainerNode.cornerRadius = targetRect.width / 2.0
             
-            if false, let videoNode = sourceNode.videoNode {
-                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: transition)
-                transition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
-                transition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
+            var appearanceTransition = transition
+            if transition.isAnimated {
+                appearanceTransition = .animated(duration: springDuration, curve: .customSpring(damping: springDamping, initialVelocity: 0.0))
+            }
+            
+            if let videoNode = sourceNode.videoNode {
+                videoNode.updateLayout(size: targetSize, layoutMode: .fillOrFitToSquare, transition: appearanceTransition)
+                appearanceTransition.updateFrame(node: videoNode, frame: CGRect(origin: CGPoint(), size: targetSize))
+                appearanceTransition.updateFrame(node: sourceNode.videoContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: targetSize.width, height: targetSize.height + backgroundCornerRadius)))
                 sourceNode.videoContainerNode.cornerRadius = backgroundCornerRadius
             }
-//            self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
+            self.insertSubnode(sourceNode.videoContainerNode, belowSubnode: self.avatarListWrapperNode)
             
+            let transitionNode = ASImageNode()
+            transitionNode.clipsToBounds = true
+            transitionNode.displaysAsynchronously = false
+            transitionNode.displayWithoutProcessing = true
+            transitionNode.image = sourceNode.avatarNode.unroundedImage
+            transitionNode.frame = CGRect(origin: CGPoint(), size: targetSize)
+            transitionNode.cornerRadius = targetRect.width / 2.0
+            radiusTransition.updateCornerRadius(node: transitionNode, cornerRadius: 0.0)
+            
+            sourceNode.avatarNode.isHidden = true
+            self.avatarListWrapperNode.contentNode.insertSubnode(transitionNode, at: 0)
 //            if let snapshotView = sourceNode.infoNode.view.snapshotView(afterScreenUpdates: false) {
 //                self.videoFadeNode.image = sourceNode.fadeNode.image
 //                self.videoFadeNode.frame = CGRect(x: 0.0, y: sourceRect.height - sourceNode.fadeNode.frame.height, width: sourceRect.width, height: sourceNode.fadeNode.frame.height)
@@ -337,7 +359,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListWrapperNode.layer.animateSpring(from: NSValue(cgPoint: initialRect.center), to: NSValue(cgPoint: self.avatarListWrapperNode.position), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, completion: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.avatarListNode.updateCustomItemsOnlySynchronously = false
-//                    strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
+                    strongSelf.avatarListNode.currentItemNode?.addSubnode(sourceNode.videoContainerNode)
                 }
             })
             
@@ -372,7 +394,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         let springDamping: CGFloat = 1000.0
         if let targetNode = targetNode as? VoiceChatTileItemNode {
             let initialSize = self.bounds
-            self.updateInfo(size: targetRect.size, animate: true)
+            self.updateInfo(size: targetRect.size, sourceSize: targetRect.size, animate: true)
             
             transition.updateCornerRadius(node: self.backgroundImageNode, cornerRadius: backgroundCornerRadius)
             
@@ -429,7 +451,9 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.infoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         } else if let targetNode = targetNode as? VoiceChatFullscreenParticipantItemNode {
             let initialSize = self.bounds
-            self.updateInfo(size: targetRect.size, animate: true)
+            self.updateInfo(size: targetRect.size, sourceSize: targetRect.size, animate: true)
+            
+            targetNode.avatarNode.isHidden = false
             
             transition.updateCornerRadius(node: self.backgroundImageNode, cornerRadius: backgroundCornerRadius)
             

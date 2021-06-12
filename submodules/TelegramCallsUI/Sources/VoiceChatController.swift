@@ -1441,7 +1441,7 @@ public final class VoiceChatController: ViewController {
                     strongSelf.controller?.push(controller)
                 })
             }, peerContextAction: { [weak self] entry, sourceNode, gesture, fullscreen in
-                guard let strongSelf = self, let controller = strongSelf.controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
+                guard let strongSelf = self, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
                     return
                 }
                 
@@ -1723,14 +1723,20 @@ public final class VoiceChatController: ViewController {
                     centerVertically = false
                 }
                 
+                var useMaskView = true
+                if case .fullscreen = strongSelf.displayMode {
+                    useMaskView = false
+                }
+                
                 let dismissPromise = ValuePromise<Bool>(false)
-                let source = VoiceChatContextExtractedContentSource(sourceNode: sourceNode, maskView: strongSelf.transitionMaskView, keepInPlace: false, blurBackground: true, centerVertically: centerVertically, shouldBeDismissed: dismissPromise.get(), animateTransitionIn: { [weak self] in
+                let source = VoiceChatContextExtractedContentSource(sourceNode: sourceNode, maskView: useMaskView ? strongSelf.transitionMaskView : nil, keepInPlace: false, blurBackground: true, centerVertically: centerVertically, shouldBeDismissed: dismissPromise.get(), animateTransitionIn: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.animatingContextMenu = true
                         strongSelf.updateDecorationsLayout(transition: .immediate)
                         if strongSelf.isLandscape {
                             strongSelf.transitionMaskTopFillLayer.opacity = 1.0
                         }
+                        strongSelf.transitionContainerNode.view.mask = nil
                         strongSelf.transitionMaskBottomFillLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4, removeOnCompletion: false, completion: { [weak self] _ in
                             Queue.mainQueue().after(0.3) {
                                 self?.transitionMaskTopFillLayer.opacity = 0.0
@@ -1748,6 +1754,7 @@ public final class VoiceChatController: ViewController {
                         strongSelf.transitionMaskBottomFillLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, completion: { [weak self] _ in
                             self?.animatingContextMenu = false
                             self?.updateDecorationsLayout(transition: .immediate)
+                            self?.transitionContainerNode.view.mask = self?.transitionMaskView
                         })
                     }
                 })
@@ -4737,6 +4744,8 @@ public final class VoiceChatController: ViewController {
                 displayPanelVideos = self.displayPanelVideos
             }
             
+            var joinedVideo = true
+            
             var myEntry: VoiceChatPeerEntry?
             var mainEntry: VoiceChatPeerEntry?
             for member in callMembers.0 {
@@ -4786,8 +4795,11 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 var memberPeer = member.peer
-                if member.peer.id == self.callState?.myPeerId, let user = memberPeer as? TelegramUser, let photo = self.currentUpdatingAvatar {
-                    memberPeer = user.withUpdatedPhoto([photo])
+                if member.peer.id == self.callState?.myPeerId {
+                    joinedVideo = member.joinedVideo
+                    if let user = memberPeer as? TelegramUser, let photo = self.currentUpdatingAvatar {
+                        memberPeer = user.withUpdatedPhoto([photo])
+                    }
                 }
                 
                 if let videoEndpointId = member.videoEndpointId {
@@ -4927,6 +4939,13 @@ public final class VoiceChatController: ViewController {
                         fullscreenIndex += 1
                     }
                 }
+            }
+            
+            if !joinedVideo && !tileItems.isEmpty || !gridTileItems.isEmpty, let peer = self.peer {
+                tileItems.removeAll()
+                gridTileItems.removeAll()
+                
+                tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
             }
             
             for member in callMembers.0 {

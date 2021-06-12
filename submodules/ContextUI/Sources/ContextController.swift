@@ -857,7 +857,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
             }
             
-            let intermediateCompletion: () -> Void = { [weak contentParentNode] in
+            let intermediateCompletion: () -> Void = { [weak self, weak contentParentNode] in
                 if completedEffect && completedContentNode && completedActionsNode {
                     switch result {
                     case .default, .custom:
@@ -869,6 +869,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     case .dismissWithoutContent:
                         break
                     }
+                    
+                    self?.clippingNode.view.mask = nil
                     
                     completion()
                 }

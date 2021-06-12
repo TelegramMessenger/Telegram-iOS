@@ -7173,7 +7173,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
         }
         
-        self.checksTooltipDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+        self.checksTooltipDisposable.set((getServerProvidedSuggestions(account: self.context.account)
         |> deliverOnMainQueue).start(next: { [weak self] values in
             guard let strongSelf = self else {
                 return

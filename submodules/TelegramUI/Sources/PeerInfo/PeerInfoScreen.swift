@@ -568,6 +568,7 @@ private final class PeerInfoInteraction {
     let accountContextMenu: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
     let updateBio: (String) -> Void
     let openDeletePeer: () -> Void
+    let openFaq: (String?) -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -605,7 +606,8 @@ private final class PeerInfoInteraction {
         logoutAccount: @escaping (AccountRecordId) -> Void,
         accountContextMenu: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
         updateBio: @escaping (String) -> Void,
-        openDeletePeer: @escaping () -> Void
+        openDeletePeer: @escaping () -> Void,
+        openFaq: @escaping (String?) -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -643,6 +645,7 @@ private final class PeerInfoInteraction {
         self.accountContextMenu = accountContextMenu
         self.updateBio = updateBio
         self.openDeletePeer = openDeletePeer
+        self.openFaq = openFaq
     }
 }
 
@@ -692,16 +695,17 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     
     if let settings = data.globalSettings {
         if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
-            //
-            //                           entries.append(.phoneInfo(presentationData.theme, presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).0, presentationData.strings.Settings_CheckPhoneNumberText))
-            //                           entries.append(.keepPhone(presentationData.theme, presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).0))
-            //                           entries.append(.changePhone(presentationData.theme, presentationData.strings.Settings_ChangePhoneNumber))
             let phoneNumber = formatPhoneNumber(peer.phone ?? "")
-            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).0, action: {
-                interaction.openSettings(.addAccount)
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).0, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), linkAction: { link in
+                if case .tap = link {
+                    interaction.openFaq("q-i-have-a-new-phone-number-what-do-i-do")
+                }
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).0, action: {
+                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePhoneNumber).start()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
-                interaction.openSettings(.addAccount)
+                interaction.openSettings(.phoneNumber)
             }))
         }
         
@@ -1683,6 +1687,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             openDeletePeer: { [weak self] in
                 self?.openDeletePeer()
+            },
+            openFaq: { [weak self] anchor in
+                self?.openFaq(anchor: anchor)
             }
         )
         
@@ -5421,12 +5428,24 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openFaq(anchor: String? = nil) {
-        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
-        self.controller?.present(controller, in: .window(.root))
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            self?.controller?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
         let _ = (self.cachedFaq.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self, weak controller] resolvedUrl in
-            controller?.dismiss()
+        |> deliverOnMainQueue).start(next: { [weak self] resolvedUrl in
+            progressDisposable.dispose()
 
             if let strongSelf = self, let resolvedUrl = resolvedUrl {
                 var resolvedUrl = resolvedUrl
@@ -6531,14 +6550,15 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                 icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
             }
             
-            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), accountTabBarAvatar, accountTabBarAvatarBadge)
-            |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?) in
+            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), getServerProvidedSuggestions(account: self.context.account), accountTabBarAvatar, accountTabBarAvatarBadge)
+            |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?) in
                 let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
+                let phoneNumberWarning = suggestions.contains(.validatePhoneNumber)
                 var otherAccountsBadge: String?
                 if accountTabBarAvatarBadge > 0 {
                     otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
-                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning ? "!" : otherAccountsBadge)
+                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning ? "!" : otherAccountsBadge)
             }
             
             self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).start(next: { [weak self] title, image, selectedImage, badgeValue in

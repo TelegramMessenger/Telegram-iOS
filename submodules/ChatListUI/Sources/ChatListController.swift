@@ -1217,7 +1217,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }))
             
-            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(account: self.context.account)
             |> deliverOnMainQueue).start(next: { [weak self] values in
                 guard let strongSelf = self else {
                     return

@@ -11,6 +11,7 @@ import AlertUI
 import PresentationDataUtils
 import AppBundle
 import Markdown
+import PhoneNumberFormat
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var presentationData: PresentationData
@@ -101,7 +102,8 @@ public final class ChangePhoneNumberIntroController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.title = phoneNumber
+        let formattedPhone = formatPhoneNumber(phoneNumber)
+        self.title = formattedPhone
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         //self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
     }

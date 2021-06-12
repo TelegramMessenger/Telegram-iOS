@@ -123,7 +123,6 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
                 updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                 
                 let parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
-
                 return GroupCallSummary(
                     info: info,
                     topParticipants: parsedParticipants
@@ -638,6 +637,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                         videoDescription = nil
                                         presentationDescription = nil
                                     }
+                                    let joinedVideo = (flags & (1 << 15)) != 0
                                     if !state.participants.contains(where: { $0.peer.id == peer.id }) {
                                         state.participants.append(GroupCallParticipantsContext.Participant(
                                             peer: peer,
@@ -651,7 +651,8 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                             activityRank: nil,
                                             muteState: muteState,
                                             volume: volume,
-                                            about: about
+                                            about: about,
+                                            joinedVideo: joinedVideo
                                         ))
                                     }
                                 }
@@ -869,6 +870,7 @@ public final class GroupCallParticipantsContext {
         public var muteState: MuteState?
         public var volume: Int32?
         public var about: String?
+        public var joinedVideo: Bool
         
         public init(
             peer: Peer,
@@ -882,7 +884,8 @@ public final class GroupCallParticipantsContext {
             activityRank: Int?,
             muteState: MuteState?,
             volume: Int32?,
-            about: String?
+            about: String?,
+            joinedVideo: Bool
         ) {
             self.peer = peer
             self.ssrc = ssrc
@@ -896,6 +899,7 @@ public final class GroupCallParticipantsContext {
             self.muteState = muteState
             self.volume = volume
             self.about = about
+            self.joinedVideo = joinedVideo
         }
 
         public var description: String {
@@ -1130,6 +1134,7 @@ public final class GroupCallParticipantsContext {
                 public var participationStatusChange: ParticipationStatusChange
                 public var volume: Int32?
                 public var about: String?
+                public var joinedVideo: Bool
                 public var isMin: Bool
                 
                 init(
@@ -1144,6 +1149,7 @@ public final class GroupCallParticipantsContext {
                     participationStatusChange: ParticipationStatusChange,
                     volume: Int32?,
                     about: String?,
+                    joinedVideo: Bool,
                     isMin: Bool
                 ) {
                     self.peerId = peerId
@@ -1157,6 +1163,7 @@ public final class GroupCallParticipantsContext {
                     self.participationStatusChange = participationStatusChange
                     self.volume = volume
                     self.about = about
+                    self.joinedVideo = joinedVideo
                     self.isMin = isMin
                 }
             }
@@ -1686,7 +1693,6 @@ public final class GroupCallParticipantsContext {
                             volume = previousVolume
                         }
                     }
-                    
                     let participant = Participant(
                         peer: peer,
                         ssrc: participantUpdate.ssrc,
@@ -1699,7 +1705,8 @@ public final class GroupCallParticipantsContext {
                         activityRank: previousActivityRank,
                         muteState: muteState,
                         volume: volume,
-                        about: participantUpdate.about
+                        about: participantUpdate.about,
+                        joinedVideo: participantUpdate.joinedVideo
                     )
                     updatedParticipants.append(participant)
                 }
@@ -2057,6 +2064,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
             }
             let isRemoved = (flags & (1 << 1)) != 0
             let justJoined = (flags & (1 << 4)) != 0
+            let joinedVideo = (flags & (1 << 15)) != 0
             let isMin = (flags & (1 << 8)) != 0
             
             let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
@@ -2086,6 +2094,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 participationStatusChange: participationStatusChange,
                 volume: volume,
                 about: about,
+                joinedVideo: joinedVideo,
                 isMin: isMin
             )
         }
@@ -2454,6 +2463,8 @@ extension GroupCallParticipantsContext.Participant {
                     videoDescription = nil
                     presentationDescription = nil
                 }
+                let joinedVideo = (flags & (1 << 15)) != 0
+                
                 self.init(
                     peer: peer,
                     ssrc: ssrc,
@@ -2466,7 +2477,8 @@ extension GroupCallParticipantsContext.Participant {
                     activityRank: nil,
                     muteState: muteState,
                     volume: volume,
-                    about: about
+                    about: about,
+                    joinedVideo: joinedVideo
                 )
         }
     }
