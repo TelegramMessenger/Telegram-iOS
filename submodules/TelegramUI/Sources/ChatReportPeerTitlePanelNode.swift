@@ -106,21 +106,19 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
     private var theme: PresentationTheme?
     
     private let labelNode: ImmediateTextNode
-    private let filledBackgroundFillNode: LinkHighlightingNode
-    private let filledBackgroundNode: LinkHighlightingNode
+
+    private let backgroundNode: NavigationBackgroundNode
     
     init(openInvitePeer: @escaping () -> Void) {
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.textAlignment = .center
-        
-        self.filledBackgroundFillNode = LinkHighlightingNode(color: .clear)
-        self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         super.init()
         
-        self.addSubnode(self.filledBackgroundFillNode)
-        self.addSubnode(self.filledBackgroundNode)
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
         self.labelNode.highlightAttributeAction = { attributes in
@@ -191,19 +189,15 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
             labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
         }
         
-        let backgroundLayout = self.filledBackgroundNode.asyncLayout()
-        let backgroundFillLayout = self.filledBackgroundFillNode.asyncLayout()
-        let backgroundApply = backgroundLayout(selectDateFillStaticColor(theme: theme, wallpaper: wallpaper), labelRects, 10.0, 10.0, 0.0)
-        let backgroundFillApply = backgroundFillLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating, labelRects, 10.0, 10.0, 0.0)
-        backgroundApply()
-        backgroundFillApply()
-        
         let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
         
         let labelFrame = CGRect(origin: CGPoint(x: floor((width - labelLayout.size.width) / 2.0), y: topInset + floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
         self.labelNode.frame = labelFrame
-        self.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
-        self.filledBackgroundFillNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+
+        let backgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: 1.0).insetBy(dx: -5.0, dy: -2.0)
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: theme, wallpaper: wallpaper), enableBlur: dateFillNeedsBlur(theme: theme, wallpaper: wallpaper), transition: .immediate)
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.size.height / 2.0, transition: transition)
         
         return topInset + backgroundSize.height + bottomInset
     }
@@ -528,6 +522,11 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.closeButton.hitTest(CGPoint(x: point.x - self.closeButton.frame.minX, y: point.y - self.closeButton.frame.minY), with: event) {
             return result
+        }
+        if let inviteInfoNode = self.inviteInfoNode {
+            if let result = inviteInfoNode.view.hitTest(self.view.convert(point, to: inviteInfoNode.view), with: event) {
+                return result
+            }
         }
         return super.hitTest(point, with: event)
     }

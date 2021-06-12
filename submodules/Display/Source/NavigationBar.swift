@@ -7,6 +7,12 @@ private var backArrowImageCache: [Int32: UIImage] = [:]
 
 public final class SparseNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for view in self.view.subviews {
+            if let result = view.hitTest(self.view.convert(point, to: view), with: event) {
+                return result
+            }
+        }
+        
         let result = super.hitTest(point, with: event)
         if result != self.view {
             return result

@@ -30,8 +30,8 @@ class ChatReplyCountItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatReplyCountItemNode()
-            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
+                node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -63,9 +63,9 @@ class ChatReplyCountItem: ListViewItem {
 
 class ChatReplyCountItemNode: ListViewItemNode {
     var item: ChatReplyCountItem?
-    let labelNode: TextNode
-    var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
-    var backgroundColorNode: ASDisplayNode
+    private let labelNode: TextNode
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private let backgroundColorNode: ASDisplayNode
     
     private var theme: ChatPresentationThemeData?
     
