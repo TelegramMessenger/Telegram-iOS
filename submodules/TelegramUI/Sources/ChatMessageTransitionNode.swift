@@ -217,15 +217,15 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
 
         func beginAnimation() {
             let verticalDuration: Double = ChatMessageTransitionNode.animationDuration
-            let horizontalDuration: Double = verticalDuration// * 0.5
+            let horizontalDuration: Double = verticalDuration
             let delay: Double = 0.0
 
             var updatedContentAreaInScreenSpace = self.getContentAreaInScreenSpace()
+            updatedContentAreaInScreenSpace.size.width = updatedContentAreaInScreenSpace.origin.x + self.clippingNode.bounds.width
             updatedContentAreaInScreenSpace.origin.x = 0.0
-            updatedContentAreaInScreenSpace.size.width = self.clippingNode.bounds.width
 
             let clippingOffset = updatedContentAreaInScreenSpace.minY - self.clippingNode.frame.minY
-            self.clippingNode.frame = CGRect(origin: CGPoint(x: 0.0, y: updatedContentAreaInScreenSpace.minY), size: self.clippingNode.bounds.size)
+            self.clippingNode.frame = CGRect(origin: CGPoint(x: 0.0, y: updatedContentAreaInScreenSpace.minY), size: CGSize(width: updatedContentAreaInScreenSpace.size.width, height: self.clippingNode.bounds.height))
             self.clippingNode.bounds = CGRect(origin: CGPoint(x: 0.0, y: clippingOffset), size: self.clippingNode.bounds.size)
 
             switch self.source {
