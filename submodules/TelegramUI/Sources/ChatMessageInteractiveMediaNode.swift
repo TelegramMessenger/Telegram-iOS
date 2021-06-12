@@ -739,6 +739,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             }
                                             if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
                                                 return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
+                                                |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                                                    if let value = value {
+                                                        return .single(value)
+                                                    } else {
+                                                        return .complete()
+                                                    }
+                                                }
                                             } else {
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }

@@ -173,6 +173,13 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                             self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: isLight ? .black : .white)
                         }
                         imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
+                        |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                            if let value = value {
+                                return .single(value)
+                            } else {
+                                return .complete()
+                            }
+                        }
                     } else {
                         self.imageNode.alpha = 1.0
 

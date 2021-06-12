@@ -11,47 +11,82 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-private func availableColors() -> [UInt32] {
-    return [
-        0xffffff,
-        0xd4dfea,
-        0xb3cde1,
-        0x6ab7ea,
-        0x008dd0,
-        0xd3e2da,
-        0xc8e6c9,
-        0xc5e1a5,
-        0x61b06e,
-        0xcdcfaf,
-        0xa7a895,
-        0x7c6f72,
-        0xffd7ae,
-        0xffb66d,
-        0xde8751,
-        0xefd5e0,
-        0xdba1b9,
-        0xffafaf,
-        0xf16a60,
-        0xe8bcea,
-        0x9592ed,
-        0xd9bc60,
-        0xb17e49,
-        0xd5cef7,
-        0xdf506b,
-        0x8bd2cc,
-        0x3c847e,
-        0x22612c,
-        0x244d7c,
-        0x3d3b85,
-        0x65717d,
-        0x18222d,
-        0x000000
-    ]
-}
-
-private func randomColor() -> UInt32 {
-    let colors = availableColors()
-    return colors[1 ..< colors.count - 1].randomElement() ?? 0x000000
+private func availableColors(theme: PresentationTheme) -> [UInt32] {
+    if theme.overallDarkAppearance {
+        return ([
+            0xffffff,
+            0xd4dfea,
+            0xb3cde1,
+            0x6ab7ea,
+            0x008dd0,
+            0xd3e2da,
+            0xc8e6c9,
+            0xc5e1a5,
+            0x61b06e,
+            0xcdcfaf,
+            0xa7a895,
+            0x7c6f72,
+            0xffd7ae,
+            0xffb66d,
+            0xde8751,
+            0xefd5e0,
+            0xdba1b9,
+            0xffafaf,
+            0xf16a60,
+            0xe8bcea,
+            0x9592ed,
+            0xd9bc60,
+            0xb17e49,
+            0xd5cef7,
+            0xdf506b,
+            0x8bd2cc,
+            0x3c847e,
+            0x22612c,
+            0x244d7c,
+            0x3d3b85,
+            0x65717d,
+            0x18222d,
+            0x000000
+        ] as [UInt32]).filter { color in
+            return UIColor(rgb: color).hsb.b <= 0.4
+        }
+    } else {
+        return [
+            0xffffff,
+            0xd4dfea,
+            0xb3cde1,
+            0x6ab7ea,
+            0x008dd0,
+            0xd3e2da,
+            0xc8e6c9,
+            0xc5e1a5,
+            0x61b06e,
+            0xcdcfaf,
+            0xa7a895,
+            0x7c6f72,
+            0xffd7ae,
+            0xffb66d,
+            0xde8751,
+            0xefd5e0,
+            0xdba1b9,
+            0xffafaf,
+            0xf16a60,
+            0xe8bcea,
+            0x9592ed,
+            0xd9bc60,
+            0xb17e49,
+            0xd5cef7,
+            0xdf506b,
+            0x8bd2cc,
+            0x3c847e,
+            0x22612c,
+            0x244d7c,
+            0x3d3b85,
+            0x65717d,
+            0x18222d,
+            0x000000
+        ]
+    }
 }
 
 final class ThemeColorsGridController: ViewController {
@@ -120,7 +155,7 @@ final class ThemeColorsGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, colors: availableColors(), present: { [weak self] controller, arguments in
+        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, colors: availableColors(theme: self.presentationData.theme), present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
         }, pop: { [weak self] in
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {

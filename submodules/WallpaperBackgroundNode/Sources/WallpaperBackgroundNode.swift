@@ -503,18 +503,20 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.resource, media: file, message: nil)))
 
-                    let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
+                    let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true, onlyFullSize: true)
                     self.patternImageDisposable.set((signal
                     |> deliverOnMainQueue).start(next: { [weak self] generator in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
-                        strongSelf.validPatternGeneratedImage = nil
-                        if let size = strongSelf.validLayout {
-                            strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
-                        } else {
-                            strongSelf._isReady.set(true)
+                        if let generator = generator {
+                            strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
+                            strongSelf.validPatternGeneratedImage = nil
+                            if let size = strongSelf.validLayout {
+                                strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
+                            } else {
+                                strongSelf._isReady.set(true)
+                            }
                         }
                     }))
                 }

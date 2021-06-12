@@ -401,14 +401,14 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
     }
 }
 
-public func patternWallpaperImage(account: Account, accountManager: AccountManager, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func patternWallpaperImage(account: Account, accountManager: AccountManager, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false, onlyFullSize: Bool = false) -> Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> {
     return patternWallpaperDatas(account: account, accountManager: accountManager, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
     |> mapToSignal { (thumbnailData, fullSizeData, fullSizeComplete) in
-        return patternWallpaperImageInternal(thumbnailData: thumbnailData, fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
+        return patternWallpaperImageInternal(thumbnailData: thumbnailData, fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode, onlyFullSize: onlyFullSize)
     }
 }
 
-public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fullSizeComplete: Bool, mode: PatternWallpaperDrawMode) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fullSizeComplete: Bool, mode: PatternWallpaperDrawMode, onlyFullSize: Bool = false) -> Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> {
     var prominent = false
     if case .thumbnail = mode {
         prominent = true
@@ -432,6 +432,12 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
                     scaledSizeImage = image
                 }
+            }
+        }
+
+        if onlyFullSize {
+            if fullSizeData == nil {
+                return nil
             }
         }
         
