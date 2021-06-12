@@ -239,9 +239,16 @@ final class ThemeGridController: ViewController {
                             strongSelf.present(controller, in: .window(.root))
                             
                             let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
-                                let presentationData = strongSelf.presentationData
                                 let _ = updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                     return current.withUpdatedThemeSpecificChatWallpapers([:])
+                                }).start()
+
+                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
+                                    WallpapersState.update(transaction: transaction, { state in
+                                        var state = state
+                                        state.wallpapers.removeAll()
+                                        return state
+                                    })
                                 }).start()
                                 
                                 let _ = (telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network)
