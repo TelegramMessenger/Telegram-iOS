@@ -40,7 +40,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         self.addSubnode(self.backgroundBlurNode)
         self.addSubnode(self.accessibilityArea)
 
-        self.backgroundBlurNode.view.mask = backgroundMaskNode.view
+        //self.backgroundBlurNode.view.mask = backgroundMaskNode.view
         
         self.accessibilityArea.activate = { [weak self] in
             self?.buttonPressed()
@@ -162,7 +162,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     node.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
 
                     node.backgroundBlurNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
-                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, transition: .immediate)
+                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: bubbleCorners.auxiliaryRadius, transition: .immediate)
                     node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
                     
                     if iconImage != nil {
