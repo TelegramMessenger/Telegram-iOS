@@ -2925,7 +2925,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             var currentCallsPrivate: Bool?
             var previousVideoCallsAvailable: Bool? = true
             var currentVideoCallsAvailable: Bool?
-            
+                        
             if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
                 previousCallsPrivate = previousCachedData.callsPrivate ?? false
                 currentCallsPrivate = cachedData.callsPrivate
@@ -2934,10 +2934,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 currentVideoCallsAvailable = cachedData.videoCallsAvailable
             }
             
+            if let previousSuggestPhoneNumberConfirmation = previousData?.globalSettings?.suggestPhoneNumberConfirmation, previousSuggestPhoneNumberConfirmation != data.globalSettings?.suggestPhoneNumberConfirmation {
+                infoUpdated = true
+            }
             if previousCallsPrivate != currentCallsPrivate || previousVideoCallsAvailable != currentVideoCallsAvailable {
                 infoUpdated = true
             }
-            
             if (previousCall == nil) != (currentCall == nil) {
                 infoUpdated = true
             }
@@ -5869,7 +5871,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             for sectionId in removeRegularSections {
                 if let sectionNode = self.regularSections.removeValue(forKey: sectionId) {
-                    sectionNode.removeFromSupernode()
+                    transition.updateAlpha(node: sectionNode, alpha: 0.0, completion: { [weak sectionNode] _ in
+                        sectionNode?.removeFromSupernode()
+                    })
                 }
             }
             

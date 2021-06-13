@@ -164,13 +164,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.addSubnode(self.effectNode)
         self.addSubnode(self.foregroundNode)
     }
-    
-    public override func didLoad() {
-        super.didLoad()
         
-        self.effectNode.layer.compositingFilter = "screenBlendMode"
-    }
-    
     public var isEmpty: Bool {
         return self.currentData == nil
     }
@@ -181,6 +175,8 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         }
         self.backdropNode = backdropNode
         self.insertSubnode(backdropNode, at: 0)
+        
+        self.effectNode.layer.compositingFilter = "screenBlendMode"
     }
     
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
