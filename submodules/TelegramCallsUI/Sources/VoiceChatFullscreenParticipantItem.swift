@@ -362,7 +362,11 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
             let springDamping: CGFloat = 124.0
             
             if isExtracted {
-                let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, sourceSize: nonExtractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
+                var hasVideo = false
+                if let videoNode = self.videoNode, videoNode.supernode == self.videoContainerNode, !videoNode.alpha.isZero {
+                    hasVideo = true
+                }
+                let profileNode = VoiceChatPeerProfileNode(context: item.context, size: extractedRect.size, sourceSize: nonExtractedRect.size, peer: item.peer, text: item.text, customNode: hasVideo ? self.videoContainerNode : nil, additionalEntry: .single(nil), requestDismiss: { [weak self] in
                     self?.contextSourceNode.requestDismiss?()
                 })
                 profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)

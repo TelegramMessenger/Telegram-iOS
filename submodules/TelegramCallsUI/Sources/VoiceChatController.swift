@@ -4555,8 +4555,8 @@ public final class VoiceChatController: ViewController {
                     self.audioButton.layer.removeAllAnimations()
                     self.cameraButton.layer.removeAllAnimations()
                     self.leaveButton.layer.removeAllAnimations()
+                    self.bottomPanelNode.addSubnode(self.cameraButton)
                     self.bottomPanelNode.addSubnode(self.audioButton)
-                    //self.bottomPanelNode.addSubnode(self.cameraButtonNode)
                     self.bottomPanelNode.addSubnode(self.leaveButton)
                     self.bottomPanelNode.addSubnode(self.actionButton)
                     self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
@@ -6606,7 +6606,7 @@ public final class VoiceChatController: ViewController {
             return
         }
         
-        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioButton, leaveNode: self.controllerNode.leaveButton, navigationController: self.navigationController as? NavigationController, initiallyHidden: self.dismissedManually)
+        let overlayController = VoiceChatOverlayController(actionButton: self.controllerNode.actionButton, audioOutputNode: self.controllerNode.audioButton, cameraNode: self.controllerNode.cameraButton, leaveNode: self.controllerNode.leaveButton, navigationController: self.navigationController as? NavigationController, initiallyHidden: self.dismissedManually)
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
         }
@@ -6619,9 +6619,10 @@ public final class VoiceChatController: ViewController {
                 overlayController?.animateOut(reclaim: true, targetPosition: strongSelf.controllerNode.actionButtonPosition, completion: { immediate in
                     if let strongSelf = self, immediate {
                         strongSelf.controllerNode.actionButton.ignoreHierarchyChanges = true
-                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.cameraButton)
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.audioButton)
                         strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.leaveButton)
+                        strongSelf.controllerNode.bottomPanelNode.addSubnode(strongSelf.controllerNode.actionButton)
                         
                         if immediate, let layout = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, transition: .immediate)

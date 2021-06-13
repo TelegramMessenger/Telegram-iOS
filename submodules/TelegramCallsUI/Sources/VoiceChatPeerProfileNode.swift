@@ -374,7 +374,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
             
             self.avatarListNode.updateCustomItemsOnlySynchronously = true
-            self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: nil, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
+            self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: self.customNode, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
             
             let backgroundTargetRect = CGRect(x: 0.0, y: targetSize.height - backgroundCornerRadius * 2.0, width: targetRect.width, height: targetRect.height - targetSize.height + backgroundCornerRadius * 2.0)
             let initialBackgroundPosition = self.backgroundImageNode.position
