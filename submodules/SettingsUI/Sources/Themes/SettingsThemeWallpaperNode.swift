@@ -41,6 +41,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     private let statusNode: RadialStatusNode
     
     var pressed: (() -> Void)?
+
+    private var isSelected: Bool = false
+    private var isLoaded: Bool = false
+
+    private let isLoadedDisposable = MetaDisposable()
          
     init(overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -59,10 +64,36 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
+
+    deinit {
+        self.isLoadedDisposable.dispose()
+    }
     
     func setSelected(_ selected: Bool, animated: Bool = false) {
-        let state: RadialStatusNodeState = selected ? .check(.white) : .none
-        self.statusNode.transitionToState(state, animated: animated, completion: {})
+        if self.isSelected != selected {
+            self.isSelected = selected
+
+            self.updateStatus(animated: animated)
+        }
+    }
+
+    private func updateIsLoaded(isLoaded: Bool, animated: Bool) {
+        if self.isLoaded != isLoaded {
+            self.isLoaded = isLoaded
+            self.updateStatus(animated: animated)
+        }
+    }
+
+    private func updateStatus(animated: Bool) {
+        if self.isSelected {
+            if self.isLoaded {
+                self.statusNode.transitionToState(.check(.white), animated: animated, completion: {})
+            } else {
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: animated, completion: {})
+            }
+        } else {
+            self.statusNode.transitionToState(.none, animated: animated, completion: {})
+        }
     }
     
     func setOverlayBackgroundColor(_ color: UIColor) {
@@ -127,9 +158,6 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             gradientNode.updateLayout(size: size, transition: .immediate)
         }
         
-        let state: RadialStatusNodeState = selected ? .check(.white) : .none
-        self.statusNode.transitionToState(state, animated: false, completion: {})
-        
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - progressDiameter) / 2.0), y: floorToScreenPixels((size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
         
@@ -143,6 +171,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: context.account))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
+                    self.isLoadedDisposable.set(nil)
+                    self.updateIsLoaded(isLoaded: true, animated: false)
                 case let .image(representations, _):
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
                     self.imageNode.alpha = 1.0
@@ -150,10 +180,15 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
+                    self.isLoadedDisposable.set(nil)
+                    self.updateIsLoaded(isLoaded: true, animated: false)
                 case let .file(file):
                     let convertedRepresentations : [ImageRepresentationWithReference] = file.file.previewRepresentations.map {
                         ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: .slug(file.slug), resource: $0.resource))
                     }
+
+                    let fullDimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
+                    let convertedFullRepresentations = [ImageRepresentationWithReference(representation: .init(dimensions: fullDimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource))]
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                     if wallpaper.isPattern {
@@ -180,10 +215,43 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                                 return .complete()
                             }
                         }
+
+                        let anyStatus = combineLatest(queue: .mainQueue(),
+                            context.account.postbox.mediaBox.resourceStatus(convertedFullRepresentations[0].reference.resource, approximateSynchronousValue: true),
+                            context.sharedContext.accountManager.mediaBox.resourceStatus(convertedFullRepresentations[0].reference.resource, approximateSynchronousValue: true)
+                        )
+                        |> map { a, b -> Bool in
+                            switch a {
+                            case .Local:
+                                return true
+                            default:
+                                break
+                            }
+                            switch b {
+                            case .Local:
+                                return true
+                            default:
+                                break
+                            }
+                            return false
+                        }
+                        |> distinctUntilChanged
+
+                        self.updateIsLoaded(isLoaded: false, animated: false)
+                        self.isLoadedDisposable.set((anyStatus
+                        |> deliverOnMainQueue).start(next: { [weak self] value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.updateIsLoaded(isLoaded: value, animated: true)
+                        }))
                     } else {
                         self.imageNode.alpha = 1.0
 
                         imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
+
+                        self.updateIsLoaded(isLoaded: true, animated: false)
+                        self.isLoadedDisposable.set(nil)
                     }
                     self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
                     
@@ -207,6 +275,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     apply()
             }
         }
+
+        self.setSelected(selected, animated: false)
     }
     
     @objc func buttonPressed() {

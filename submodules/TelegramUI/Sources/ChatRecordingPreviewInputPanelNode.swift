@@ -253,7 +253,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
             self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
                         
-            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.1)
             
             self.waveformScubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.3, delay: 0.1)
             self.waveformScubberNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)

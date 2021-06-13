@@ -75,7 +75,15 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.set((context.account.postbox.messageView(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] messageView in
             if let strongSelf = self {
+                if messageView.message == nil {
+                    Queue.mainQueue().justDispatch {
+                        strongSelf.interfaceInteraction?.setupReplyMessage(nil, { _ in })
+                    }
+                    return
+                }
+
                 let message = messageView.message
+
                 var authorName = ""
                 var text = ""
                 if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {

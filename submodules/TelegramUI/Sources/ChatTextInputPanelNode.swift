@@ -105,7 +105,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 if let timeout = timeout {
                     return (nil, shortTimeIntervalString(strings: strings, value: timeout), strings.VoiceOver_SelfDestructTimerOn(timeIntervalString(strings: strings, value: timeout)).0, 1.0, UIEdgeInsets())
                 } else {
-                    return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, strings.VoiceOver_SelfDestructTimerOff, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0))
+                    return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, strings.VoiceOver_SelfDestructTimerOff, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
                 }
             case .scheduledMessages:
                 return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, strings.VoiceOver_ScheduledMessages, 1.0, UIEdgeInsets())
@@ -128,7 +128,9 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     
     func updateLayout(size: CGSize) {
         if let image = self.imageNode.image {
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - self.imageEdgeInsets.bottom), size: image.size)
+            let bottomInset: CGFloat = 0.0
+            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - bottomInset), size: image.size)
+            self.imageNode.frame = imageFrame
         }
     }
     

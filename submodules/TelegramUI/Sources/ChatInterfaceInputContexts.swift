@@ -286,7 +286,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 if !extendedSearchLayout {
                     if case .scheduledMessages = chatPresentationInterfaceState.subject {
                     } else if chatPresentationInterfaceState.renderedPeer?.peerId != context.account.peerId {
-                        if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                        if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                             accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                         } else if currentAutoremoveTimeout != nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                             accessoryItems.append(.messageAutoremoveTimeout(currentAutoremoveTimeout))

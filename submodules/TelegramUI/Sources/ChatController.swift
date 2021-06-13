@@ -4856,20 +4856,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, completion in
-            if let strongSelf = self, strongSelf.isNodeLoaded, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
-                        strongSelf.updateItemNodesSearchTextHighlightStates()
-                        strongSelf.chatDisplayNode.ensureInputViewFocused()
-                    } else {
+            guard let strongSelf = self, strongSelf.isNodeLoaded else {
+                return
+            }
+            if let messageId = messageId {
+                if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
+                    let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
+                        if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
+                            strongSelf.updateItemNodesSearchTextHighlightStates()
+                            strongSelf.chatDisplayNode.ensureInputViewFocused()
+                        } else {
+                            completion(.immediate)
+                        }
+                    }, alertAction: {
                         completion(.immediate)
-                    }
-                }, alertAction: {
+                    }, delay: true)
+                } else {
                     completion(.immediate)
-                }, delay: true)
+                }
             } else {
-                completion(.immediate)
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(nil) }) }, completion: completion)
             }
         }, setupEditMessage: { [weak self] messageId, completion in
             if let strongSelf = self, strongSelf.isNodeLoaded {
