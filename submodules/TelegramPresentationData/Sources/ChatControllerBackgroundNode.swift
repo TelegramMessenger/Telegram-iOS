@@ -107,7 +107,6 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
 private var signalBackgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
 public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, mediaBox: MediaBox, accountMediaBox: MediaBox) -> Signal<(UIImage?, Bool)?, NoError> {
-    var backgroundImage: UIImage?
     if wallpaper == signalBackgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == signalBackgroundImageForWallpaper?.1, let image = signalBackgroundImageForWallpaper?.2 {
         return .single((image, true))
     } else {
@@ -259,7 +258,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             }
                         } else {
                             return Signal { subscriber in
-                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.standalone(resource: file.file.resource)).start()
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
                                 let data = accountMediaBox.resourceData(file.file.resource).start(next: { data in
                                     if data.complete {
                                         if let image = UIImage(contentsOfFile: data.path)?.precomposed() {

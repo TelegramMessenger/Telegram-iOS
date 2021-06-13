@@ -42,12 +42,14 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     
     var pressed: (() -> Void)?
 
+    private let displayLoading: Bool
     private var isSelected: Bool = false
     private var isLoaded: Bool = false
 
     private let isLoadedDisposable = MetaDisposable()
          
-    init(overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
+    init(displayLoading: Bool = false, overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
+        self.displayLoading = displayLoading
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: overlayBackgroundColor)
@@ -86,7 +88,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
     private func updateStatus(animated: Bool) {
         if self.isSelected {
-            if self.isLoaded {
+            if self.isLoaded || !displayLoading {
                 self.statusNode.transitionToState(.check(.white), animated: animated, completion: {})
             } else {
                 self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true), animated: animated, completion: {})
