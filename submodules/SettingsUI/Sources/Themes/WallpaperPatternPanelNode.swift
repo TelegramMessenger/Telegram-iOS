@@ -128,7 +128,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     var item: WallpaperPatternItem?
 
     init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: true)
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
 
@@ -347,7 +347,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
         
         for wallpaper in self.wallpapers {
-            let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
+            let node = SettingsThemeWallpaperNode(displayLoading: true, overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
             node.cornerRadius = 5.0
             

@@ -267,6 +267,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         let size: CGSize
         let patternColor: UInt32
         let backgroundColor: UInt32
+        let invertPattern: Bool
     }
     private var validPatternGeneratedImage: ValidPatternGeneratedImage?
 
@@ -527,7 +528,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.patternImageNode.layer.compositingFilter = nil
             } else {
                 self.patternImageNode.alpha = intensity
-                self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
+                if patternIsLight {
+                    self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
+                } else {
+                    self.patternImageNode.layer.compositingFilter = nil
+                }
             }
             self.patternImageNode.isHidden = false
             invertPattern = intensity < 0
@@ -566,7 +571,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 patternBackgroundColor = .clear
             }
 
-            let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb)
+            let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb, invertPattern: invertPattern)
 
             if self.validPatternGeneratedImage != updatedGeneratedImage {
                 self.validPatternGeneratedImage = updatedGeneratedImage
