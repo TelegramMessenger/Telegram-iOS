@@ -34,9 +34,11 @@ import CoreSpotlight
 import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
-
-#if canImport(BackgroundTasks)
 import BackgroundTasks
+
+#if os(iOS)
+import AppCenter
+import AppCenterCrashes
 #endif
 
 private let handleVoipNotifications = false
@@ -486,14 +488,7 @@ final class SharedApplicationContext {
         telegramUIDeclareEncodables()
         
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
-        
         GlobalExperimentalSettings.enableFeed = false
-        #if DEBUG
-            //GlobalExperimentalSettings.enableFeed = true
-            #if targetEnvironment(simulator)
-                //GlobalTelegramCoreConfiguration.readMessages = false
-            #endif
-        #endif
         
         self.window?.makeKeyAndVisible()
         
@@ -1335,6 +1330,14 @@ final class SharedApplicationContext {
         }*/
         
         self.maybeCheckForUpdates()
+
+        #if os(iOS)
+        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
+            AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
+                Crashes.self
+            ])
+        }
+        #endif
         
         return true
     }
