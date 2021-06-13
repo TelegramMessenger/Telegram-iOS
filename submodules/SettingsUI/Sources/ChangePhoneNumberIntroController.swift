@@ -143,7 +143,7 @@ public final class ChangePhoneNumberIntroController: ViewController {
     }
     
     func proceed() {
-        self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+        self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.TwoFactorSetup_Email_Action, action: { [weak self] in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
             }
