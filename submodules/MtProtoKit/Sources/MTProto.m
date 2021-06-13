@@ -1148,7 +1148,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     {
                         if (!_useUnauthorizedMode)
                         {
-                            NSMutableArray *currentContainerMessages = [[NSMutableArray alloc] init];
+                            NSMutableArray<MTPreparedMessage *> *currentContainerMessages = [[NSMutableArray alloc] init];
                             NSUInteger currentContainerSize = 0;
                             
                             for (NSUInteger j = i; j < transactionMessageList.count; j++, i++)
@@ -1186,8 +1186,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 }
                             }
                             
-                            if (currentContainerMessages.count == 1)
+                            if (currentContainerMessages.count == 1 && ![transactionSessionInfo wasMessageSentOnce:currentContainerMessages[0].messageId])
                             {
+                                [transactionSessionInfo setMessageWasSentOnce:currentContainerMessages[0].messageId];
                                 int32_t quickAckId = 0;
                                 NSData *messageData = [self _dataForEncryptedMessage:currentContainerMessages[0] authKey:authKey sessionInfo:transactionSessionInfo quickAckId:&quickAckId address:scheme.address extendedPadding:extendedPadding];
                                 if (messageData != nil)
@@ -2116,17 +2117,12 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
     if (data1.length != data2.length) {
         return false;
     }
-
     uint8_t const *bytes1 = data1.bytes;
     uint8_t const *bytes2 = data2.bytes;
-
     int result = 0;
     for (int i = 0; i < data1.length; i++) {
-        if (bytes1[i] != bytes2[i]) {
-            result |= i + 1;
-        }
+        result |= bytes1[i] != bytes2[i];
     }
-
     return result == 0;
 }
 
