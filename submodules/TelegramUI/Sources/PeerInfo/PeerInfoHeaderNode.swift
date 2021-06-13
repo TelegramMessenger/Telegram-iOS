@@ -1999,7 +1999,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
-        let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact)
+        let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: false, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact)
         
         var isVerified = false
         let titleString: NSAttributedString
@@ -2469,21 +2469,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             let hiddenWhileExpanded: Bool
             if buttonKeys.count > 3 {
-                if self.isOpenedFromChat {
-                    switch buttonKey {
-                    case .message, .search, .mute:
-                        hiddenWhileExpanded = true
-                    default:
-                        hiddenWhileExpanded = false
-                    }
-                } else {
-                    switch buttonKey {
-                    case .mute, .search, .videoCall:
-                        hiddenWhileExpanded = true
-                    default:
-                        hiddenWhileExpanded = false
-                    }
-                }
+                hiddenWhileExpanded = peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: buttonKey, isOpenedFromChat: self.isOpenedFromChat)
             } else {
                 hiddenWhileExpanded = false
             }

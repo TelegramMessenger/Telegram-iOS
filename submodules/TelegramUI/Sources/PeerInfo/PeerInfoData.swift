@@ -947,7 +947,27 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: PeerInfoHeaderButtonKey, isOpenedFromChat: Bool) -> Bool {
+    var hiddenWhileExpanded = false
+    if isOpenedFromChat {
+        switch buttonKey {
+        case .message, .search, .videoCall, .addMember:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    } else {
+        switch buttonKey {
+        case .search, .call, .videoCall, .addMember:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    }
+    return hiddenWhileExpanded
+}
+
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
@@ -1095,6 +1115,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         result.append(.search)
         result.append(.more)
+    }
+    if isExpanded && result.count > 3 {
+        result = result.filter { !peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: $0, isOpenedFromChat: isOpenedFromChat) }
     }
     return result
 }
