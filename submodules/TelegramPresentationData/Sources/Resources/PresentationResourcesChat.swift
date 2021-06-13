@@ -532,7 +532,14 @@ public struct PresentationResourcesChat {
     
     public static func chatInputTextFieldTimerImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputTextFieldTimerImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconTimer"), color: theme.chat.inputPanel.inputControlColor)
+            if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconTimer"), color: theme.chat.inputPanel.inputControlColor) {
+                return generateImage(CGSize(width: image.size.width, height: image.size.height + 1.0), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: image.size))
+                })
+            } else {
+                return nil
+            }
         })
     }
     

@@ -15,6 +15,11 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+appcenter_targets = [
+    "@appcenter_sdk//:AppCenter",
+    "@appcenter_sdk//:AppCenterCrashes",
+]
+
 swift_library(
     name = "TelegramUI",
     module_name = "TelegramUI",
@@ -223,7 +228,12 @@ swift_library(
         "//submodules/ImportStickerPackUI:ImportStickerPackUI",
         "//submodules/GradientBackground:GradientBackground",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
-    ],
+    ] + select({
+        "@build_bazel_rules_apple//apple:ios_armv7": [],
+        "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
+        "//build-system:ios_sim_arm64": [],
+        "@build_bazel_rules_apple//apple:ios_x86_64": [],
+    }),
     visibility = [
         "//visibility:public",
     ],
