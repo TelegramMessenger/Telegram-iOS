@@ -36,7 +36,7 @@ import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
 
-#if os(iOS)
+#if canImport(AppCenter)
 import AppCenter
 import AppCenterCrashes
 #endif
@@ -1331,7 +1331,7 @@ final class SharedApplicationContext {
         
         self.maybeCheckForUpdates()
 
-        #if os(iOS)
+        #if canImport(AppCenter)
         if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
             AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
                 Crashes.self

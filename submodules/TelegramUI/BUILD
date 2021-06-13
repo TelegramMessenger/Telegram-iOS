@@ -1,5 +1,11 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+load(
+    "@build_configuration//:variables.bzl",
+    "telegram_bundle_id",
+)
+
+
 filegroup(
     name = "TelegramUIResources",
     srcs = glob([
@@ -15,10 +21,16 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-appcenter_targets = [
+internal_bundle_ids = [
+    "org.telegram.Telegram-iOS",
+]
+
+available_appcenter_targets = [
     "@appcenter_sdk//:AppCenter",
     "@appcenter_sdk//:AppCenterCrashes",
 ]
+
+appcenter_targets = available_appcenter_targets if telegram_bundle_id in internal_bundle_ids else []
 
 swift_library(
     name = "TelegramUI",
