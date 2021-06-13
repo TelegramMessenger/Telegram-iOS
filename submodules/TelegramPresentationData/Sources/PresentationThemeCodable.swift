@@ -426,6 +426,7 @@ extension PresentationThemeRootNavigationBar: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let blurredBackgroundColor = try decodeColor(values, .background)
 
         self.init(
             buttonColor: try decodeColor(values, .button),
@@ -434,8 +435,8 @@ extension PresentationThemeRootNavigationBar: Codable {
             secondaryTextColor: try decodeColor(values, .secondaryText),
             controlColor: try decodeColor(values, .control),
             accentTextColor: try decodeColor(values, .accentText),
-            blurredBackgroundColor: try decodeColor(values, .background),
-            opaqueBackgroundColor: try decodeColor(values, .opaqueBackground, fallbackKey: "root.navBar.background"),
+            blurredBackgroundColor: blurredBackgroundColor,
+            opaqueBackgroundColor: (try? decodeColor(values, .opaqueBackground)) ?? blurredBackgroundColor.withAlphaComponent(1.0),
             separatorColor: try decodeColor(values, .separator),
             badgeBackgroundColor: try decodeColor(values, .badgeFill),
             badgeStrokeColor: try decodeColor(values, .badgeStroke),
