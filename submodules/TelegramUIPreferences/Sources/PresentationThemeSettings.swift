@@ -404,6 +404,36 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         }
         return UIColor(rgb: value)
     }
+
+
+    public var wallpaperGradientColors: [UInt32]? {
+        switch self {
+        case .blue:
+            return [0x1b2836, 0x121a22, 0x1b2836, 0x121a22]
+        case .cyan:
+            return [0x152b32, 0x0c181c, 0x152b32, 0x0c181c]
+        case .green:
+            return [0x142615, 0x0b160c, 0x142615, 0x0b160c]
+        case .pink:
+            return [0x2d1f23, 0x22171a, 0x2d1f23, 0x22171a]
+        case .orange:
+            return [0x2e2213, 0x221b0f, 0x2e2213, 0x221b0f]
+        case .purple:
+            return [0x25212e, 0x1b1822, 0x25212e, 0x1b1822]
+        case .red:
+            return [0x281613, 0x1e110e, 0x281613, 0x1e110e]
+        case .yellow:
+            return [0x2d2813, 0x221d0e, 0x2d2813, 0x221d0e]
+        case .gray:
+            return [0x1b1d21, 0x111315, 0x1b1d21, 0x111315]
+        case .black:
+            return nil
+        case .white:
+            return nil
+        case .custom, .preset, .theme:
+            return nil
+        }
+    }
 }
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {

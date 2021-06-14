@@ -3,11 +3,12 @@ import UIKit
 import TelegramCore
 import SyncCore
 import TelegramUIPreferences
+import Postbox
 
 private let defaultDarkTintedAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkTintedPresentationTheme = makeDefaultDarkTintedPresentationTheme(preview: false)
 
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, wallpaperGradientColors: [UInt32]? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
     }
@@ -46,8 +47,12 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
         if let accentColor = accentColor {
-            let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-            suggestedWallpaper = .color(color.argb)
+            if let wallpaperGradientColors = wallpaperGradientColors, !wallpaperGradientColors.isEmpty {
+                suggestedWallpaper = .file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: "fqv01SQemVIBAAAApND8LDRUhRU", file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 36542425), partialReference: nil, resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 600, height: 800), resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/tgv", size: nil, attributes: []), settings: WallpaperSettings(colors: wallpaperGradientColors, intensity: 50))
+            } else {
+                let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                suggestedWallpaper = .color(color.argb)
+            }
         }
         
         let accentColor = accentColor ?? defaultDarkTintedAccentColor

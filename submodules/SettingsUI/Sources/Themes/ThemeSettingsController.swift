@@ -1289,7 +1289,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     updatedTheme = generalThemeReference
                 }
                 
-                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper) else {
+                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, wallpaperGradientColors: accentColor?.baseColor.wallpaperGradientColors) else {
                     return current
                 }
                 
