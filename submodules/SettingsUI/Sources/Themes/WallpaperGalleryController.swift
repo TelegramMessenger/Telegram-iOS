@@ -171,6 +171,7 @@ public class WallpaperGalleryController: ViewController {
         return self._ready
     }
     private var didSetReady = false
+    private var didBeginSettingReady = false
     
     private let disposable = MetaDisposable()
     
@@ -581,11 +582,6 @@ public class WallpaperGalleryController: ViewController {
                 }
             }
         }
-        
-        let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
-            self?.didSetReady = true
-        }
-        self._ready.set(ready |> map { true })
     }
     
     private func currentEntry() -> WallpaperGalleryEntry? {
@@ -722,6 +718,14 @@ public class WallpaperGalleryController: ViewController {
                         self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 }
+            }
+            if !self.didBeginSettingReady {
+                self.didBeginSettingReady = true
+
+                let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
+                    self?.didSetReady = true
+                }
+                self._ready.set(ready |> map { true })
             }
         }
     }
