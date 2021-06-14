@@ -13,6 +13,7 @@ import StickerResources
 import ContextUI
 import Markdown
 import ShimmerEffect
+import WallpaperBackgroundNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -22,6 +23,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private var placeholderNode: StickerShimmerEffectNode
     var textNode: TextNode?
     
@@ -249,6 +251,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            
+            if let backgroundNode = self.backgroundNode {
+                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            }
+        }
+    }
+    
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -644,6 +656,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.enableSynchronousImageApply = false
                     
                     if let immediateThumbnailData = telegramFile?.immediateThumbnailData {
+                        if strongSelf.backgroundNode == nil {
+                            if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                strongSelf.backgroundNode = backgroundNode
+                                strongSelf.placeholderNode.addBackdropNode(backgroundNode)
+                                
+                                if let (rect, size) = strongSelf.absoluteRect {
+                                    strongSelf.updateAbsoluteRect(rect, within: size)
+                                }
+                            }
+                        }
+                        
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         
@@ -682,9 +705,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                            replyBackgroundNode.color = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            let replyBackgroundNode = NavigationBackgroundNode(color: item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic)
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.replyBackgroundNode = replyBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
@@ -985,7 +1008,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
                         
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.addSubnode(swipeToReplyNode)
                         animateReplyNodeIn = true

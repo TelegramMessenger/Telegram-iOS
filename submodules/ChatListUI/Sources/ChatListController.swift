@@ -365,6 +365,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     strongSelf.navigationItem.setLeftBarButton(editItem, animated: true)
                                 }
                             }
+                        } else {
+                            let editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
+                            editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
+                            strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
                         }
                         
                         let (hasProxy, connectsViaProxy) = proxy
@@ -1213,7 +1217,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }))
             
-            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(account: self.context.account)
             |> deliverOnMainQueue).start(next: { [weak self] values in
                 guard let strongSelf = self else {
                     return

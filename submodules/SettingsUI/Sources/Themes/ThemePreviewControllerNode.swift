@@ -251,6 +251,13 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if wallpaper.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
+                    |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                        if let value = value {
+                            return .single(value)
+                        } else {
+                            return .complete()
+                        }
+                    }
                 } else {
                     signal = .complete()
                 }

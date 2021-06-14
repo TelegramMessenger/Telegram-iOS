@@ -363,20 +363,6 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     index += 1
                 }
             }
-
-            if !entries.contains(where: { entry in
-                if case .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), _) = entry.wallpaper {
-                    return true
-                } else {
-                    return false
-                }
-            }) {
-                let entry = ThemeGridControllerEntry(index: 1, wallpaper: .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings()), isEditable: false, isSelected: false)
-                if !entries.contains(where: { $0.stableId == entry.stableId }) {
-                    entries.insert(entry, at: index)
-                    index += 1
-                }
-            }
             
             var sortedWallpapers: [TelegramWallpaper] = []
             if presentationData.theme.overallDarkAppearance {

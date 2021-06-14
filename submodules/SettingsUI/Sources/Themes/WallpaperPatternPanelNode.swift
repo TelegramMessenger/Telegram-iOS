@@ -128,7 +128,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     var item: WallpaperPatternItem?
 
     init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: true)
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
 
@@ -312,7 +312,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
         sliderView.backColor = self.theme.list.disclosureArrowColor
-        sliderView.trackColor = sliderView.backColor//self.theme.list.itemAccentColor
+        if self.allowDark {
+            sliderView.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            sliderView.trackColor = self.theme.list.itemAccentColor
+        }
         
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -343,7 +347,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
         
         for wallpaper in self.wallpapers {
-            let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
+            let node = SettingsThemeWallpaperNode(displayLoading: true, overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
             node.cornerRadius = 5.0
             
@@ -386,11 +390,15 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.color = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
         self.sliderView?.backColor = self.theme.list.disclosureArrowColor
-        self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        if self.allowDark {
+            self.sliderView?.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        }
         self.titleNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         

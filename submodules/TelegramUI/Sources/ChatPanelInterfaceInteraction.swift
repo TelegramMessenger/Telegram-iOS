@@ -50,7 +50,7 @@ enum ChatPanelRestrictionInfoDisplayType {
 }
 
 final class ChatPanelInterfaceInteraction {
-    let setupReplyMessage: (MessageId, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
+    let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let beginMessageSelection: ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let deleteSelectedMessages: () -> Void
@@ -133,7 +133,7 @@ final class ChatPanelInterfaceInteraction {
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
-        setupReplyMessage: @escaping (MessageId, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
+        setupReplyMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         setupEditMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         beginMessageSelection: @escaping ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         deleteSelectedMessages: @escaping () -> Void,

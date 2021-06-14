@@ -166,7 +166,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
         //self.backgroundNode.image = graphics.dateStaticBackground
-        self.backgroundNode.color = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
         //self.backgroundNode.addSubnode(self.stickBackgroundNode)
@@ -200,7 +200,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
         //self.backgroundNode.image = graphics.dateStaticBackground
-        self.backgroundNode.color = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
@@ -218,8 +218,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    func updateBackgroundColor(_ color: UIColor) {
-        self.backgroundNode.color = color
+    func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+        self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
         /*let chatDateSize: CGFloat = 20.0
         self.backgroundNode.image = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))

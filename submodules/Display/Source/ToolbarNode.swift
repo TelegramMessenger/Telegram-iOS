@@ -102,7 +102,7 @@ public final class ToolbarNode: ASDisplayNode {
     
     public func updateTheme(_ theme: TabBarControllerTheme) {
         self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
-        self.backgroundNode.color = theme.tabBarBackgroundColor
+        self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {

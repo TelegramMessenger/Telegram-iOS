@@ -128,6 +128,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.backgroundNode.update(wallpaper: self.state.chatWallpaper)
+        self.backgroundNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)
@@ -535,6 +536,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, editMessageMedia: { _, _ in  
         }, copyText: { _ in
         }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -629,7 +632,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.panelBackgroundNode.color = theme.chat.inputPanel.panelBackgroundColor
+        self.panelBackgroundNode.updateColor(color: theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.panelSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: theme.chat.inputPanel.panelControlAccentColor, for: [])
     }

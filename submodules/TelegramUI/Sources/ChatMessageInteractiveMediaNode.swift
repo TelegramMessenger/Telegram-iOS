@@ -573,6 +573,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         if case let .file(_, patternColors, rotation, intensity, _, _) = wallpaper.content {
                             var colors: [UIColor] = []
                             var customPatternColor: UIColor? = nil
+                            var bakePatternAlpha: CGFloat = 1.0
                             if let intensity = intensity, intensity < 0 {
                                 if patternColors.isEmpty {
                                     colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
@@ -588,8 +589,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                                 let isLight = UIColor.average(of: patternColors.map(UIColor.init(rgb:))).hsb.b > 0.3
                                 customPatternColor = isLight ? .black : .white
+                                bakePatternAlpha = CGFloat(intensity ?? 50) / 100.0
                             }
-                            patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation, customPatternColor: customPatternColor)
+                            patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation, customPatternColor: customPatternColor, bakePatternAlpha: bakePatternAlpha)
                         }
                     }
                     
@@ -737,6 +739,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             }
                                             if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
                                                 return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
+                                                |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                                                    if let value = value {
+                                                        return .single(value)
+                                                    } else {
+                                                        return .complete()
+                                                    }
+                                                }
                                             } else {
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }

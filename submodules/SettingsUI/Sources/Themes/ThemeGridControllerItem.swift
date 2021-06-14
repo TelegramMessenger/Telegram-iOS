@@ -52,7 +52,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
     private var item: ThemeGridControllerItem?
     
     override init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: false)
 
         super.init()
         

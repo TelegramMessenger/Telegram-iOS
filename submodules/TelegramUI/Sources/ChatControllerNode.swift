@@ -245,11 +245,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
-        
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+
+        var getMessageTransitionNode: (() -> ChatMessageTransitionNode?)?
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+            return getMessageTransitionNode?()
+        })
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
+
+        var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
+        var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
+        self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode, getContentAreaInScreenSpace: {
+            return getContentAreaInScreenSpaceImpl?() ?? CGRect()
+        }, onTransitionEvent: { transition in
+            onTransitionEventImpl?(transition)
+        })
         
         self.reactionContainerNode = ReactionSelectionParentNode(account: context.account, theme: chatPresentationInterfaceState.theme)
         
@@ -271,14 +282,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat)
         self.navigateButtons.accessibilityElementsHidden = true
-
-        var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
-        var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
-        self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode, getContentAreaInScreenSpace: {
-            return getContentAreaInScreenSpaceImpl?() ?? CGRect()
-        }, onTransitionEvent: { transition in
-            onTransitionEventImpl?(transition)
-        })
         
         super.init()
 
@@ -298,6 +301,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             strongSelf.backgroundNode.animateEvent(transition: transition)
+        }
+
+        getMessageTransitionNode = { [weak self] in
+            return self?.messageTransitionNode
         }
         
         self.controller?.presentationContext.topLevelSubview = { [weak self] in
@@ -1601,10 +1608,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if themeUpdated {
                 if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
-                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                    self.inputPanelBackgroundNode.updateColor(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper, transition: .immediate)
                     self.usePlainInputSeparator = true
                 } else {
-                    self.inputPanelBackgroundNode.color = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                    self.inputPanelBackgroundNode.updateColor(color: self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
                     self.usePlainInputSeparator = false
                     self.plainInputSeparatorAlpha = nil
                 }
@@ -2300,7 +2307,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
                             #if DEBUG
-                            webpage = nil
+                            //webpage = nil
                             #endif
                             messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
                         }

@@ -454,7 +454,7 @@ private final class MultipartFetchManager {
                 self.parallelParts = 4 * 4
             } else {
                 self.defaultPartSize = 128 * 1024
-                self.parallelParts = 4
+                self.parallelParts = 8
             }
         } else {
             self.parallelParts = 1

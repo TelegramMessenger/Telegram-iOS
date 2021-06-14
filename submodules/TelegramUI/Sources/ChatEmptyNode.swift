@@ -796,7 +796,7 @@ final class ChatEmptyNode: ASDisplayNode {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
 
-            self.backgroundNode.color = interfaceState.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+            self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), enableBlur: dateFillNeedsBlur(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), transition: .immediate)
         }
         
         var isScheduledMessages = false
@@ -887,6 +887,6 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 10.0, transition: transition)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
     }
 }

@@ -86,7 +86,7 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         if self.theme !== theme {
             self.theme = theme
 
-            self.backgroundNode.color = theme.chat.inputPanel.panelBackgroundColor
+            self.backgroundNode.updateColor(color: theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
             switch self.type {
                 case .down:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)

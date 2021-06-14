@@ -397,9 +397,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
         combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
-        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+        getServerProvidedSuggestions(account: context.account)
         )
-        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences -> PeerInfoScreenData in
+        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions -> PeerInfoScreenData in
             let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
             let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
             
@@ -416,7 +417,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 enableQRLogin = true
             }
             
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: false, accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
+            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
             
             return PeerInfoScreenData(
                 peer: peerView.peers[peerId],
@@ -946,7 +947,27 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: PeerInfoHeaderButtonKey, isOpenedFromChat: Bool) -> Bool {
+    var hiddenWhileExpanded = false
+    if isOpenedFromChat {
+        switch buttonKey {
+        case .message, .search, .videoCall, .addMember:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    } else {
+        switch buttonKey {
+        case .search, .call, .videoCall, .addMember:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    }
+    return hiddenWhileExpanded
+}
+
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
@@ -1094,6 +1115,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         result.append(.search)
         result.append(.more)
+    }
+    if isExpanded && result.count > 3 {
+        result = result.filter { !peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: $0, isOpenedFromChat: isOpenedFromChat) }
     }
     return result
 }

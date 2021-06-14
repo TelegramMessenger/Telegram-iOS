@@ -176,7 +176,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(self.presentationData)
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
-        self.toolbarBackgroundNode?.color = self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+        self.toolbarBackgroundNode?.updateColor(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         self.toolbarSeparatorNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         self.segmentedControlNode?.updateTheme(SegmentedControlTheme(theme: self.presentationData.theme))
     }

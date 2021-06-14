@@ -87,7 +87,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
                 }
             } else {
                 let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-                if let _ = decodedThumbnailData {
+                if let _ = decodedThumbnailData, false {
                     fetchedThumbnail = .complete()
                 } else {
                     fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[smallestIndex].reference)
@@ -96,7 +96,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
                 let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[largestIndex].reference)
                 
                 let thumbnailData: Signal<Data?, NoError>
-                if let decodedThumbnailData = decodedThumbnailData {
+                if let decodedThumbnailData = decodedThumbnailData, false {
                     thumbnailData = .single(decodedThumbnailData)
                 } else {
                     thumbnailData = Signal<Data?, NoError> { subscriber in
@@ -302,12 +302,14 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
     let rotation: Int32?
     let preview: Bool
     let customPatternColor: UIColor?
+    let bakePatternAlpha: CGFloat
     
-    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false) {
+    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0) {
         self.colors = colors
         self.rotation = rotation
         self.customPatternColor = customPatternColor
         self.preview = preview
+        self.bakePatternAlpha = bakePatternAlpha
     }
     
     public func serialized() -> NSArray {
@@ -318,6 +320,7 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
             array.add(NSNumber(value: customPatternColor.argb))
         }
         array.add(NSNumber(value: self.preview))
+        array.add(NSNumber(value: Double(self.bakePatternAlpha)))
         return array
     }
 }
@@ -398,14 +401,14 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
     }
 }
 
-public func patternWallpaperImage(account: Account, accountManager: AccountManager, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func patternWallpaperImage(account: Account, accountManager: AccountManager, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false, onlyFullSize: Bool = false) -> Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> {
     return patternWallpaperDatas(account: account, accountManager: accountManager, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
     |> mapToSignal { (thumbnailData, fullSizeData, fullSizeComplete) in
-        return patternWallpaperImageInternal(thumbnailData: thumbnailData, fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
+        return patternWallpaperImageInternal(thumbnailData: thumbnailData, fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode, onlyFullSize: onlyFullSize)
     }
 }
 
-public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fullSizeComplete: Bool, mode: PatternWallpaperDrawMode) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fullSizeComplete: Bool, mode: PatternWallpaperDrawMode, onlyFullSize: Bool = false) -> Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> {
     var prominent = false
     if case .thumbnail = mode {
         prominent = true
@@ -429,6 +432,12 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
                     scaledSizeImage = image
                 }
+            }
+        }
+
+        if onlyFullSize {
+            if fullSizeData == nil {
+                return nil
             }
         }
         
@@ -552,6 +561,9 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.setBlendMode(.softLight)
                     }
                     if let overlayImage = overlayImage {
+                        if customArguments.bakePatternAlpha != 1.0 {
+                            c.setAlpha(customArguments.bakePatternAlpha)
+                        }
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
@@ -559,6 +571,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                        c.setAlpha(1.0)
                     }
                 }
                 addCorners(context, arguments: arguments)

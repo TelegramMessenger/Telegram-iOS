@@ -857,7 +857,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
             }
             
-            let intermediateCompletion: () -> Void = { [weak contentParentNode] in
+            let intermediateCompletion: () -> Void = { [weak self, weak contentParentNode] in
                 if completedEffect && completedContentNode && completedActionsNode {
                     switch result {
                     case .default, .custom:
@@ -869,6 +869,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     case .dismissWithoutContent:
                         break
                     }
+                    
+                    self?.clippingNode.view.mask = nil
                     
                     completion()
                 }
@@ -1434,7 +1436,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
                         
                         if contentContainerFrame.maxX > layout.size.width {
-                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentContainerFrame.width) / 2.0), y: contentContainerFrame.minY), size: contentContainerFrame.size)
+                            contentContainerFrame = CGRect(origin: CGPoint(x: layout.size.width - contentContainerFrame.width - 11.0, y: contentContainerFrame.minY), size: contentContainerFrame.size)
                         }
                     }
                     

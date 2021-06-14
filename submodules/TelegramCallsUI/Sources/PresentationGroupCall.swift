@@ -399,6 +399,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var temporaryActivityRank: Int?
     private var temporaryRaiseHandRating: Int64?
     private var temporaryHasRaiseHand: Bool = false
+    private var temporaryJoinedVideo: Bool = true
     private var temporaryMuteState: GroupCallParticipantsContext.Participant.MuteState?
     
     private var internalState: InternalState = .requesting
@@ -1016,7 +1017,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             activityRank: strongSelf.temporaryActivityRank,
                             muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                             volume: nil,
-                            about: about
+                            about: about,
+                            joinedVideo: strongSelf.temporaryJoinedVideo
                         ))
                         participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                     }
@@ -1097,7 +1099,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         activityRank: strongSelf.temporaryActivityRank,
                         muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                         volume: nil,
-                        about: about
+                        about: about,
+                        joinedVideo: strongSelf.temporaryJoinedVideo
                     ))
                 }
 
@@ -1261,7 +1264,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     activityRank: strongSelf.temporaryActivityRank,
                     muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: canManageCall || !state.defaultParticipantsAreMuted.isMuted, mutedByYou: false),
                     volume: nil,
-                    about: about
+                    about: about,
+                    joinedVideo: strongSelf.temporaryJoinedVideo
                 ))
             }
 
@@ -1828,7 +1832,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 activityRank: strongSelf.temporaryActivityRank,
                                 muteState: strongSelf.temporaryMuteState ?? GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false),
                                 volume: nil,
-                                about: about
+                                about: about,
+                                joinedVideo: strongSelf.temporaryJoinedVideo
                             ))
                             participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                         }
@@ -2213,6 +2218,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.temporaryRaiseHandRating = participant.raiseHandRating
                             strongSelf.temporaryHasRaiseHand = participant.hasRaiseHand
                             strongSelf.temporaryMuteState = participant.muteState
+                            strongSelf.temporaryJoinedVideo = participant.joinedVideo
                         }
                     }
                     strongSelf.switchToTemporaryParticipantsContext(sourceContext: participantsContext, oldMyPeerId: previousPeerId)
@@ -2562,13 +2568,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isVideoMutedDisposable.set(nil)
             self.genericCallContext?.disableVideo()
             self.isVideoMuted = true
-
+        
             self.updateLocalVideoState()
         }
     }
 
     private func updateLocalVideoState() {
-        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted)
+        self.participantsContext?.updateVideoState(peerId: self.joinAsPeerId, isVideoMuted: self.videoCapturer == nil, isVideoPaused: self.isVideoMuted, isPresentationPaused: nil)
     }
     
     public func switchVideoCamera() {

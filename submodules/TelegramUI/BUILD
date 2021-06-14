@@ -1,5 +1,11 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+load(
+    "@build_configuration//:variables.bzl",
+    "telegram_bundle_id",
+)
+
+
 filegroup(
     name = "TelegramUIResources",
     srcs = glob([
@@ -14,6 +20,17 @@ filegroup(
     srcs = glob(["Images.xcassets/**"]),
     visibility = ["//visibility:public"],
 )
+
+internal_bundle_ids = [
+    "org.telegram.Telegram-iOS",
+]
+
+available_appcenter_targets = [
+    "@appcenter_sdk//:AppCenter",
+    "@appcenter_sdk//:AppCenterCrashes",
+]
+
+appcenter_targets = available_appcenter_targets if telegram_bundle_id in internal_bundle_ids else []
 
 swift_library(
     name = "TelegramUI",
@@ -223,7 +240,12 @@ swift_library(
         "//submodules/ImportStickerPackUI:ImportStickerPackUI",
         "//submodules/GradientBackground:GradientBackground",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
-    ],
+    ] + select({
+        "@build_bazel_rules_apple//apple:ios_armv7": [],
+        "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
+        "//build-system:ios_sim_arm64": [],
+        "@build_bazel_rules_apple//apple:ios_x86_64": [],
+    }),
     visibility = [
         "//visibility:public",
     ],

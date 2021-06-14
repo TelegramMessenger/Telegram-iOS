@@ -201,6 +201,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private let cachedDataReady = Promise<Bool>()
     private var didSetCachedDataReady = false
+
+    private let wallpaperReady = Promise<Bool>()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var presentationInterfaceStatePromise: ValuePromise<ChatPresentationInterfaceState>
@@ -433,6 +435,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.peekData = peekData
 
         self.chatBackgroundNode = WallpaperBackgroundNode(context: context, useSharedAnimationPhase: true)
+        self.wallpaperReady.set(chatBackgroundNode.isReady)
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource
         var groupCallPanelSource: GroupCallPanelSource
@@ -2700,6 +2703,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return true
                 }), in: .current)
             }
+        }, isAnimatingMessage: { [weak self] stableId in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.chatDisplayNode.messageTransitionNode.isAnimatingMessage(stableId: stableId)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -4446,11 +4454,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.historyState.get(),
             self._chatLocationInfoReady.get(),
             effectiveCachedDataReady,
-            initialData
+            initialData,
+            self.wallpaperReady.get()
         )
-        |> map { _, chatLocationInfoReady, cachedDataReady, _ in
-            return chatLocationInfoReady && cachedDataReady
-        })
+        |> map { _, chatLocationInfoReady, cachedDataReady, _, wallpaperReady in
+            return chatLocationInfoReady && cachedDataReady && wallpaperReady
+        }
+        |> distinctUntilChanged)
         
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()
@@ -4846,20 +4856,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, completion in
-            if let strongSelf = self, strongSelf.isNodeLoaded, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
-                        strongSelf.updateItemNodesSearchTextHighlightStates()
-                        strongSelf.chatDisplayNode.ensureInputViewFocused()
-                    } else {
+            guard let strongSelf = self, strongSelf.isNodeLoaded else {
+                return
+            }
+            if let messageId = messageId {
+                if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
+                    let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
+                        if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
+                            strongSelf.updateItemNodesSearchTextHighlightStates()
+                            strongSelf.chatDisplayNode.ensureInputViewFocused()
+                        } else {
+                            completion(.immediate)
+                        }
+                    }, alertAction: {
                         completion(.immediate)
-                    }
-                }, alertAction: {
+                    }, delay: true)
+                } else {
                     completion(.immediate)
-                }, delay: true)
+                }
             } else {
-                completion(.immediate)
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(nil) }) }, completion: completion)
             }
         }, setupEditMessage: { [weak self] messageId, completion in
             if let strongSelf = self, strongSelf.isNodeLoaded {
@@ -7168,7 +7185,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
         }
         
-        self.checksTooltipDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+        self.checksTooltipDisposable.set((getServerProvidedSuggestions(account: self.context.account)
         |> deliverOnMainQueue).start(next: { [weak self] values in
             guard let strongSelf = self else {
                 return

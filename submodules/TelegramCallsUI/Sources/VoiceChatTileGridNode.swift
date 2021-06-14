@@ -35,10 +35,10 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         self.clipsToBounds = true
     }
     
-    var visiblity = true {
+    var visibility = true {
         didSet {
             for (_, tileNode) in self.itemNodes {
-                tileNode.visiblity = self.visiblity
+                tileNode.visibility = self.visibility
             }
         }
     }
@@ -53,7 +53,8 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, layoutMode: VoiceChatTileLayoutMode, items: [VoiceChatTileItem], transition: ContainedViewLayoutTransition) -> CGSize {
+    func update(size: CGSize, layoutMode: VoiceChatTileLayoutMode, items: [VoiceChatTileItem], transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) -> CGSize {
+        let wasEmpty = self.items.isEmpty
         self.items = items
         
         var validIds: [String] = []
@@ -131,11 +132,11 @@ final class VoiceChatTileGridNode: ASDisplayNode {
                 self.addSubnode(addedItemNode)
             }
             if let itemNode = itemNode {
-                itemNode.visiblity = self.visiblity
+                itemNode.visibility = self.visibility
                 if wasAdded {
                     itemNode.frame = itemFrame
                     if !isFirstTime {
-                        itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: 0.3)
+                        itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: wasEmpty ? 0.4 : 0.3)
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 } else {
@@ -164,6 +165,14 @@ final class VoiceChatTileGridNode: ASDisplayNode {
                     itemNode?.removeFromSupernode()
                 })
             }
+        }
+        
+        if case let .animated(duration, _) = transition {
+            Queue.mainQueue().after(duration) {
+                completion()
+            }
+        } else {
+            completion()
         }
         
         let rowCount = ceil(CGFloat(self.items.count) / 2.0)
@@ -284,7 +293,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                         strongSelf.cornersNode.image = decorationCornersImage(top: true, bottom: false, dark: item.getIsExpanded())
                         
                         tileGridNode = VoiceChatTileGridNode(context: item.context)
-                        tileGridNode.visiblity = strongSelf.gridVisiblity
+                        tileGridNode.visibility = strongSelf.gridVisibility
                         strongSelf.addSubnode(tileGridNode)
                         strongSelf.tileGridNode = tileGridNode
                     }
@@ -315,9 +324,9 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
         self.tileGridNode?.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    var gridVisiblity: Bool = true {
+    var gridVisibility: Bool = true {
         didSet {
-            self.tileGridNode?.visiblity = self.gridVisiblity
+            self.tileGridNode?.visibility = self.gridVisibility
         }
     }
     

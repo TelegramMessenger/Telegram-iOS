@@ -28,6 +28,7 @@ final class VoiceChatTileItem: Equatable {
     let videoEndpointId: String
     let videoReady: Bool
     let videoTimeouted: Bool
+    let isVideoLimit: Bool
     let isPaused: Bool
     let isOwnScreencast: Bool
     let strings: PresentationStrings
@@ -47,12 +48,13 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
         self.videoReady = videoReady
         self.videoTimeouted = videoTimeouted
+        self.isVideoLimit = isVideoLimit
         self.isPaused = isPaused
         self.isOwnScreencast = isOwnScreencast
         self.strings = strings
@@ -265,7 +267,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         let springDuration: Double = 0.42
         let springDamping: CGFloat = 124.0
         if isExtracted {
-            let profileNode = VoiceChatPeerProfileNode(context: self.context, size: extractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
+            let profileNode = VoiceChatPeerProfileNode(context: self.context, size: extractedRect.size, sourceSize: nonExtractedRect.size, peer: item.peer, text: item.text, customNode: self.videoContainerNode, additionalEntry: .single(nil), requestDismiss: { [weak self] in
                 self?.contextSourceNode.requestDismiss?()
             })
             profileNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
@@ -323,7 +325,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.updateIsEnabled()
     }
     
-    var visiblity = true {
+    var visibility = true {
         didSet {
             self.updateIsEnabled()
         }
@@ -335,7 +337,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         }
         let isVisibleInContainer = rect.maxY >= 0.0 && rect.minY <= containerSize.height
         if let videoNode = self.videoNode, videoNode.supernode === self.videoContainerNode {
-            videoNode.updateIsEnabled(self.visiblity && isVisibleInContainer)
+            videoNode.updateIsEnabled(self.visibility && isVisibleInContainer)
         }
     }
     
@@ -409,7 +411,11 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             self.videoNode?.updateIsBlurred(isBlurred: item.isPaused, light: true)
             
             var showPlaceholder = false
-            if item.isOwnScreencast {
+            if item.isVideoLimit {
+                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded, font: Font.semibold(13.0), textColor: .white)
+                self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Pause"), color: .white)
+                showPlaceholder = true
+            } else if item.isOwnScreencast {
                 self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_YouAreSharingScreen, font: Font.semibold(13.0), textColor: .white)
                 self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: item.isTablet ? "Call/ScreenShareTablet" : "Call/ScreenSharePhone"), color: .white)
                 showPlaceholder = true
@@ -426,7 +432,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             let titleFont = Font.semibold(13.0)
             let titleColor = UIColor.white
             var titleAttributedString: NSAttributedString?
-            if let user = item.peer as? TelegramUser {
+            if item.isVideoLimit {
+                titleAttributedString = nil
+            } else if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
                         switch item.nameDisplayOrder {

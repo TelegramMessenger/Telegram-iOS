@@ -228,7 +228,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount, isPinned, hasAutoremove in
             let dateColor: UIColor
             var backgroundImage: UIImage?
-            var blurredBackgroundColor: UIColor?
+            var blurredBackgroundColor: (UIColor, Bool)?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
             var leftInset: CGFloat
             
@@ -327,8 +327,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
-                    //backgroundImage = graphics.dateAndStatusFreeBackground
-                    blurredBackgroundColor = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+
+                    blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper))
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -350,7 +350,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = serviceColor.primaryText
                     outgoingStatus = status
                     //backgroundImage = graphics.dateAndStatusFreeBackground
-                    blurredBackgroundColor = presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                    blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper))
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -611,7 +611,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
 
                     if let blurredBackgroundColor = blurredBackgroundColor {
                         if let blurredBackgroundNode = strongSelf.blurredBackgroundNode {
-                            blurredBackgroundNode.color = blurredBackgroundColor
+                            blurredBackgroundNode.updateColor(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1, transition: .immediate)
                             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
                             if let previousLayoutSize = previousLayoutSize {
                                 blurredBackgroundNode.frame = blurredBackgroundNode.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
@@ -619,7 +619,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             transition.updateFrame(node: blurredBackgroundNode, frame: CGRect(origin: CGPoint(), size: layoutSize))
                             blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: transition)
                         } else {
-                            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor)
+                            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
                             strongSelf.blurredBackgroundNode = blurredBackgroundNode
                             strongSelf.insertSubnode(blurredBackgroundNode, at: 0)
                             blurredBackgroundNode.frame = CGRect(origin: CGPoint(), size: layoutSize)

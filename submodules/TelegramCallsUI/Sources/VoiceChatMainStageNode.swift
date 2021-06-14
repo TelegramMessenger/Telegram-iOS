@@ -26,6 +26,74 @@ private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
 private let fadeHeight: CGFloat = 50.0
 private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
+private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
+    private let pinButtonIconNode: VoiceChatPinNode
+    private let pinButtonClippingnode: ASDisplayNode
+    private let pinButtonTitleNode: ImmediateTextNode
+    
+    init(presentationData: PresentationData) {
+        self.pinButtonIconNode = VoiceChatPinNode()
+        self.pinButtonClippingnode = ASDisplayNode()
+        self.pinButtonClippingnode.clipsToBounds = true
+    
+        self.pinButtonTitleNode = ImmediateTextNode()
+        self.pinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Unpin, font: Font.regular(17.0), textColor: .white)
+        self.pinButtonTitleNode.alpha = 0.0
+    
+        super.init()
+        
+        self.addSubnode(self.pinButtonClippingnode)
+        self.addSubnode(self.pinButtonIconNode)
+        self.pinButtonClippingnode.addSubnode(self.pinButtonTitleNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.pinButtonClippingnode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.pinButtonIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.pinButtonClippingnode.alpha = 0.4
+                    strongSelf.pinButtonIconNode.alpha = 0.4
+                } else {
+                    strongSelf.pinButtonClippingnode.alpha = 1.0
+                    strongSelf.pinButtonIconNode.alpha = 1.0
+                    strongSelf.pinButtonClippingnode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.pinButtonIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+    }
+    
+    private var isPinned = false
+    func update(pinned: Bool, animated: Bool) {
+        let wasPinned = self.isPinned
+        self.pinButtonIconNode.update(state: .init(pinned: pinned, color: .white), animated: true)
+        self.isPinned = pinned
+        
+        self.pinButtonTitleNode.alpha = self.isPinned ? 1.0 : 0.0
+        if animated && pinned != wasPinned {
+            if wasPinned {
+                self.pinButtonTitleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                self.pinButtonTitleNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.pinButtonTitleNode.frame.width, y: 0.0), duration: 0.2, additive: true)
+            } else {
+                self.pinButtonTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.pinButtonTitleNode.layer.animatePosition(from: CGPoint(x: self.pinButtonTitleNode.frame.width, y: 0.0), to: CGPoint(), duration: 0.2, additive: true)
+            }
+        }
+    }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let unpinSize = self.pinButtonTitleNode.updateLayout(size)
+        let pinIconSize = CGSize(width: 48.0, height: 48.0)
+        let totalSize = CGSize(width: unpinSize.width + pinIconSize.width, height: 44.0)
+        
+        transition.updateFrame(node: self.pinButtonIconNode, frame: CGRect(origin: CGPoint(x: totalSize.width - pinIconSize.width, y: 0.0), size: pinIconSize))
+        transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: 4.0, y: 12.0), size: unpinSize))
+        transition.updateFrame(node: self.pinButtonClippingnode, frame: CGRect(x: 0.0, y: 0.0, width: totalSize.width - pinIconSize.width * 0.6667, height: 44.0))
+        
+        return totalSize
+    }
+}
+
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
     private let call: PresentationGroupCall
@@ -39,13 +107,12 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
     private let bottomFadeNode: ASDisplayNode
+    private let bottomGradientNode: ASDisplayNode
     private let bottomFillNode: ASDisplayNode
     private let headerNode: ASDisplayNode
     private let backButtonNode: HighlightableButtonNode
     private let backButtonArrowNode: ASImageNode
-    private let pinButtonNode: HighlightTrackingButtonNode
-    private let pinButtonIconNode: ASImageNode
-    private let pinButtonTitleNode: ImmediateTextNode
+    private let pinButtonNode: VoiceChatPinButtonNode
     private let audioLevelNode: VoiceChatBlobNode
     private let audioLevelDisposable = MetaDisposable()
     private let speakingPeerDisposable = MetaDisposable()
@@ -106,7 +173,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         self.bottomFadeNode = ASDisplayNode()
-        self.bottomFadeNode.displaysAsynchronously = false
+        
+        self.bottomGradientNode = ASDisplayNode()
+        self.bottomGradientNode.displaysAsynchronously = false
         if let image = generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
@@ -116,7 +185,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
-            self.bottomFadeNode.backgroundColor = UIColor(patternImage: image)
+            self.bottomGradientNode.backgroundColor = UIColor(patternImage: image)
         }
         
         self.bottomFillNode = ASDisplayNode()
@@ -133,14 +202,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.pinButtonIconNode = ASImageNode()
-        self.pinButtonIconNode.displayWithoutProcessing = true
-        self.pinButtonIconNode.displaysAsynchronously = false
-        self.pinButtonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white)
-        self.pinButtonTitleNode = ImmediateTextNode()
-        self.pinButtonTitleNode.isHidden = true
-        self.pinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Unpin, font: Font.regular(17.0), textColor: .white)
-        self.pinButtonNode = HighlightableButtonNode()
+        self.pinButtonNode = VoiceChatPinButtonNode(presentationData: presentationData)
         
         self.backdropAvatarNode = ImageNode()
         self.backdropAvatarNode.contentMode = .scaleAspectFill
@@ -200,7 +262,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.addSubnode(self.backdropAvatarNode)
         self.addSubnode(self.topFadeNode)
         self.addSubnode(self.bottomFadeNode)
-        self.addSubnode(self.bottomFillNode)
+        self.bottomFadeNode.addSubnode(self.bottomGradientNode)
+        self.bottomFadeNode.addSubnode(self.bottomFillNode)
         self.addSubnode(self.audioLevelNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
@@ -208,8 +271,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.addSubnode(self.headerNode)
         self.headerNode.addSubnode(self.backButtonNode)
         self.headerNode.addSubnode(self.backButtonArrowNode)
-        self.headerNode.addSubnode(self.pinButtonIconNode)
-        self.headerNode.addSubnode(self.pinButtonTitleNode)
         self.headerNode.addSubnode(self.pinButtonNode)
         
         self.addSubnode(self.placeholderIconNode)
@@ -253,22 +314,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             }
         }
         self.backButtonNode.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
-       
-        self.pinButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.pinButtonTitleNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.pinButtonIconNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.pinButtonTitleNode.alpha = 0.4
-                    strongSelf.pinButtonIconNode.alpha = 0.4
-                } else {
-                    strongSelf.pinButtonTitleNode.alpha = 1.0
-                    strongSelf.pinButtonIconNode.alpha = 1.0
-                    strongSelf.pinButtonTitleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.pinButtonIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
         self.pinButtonNode.addTarget(self, action: #selector(self.pinPressed), forControlEvents: .touchUpInside)
     }
     
@@ -333,9 +378,18 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         self.stopScreencast?()
     }
     
+    var visibility = true {
+        didSet {
+            if let videoNode = self.currentVideoNode, videoNode.supernode === self {
+                videoNode.updateIsEnabled(self.visibility)
+            }
+        }
+    }
+    
     var animating: Bool {
         return self.animatingIn || self.animatingOut
     }
+    
     private var animatingIn = false
     private var animatingOut = false
     private var appeared = false
@@ -433,7 +487,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.microphoneNode.alpha = 1.0
             self.titleNode.alpha = 1.0
             self.bottomFadeNode.alpha = 1.0
-            self.bottomFillNode.alpha = 1.0
         }
         alphaTransition.updateAlpha(node: self.topFadeNode, alpha: 0.0)
         alphaTransition.updateAlpha(node: self.titleNode, alpha: 0.0)
@@ -556,7 +609,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             return
         }
         var effectiveSpeakingPeerId = self.speakingPeerId
-        if let peerId = effectiveSpeakingPeerId, self.visiblePeerIds.contains(peerId) || self.currentPeer?.0 == peerId || self.callState?.myPeerId == peerId || isTablet {
+        if let peerId = effectiveSpeakingPeerId, self.currentPeer?.0 == peerId || self.callState?.myPeerId == peerId || isTablet {
             effectiveSpeakingPeerId = nil
         }
         guard self.effectiveSpeakingPeerId != effectiveSpeakingPeerId else {
@@ -724,8 +777,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, isLandscape: isLandscape, isTablet: isTablet, transition: .immediate)
         }
         
-        self.pinButtonTitleNode.isHidden = !pinned
-        self.pinButtonIconNode.image = !pinned ? generateTintedImage(image: UIImage(bundleImageName: "Call/Pin"), color: .white) : generateTintedImage(image: UIImage(bundleImageName: "Call/Unpin"), color: .white)
+        self.pinButtonNode.update(pinned: pinned, animated: true)
         
         self.audioLevelNode.startAnimating(immediately: true)
         
@@ -766,7 +818,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
     private func setAvatarHidden(_ hidden: Bool) {
         self.topFadeNode.isHidden = !hidden
         self.bottomFadeNode.isHidden = !hidden
-        self.bottomFillNode.isHidden = !hidden
         self.avatarNode.isHidden = hidden
         self.audioLevelNode.isHidden = hidden
     }
@@ -830,7 +881,10 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 return
                             }
                             
-                            videoNode.isMainstageExclusive = isMyPeer
+                            videoNode.isMainstageExclusive = isMyPeer && !isPresentation
+                            if videoNode.isMainstageExclusive {
+                                videoNode.storeSnapshot()
+                            }
                             videoNode.tapped = { [weak self] in
                                 guard let strongSelf = self else {
                                     return
@@ -873,7 +927,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 videoNode.alpha = 0.0
                                 strongSelf.topFadeNode.isHidden = true
                                 strongSelf.bottomFadeNode.isHidden = true
-                                strongSelf.bottomFillNode.isHidden = true
                             } else if isMyPeer {
                                 videoNode.layer.removeAnimation(forKey: "opacity")
                                 videoNode.alpha = 1.0
@@ -907,11 +960,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                             if delayTransition {
                                                 strongSelf.topFadeNode.isHidden = false
                                                 strongSelf.bottomFadeNode.isHidden = false
-                                                strongSelf.bottomFillNode.isHidden = false
                                                 strongSelf.topFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                                                 strongSelf.bottomFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                                                strongSelf.bottomFillNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                                               
                                                 strongSelf.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                                                 strongSelf.audioLevelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                                             }
@@ -992,7 +1042,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                                 videoNode.updateIsBlurred(isBlurred: isPaused, light: true, animated: false)
                                 strongSelf.topFadeNode.isHidden = true
                                 strongSelf.bottomFadeNode.isHidden = true
-                                strongSelf.bottomFillNode.isHidden = true
                                 if let videoNode = strongSelf.currentVideoNode {
                                     videoNode.alpha = 1.0
                                     videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] _ in
@@ -1031,7 +1080,6 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         transition.updateAlpha(node: self.titleNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
         transition.updateAlpha(node: self.microphoneNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
         transition.updateAlpha(node: self.bottomFadeNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
-        transition.updateAlpha(node: self.bottomFillNode, alpha: hidden ? 0.0 : 1.0, delay: delay)
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isLandscape: Bool, isTablet: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
@@ -1042,11 +1090,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         let initialBottomInset = bottomInset
-        var bottomInset = bottomInset
-        if !sideInset.isZero {
-            bottomInset = 14.0
-        }
-        
+        var bottomInset = bottomInset        
         let layoutMode: GroupVideoNode.LayoutMode
         if case .immediate = transition, self.animatingIn {
             layoutMode = .fillOrFitToSquare
@@ -1081,8 +1125,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if size.height != tileHeight && size.width < size.height {
             totalFadeHeight += bottomInset
         }
-        transition.updateFrame(node: self.bottomFadeNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight, width: size.width, height: fadeHeight))
-        transition.updateFrame(node: self.bottomFillNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight + fadeHeight, width: size.width, height: max(0.0, totalFadeHeight - fadeHeight)))
+        transition.updateFrame(node: self.bottomFadeNode, frame: CGRect(x: 0.0, y: size.height - totalFadeHeight, width: size.width, height: totalFadeHeight))
+        transition.updateFrame(node: self.bottomGradientNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: fadeHeight))
+        transition.updateFrame(node: self.bottomFillNode, frame: CGRect(x: 0.0, y: fadeHeight, width: size.width, height: max(0.0, totalFadeHeight - fadeHeight)))
         transition.updateFrame(node: self.topFadeNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: 50.0))
         
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))
@@ -1091,13 +1136,9 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: sideInset + 27.0, y: 12.0), size: backSize))
         
-        let unpinSize = self.pinButtonTitleNode.updateLayout(size)
-        if let image = self.pinButtonIconNode.image {
-            let offset: CGFloat = sideInset.isZero ? 0.0 : initialBottomInset + 8.0
-            transition.updateFrame(node: self.pinButtonIconNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - offset, y: 0.0), size: image.size))
-            transition.updateFrame(node: self.pinButtonTitleNode, frame: CGRect(origin: CGPoint(x: size.width - image.size.width - unpinSize.width + 4.0 - offset, y: 12.0), size: unpinSize))
-            transition.updateFrame(node: self.pinButtonNode, frame: CGRect(x: size.width - image.size.width - unpinSize.width - offset, y: 0.0, width: unpinSize.width + image.size.width, height: 44.0))
-        }
+        let offset: CGFloat = sideInset.isZero ? 0.0 : initialBottomInset + 8.0
+        let pinButtonSize = self.pinButtonNode.update(size: size, transition: transition)
+        transition.updateFrame(node: self.pinButtonNode, frame: CGRect(origin: CGPoint(x: size.width - pinButtonSize.width - offset, y: 0.0), size: pinButtonSize))
         
         transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 64.0)))
         

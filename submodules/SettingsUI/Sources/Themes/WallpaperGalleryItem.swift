@@ -642,7 +642,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 strongSelf.motionButtonNode.buttonColor = color
                 strongSelf.colorsButtonNode.buttonColor = color
 
-                strongSelf.playButtonBackgroundNode.color = color
+                strongSelf.playButtonBackgroundNode.updateColor(color: color, transition: .immediate)
             }))
         } else if self.arguments.patternEnabled != previousArguments.patternEnabled {
             self.patternButtonNode.isSelected = self.arguments.patternEnabled

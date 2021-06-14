@@ -278,7 +278,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
-                            strongSelf.backgroundColorNode.backgroundColor = item.presentationData.theme.theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+                            strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
