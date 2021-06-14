@@ -68,15 +68,11 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         self.textNode = ASTextNode()
         self.imageNode = ASImageNode()
         self.imageNode.displaysAsynchronously = false
-        self.imageNode.image = item.image
-
+        if case let .image(data) = item.content, let image = UIImage(data: data) {
+            self.imageNode.image = image
+        }
         self.textNode.attributedText = NSAttributedString(string: item.emojis.joined(separator: " "), font: Font.regular(32.0), textColor: .black)
-        
-//        for case let .Sticker(text, _, _) in item.file.attributes {
-//            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
-//            break
-//        }
-        
+                
 //        if item.file.isAnimatedSticker {
 //            let animationNode = AnimatedStickerNode()
 //            self.animationNode = animationNode
@@ -91,10 +87,6 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
 //            self.imageNode.addSubnode(self.textNode)
 //            self.animationNode = nil
 //        }
-        
-        
-        
-//        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false, fetched: true))
         
         super.init()
         

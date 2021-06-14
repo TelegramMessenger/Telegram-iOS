@@ -68,6 +68,9 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         self.controllerNode.cancel = { [weak self] in
             self?.dismiss()
         }
+        self.controllerNode.present = { [weak self] controller, arguments in
+            self?.present(controller, in: .window(.root), with: arguments)
+        }
         self.controllerNode.presentInGlobalOverlay = { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }
