@@ -3948,6 +3948,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.Title" = "Background Preview";
 "WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
 "WallpaperPreview.PreviewBottomText" = "Enjoy the view";
+
 "WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
 "WallpaperPreview.SwipeBottomText" = "Backgrounds for the god of backgrounds!";
 "WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
@@ -6495,3 +6496,5 @@ Sorry for the inconvenience.";
 "VoiceChat.Unpin" = "Unpin";
 
 "VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first 30 members";
+
+"WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
