@@ -88,6 +88,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     let context: AccountContext
     var theme: PresentationTheme
     var strings: PresentationStrings
+
+    private var validLayout: (size: CGSize, interfaceState: ChatPresentationInterfaceState)?
     
     init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
@@ -158,12 +160,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     headerString = "Forward messages"
                 }
                 strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
-                
-                strongSelf.setNeedsLayout()
-                if let subnodes = strongSelf.subnodes {
-                    for subnode in subnodes {
-                        subnode.setNeedsDisplay()
-                    }
+
+                if let (size, interfaceState) = strongSelf.validLayout {
+                    strongSelf.updateState(size: size, interfaceState: interfaceState)
                 }
             }
         }))
@@ -196,37 +195,36 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
-            self.setNeedsLayout()
+            if let (size, interfaceState) = self.validLayout {
+                self.updateState(size: size, interfaceState: interfaceState)
+            }
         }
     }
-    
+
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
 
     override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        let bounds = self.bounds
+        self.validLayout = (size, interfaceState)
+
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
-        
+
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
         let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 12.0, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
-        
+
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
-        
+
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
-        
+
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 7.0), size: titleSize)
-        
+
         let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 25.0), size: textSize)
     }

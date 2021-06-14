@@ -855,10 +855,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {
-        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case .builtin = wallpaper {
-            return
-        }
-
         if enabled {
             let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
             horizontal.minimumRelativeValue = motionAmount
@@ -1069,14 +1065,48 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if let source = self.source {
             switch source {
-                case .wallpaper, .slug:
+                case .slug, .wallpaper:
                     topMessageText = presentationData.strings.WallpaperPreview_PreviewTopText
                     bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomText
+
+                    var hasAnimatableGradient = false
+                    switch currentWallpaper {
+                    case let .file(file) where file.isPattern:
+                        if file.settings.colors.count >= 3 {
+                            hasAnimatableGradient = true
+                        }
+                    case let .gradient(colors, _):
+                        if colors.count >= 3 {
+                            hasAnimatableGradient = true
+                        }
+                    default:
+                        break
+                    }
+                    if hasAnimatableGradient {
+                        bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomTextAnimatable
+                    }
                 case let .list(_, _, type):
                     switch type {
                         case .wallpapers:
                             topMessageText = presentationData.strings.WallpaperPreview_SwipeTopText
                             bottomMessageText = presentationData.strings.WallpaperPreview_SwipeBottomText
+
+                            var hasAnimatableGradient = false
+                            switch currentWallpaper {
+                            case let .file(file) where file.isPattern:
+                                if file.settings.colors.count >= 3 {
+                                    hasAnimatableGradient = true
+                                }
+                            case let .gradient(colors, _):
+                                if colors.count >= 3 {
+                                    hasAnimatableGradient = true
+                                }
+                            default:
+                                break
+                            }
+                            if hasAnimatableGradient {
+                                bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomTextAnimatable
+                            }
                         case .colors:
                             topMessageText = presentationData.strings.WallpaperPreview_SwipeColorsTopText
                             bottomMessageText = presentationData.strings.WallpaperPreview_SwipeColorsBottomText
@@ -1099,7 +1129,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
-        if let _ = self.messageNodes {
+        if let messageNodes = self.messageNodes {
+            for i in 0 ..< items.count {
+                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                    let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+
+                    messageNodes[i].contentSize = layout.contentSize
+                    messageNodes[i].insets = layout.insets
+                    messageNodes[i].frame = nodeFrame
+
+                    apply(ListViewItemApply(isOnScreen: true))
+                }
+            }
         } else {
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {

@@ -1117,6 +1117,9 @@ private:
 
         tgcalls::GroupConfig config;
         config.need_log = false;
+#if DEBUG
+        config.need_log = true;
+#endif
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){

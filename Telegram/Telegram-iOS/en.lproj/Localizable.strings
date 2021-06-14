@@ -3948,6 +3948,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.Title" = "Background Preview";
 "WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
 "WallpaperPreview.PreviewBottomText" = "Enjoy the view";
+
 "WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
 "WallpaperPreview.SwipeBottomText" = "Backgrounds for the god of backgrounds!";
 "WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
@@ -6507,3 +6508,5 @@ Sorry for the inconvenience.";
 "ImportStickerPack.ChooseName" = "Choose Name";
 "ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
 "ImportStickerPack.ImportingStickers" = "Importing Stickers";
+
+"WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";

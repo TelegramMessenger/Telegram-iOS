@@ -380,9 +380,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
         if case let .color(color) = wallpaper {
             gradientColors = [color]
+            self._isReady.set(true)
         } else if case let .gradient(colors, settings) = wallpaper {
             gradientColors = colors
             gradientAngle = settings.rotation ?? 0
+            self._isReady.set(true)
         } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
             gradientColors = settings.colors
             gradientAngle = settings.rotation ?? 0
@@ -437,9 +439,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
                     self.wallpaperDisposable.set(nil)
+                    Queue.mainQueue().justDispatch {
+                        self._isReady.set(true)
+                    }
                 } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
                     self.wallpaperDisposable.set(nil)
+                    Queue.mainQueue().justDispatch {
+                        self._isReady.set(true)
+                    }
                 } else {
                     self.wallpaperDisposable.set((chatControllerBackgroundImageSignal(wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox)
                     |> deliverOnMainQueue).start(next: { [weak self] image in
@@ -447,6 +455,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                             return
                         }
                         strongSelf.contentNode.contents = image?.0?.cgImage
+                        strongSelf._isReady.set(true)
                     }))
                 }
                 self.contentNode.isHidden = false
@@ -466,11 +475,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
         var invertPattern: Bool = false
         var patternIsLight: Bool = false
+        var patternIsBlack: Bool = false
 
         switch wallpaper {
         case let .file(_, _, _, _, isPattern, _, _, file, settings) where isPattern:
             var updated = true
-            let isLight = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b > 0.3
+            let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
+            let isLight = brightness > 0.3
+            patternIsBlack = brightness <= 0.01
             if let previousWallpaper = self.validPatternImage?.wallpaper {
                 switch previousWallpaper {
                 case let .file(_, _, _, _, _, _, _, previousFile, _):
@@ -528,10 +540,10 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.patternImageNode.layer.compositingFilter = nil
             } else {
                 self.patternImageNode.alpha = intensity
-                if patternIsLight {
-                    self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
-                } else {
+                if patternIsBlack {
                     self.patternImageNode.layer.compositingFilter = nil
+                } else {
+                    self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
                 }
             }
             self.patternImageNode.isHidden = false
@@ -553,7 +565,6 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.backgroundColor = nil
             self.gradientBackgroundNode?.contentView.alpha = 1.0
             self.contentNode.alpha = 1.0
-            self._isReady.set(true)
         }
 
         if let validPatternImage = self.validPatternImage {

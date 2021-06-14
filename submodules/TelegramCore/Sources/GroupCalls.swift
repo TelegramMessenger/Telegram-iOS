@@ -2457,6 +2457,8 @@ extension GroupCallParticipantsContext.Participant {
                 } else if mutedByYou {
                     muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                 }
+                
+                
                 var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                 var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                 if muteState?.canUnmute == false {

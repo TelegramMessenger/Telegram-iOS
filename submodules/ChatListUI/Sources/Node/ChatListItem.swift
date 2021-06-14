@@ -1853,7 +1853,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
                     if let peerPresence = peerPresence as? TelegramUserPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0))
+                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0), isOnline: online)
                     }
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)

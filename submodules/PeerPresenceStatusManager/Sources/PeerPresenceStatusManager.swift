@@ -4,19 +4,23 @@ import TelegramCore
 import SyncCore
 import SyncCore
 
-private func suggestedUserPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> Double {
+private func suggestedUserPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relativeTo timestamp: Int32, isOnline: Bool?) -> Double {
     switch presence.status {
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
             return Double(statusTimestamp - timestamp)
         } else {
-            let difference = timestamp - statusTimestamp
-            if difference < 30 {
-                return Double((30 - difference) + 1)
-            } else if difference < 60 * 60 {
-                return Double((difference % 60) + 1)
+            if let isOnline = isOnline, isOnline {
+                return 1.0
             } else {
-                return Double.infinity
+                let difference = timestamp - statusTimestamp
+                if difference < 30 {
+                    return Double((30 - difference) + 1)
+                } else if difference < 60 * 60 {
+                    return Double((difference % 60) + 1)
+                } else {
+                    return Double.infinity
+                }
             }
         }
     case .recently:
@@ -43,12 +47,12 @@ public final class PeerPresenceStatusManager {
         self.timer?.invalidate()
     }
     
-    public func reset(presence: TelegramUserPresence) {
+    public func reset(presence: TelegramUserPresence, isOnline: Bool? = nil) {
         self.timer?.invalidate()
         self.timer = nil
         
         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-        let timeout = suggestedUserPresenceStringRefreshTimeout(presence, relativeTo: Int32(timestamp))
+        let timeout = suggestedUserPresenceStringRefreshTimeout(presence, relativeTo: Int32(timestamp), isOnline: isOnline)
         if timeout.isFinite {
             self.timer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {

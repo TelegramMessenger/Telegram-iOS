@@ -87,7 +87,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
                 }
             } else {
                 let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-                if let _ = decodedThumbnailData {
+                if let _ = decodedThumbnailData, false {
                     fetchedThumbnail = .complete()
                 } else {
                     fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[smallestIndex].reference)
@@ -96,7 +96,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
                 let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[largestIndex].reference)
                 
                 let thumbnailData: Signal<Data?, NoError>
-                if let decodedThumbnailData = decodedThumbnailData {
+                if let decodedThumbnailData = decodedThumbnailData, false {
                     thumbnailData = .single(decodedThumbnailData)
                 } else {
                     thumbnailData = Signal<Data?, NoError> { subscriber in
