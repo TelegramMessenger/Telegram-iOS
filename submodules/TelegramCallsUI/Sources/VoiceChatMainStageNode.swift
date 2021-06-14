@@ -23,7 +23,6 @@ import ContextUI
 private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .white)
 private let backgroundCornerRadius: CGFloat = 11.0
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
-private let fadeHeight: CGFloat = 50.0
 private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
 private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {

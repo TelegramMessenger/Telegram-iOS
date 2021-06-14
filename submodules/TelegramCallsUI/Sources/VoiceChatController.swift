@@ -44,6 +44,26 @@ let bottomAreaHeight: CGFloat = 206.0
 private let fullscreenBottomAreaHeight: CGFloat = 80.0
 private let bottomGradientHeight: CGFloat = 70.0
 
+public struct VoiceChatConfiguration {
+    static var defaultValue: VoiceChatConfiguration {
+        return VoiceChatConfiguration(videoParticipantsMaxCount: 30)
+    }
+    
+    public let videoParticipantsMaxCount: Int32
+    
+    fileprivate init(videoParticipantsMaxCount: Int32) {
+        self.videoParticipantsMaxCount = videoParticipantsMaxCount
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> VoiceChatConfiguration {
+        if let data = appConfiguration.data, let value = data["groupcall_video_participants_max"] as? Double {
+            return VoiceChatConfiguration(videoParticipantsMaxCount: Int32(value))
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
         return nil
@@ -87,8 +107,6 @@ func decorationTopCornersImage(dark: Bool) -> UIImage? {
         context.fillPath()
     })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 32)
 }
-
-
 
 func decorationBottomCornersImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 50.0, height: 110.0), rotatedContext: { (size, context) in
@@ -491,7 +509,7 @@ public final class VoiceChatController: ViewController {
                     text = .text(about, textIcon, .generic)
                 }
                 
-                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isVideoLimit: false, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
+                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isVideoLimit: false, videoLimit: 0, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
                     interaction.switchToPeer(peer.id, videoEndpointId, !secondary)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture, false)
@@ -748,6 +766,8 @@ public final class VoiceChatController: ViewController {
         }
         
         private let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+        
+        private var configuration: VoiceChatConfiguration?
         
         private weak var controller: VoiceChatController?
         private let sharedContext: SharedAccountContext
@@ -1863,15 +1883,20 @@ public final class VoiceChatController: ViewController {
                 self.call.state,
                 self.call.members,
                 invitedPeers,
-                self.displayAsPeersPromise.get()
+                self.displayAsPeersPromise.get(),
+                self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
             |> mapToThrottled { values in
                 return .single(values)
                 |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
-            }).start(next: { [weak self] state, callMembers, invitedPeers, displayAsPeers in
+            }).start(next: { [weak self] state, callMembers, invitedPeers, displayAsPeers, preferencesView in
                 guard let strongSelf = self else {
                     return
                 }
+                
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let configuration = VoiceChatConfiguration.with(appConfiguration: appConfiguration)
+                strongSelf.configuration = configuration
                 
                 var animate = false
                 if strongSelf.callState != state {
@@ -2461,14 +2486,18 @@ public final class VoiceChatController: ViewController {
                     })))
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_NoiseSuppression, textColor: .primary, textLayout: .secondLineWithValue(strongSelf.isNoiseSuppressionEnabled ? strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionEnabled : strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionDisabled), icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Noise"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    f(.dismissWithoutContent)
-                    if let strongSelf = self {
-                        strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
-                    }
-                })))
+                let isScheduled = strongSelf.isScheduled
+                
+                if !isScheduled {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_NoiseSuppression, textColor: .primary, textLayout: .secondLineWithValue(strongSelf.isNoiseSuppressionEnabled ? strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionEnabled : strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionDisabled), icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Noise"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        if let strongSelf = self {
+                            strongSelf.call.setIsNoiseSuppressionEnabled(!strongSelf.isNoiseSuppressionEnabled)
+                        }
+                    })))
+                }
                 
                 if let callState = strongSelf.callState, callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
                     if #available(iOS 12.0, *) {
@@ -2544,7 +2573,6 @@ public final class VoiceChatController: ViewController {
                 }
 
                 if canManageCall {
-                    let isScheduled = strongSelf.isScheduled
                     items.append(.action(ContextMenuActionItem(text: isScheduled ? strongSelf.presentationData.strings.VoiceChat_CancelVoiceChat : strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { _, f in
@@ -4945,7 +4973,8 @@ public final class VoiceChatController: ViewController {
                 tileItems.removeAll()
                 gridTileItems.removeAll()
                 
-                tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
+                let configuration = self.configuration ?? VoiceChatConfiguration.defaultValue
+                tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
             }
             
             for member in callMembers.0 {

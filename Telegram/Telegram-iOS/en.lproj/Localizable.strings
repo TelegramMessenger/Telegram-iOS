@@ -6494,4 +6494,16 @@ Sorry for the inconvenience.";
 
 "VoiceChat.Unpin" = "Unpin";
 
-"VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first 30 members";
+"VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first %@ members";
+
+"ImportStickerPack.StickerCount_1" = "1 Sticker";
+"ImportStickerPack.StickerCount_2" = "2 Stickers";
+"ImportStickerPack.StickerCount_3_10" = "%@ Stickers";
+"ImportStickerPack.StickerCount_any" = "%@ Stickers";
+"ImportStickerPack.StickerCount_many" = "%@ Stickers";
+"ImportStickerPack.StickerCount_0" = "%@ Stickers";
+"ImportStickerPack.CreateStickerSet" = "Create Sticker Set";
+"ImportStickerPack.RemoveFromImport" = "Remove From Import";
+"ImportStickerPack.ChooseName" = "Choose Name";
+"ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
+"ImportStickerPack.ImportingStickers" = "Importing Stickers";
