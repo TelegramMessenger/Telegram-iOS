@@ -855,10 +855,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {
-        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case .builtin = wallpaper {
-            return
-        }
-
         if enabled {
             let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
             horizontal.minimumRelativeValue = motionAmount
