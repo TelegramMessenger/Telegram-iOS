@@ -3687,7 +3687,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 self?.openDeletePeer()
                             })))
                         } else {
-                            if !headerButtons.contains(.leave) {
+                            if filteredButtons.contains(.leave) {
                                 if case .member = channel.participationStatus {
                                     if !items.isEmpty {
                                         items.append(.separator)
