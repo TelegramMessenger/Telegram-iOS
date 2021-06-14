@@ -623,6 +623,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                     guard let peer = transaction.getPeer(peerId) else {
                                         continue loop
                                     }
+                                    let videoJoined = (flags & (1 << 15)) != 0
                                     let muted = (flags & (1 << 0)) != 0
                                     let mutedByYou = (flags & (1 << 9)) != 0
                                     var muteState: GroupCallParticipantsContext.Participant.MuteState?
@@ -645,6 +646,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, cal
                                             videoDescription: videoDescription,
                                             presentationDescription: presentationDescription,
                                             joinTimestamp: date,
+                                            videoJoined: videoJoined,
                                             raiseHandRating: raiseHandRating,
                                             hasRaiseHand: raiseHandRating != nil,
                                             activityTimestamp: activeDate.flatMap(Double.init),
@@ -862,6 +864,7 @@ public final class GroupCallParticipantsContext {
         public var videoDescription: VideoDescription?
         public var presentationDescription: VideoDescription?
         public var joinTimestamp: Int32
+        public var videoJoined: Bool
         public var raiseHandRating: Int64?
         public var hasRaiseHand: Bool
         public var activityTimestamp: Double?
@@ -876,6 +879,7 @@ public final class GroupCallParticipantsContext {
             videoDescription: VideoDescription?,
             presentationDescription: VideoDescription?,
             joinTimestamp: Int32,
+            videoJoined: Bool,
             raiseHandRating: Int64?,
             hasRaiseHand: Bool,
             activityTimestamp: Double?,
@@ -889,6 +893,7 @@ public final class GroupCallParticipantsContext {
             self.videoDescription = videoDescription
             self.presentationDescription = presentationDescription
             self.joinTimestamp = joinTimestamp
+            self.videoJoined = videoJoined
             self.raiseHandRating = raiseHandRating
             self.hasRaiseHand = hasRaiseHand
             self.activityTimestamp = activityTimestamp
@@ -1124,6 +1129,7 @@ public final class GroupCallParticipantsContext {
                 public var videoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
                 public var presentationDescription: GroupCallParticipantsContext.Participant.VideoDescription?
                 public var joinTimestamp: Int32
+                public var videoJoined: Bool
                 public var activityTimestamp: Double?
                 public var raiseHandRating: Int64?
                 public var muteState: Participant.MuteState?
@@ -1138,6 +1144,7 @@ public final class GroupCallParticipantsContext {
                     videoDescription: GroupCallParticipantsContext.Participant.VideoDescription?,
                     presentationDescription: GroupCallParticipantsContext.Participant.VideoDescription?,
                     joinTimestamp: Int32,
+                    videoJoined: Bool,
                     activityTimestamp: Double?,
                     raiseHandRating: Int64?,
                     muteState: Participant.MuteState?,
@@ -1151,6 +1158,7 @@ public final class GroupCallParticipantsContext {
                     self.videoDescription = videoDescription
                     self.presentationDescription = presentationDescription
                     self.joinTimestamp = joinTimestamp
+                    self.videoJoined = videoJoined
                     self.activityTimestamp = activityTimestamp
                     self.raiseHandRating = raiseHandRating
                     self.muteState = muteState
@@ -1693,6 +1701,7 @@ public final class GroupCallParticipantsContext {
                         videoDescription: participantUpdate.videoDescription,
                         presentationDescription: participantUpdate.presentationDescription,
                         joinTimestamp: previousJoinTimestamp ?? participantUpdate.joinTimestamp,
+                        videoJoined: participantUpdate.videoJoined,
                         raiseHandRating: participantUpdate.raiseHandRating,
                         hasRaiseHand: participantUpdate.raiseHandRating != nil,
                         activityTimestamp: activityTimestamp,
@@ -2058,6 +2067,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
             let isRemoved = (flags & (1 << 1)) != 0
             let justJoined = (flags & (1 << 4)) != 0
             let isMin = (flags & (1 << 8)) != 0
+            let videoJoined = (flags & (1 << 15)) != 0
             
             let participationStatusChange: GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate.ParticipationStatusChange
             if isRemoved {
@@ -2080,6 +2090,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate {
                 videoDescription: videoDescription,
                 presentationDescription: presentationDescription,
                 joinTimestamp: date,
+                videoJoined: videoJoined,
                 activityTimestamp: activeDate.flatMap(Double.init),
                 raiseHandRating: raiseHandRating,
                 muteState: muteState,
@@ -2448,6 +2459,9 @@ extension GroupCallParticipantsContext.Participant {
                 } else if mutedByYou {
                     muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: mutedByYou)
                 }
+                
+                let videoJoined = (flags & (1 << 15)) != 0
+                
                 var videoDescription = video.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                 var presentationDescription = presentation.flatMap(GroupCallParticipantsContext.Participant.VideoDescription.init)
                 if muteState?.canUnmute == false {
@@ -2460,6 +2474,7 @@ extension GroupCallParticipantsContext.Participant {
                     videoDescription: videoDescription,
                     presentationDescription: presentationDescription,
                     joinTimestamp: date,
+                    videoJoined: videoJoined,
                     raiseHandRating: raiseHandRating,
                     hasRaiseHand: raiseHandRating != nil,
                     activityTimestamp: activeDate.flatMap(Double.init),
