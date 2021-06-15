@@ -4930,7 +4930,7 @@ public final class VoiceChatController: ViewController {
                         requestedVideoChannels.append(videoChannel)
                     }
                     if member.peer.id != self.callState?.myPeerId {
-                        if var presentationChannel = member.requestedPresentationVideoChannel(minQuality: .thumbnail, maxQuality: .medium) {
+                        if var presentationChannel = member.requestedPresentationVideoChannel(minQuality: .thumbnail, maxQuality: .thumbnail) {
                             if self.effectiveSpeaker?.1 == presentationChannel.endpointId {
                                 presentationChannel.minQuality = .full
                                 presentationChannel.maxQuality = .full
