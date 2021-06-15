@@ -192,6 +192,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
         return generateGradient(size: size, colors: colors, positions: positions)
     }
 
+    private var colors: [UIColor]
     private var phase: Int = 0
 
     public let contentView: UIImageView
@@ -213,13 +214,6 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     private var validLayout: CGSize?
 
-    private var colors: [UIColor] = [
-        UIColor(rgb: 0x7FA381),
-        UIColor(rgb: 0xFFF5C5),
-        UIColor(rgb: 0x336F55),
-        UIColor(rgb: 0xFBE37D)
-    ]
-
     private struct PhaseTransitionKey: Hashable {
         var width: Int
         var height: Int
@@ -234,9 +228,16 @@ public final class GradientBackgroundNode: ASDisplayNode {
     private let useSharedAnimationPhase: Bool
     static var sharedPhase: Int = 0
 
-    public init(useSharedAnimationPhase: Bool = false) {
+    public init(colors: [UIColor]? = nil, useSharedAnimationPhase: Bool = false) {
         self.useSharedAnimationPhase = useSharedAnimationPhase
         self.contentView = UIImageView()
+        let defaultColors: [UIColor] = [
+            UIColor(rgb: 0x7FA381),
+            UIColor(rgb: 0xFFF5C5),
+            UIColor(rgb: 0x336F55),
+            UIColor(rgb: 0xFBE37D)
+        ]
+        self.colors = colors ?? defaultColors
 
         super.init()
 
@@ -395,10 +396,23 @@ public final class GradientBackgroundNode: ASDisplayNode {
     }
 
     public func updateColors(colors: [UIColor]) {
-        self.colors = colors
-        self.invalidated = true
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+        var updated = false
+        if self.colors.count != colors.count {
+            updated = true
+        } else {
+            for i in 0 ..< self.colors.count {
+                if !self.colors[i].isEqual(colors[i]) {
+                    updated = true
+                    break
+                }
+            }
+        }
+        if updated {
+            self.colors = colors
+            self.invalidated = true
+            if let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
+            }
         }
     }
 

@@ -391,15 +391,16 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
 
         if gradientColors.count >= 3 {
+            let mappedColors = gradientColors.map { color -> UIColor in
+                return UIColor(rgb: color)
+            }
             if self.gradientBackgroundNode == nil {
-                let gradientBackgroundNode = createGradientBackgroundNode(useSharedAnimationPhase: self.useSharedAnimationPhase)
+                let gradientBackgroundNode = createGradientBackgroundNode(colors: mappedColors, useSharedAnimationPhase: self.useSharedAnimationPhase)
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.addSubnode(self.patternImageNode)
             }
-            self.gradientBackgroundNode?.updateColors(colors: gradientColors.map { color -> UIColor in
-                return UIColor(rgb: color)
-            })
+            self.gradientBackgroundNode?.updateColors(colors: mappedColors)
 
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
