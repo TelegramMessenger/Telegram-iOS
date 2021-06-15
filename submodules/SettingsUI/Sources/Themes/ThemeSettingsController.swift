@@ -1047,10 +1047,15 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         var defaultThemes: [PresentationThemeReference] = []
         if presentationData.autoNightModeTriggered {
+            defaultThemes.append(contentsOf: [.builtin(.nightAccent), .builtin(.night)])
         } else {
-            defaultThemes.append(contentsOf: [.builtin(.dayClassic), .builtin(.day)])
+            defaultThemes.append(contentsOf: [
+                .builtin(.dayClassic),
+                .builtin(.nightAccent),
+                .builtin(.day),
+                .builtin(.night)
+            ])
         }
-        defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
         
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }.filter { !removedThemeIndexes.contains($0.index) }
         
