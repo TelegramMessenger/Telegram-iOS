@@ -10,8 +10,24 @@ import AccountContext
 import SwiftSignalKit
 import WallpaperResources
 import Postbox
+import FastBlur
 
 private let motionAmount: CGFloat = 32.0
+
+private func generateBlurredContents(image: UIImage) -> UIImage? {
+    let size = image.size.aspectFitted(CGSize(width: 64.0, height: 64.0))
+    let context = DrawingContext(size: size, scale: 1.0, premultiplied: true, opaque: true, clear: false)
+    context.withFlippedContext { c in
+        c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+    }
+
+    telegramFastBlurMore(Int32(context.size.width), Int32(context.size.height), Int32(context.bytesPerRow), context.bytes)
+    telegramFastBlurMore(Int32(context.size.width), Int32(context.size.height), Int32(context.bytesPerRow), context.bytes)
+
+    adjustSaturationInContext(context: context, saturation: 1.7)
+
+    return context.generateImage()
+}
 
 public final class WallpaperBackgroundNode: ASDisplayNode {
     public final class BubbleBackgroundNode: ASDisplayNode {
@@ -98,11 +114,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
                 var hasComplexGradient = false
                 switch wallpaper {
-                case let .file(_, _, _, _, isPattern, _, _, _, settings):
+                case let .file(_, _, _, _, _, _, _, _, settings):
                     hasComplexGradient = settings.colors.count >= 3
-                    if !isPattern {
-                        needsCleanBackground = false
-                    }
                 case let .gradient(_, colors, _):
                     hasComplexGradient = colors.count >= 3
                 default:
@@ -127,8 +140,13 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                         cleanWallpaperNode.frame = self.bounds
                         self.insertSubnode(cleanWallpaperNode, at: 0)
                     }
-                    self.cleanWallpaperNode?.contents = backgroundNode.contentNode.contents
-                    self.cleanWallpaperNode?.backgroundColor = backgroundNode.contentNode.backgroundColor
+                    if let blurredBackgroundContents = backgroundNode.blurredBackgroundContents {
+                        self.cleanWallpaperNode?.contents = blurredBackgroundContents.cgImage
+                        self.cleanWallpaperNode?.backgroundColor = backgroundNode.contentNode.backgroundColor
+                    } else {
+                        self.cleanWallpaperNode?.contents = backgroundNode.contentNode.contents
+                        self.cleanWallpaperNode?.backgroundColor = backgroundNode.contentNode.backgroundColor
+                    }
                 } else {
                     if let cleanWallpaperNode = self.cleanWallpaperNode {
                         self.cleanWallpaperNode = nil
@@ -242,6 +260,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private let useSharedAnimationPhase: Bool
     
     private let contentNode: ASDisplayNode
+    private var blurredBackgroundContents: UIImage?
+
     private var gradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: ASImageNode
 
@@ -404,6 +424,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
+            self.blurredBackgroundContents = nil
             self.motionEnabled = false
             self.wallpaperDisposable.set(nil)
         } else {
@@ -417,7 +438,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
             if gradientColors.count >= 2 {
                 self.contentNode.backgroundColor = nil
-                self.contentNode.contents = generateImage(CGSize(width: 100.0, height: 200.0), rotatedContext: { size, context in
+                let image = generateImage(CGSize(width: 100.0, height: 200.0), rotatedContext: { size, context in
                     let gradientColors = [UIColor(rgb: gradientColors[0]).cgColor, UIColor(rgb: gradientColors[1]).cgColor] as CFArray
 
                     var locations: [CGFloat] = [0.0, 1.0]
@@ -429,22 +450,27 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
 
                     context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                })?.cgImage
+                })
+                self.contentNode.contents = image?.cgImage
+                self.blurredBackgroundContents = image
                 self.wallpaperDisposable.set(nil)
             } else if gradientColors.count >= 1 {
                 self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
                 self.contentNode.contents = nil
+                self.blurredBackgroundContents = nil
                 self.wallpaperDisposable.set(nil)
             } else {
                 self.contentNode.backgroundColor = .white
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
+                    self.blurredBackgroundContents = generateBlurredContents(image: image)
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
                     }
                 } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
+                    self.blurredBackgroundContents = generateBlurredContents(image: image)
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
@@ -456,6 +482,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                             return
                         }
                         strongSelf.contentNode.contents = image?.0?.cgImage
+                        if let image = image?.0 {
+                            strongSelf.blurredBackgroundContents = generateBlurredContents(image: image)
+                        } else {
+                            strongSelf.blurredBackgroundContents = nil
+                        }
                         strongSelf._isReady.set(true)
                     }))
                 }
