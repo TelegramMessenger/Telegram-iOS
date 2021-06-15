@@ -8,6 +8,7 @@ import SwiftSignalKit
 import Postbox
 import MediaResources
 import AppBundle
+import TinyThumbnail
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
@@ -225,24 +226,46 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 } else {
                     if file.settings.blur {
                         let representation = CachedBlurredWallpaperRepresentation()
-                        
-                        let effectiveMediaBox: MediaBox
+
                         if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: representation)) {
-                            effectiveMediaBox = mediaBox
-                        } else {
-                            effectiveMediaBox = accountMediaBox
-                        }
-                        
-                        return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
-                        |> map { data -> (UIImage?, Bool)? in
-                            if data.complete {
-                                return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
-                            } else {
-                                return nil
+                            let effectiveMediaBox = mediaBox
+
+                            return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
+                            |> map { data -> (UIImage?, Bool)? in
+                                if data.complete {
+                                    return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
+                                } else {
+                                    return nil
+                                }
                             }
-                        }
-                        |> afterNext { image in
-                            cacheWallpaper(image?.0)
+                            |> afterNext { image in
+                                cacheWallpaper(image?.0)
+                            }
+                        } else {
+                            return Signal { subscriber in
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
+                                var didOutputBlurred = false
+                                let data = accountMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                    if data.complete {
+                                        if let image = UIImage(contentsOfFile: data.path)?.precomposed() {
+                                            mediaBox.copyResourceData(file.file.resource.id, fromTempPath: data.path)
+                                            subscriber.putNext((image, true))
+                                        }
+                                    } else if !didOutputBlurred {
+                                        didOutputBlurred = true
+                                        if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
+                                            if let image = UIImage(data: decodedData)?.precomposed() {
+                                                subscriber.putNext((image, false))
+                                            }
+                                        }
+                                    }
+                                })
+
+                                return ActionDisposable {
+                                    fetch.dispose()
+                                    data.dispose()
+                                }
+                            }
                         }
                     } else {
                         var path: String?
@@ -259,11 +282,19 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         } else {
                             return Signal { subscriber in
                                 let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
+                                var didOutputBlurred = false
                                 let data = accountMediaBox.resourceData(file.file.resource).start(next: { data in
                                     if data.complete {
                                         if let image = UIImage(contentsOfFile: data.path)?.precomposed() {
                                             mediaBox.copyResourceData(file.file.resource.id, fromTempPath: data.path)
                                             subscriber.putNext((image, true))
+                                        }
+                                    } else if !didOutputBlurred {
+                                        didOutputBlurred = true
+                                        if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
+                                            if let image = UIImage(data: decodedData)?.precomposed() {
+                                                subscriber.putNext((image, false))
+                                            }
                                         }
                                     }
                                 })

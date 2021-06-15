@@ -430,7 +430,13 @@ final class ThemeAccentColorController: ViewController {
                     motion = settings.motion
                     rotation = settings.rotation ?? 0
                 } else {
-                    backgroundColors = []
+                    if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
+                        backgroundColors = [averageColor(from: image).rgb]
+                    } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox, knockoutMode: false) {
+                        backgroundColors = [averageColor(from: image).rgb]
+                    } else {
+                        backgroundColors = [UIColor.gray.rgb]
+                    }
                 }
             }
             
