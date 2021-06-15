@@ -1077,7 +1077,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                             if wallpaper.wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
                                 return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
-                                    if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
+                                    if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: imageData) {
                                         return .single((theme, image, thumbnailData))
                                     } else {
                                         return .complete()

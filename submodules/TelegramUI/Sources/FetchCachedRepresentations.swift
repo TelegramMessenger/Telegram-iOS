@@ -503,6 +503,8 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                 colorImage = generateImage(size, contextGenerator: { size, c in
                     let rect = CGRect(origin: CGPoint(), size: size)
                     c.setBlendMode(.copy)
+
+                    let averageBackgroundColor = UIColor.average(of: colors)
                     
                     if colors.count == 1, let color = colors.first {
                         c.setFillColor(color.cgColor)
@@ -511,11 +513,11 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                         let drawingRect = rect
                         let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
-                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.scaleBy(x: 1.0, y: 1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                         c.draw(image.cgImage!, in: drawingRect)
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
-                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.scaleBy(x: 1.0, y: 1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                     } else {
                         let gradientColors = colors.map { $0.cgColor } as CFArray
@@ -546,7 +548,16 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                         c.setBlendMode(.softLight)
                     }
 
-                    if colors.count == 1, let color = colors.first {
+                    let isLight = averageBackgroundColor.hsb.b >= 0.3
+                    if isLight {
+                        c.setFillColor(UIColor(white: 0.0, alpha: abs(intensity)).cgColor)
+                        c.fill(rect)
+                    } else {
+                        c.setFillColor(UIColor(white: 1.0, alpha: abs(intensity)).cgColor)
+                        c.fill(rect)
+                    }
+
+                    /*if colors.count == 1, let color = colors.first {
                         c.setFillColor(patternColor(for: color, intensity: intensity).cgColor)
                         c.fill(rect)
                     } else {
@@ -565,7 +576,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                         c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
                         
                         c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                    }
+                    }*/
                 }, scale: 1.0)
             }
             
