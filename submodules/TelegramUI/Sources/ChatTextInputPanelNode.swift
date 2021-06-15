@@ -244,6 +244,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     private let counterTextNode: ImmediateTextNode
     
+    let menuButton: HighlightTrackingButtonNode
+    private let menuButtonBackgroundNode: ASDisplayNode
+    private let menuButtonClippingNode: ASDisplayNode
+    private let menuButtonIconNode: AnimationNode
+    private let menuButtonTextNode: ImmediateTextNode
+    
     let attachmentButton: HighlightableButtonNode
     let attachmentButtonDisabledNode: HighlightableButtonNode
     let searchLayoutClearButton: HighlightableButton
@@ -441,6 +447,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode = ImmediateTextNode()
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
+        
+        self.menuButton = HighlightTrackingButtonNode()
+        self.menuButton.clipsToBounds = true
+        self.menuButton.cornerRadius = 16.0
+        self.menuButtonBackgroundNode = ASDisplayNode()
+        self.menuButtonClippingNode = ASDisplayNode()
+        self.menuButtonClippingNode.clipsToBounds = true
+        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: [:])
+        self.menuButtonTextNode = ImmediateTextNode()
+        
         self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
         self.attachmentButton.accessibilityTraits = [.button]
@@ -456,6 +472,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.counterTextNode.textAlignment = .center
         
         super.init()
+        
+        self.menuButton.addTarget(self, action: #selector(self.menuButtonPressed), forControlEvents: .touchUpInside)
+        self.menuButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if let strongSelf = self {
+                    if highlighted {
+                        strongSelf.menuButton.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.menuButton.alpha = 0.4
+                    } else {
+                        strongSelf.menuButton.alpha = 1.0
+                        strongSelf.menuButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
+        }
         
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
         self.attachmentButtonDisabledNode.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
@@ -538,6 +569,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.addSubnode(self.textPlaceholderNode)
         
+        self.menuButton.addSubnode(self.menuButtonBackgroundNode)
+        self.menuButton.addSubnode(self.menuButtonClippingNode)
+        self.menuButtonClippingNode.addSubnode(self.menuButtonTextNode)
+        self.menuButton.addSubnode(self.menuButtonIconNode)
+        
+        self.addSubnode(self.menuButton)
         self.addSubnode(self.attachmentButton)
         self.addSubnode(self.attachmentButtonDisabledNode)
           
@@ -716,8 +753,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         let previousAdditionalSideInsets = self.validLayout?.3
         self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
-        let baseWidth = width - leftInset - rightInset
-        
+    
         var transition = transition
         var additionalOffset: CGFloat = 0.0
         if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
@@ -763,11 +799,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
+        var menuTextSize = self.menuButtonTextNode.frame.size
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
             let themeUpdated = previousState?.theme !== interfaceState.theme
+            
+            if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
+                if interfaceState.showCommands {
+                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: [:])
+                } else {
+                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: [:])
+                }
+                self.menuButtonIconNode.playOnce()
+            }
             
             var updateSendButtonIcon = false
             if (previousState?.interfaceState.editMessage != nil) != (interfaceState.interfaceState.editMessage != nil) {
@@ -800,6 +846,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 
                 self.theme = interfaceState.theme
+                
+                self.menuButtonBackgroundNode.backgroundColor = interfaceState.theme.chat.inputPanel.actionControlFillColor
+                self.menuButtonTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_InputMenu, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+                menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
                 
                 if isEditingMedia {
                     self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
@@ -978,9 +1028,45 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.accessoryItemButtons = updatedButtons
         }
         
+        var hasMenuButton = false
+        var menuButtonExpanded = false
+        if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands {
+            hasMenuButton = true
+            if case .none = interfaceState.inputMode {
+                menuButtonExpanded = true
+            }
+        }
+        
+        let leftMenuInset: CGFloat
+        let menuCollapsedButtonWidth: CGFloat = 38.0
+        let menuButtonWidth = menuTextSize.width + 47.0
+        if hasMenuButton {
+            let menuButtonSpacing: CGFloat = 10.0
+            if menuButtonExpanded {
+                leftMenuInset = menuButtonWidth + menuButtonSpacing
+            } else {
+                leftMenuInset = menuCollapsedButtonWidth + menuButtonSpacing
+            }
+        } else {
+            leftMenuInset = 0.0
+        }
+        
+        let baseWidth = width - leftInset - leftMenuInset - rightInset
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
-        
+                
+        let menuButtonHeight: CGFloat = 33.0
+        let menuButtonFrame = CGRect(x: leftInset + 10.0, y: panelHeight - minimalHeight + floorToScreenPixels((minimalHeight - menuButtonHeight) / 2.0), width: menuButtonExpanded ? menuButtonWidth : menuCollapsedButtonWidth, height: menuButtonHeight)
+        transition.updateFrameAsPositionAndBounds(node: self.menuButton, frame: menuButtonFrame)
+        transition.updateFrame(node: self.menuButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
+        transition.updateFrame(node: self.menuButtonClippingNode, frame: CGRect(origin: CGPoint(x: 19.0, y: 0.0), size: CGSize(width: menuButtonWidth - 19.0, height: menuButtonFrame.height)))
+        transition.updateFrame(node: self.menuButtonTextNode, frame: CGRect(origin: CGPoint(x: 16.0, y: 7.0 - UIScreenPixel), size: menuTextSize))
+        transition.updateAlpha(node: self.menuButtonTextNode, alpha: menuButtonExpanded ? 1.0 : 0.0)
+        transition.updateFrame(node: self.menuButtonIconNode, frame: CGRect(x: 4.0 + UIScreenPixel, y: 1.0 + UIScreenPixel, width: 30.0, height: 30.0))
+        transition.updateTransformScale(node: self.menuButton, scale: hasMenuButton ? 1.0 : 0.001)
+        transition.updateAlpha(node: self.menuButton, alpha: hasMenuButton ? 1.0 : 0.0)
+        self.menuButton.isUserInteractionEnabled = hasMenuButton
+                    
         self.actionButtons.micButton.updateMode(mode: interfaceState.interfaceState.mediaRecordingMode, animated: transition.isAnimated)
         
         var hideMicButton = false
@@ -1236,6 +1322,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         }
+        
+        var leftInset = leftInset
+        leftInset += leftMenuInset
         
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
         transition.updateFrame(node: self.attachmentButtonDisabledNode, frame: self.attachmentButton.frame)
@@ -2055,6 +2144,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.sendMessage()
     }
     
+    @objc func menuButtonPressed() {
+        self.interfaceInteraction?.updateShowCommands { value in
+            return !value
+        }
+    }
+
     @objc func attachmentButtonPressed() {
         self.displayAttachmentMenu()
     }

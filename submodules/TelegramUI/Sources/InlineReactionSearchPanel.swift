@@ -379,7 +379,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     }
 }
 
-private let backroundDiameter: CGFloat = 20.0
+private let backgroundDiameter: CGFloat = 20.0
 private let shadowBlur: CGFloat = 6.0
 
 final class InlineReactionSearchPanel: ChatInputContextPanelNode {
@@ -402,8 +402,8 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.backgroundNode = ASDisplayNode()
         
-        let shadowImage = generateImage(CGSize(width: backroundDiameter + shadowBlur * 2.0, height: floor(backroundDiameter / 2.0 + shadowBlur)), rotatedContext: { size, context in
-            let diameter = backroundDiameter
+        let shadowImage = generateImage(CGSize(width: backgroundDiameter + shadowBlur * 2.0, height: floor(backgroundDiameter / 2.0 + shadowBlur)), rotatedContext: { size, context in
+            let diameter = backgroundDiameter
             let shadow = UIColor(white: 0.0, alpha: 0.5)
             context.clear(CGRect(origin: CGPoint(), size: size))
             
@@ -422,7 +422,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             
             context.setFillColor(theme.list.plainBackgroundColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        })?.stretchableImage(withLeftCapWidth: Int(backroundDiameter / 2.0 + shadowBlur), topCapHeight: 0)
+        })?.stretchableImage(withLeftCapWidth: Int(backgroundDiameter / 2.0 + shadowBlur), topCapHeight: 0)
         
         self.backgroundTopLeftNode = ASImageNode()
         self.backgroundTopLeftNode.image = shadowImage
@@ -468,8 +468,8 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             
             let cornersTransitionDistance: CGFloat = 20.0
             let cornersTransition: CGFloat = max(0.0, min(1.0, (cornersTransitionDistance - offset) / cornersTransitionDistance))
-            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopLeftContainerNode, scale: 1.0, offset: CGPoint(x: -cornersTransition * backroundDiameter, y: 0.0), beginWithCurrentState: true)
-            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopRightContainerNode, scale: 1.0, offset: CGPoint(x: cornersTransition * backroundDiameter, y: 0.0), beginWithCurrentState: true)
+            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopLeftContainerNode, scale: 1.0, offset: CGPoint(x: -cornersTransition * backgroundDiameter, y: 0.0), beginWithCurrentState: true)
+            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopRightContainerNode, scale: 1.0, offset: CGPoint(x: cornersTransition * backgroundDiameter, y: 0.0), beginWithCurrentState: true)
         }
         
         self.stickersNode.sendSticker = { [weak self] file, node, rect in
@@ -498,13 +498,13 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: backroundDiameter / 2.0), size: size))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: backgroundDiameter / 2.0), size: size))
         
-        transition.updateFrame(node: self.backgroundTopLeftContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -shadowBlur), size: CGSize(width: size.width / 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
-        transition.updateFrame(node: self.backgroundTopRightContainerNode, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: -shadowBlur), size: CGSize(width: size.width - size.width / 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopLeftContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -shadowBlur), size: CGSize(width: size.width / 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopRightContainerNode, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: -shadowBlur), size: CGSize(width: size.width - size.width / 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
         
-        transition.updateFrame(node: self.backgroundTopLeftNode, frame: CGRect(origin: CGPoint(x: -shadowBlur, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
-        transition.updateFrame(node: self.backgroundTopRightNode, frame: CGRect(origin: CGPoint(x: -shadowBlur - size.width / 2.0, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopLeftNode, frame: CGRect(origin: CGPoint(x: -shadowBlur, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopRightNode, frame: CGRect(origin: CGPoint(x: -shadowBlur - size.width / 2.0, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
         
         transition.updateFrame(node: self.stickersNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset * 2.0, height: size.height)))
         self.stickersNode.update(size: CGSize(width: size.width - leftInset * 2.0, height: size.height), transition: transition)

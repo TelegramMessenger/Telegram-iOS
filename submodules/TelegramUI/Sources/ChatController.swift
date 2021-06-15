@@ -3108,6 +3108,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         var hasBots: Bool = false
+                        var hasBotCommands: Bool = false
                         var autoremoveTimeout: Int32?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
@@ -3129,6 +3130,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else if let cachedUserData = peerView.cachedData as? CachedUserData {
                                 if case let .known(value) = cachedUserData.autoremoveTimeout {
                                     autoremoveTimeout = value?.effectiveValue
+                                }
+                                if let botInfo = cachedUserData.botInfo, !botInfo.commands.isEmpty {
+                                    hasBotCommands = true
                                 }
                             }
                         }
@@ -3205,7 +3209,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
-                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
+                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                         })
                         if !strongSelf.didSetChatLocationInfoReady {
@@ -5471,6 +5475,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                     }
                     strongSelf.sendMessages([.message(text: messageText, attributes: attributes, mediaReference: nil, replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)])
+                    strongSelf.interfaceInteraction?.updateShowCommands { _ in
+                        return false
+                    }
                 }
             }
         }, sendBotStart: { [weak self] payload in
@@ -6633,6 +6640,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
+            }
+        }, updateShowCommands: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: true, {
+                    return $0.updatedShowCommands(f($0.showCommands))
+                })
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         

@@ -30,8 +30,17 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         return nil
     }
     
+    if chatPresentationInterfaceState.showCommands, let renderedPeer = chatPresentationInterfaceState.renderedPeer {
+        if let currentPanel = currentPanel as? CommandMenuChatInputContextPanelNode {
+            return currentPanel
+        } else {
+            let panel = CommandMenuChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: renderedPeer.peerId)
+            panel.interfaceInteraction = interfaceInteraction
+            return panel
+        }
+    }
+    
     guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResults.values.sorted(by: { lhs, rhs in
-        
         let (lhsP, lhsHasItems) = inputQueryResultPriority(lhs)
         let (rhsP, rhsHasItems) = inputQueryResultPriority(rhs)
         if lhsHasItems != rhsHasItems {

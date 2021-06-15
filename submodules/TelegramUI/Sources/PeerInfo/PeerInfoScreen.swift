@@ -453,7 +453,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
-        }, statuses: nil)
+        }, updateShowCommands: { _ in }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         

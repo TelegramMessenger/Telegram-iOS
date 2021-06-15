@@ -861,6 +861,7 @@ public final class VoiceChatController: ViewController {
         private var currentFullscreenEntries: [ListEntry] = []
         private var currentTileItems: [VoiceChatTileItem] = []
         private var displayPanelVideos = false
+        private var joinedVideo: Bool?
         
         private var peerViewDisposable: Disposable?
         private let leaveDisposable = MetaDisposable()
@@ -4355,6 +4356,9 @@ public final class VoiceChatController: ViewController {
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: smallButtons, animated: true)
             
             var hasCameraButton = self.callState?.isVideoEnabled ?? false
+            if let joinedVideo = self.joinedVideo, !joinedVideo {
+                hasCameraButton = false
+            }
             switch actionButtonState {
                 case let .active(state):
                     switch state {
@@ -4968,6 +4972,8 @@ public final class VoiceChatController: ViewController {
                     }
                 }
             }
+            
+            self.joinedVideo = joinedVideo
             
             if !joinedVideo && !tileItems.isEmpty || !gridTileItems.isEmpty, let peer = self.peer {
                 tileItems.removeAll()

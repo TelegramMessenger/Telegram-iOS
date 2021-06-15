@@ -219,13 +219,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.contentNode.addSubnode(self.highlightNode)
         
         self.containerNode.shouldBegin = { [weak self] location in
-            guard let strongSelf = self, let item = strongSelf.item, item.videoReady else {
+            guard let strongSelf = self, let item = strongSelf.item, item.videoReady && !item.isVideoLimit else {
                 return false
             }
             return true
         }
         self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction, !item.isVideoLimit else {
                 gesture.cancel()
                 return
             }

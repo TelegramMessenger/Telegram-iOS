@@ -6510,3 +6510,6 @@ Sorry for the inconvenience.";
 "ImportStickerPack.ImportingStickers" = "Importing Stickers";
 
 "WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
+
+"Conversation.InputMenu" = "Menu";
+"Conversation.MessageDoesntExist" = "Message doesn't exist";

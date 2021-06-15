@@ -130,6 +130,7 @@ final class ChatPanelInterfaceInteraction {
     let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
     let presentInviteMembers: () -> Void
     let presentGigagroupHelp: () -> Void
+    let updateShowCommands: ((Bool) -> Bool) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -213,6 +214,7 @@ final class ChatPanelInterfaceInteraction {
         presentInviteMembers: @escaping () -> Void,
         presentGigagroupHelp: @escaping () -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
+        updateShowCommands: @escaping ((Bool) -> Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -295,6 +297,7 @@ final class ChatPanelInterfaceInteraction {
         self.joinGroupCall = joinGroupCall
         self.presentInviteMembers = presentInviteMembers
         self.presentGigagroupHelp = presentGigagroupHelp
+        self.updateShowCommands = updateShowCommands
         self.statuses = statuses
     }
 }

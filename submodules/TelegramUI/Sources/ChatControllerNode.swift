@@ -2327,7 +2327,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
-                    
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
                             messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
@@ -2451,6 +2450,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     var shouldAnimateMessageTransition: Bool {
         if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
+            return false
+        }
+        
+        if self.chatPresentationInterfaceState.showCommands {
             return false
         }
 
