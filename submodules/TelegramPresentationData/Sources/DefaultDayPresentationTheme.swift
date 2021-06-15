@@ -60,10 +60,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                     outgoingAccent = accentColor
                 }
 
-                suggestedWallpaper = .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .gradient(defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             }
         }
     }
@@ -222,7 +222,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
         defaultWallpaper = forcedWallpaper
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
-            defaultWallpaper = .gradient(backgroundColors, WallpaperSettings())
+            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
         } else {
             defaultWallpaper = .color(backgroundColors[0])
         }

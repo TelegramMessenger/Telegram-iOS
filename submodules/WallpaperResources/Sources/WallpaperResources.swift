@@ -286,10 +286,6 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }
             }
-
-            if blurredThumbnailImage != nil {
-                fullSizeImage = nil
-            }
             
             if let blurredThumbnailImage = blurredThumbnailImage, fullSizeImage == nil {
                 let context = DrawingContext(size: blurredThumbnailImage.size, scale: blurredThumbnailImage.scale, clear: true)
@@ -876,7 +872,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         case let .color(color):
             c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
-        case let .gradient(colors, _):
+        case let .gradient(_, colors, _):
             if colors.count >= 3 {
                 let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.map(UIColor.init(rgb:)))
                 c.draw(image.cgImage!, in: drawingRect)
@@ -1254,7 +1250,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     if file.settings.colors.count >= 2 {
                         bottomBackgroundColor = UIColor(rgb: file.settings.colors[1])
                     }
-                } else if let wallpaper = wallpaper, case let .gradient(colors, _) = wallpaper {
+                } else if let wallpaper = wallpaper, case let .gradient(_, colors, _) = wallpaper {
                     topBackgroundColor = colors.first.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
                     if colors.count >= 2 {
                         bottomBackgroundColor = UIColor(rgb: colors[1])
@@ -1294,7 +1290,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 case let .color(color):
                     colors = [color]
                     topBackgroundColor = UIColor(rgb: color)
-                case let .gradient(colorsValue, settings):
+                case let .gradient(_, colorsValue, settings):
                     colors = colorsValue
                     if colors.count >= 1 {
                         topBackgroundColor = UIColor(rgb: colors[0])
@@ -1373,7 +1369,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil, [])
                     case let .color(color):
                         backgroundColor = (UIColor(rgb: color), nil, [])
-                    case let .gradient(colors, settings):
+                    case let .gradient(_, colors, settings):
                         if colors.count >= 2 {
                             backgroundColor = (UIColor(rgb: colors[0]), UIColor(rgb: colors[1]), colors)
                         } else {

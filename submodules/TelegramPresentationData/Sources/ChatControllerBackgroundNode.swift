@@ -43,7 +43,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                     context.setFillColor(UIColor(argb: color).withAlphaComponent(1.0).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-            case let .gradient(colors, settings):
+            case let .gradient(_, colors, settings):
                 backgroundImage = generateImage(CGSize(width: 640.0, height: 1280.0), rotatedContext: { size, context in
                     let gradientColors = [UIColor(argb: colors.count >= 1 ? colors[0] : 0).cgColor, UIColor(argb: colors.count >= 2 ? colors[1] : 0).cgColor] as CFArray
                        
@@ -135,7 +135,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 |> afterNext { image in
                     cacheWallpaper(image?.0)
                 }
-            case let .gradient(colors, settings):
+            case let .gradient(_, colors, settings):
                 return .single((generateImage(CGSize(width: 640.0, height: 1280.0).fitted(CGSize(width: 100.0, height: 100.0)), rotatedContext: { size, context in
                     let gradientColors = [UIColor(rgb: colors.count >= 1 ? colors[0] : 0).cgColor, UIColor(rgb: colors.count >= 2 ? colors[1] : 0).cgColor] as CFArray
                        
@@ -192,7 +192,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         } else {
                             let interimWallpaper: TelegramWallpaper
                             if file.settings.colors.count >= 2 {
-                                interimWallpaper = .gradient(file.settings.colors, file.settings)
+                                interimWallpaper = .gradient(nil, file.settings.colors, file.settings)
                             } else {
                                 interimWallpaper = .color(file.settings.colors.count >= 1 ? file.settings.colors[0] : 0)
                             }

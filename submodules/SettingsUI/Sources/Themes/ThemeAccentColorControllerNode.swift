@@ -458,7 +458,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     }
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 } else if backgroundColors.count >= 2 {
-                    wallpaper = .gradient(backgroundColors, WallpaperSettings(rotation: state.rotation))
+                    wallpaper = .gradient(nil, backgroundColors, WallpaperSettings(rotation: state.rotation))
                 } else {
                     wallpaper = .color(backgroundColors.first ?? 0xffffff)
                 }
@@ -468,7 +468,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .dayClassic:
                         let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                        suggestedWallpaper = .gradient([topColor.rgb, bottomColor.rgb], WallpaperSettings())
+                        suggestedWallpaper = .gradient(nil, [topColor.rgb, bottomColor.rgb], WallpaperSettings())
                         backgroundColors = [topColor.rgb, bottomColor.rgb]
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)

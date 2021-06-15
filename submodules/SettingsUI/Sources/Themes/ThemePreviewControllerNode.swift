@@ -192,7 +192,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if file.settings.blur {
                 self.chatContainerNode.insertSubnode(self.blurredNode, belowSubnode: self.messagesContainerNode)
             }
-        } else if case let .gradient(colors, _) = self.wallpaper {
+        } else if case let .gradient(_, colors, _) = self.wallpaper {
             gradientColors = colors
         }
 

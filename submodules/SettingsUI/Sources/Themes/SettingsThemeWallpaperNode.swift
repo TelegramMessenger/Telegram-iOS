@@ -109,7 +109,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
         var colors: [UInt32] = []
         var intensity: CGFloat = 0.5
-        if case let .gradient(value, _) = wallpaper {
+        if case let .gradient(_, value, _) = wallpaper {
             colors = value
         } else if case let .file(file) = wallpaper {
             colors = file.settings.colors

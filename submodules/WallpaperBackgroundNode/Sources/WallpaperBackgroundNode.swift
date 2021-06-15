@@ -103,7 +103,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     if !isPattern {
                         needsCleanBackground = false
                     }
-                case let .gradient(colors, _):
+                case let .gradient(_, colors, _):
                     hasComplexGradient = colors.count >= 3
                 default:
                     break
@@ -381,7 +381,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         if case let .color(color) = wallpaper {
             gradientColors = [color]
             self._isReady.set(true)
-        } else if case let .gradient(colors, settings) = wallpaper {
+        } else if case let .gradient(_, colors, settings) = wallpaper {
             gradientColors = colors
             gradientAngle = settings.rotation ?? 0
             self._isReady.set(true)

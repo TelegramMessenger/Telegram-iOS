@@ -65,7 +65,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient([topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
+                            self = .gradient(nil, [topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
                             var colors: [UInt32] = []
@@ -118,7 +118,7 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(colors, settings):
+            case let .gradient(_, colors, settings):
                 var components: [String] = []
                 for color in colors {
                     components.append(String(format: "%06x", color))

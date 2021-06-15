@@ -627,7 +627,7 @@ public class WallpaperGalleryController: ViewController {
                     switch initialWallpaper {
                     case let .color(color):
                         strongSelf.patternPanelNode?.backgroundColors = ([color], nil, nil)
-                    case let .gradient(colors, settings):
+                    case let .gradient(_, colors, settings):
                         strongSelf.patternPanelNode?.backgroundColors = (colors, settings.rotation, nil)
                     case let .file(file) where file.isPattern:
                         strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors, file.settings.rotation, file.settings.intensity)
@@ -647,7 +647,7 @@ public class WallpaperGalleryController: ViewController {
                         case let .file(file):
                             if !file.settings.colors.isEmpty {
                                 if file.settings.colors.count >= 2 {
-                                    strongSelf.updateEntries(wallpaper: .gradient(file.settings.colors, WallpaperSettings(rotation: file.settings.rotation)))
+                                    strongSelf.updateEntries(wallpaper: .gradient(nil, file.settings.colors, WallpaperSettings(rotation: file.settings.rotation)))
                                 } else {
                                     strongSelf.updateEntries(wallpaper: .color(file.settings.colors[0]))
                                 }
@@ -782,7 +782,7 @@ public class WallpaperGalleryController: ViewController {
                     entryColors = [color]
                 } else if case let .file(file) = wallpaper, file.isPattern {
                     entryColors = file.settings.colors
-                } else if case let .gradient(colors, _) = wallpaper {
+                } else if case let .gradient(_, colors, _) = wallpaper {
                     entryColors = colors
                 }
             }
@@ -797,7 +797,7 @@ public class WallpaperGalleryController: ViewController {
                         let newWallpaper = TelegramWallpaper.color(entryColors[0])
                         updatedEntries.append(.wallpaper(newWallpaper, nil))
                     } else {
-                        let newWallpaper = TelegramWallpaper.gradient(entryColors, WallpaperSettings(rotation: nil))
+                        let newWallpaper = TelegramWallpaper.gradient(nil, entryColors, WallpaperSettings(rotation: nil))
                         updatedEntries.append(.wallpaper(newWallpaper, nil))
                     }
                 }
@@ -847,7 +847,7 @@ public class WallpaperGalleryController: ViewController {
                     case let .file(file):
                         colors = file.settings.colors
                         rotation = file.settings.rotation
-                    case let .gradient(colorsValue, settings):
+                    case let .gradient(_, colorsValue, settings):
                         colors = colorsValue
                         rotation = settings.rotation
                     default:
@@ -893,7 +893,7 @@ public class WallpaperGalleryController: ViewController {
                     return
                 }
 
-                var wallpaper: TelegramWallpaper = .gradient(colors, WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil))
+                var wallpaper: TelegramWallpaper = .gradient(nil, colors, WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil))
 
                 if case let .file(file) = currentWallpaper {
                     wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: colors, intensity: file.settings.intensity, rotation: file.settings.rotation))
@@ -1011,7 +1011,7 @@ public class WallpaperGalleryController: ViewController {
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
             case let .color(color):
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: color).hexString)"))
-            case let .gradient(colors, _):
+            case let .gradient(_, colors, _):
                 var colorsString = ""
 
                 for color in colors {

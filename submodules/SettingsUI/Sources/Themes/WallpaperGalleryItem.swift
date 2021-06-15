@@ -311,7 +311,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                     }
-                } else if case let .gradient(colors, _) = wallpaper {
+                } else if case let .gradient(_, colors, _) = wallpaper {
                     self.nativeNode.isHidden = false
                     self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = false
@@ -360,7 +360,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(colors, settings):
+                        case let .gradient(_, colors, settings):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -801,7 +801,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 } else {
                     return nil
                 }
-            case let .gradient(colors, _):
+            case let .gradient(_, colors, _):
                 return colors.map(UIColor.init(rgb:))
             case let .color(color):
                 return [UIColor(rgb: color)]
@@ -825,7 +825,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             return
         }
         switch wallpaper {
-        case let .gradient(colors, settings):
+        case let .gradient(_, colors, settings):
             if colors.count >= 3 {
                 self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
             } else {
@@ -973,7 +973,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
-                        case let .gradient(colors, _):
+                        case let .gradient(_, colors, _):
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
@@ -1076,7 +1076,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         if file.settings.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
-                    case let .gradient(colors, _):
+                    case let .gradient(_, colors, _):
                         if colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
@@ -1098,7 +1098,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 if file.settings.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
-                            case let .gradient(colors, _):
+                            case let .gradient(_, colors, _):
                                 if colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }

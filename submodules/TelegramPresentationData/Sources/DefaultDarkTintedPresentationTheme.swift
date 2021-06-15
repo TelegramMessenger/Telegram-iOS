@@ -230,7 +230,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         defaultWallpaper = forcedWallpaper
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
-            defaultWallpaper = .gradient(backgroundColors, WallpaperSettings())
+            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
         } else {
             defaultWallpaper = .color(backgroundColors[0])
         }
