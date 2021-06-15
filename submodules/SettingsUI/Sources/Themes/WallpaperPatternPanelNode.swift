@@ -274,6 +274,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
 
             return wallpapers.filter { wallpaper in
                 if case let .file(file) = wallpaper, wallpaper.isPattern, file.file.mimeType != "image/webp" {
+                    if file.id == 0 {
+                        return true
+                    }
                     if existingIds.contains(file.file.fileId) {
                         return false
                     } else {
