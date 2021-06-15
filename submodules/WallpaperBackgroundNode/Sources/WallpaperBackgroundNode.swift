@@ -531,6 +531,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                             } else {
                                 strongSelf._isReady.set(true)
                             }
+                        } else {
+                            strongSelf._isReady.set(true)
                         }
                     }))
                 }
