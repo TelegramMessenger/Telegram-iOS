@@ -844,7 +844,14 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
                     theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference)
                 } else {
-                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
+                    var wallpaperGradientColors: [UInt32]?
+                    switch accentColor {
+                    case let .accentColor(value):
+                        wallpaperGradientColors = value.baseColor.wallpaperGradientColors
+                    default:
+                        break
+                    }
+                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper, wallpaperGradientColors: wallpaperGradientColors)
                 }
                 effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
