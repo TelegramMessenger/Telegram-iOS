@@ -525,19 +525,21 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         if colorWasRemovable != self.multiColorFieldNode.isRemovable {
             updateLayout = true
         }
+
+        if let index = self.state.selection {
+            if self.state.colors.count > index {
+                self.colorPickerNode.color = UIColor(rgb: self.state.colors[index])
+            }
+        }
     
         if updateLayout, let size = self.validLayout {
-            if let index = self.state.selection {
-                if self.state.colors.count > index {
-                    self.colorPickerNode.color = UIColor(rgb: self.state.colors[index])
-                }
-            }
-            
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
 
         if let index = state.selection {
-            self.multiColorFieldNode.setColor(UIColor(rgb: self.state.colors[index]), update: false)
+            if self.state.colors.count > index {
+                self.multiColorFieldNode.setColor(UIColor(rgb: self.state.colors[index]), update: false)
+            }
         }
 
         for i in 0 ..< state.colors.count {

@@ -175,7 +175,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
     }
 }
 
-public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, blurred: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = wallpaperDatas(account: account, accountManager: accountManager, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, onlyFullSize: onlyFullSize, autoFetchFullSize: autoFetchFullSize, synchronousLoad: synchronousLoad)
     
     return signal
@@ -212,6 +212,39 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
                         imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
+                }
+            }
+
+            if blurred, let fullSizeImageValue = fullSizeImage {
+                let thumbnailSize = CGSize(width: fullSizeImageValue.width, height: fullSizeImageValue.height)
+
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+
+                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                thumbnailContext.withFlippedContext { c in
+                    c.draw(fullSizeImageValue, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                }
+                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+
+                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                }
+
+                if false, thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                    let additionalContextSize = thumbnailContextFittingSize
+                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                    additionalBlurContext.withFlippedContext { c in
+                        c.interpolationQuality = .default
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                        }
+                    }
+                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    fullSizeImage = additionalBlurContext.generateImage()?.cgImage
+                } else {
+                    fullSizeImage = thumbnailContext.generateImage()?.cgImage
                 }
             }
             
@@ -839,7 +872,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         case let .color(color):
             c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
-        case let .gradient(colors, _):
+        case let .gradient(_, colors, _):
             if colors.count >= 3 {
                 let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.map(UIColor.init(rgb:)))
                 c.draw(image.cgImage!, in: drawingRect)
@@ -1077,7 +1110,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                             if wallpaper.wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
                                 return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
-                                    if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
+                                    if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: imageData) {
                                         return .single((theme, image, thumbnailData))
                                     } else {
                                         return .complete()
@@ -1217,7 +1250,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     if file.settings.colors.count >= 2 {
                         bottomBackgroundColor = UIColor(rgb: file.settings.colors[1])
                     }
-                } else if let wallpaper = wallpaper, case let .gradient(colors, _) = wallpaper {
+                } else if let wallpaper = wallpaper, case let .gradient(_, colors, _) = wallpaper {
                     topBackgroundColor = colors.first.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
                     if colors.count >= 2 {
                         bottomBackgroundColor = UIColor(rgb: colors[1])
@@ -1257,7 +1290,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 case let .color(color):
                     colors = [color]
                     topBackgroundColor = UIColor(rgb: color)
-                case let .gradient(colorsValue, settings):
+                case let .gradient(_, colorsValue, settings):
                     colors = colorsValue
                     if colors.count >= 1 {
                         topBackgroundColor = UIColor(rgb: colors[0])
@@ -1336,7 +1369,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil, [])
                     case let .color(color):
                         backgroundColor = (UIColor(rgb: color), nil, [])
-                    case let .gradient(colors, settings):
+                    case let .gradient(_, colors, settings):
                         if colors.count >= 2 {
                             backgroundColor = (UIColor(rgb: colors[0]), UIColor(rgb: colors[1]), colors)
                         } else {

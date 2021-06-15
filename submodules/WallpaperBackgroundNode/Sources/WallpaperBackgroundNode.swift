@@ -103,7 +103,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     if !isPattern {
                         needsCleanBackground = false
                     }
-                case let .gradient(colors, _):
+                case let .gradient(_, colors, _):
                     hasComplexGradient = colors.count >= 3
                 default:
                     break
@@ -381,7 +381,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         if case let .color(color) = wallpaper {
             gradientColors = [color]
             self._isReady.set(true)
-        } else if case let .gradient(colors, settings) = wallpaper {
+        } else if case let .gradient(_, colors, settings) = wallpaper {
             gradientColors = colors
             gradientAngle = settings.rotation ?? 0
             self._isReady.set(true)
@@ -391,15 +391,16 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
 
         if gradientColors.count >= 3 {
+            let mappedColors = gradientColors.map { color -> UIColor in
+                return UIColor(rgb: color)
+            }
             if self.gradientBackgroundNode == nil {
-                let gradientBackgroundNode = createGradientBackgroundNode(useSharedAnimationPhase: self.useSharedAnimationPhase)
+                let gradientBackgroundNode = createGradientBackgroundNode(colors: mappedColors, useSharedAnimationPhase: self.useSharedAnimationPhase)
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.addSubnode(self.patternImageNode)
             }
-            self.gradientBackgroundNode?.updateColors(colors: gradientColors.map { color -> UIColor in
-                return UIColor(rgb: color)
-            })
+            self.gradientBackgroundNode?.updateColors(colors: mappedColors)
 
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
@@ -591,12 +592,28 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     self.patternImageNode.image = cachedValidPatternImage.image
                 } else {
                     let patternArguments = TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false), scale: min(2.0, UIScreenScale))
-                    if let drawingContext = validPatternImage.generate(patternArguments) {
-                        if let image = drawingContext.generateImage() {
-                            self.patternImageNode.image = image
+                    if self.useSharedAnimationPhase || self.patternImageNode.image == nil {
+                        if let drawingContext = validPatternImage.generate(patternArguments) {
+                            if let image = drawingContext.generateImage() {
+                                self.patternImageNode.image = image
 
-                            if self.useSharedAnimationPhase {
-                                WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                if self.useSharedAnimationPhase {
+                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                }
+                            }
+                        }
+                    } else {
+                        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+                            let image = validPatternImage.generate(patternArguments)?.generateImage()
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.patternImageNode.image = image
+
+                                if let image = image, strongSelf.useSharedAnimationPhase {
+                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                }
                             }
                         }
                     }

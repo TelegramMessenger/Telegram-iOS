@@ -105,6 +105,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     private let messagesContainerNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
+    private var validMessages: [String]?
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -310,7 +311,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                     }
-                } else if case let .gradient(colors, _) = wallpaper {
+                } else if case let .gradient(_, colors, _) = wallpaper {
                     self.nativeNode.isHidden = false
                     self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = false
@@ -359,7 +360,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(colors, settings):
+                        case let .gradient(_, colors, settings):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -800,7 +801,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 } else {
                     return nil
                 }
-            case let .gradient(colors, _):
+            case let .gradient(_, colors, _):
                 return colors.map(UIColor.init(rgb:))
             case let .color(color):
                 return [UIColor(rgb: color)]
@@ -824,7 +825,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             return
         }
         switch wallpaper {
-        case let .gradient(colors, settings):
+        case let .gradient(_, colors, settings):
             if colors.count >= 3 {
                 self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
             } else {
@@ -972,7 +973,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
-                        case let .gradient(colors, _):
+                        case let .gradient(_, colors, _):
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
@@ -1075,7 +1076,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         if file.settings.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
-                    case let .gradient(colors, _):
+                    case let .gradient(_, colors, _):
                         if colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
@@ -1097,7 +1098,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 if file.settings.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
-                            case let .gradient(colors, _):
+                            case let .gradient(_, colors, _):
                                 if colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
@@ -1130,18 +1131,22 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
-            for i in 0 ..< items.count {
-                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
-                    let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+            if self.validMessages != [topMessageText, bottomMessageText] {
+                self.validMessages = [topMessageText, bottomMessageText]
+                for i in 0 ..< items.count {
+                    items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                        let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
 
-                    messageNodes[i].contentSize = layout.contentSize
-                    messageNodes[i].insets = layout.insets
-                    messageNodes[i].frame = nodeFrame
+                        messageNodes[i].contentSize = layout.contentSize
+                        messageNodes[i].insets = layout.insets
+                        messageNodes[i].frame = nodeFrame
 
-                    apply(ListViewItemApply(isOnScreen: true))
+                        apply(ListViewItemApply(isOnScreen: true))
+                    }
                 }
             }
         } else {
+            self.validMessages = [topMessageText, bottomMessageText]
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?

@@ -61,7 +61,7 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             return .builtin
         case let .color(color):
             return .color(color)
-        case let .gradient(colors, _):
+        case let .gradient(_, colors, _):
             return .gradient(colors)
         case let .file(id, _, _, _, _, _, _, _, settings):
             return .file(id, settings.colors, settings.intensity ?? 0)

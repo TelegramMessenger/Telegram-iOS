@@ -164,7 +164,7 @@ final class ThemeAccentColorController: ViewController {
                     if let patternWallpaper = state.patternWallpaper {
                         coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: state.backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
                     } else if state.backgroundColors.count >= 2 {
-                        coloredWallpaper = .gradient(state.backgroundColors, WallpaperSettings(rotation: state.rotation))
+                        coloredWallpaper = .gradient(nil, state.backgroundColors, WallpaperSettings(rotation: state.rotation))
                     } else {
                         coloredWallpaper = .color(state.backgroundColors[0])
                     }
@@ -425,12 +425,18 @@ final class ThemeAccentColorController: ViewController {
                     rotation = file.settings.rotation ?? 0
                 } else if case let .color(color) = wallpaper {
                     backgroundColors = [color]
-                } else if case let .gradient(colors, settings) = wallpaper {
+                } else if case let .gradient(_, colors, settings) = wallpaper {
                     backgroundColors = colors
                     motion = settings.motion
                     rotation = settings.rotation ?? 0
                 } else {
-                    backgroundColors = []
+                    if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
+                        backgroundColors = [averageColor(from: image).rgb]
+                    } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox, knockoutMode: false) {
+                        backgroundColors = [averageColor(from: image).rgb]
+                    } else {
+                        backgroundColors = [UIColor.gray.rgb]
+                    }
                 }
             }
             

@@ -444,7 +444,7 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
             return serviceColor(with: UIColor(argb: color))
-        case let .gradient(colors, _):
+        case let .gradient(_, colors, _):
             if colors.count == 2 {
                 let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
                 return serviceColor(with: mixedColor)
@@ -503,7 +503,7 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             return .single(UIColor(rgb: 0x000000, alpha: 0.2))
         case let .color(color):
             return .single(serviceColor(with: UIColor(argb: color)))
-        case let .gradient(colors, _):
+        case let .gradient(_, colors, _):
             if colors.count == 2 {
                 let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
                 return .single(

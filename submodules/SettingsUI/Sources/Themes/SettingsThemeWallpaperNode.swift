@@ -109,7 +109,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
         var colors: [UInt32] = []
         var intensity: CGFloat = 0.5
-        if case let .gradient(value, _) = wallpaper {
+        if case let .gradient(_, value, _) = wallpaper {
             colors = value
         } else if case let .file(file) = wallpaper {
             colors = file.settings.colors
@@ -250,7 +250,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     } else {
                         self.imageNode.alpha = 1.0
 
-                        imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
+                        imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, blurred: file.settings.blur, synchronousLoad: synchronousLoad)
 
                         self.updateIsLoaded(isLoaded: true, animated: false)
                         self.isLoadedDisposable.set(nil)

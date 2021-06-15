@@ -848,7 +848,7 @@ final class SharedApplicationContext {
                 }
                 var exists = false
                 strongSelf.mainWindow.forEachViewController({ controller in
-                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
+                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController || controller is ThemePreviewController {
                         exists = true
                     }
                     return true

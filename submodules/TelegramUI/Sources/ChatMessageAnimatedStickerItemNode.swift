@@ -54,6 +54,7 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
 class ChatMessageShareButton: HighlightableButtonNode {
     private let backgroundNode: NavigationBackgroundNode
     private let iconNode: ASImageNode
+    private var iconOffset = CGPoint()
     
     private var theme: PresentationTheme?
     private var isReplies: Bool = false
@@ -100,17 +101,20 @@ class ChatMessageShareButton: HighlightableButtonNode {
             self.isReplies = isReplies
 
             var updatedIconImage: UIImage?
+            var updatedIconOffset = CGPoint()
             if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if isReplies {
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
             self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
             self.iconNode.image = updatedIconImage
+            self.iconOffset = updatedIconOffset
         }
         var size = CGSize(width: 30.0, height: 30.0)
         var offsetIcon = false
@@ -148,7 +152,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0)), size: image.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
         }
         return size
     }
