@@ -68,8 +68,7 @@ extension TelegramWallpaper: Codable {
                             self = .gradient([topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
-                            var color: UInt32?
-                            var bottomColor: UInt32?
+                            var colors: [UInt32] = []
                             var intensity: Int32?
                             var rotation: Int32?
 
@@ -83,11 +82,7 @@ extension TelegramWallpaper: Codable {
                                         continue
                                     }
                                     if [6, 8].contains(component.count), let value = UIColor(hexString: component) {
-                                        if color == nil {
-                                            color = value.argb
-                                        } else if bottomColor == nil {
-                                            bottomColor = value.argb
-                                        }
+                                        colors.append(value.rgb)
                                     } else if component.count <= 3, let value = Int32(component) {
                                         if intensity == nil {
                                             if value >= 0 && value <= 100 {
@@ -104,14 +99,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             if let slug = slug {
-                                var colors: [UInt32] = []
-                                if let color = color {
-                                    colors.append(color)
-                                }
-                                if let bottomColor = bottomColor {
-                                    colors.append(bottomColor)
-                                }
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
