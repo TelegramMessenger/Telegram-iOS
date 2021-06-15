@@ -63,8 +63,8 @@ public final class ChatControllerInteraction {
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
     let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool
-    let sendGif: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
-    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
+    let sendGif: (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool
+    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     let activateSwitchInline: (PeerId?, String) -> Void
@@ -156,8 +156,8 @@ public final class ChatControllerInteraction {
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool,
-        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
-        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
+        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool,
+        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String) -> Void,
@@ -308,7 +308,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {

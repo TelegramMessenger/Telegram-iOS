@@ -1111,7 +1111,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages(messages)
             }
             return true
-        }, sendGif: { [weak self] fileReference, sourceNode, sourceRect in
+        }, sendGif: { [weak self] fileReference, sourceNode, sourceRect, silentPosting, schedule in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                     strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode, sourceRect)
@@ -1130,10 +1130,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     }
                 }, nil)
-                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)])
+                
+                var messages = [EnqueueMessage.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)]
+                if silentPosting {
+                    messages = strongSelf.transformEnqueueMessages(messages, silentPosting: true)
+                    strongSelf.sendMessages(messages)
+                } else if schedule {
+                    strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+                        if let strongSelf = self {
+                            let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                            strongSelf.sendMessages(transformedMessages)
+                        }
+                    })
+                } else {
+                    strongSelf.sendMessages(messages)
+                }
             }
             return true
-        }, sendBotContextResultAsGif: { [weak self] collection, result, sourceNode, sourceRect in
+        }, sendBotContextResultAsGif: { [weak self] collection, result, sourceNode, sourceRect, silentPosting in
             guard let strongSelf = self else {
                 return false
             }
@@ -1145,7 +1159,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
-            strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true)
+            strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting)
             
             return true
         }, requestMessageActionCallback: { [weak self] messageId, data, isGame, requiresPassword in
@@ -9753,7 +9767,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false) {
         let peerId = self.chatLocation.peerId
         
         if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, hideVia: hideVia), canSendMessagesToChat(self.presentationInterfaceState) {
@@ -9779,7 +9793,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
             }, nil)
-            self.sendMessages([message.withUpdatedReplyToMessageId(replyMessageId)])
+            var messages = [message.withUpdatedReplyToMessageId(replyMessageId)]
+            messages = self.transformEnqueueMessages(messages, silentPosting: silentPosting)
+            self.sendMessages(messages)
         }
     }
     
