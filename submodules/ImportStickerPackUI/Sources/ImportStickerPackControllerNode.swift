@@ -13,6 +13,8 @@ import ActivityIndicator
 import TextFormat
 import AccountContext
 import ContextUI
+import RadialStatusNode
+import UndoUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -66,6 +68,12 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let contentTitleNode: ImmediateTextNode
     private let contentSeparatorNode: ASDisplayNode
     
+    private let radialStatus: RadialStatusNode
+    private let radialCheck: RadialStatusNode
+    private let radialStatusBackground: ASImageNode
+    private let radialStatusText: ImmediateTextNode
+    private let progressText: ImmediateTextNode
+    
     private var interaction: StickerPackPreviewInteraction!
     
     var present: ((ViewController, Any?) -> Void)?
@@ -82,6 +90,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private var hapticFeedback: HapticFeedback?
     
     private let disposable = MetaDisposable()
+    
+    private var progress: (CGFloat, Int32, Int32)?
         
     init(context: AccountContext) {
         self.context = context
@@ -123,6 +133,25 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.installActionSeparatorNode.isLayerBacked = true
         self.installActionSeparatorNode.displaysAsynchronously = false
         
+        self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
+        self.radialCheck = RadialStatusNode(backgroundNodeColor: .clear)
+        self.radialStatusBackground = ASImageNode()
+        self.radialStatusBackground.isUserInteractionEnabled = false
+        self.radialStatusBackground.displaysAsynchronously = false
+        self.radialStatusBackground.image = generateCircleImage(diameter: 180.0, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
+        
+        self.radialStatusText = ImmediateTextNode()
+        self.radialStatusText.isUserInteractionEnabled = false
+        self.radialStatusText.displaysAsynchronously = false
+        self.radialStatusText.maximumNumberOfLines = 1
+        self.radialStatusText.isAccessibilityElement = false
+        
+        self.progressText = ImmediateTextNode()
+        self.progressText.isUserInteractionEnabled = false
+        self.progressText.displaysAsynchronously = false
+        self.progressText.maximumNumberOfLines = 1
+        self.progressText.isAccessibilityElement = false
+        
         super.init()
         
         self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false)
@@ -149,6 +178,12 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.contentContainerNode.addSubnode(self.installActionButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentTitleNode)
         self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
+        
+        self.wrappingScrollNode.addSubnode(self.radialStatusBackground)
+        self.wrappingScrollNode.addSubnode(self.radialStatus)
+        self.wrappingScrollNode.addSubnode(self.radialCheck)
+        self.wrappingScrollNode.addSubnode(self.radialStatusText)
+        self.wrappingScrollNode.addSubnode(self.progressText)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -268,6 +303,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         }
     }
     
+    private var hadProgress = false
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
@@ -304,16 +340,30 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         var itemCount = 0
         var animateIn = false
         
-        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count {
+        var forceTitleUpdate = false
+        if self.progress != nil && !self.hadProgress {
+            self.hadProgress = true
+            forceTitleUpdate = true
+        }
+        
+        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count || forceTitleUpdate {
             let previousItems = self.currentItems
             self.currentItems = self.pendingItems
             
             let titleFont = Font.medium(20.0)
-            self.contentTitleNode.attributedText = stringWithAppliedEntities(self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count)), entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            let title: String
+            if let _ = self.progress {
+                title = self.presentationData.strings.ImportStickerPack_ImportingStickers
+            } else {
+                title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
+            }
+            self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
             animateIn = true
             itemCount = self.currentItems.count
 
-            transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
+            if !forceTitleUpdate {
+                transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
+            }
         }
         
         let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
@@ -332,11 +382,13 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         let minimallyRevealedRowCount: CGFloat = 3.5
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
-        let bottomGridInset = buttonHeight
+        var bottomGridInset = buttonHeight
+        if let _ = self.progress {
+            bottomGridInset += 210.0
+        }
         let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight - bottomGridInset)
-
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
-
+        
         let installButtonOffset = buttonHeight
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
         transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
@@ -350,6 +402,66 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
+                
+        transition.updateAlpha(node: self.contentGridNode, alpha: self.progress == nil ? 1.0 : 0.0)
+        
+        if let (progress, count, total) = self.progress {
+            let effectiveProgress = progress
+            
+            let availableHeight: CGFloat = 330.0
+            var radialStatusSize = CGSize(width: 186.0, height: 186.0)
+            var maxIconStatusSpacing: CGFloat = 46.0
+            var maxProgressTextSpacing: CGFloat = 33.0
+            var progressStatusSpacing: CGFloat = 14.0
+            var statusButtonSpacing: CGFloat = 19.0
+            
+            var maxK: CGFloat = availableHeight / (30.0 + maxProgressTextSpacing + 320.0)
+            maxK = max(0.5, min(1.0, maxK))
+            
+            radialStatusSize.width = floor(radialStatusSize.width * maxK)
+            radialStatusSize.height = floor(radialStatusSize.height * maxK)
+            maxIconStatusSpacing = floor(maxIconStatusSpacing * maxK)
+            maxProgressTextSpacing = floor(maxProgressTextSpacing * maxK)
+            progressStatusSpacing = floor(progressStatusSpacing * maxK)
+            statusButtonSpacing = floor(statusButtonSpacing * maxK)
+            
+            var updateRadialBackround = false
+            if let width = self.radialStatusBackground.image?.size.width {
+                if abs(width - radialStatusSize.width) > 0.01 {
+                    updateRadialBackround = true
+                }
+            } else {
+                updateRadialBackround = true
+            }
+            
+            if updateRadialBackround {
+                self.radialStatusBackground.image = generateCircleImage(diameter: radialStatusSize.width, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
+            }
+            
+            let contentOrigin = self.contentBackgroundNode.frame.minY + 72.0
+        
+            transition.updateAlpha(node: self.radialStatusText, alpha: 1.0)
+            transition.updateAlpha(node: self.progressText, alpha: 1.0)
+            transition.updateAlpha(node: self.radialStatus, alpha: 1.0)
+            transition.updateAlpha(node: self.installActionButtonNode, alpha: 0.0)
+            transition.updateAlpha(node: self.contentSeparatorNode, alpha: 0.0)
+            transition.updateAlpha(node: self.installActionSeparatorNode, alpha: 0.0)
+            
+            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
+            
+            self.progressText.attributedText = NSAttributedString(string:  self.presentationData.strings.ImportStickerPack_Of(String(count), String(total)).0, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+            
+            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOrigin), size: radialStatusSize)
+            let checkSize: CGFloat = 130.0
+            self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
+            self.radialStatusBackground.frame = self.radialStatus.frame
+            
+            self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
+            
+            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
         }
     }
     
@@ -441,10 +553,59 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
                 }
                 
-                strongSelf.disposable.set(createStickerSet(account: strongSelf.context.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated).start(next: { [weak self] status in
+                strongSelf.progress = (0.0, 0, Int32(stickers.count))
+                strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, 0.0), cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
+                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition:  .animated(duration: 0.2, curve: .easeInOut))
+                }
+                
+                strongSelf.disposable.set((createStickerSet(account: strongSelf.context.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated)
+                |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self {
-                        if case let .complete(pack, items) = status {
-                            print("done!")
+                        if case let .complete(info, items) = status {
+                            if let (_, _, count) = strongSelf.progress {
+                                strongSelf.progress = (1.0, count, count)
+                                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                }
+                            }
+                            let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+                            
+                            strongSelf.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
+                            strongSelf.radialCheck.transitionToState(.check(strongSelf.presentationData.theme.list.itemAccentColor), animated: true, synchronous: true, completion: {})
+                            strongSelf.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.radialStatus.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                            })
+                            strongSelf.radialStatusBackground.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.radialStatusBackground.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                            })
+                            strongSelf.radialCheck.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.radialCheck.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                            })
+                            strongSelf.radialStatusText.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                            strongSelf.radialStatusText.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                            
+                            strongSelf.cancelButtonNode.isUserInteractionEnabled = false
+                            
+                            Queue.mainQueue().after(1.0) {
+                                strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
+                                strongSelf.dismiss?()
+                            }
+                        } else if case let .progress(progress, count, total) = status {
+                            strongSelf.progress = (CGFloat(progress), count, total)
+                            strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, CGFloat(progress)), cancelEnabled: false, animateRotation: false), animated: true, synchronous: true, completion: {})
+                            if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                            }
                         }
                     }
                 }, error: { error in

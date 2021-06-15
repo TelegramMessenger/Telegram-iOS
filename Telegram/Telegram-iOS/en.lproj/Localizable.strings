@@ -6508,6 +6508,8 @@ Sorry for the inconvenience.";
 "ImportStickerPack.ChooseName" = "Choose Name";
 "ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
 "ImportStickerPack.ImportingStickers" = "Importing Stickers";
+"ImportStickerPack.Of" = "%1$@ of %2$@ Imported";
+"ImportStickerPack.InProgress" = "Please keep this window open\nuntil the import is completed.";
 
 "WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
 

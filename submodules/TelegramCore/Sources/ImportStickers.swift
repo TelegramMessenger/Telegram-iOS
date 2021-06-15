@@ -92,7 +92,7 @@ public struct ImportSticker {
 }
 
 public enum CreateStickerSetStatus {
-    case progress(Float)
+    case progress(Float, Int32, Int32)
     case complete(StickerPackCollectionInfo, [ItemCollectionItem])
 }
 
@@ -193,16 +193,18 @@ public func createStickerSet(account: Account, title: String, shortName: String,
                 }
             } else {
                 var totalProgress: Float = 0.0
+                var completeCount: Int32 = 0
                 for sticker in uploadedStickers {
                     switch sticker {
                         case .complete:
                             totalProgress += 1.0
+                            completeCount += 1
                         case let .progress(progress):
                             totalProgress += progress
                     }
                 }
                 let normalizedProgress = min(1.0, max(0.0, totalProgress / Float(stickers.count)))
-                return .single(.progress(normalizedProgress))
+                return .single(.progress(normalizedProgress, completeCount, Int32(uploadedStickers.count)))
             }
         }
     }
