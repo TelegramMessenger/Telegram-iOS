@@ -175,7 +175,7 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager, fil
     }
 }
 
-public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, blurred: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = wallpaperDatas(account: account, accountManager: accountManager, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, onlyFullSize: onlyFullSize, autoFetchFullSize: autoFetchFullSize, synchronousLoad: synchronousLoad)
     
     return signal
@@ -212,6 +212,39 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
                         imageOrientation = imageOrientationFromSource(imageSource)
                         fullSizeImage = image
                     }
+                }
+            }
+
+            if blurred, let fullSizeImageValue = fullSizeImage {
+                let thumbnailSize = CGSize(width: fullSizeImageValue.width, height: fullSizeImageValue.height)
+
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+
+                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                thumbnailContext.withFlippedContext { c in
+                    c.draw(fullSizeImageValue, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                }
+                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+
+                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                }
+
+                if false, thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                    let additionalContextSize = thumbnailContextFittingSize
+                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                    additionalBlurContext.withFlippedContext { c in
+                        c.interpolationQuality = .default
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                        }
+                    }
+                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    fullSizeImage = additionalBlurContext.generateImage()?.cgImage
+                } else {
+                    fullSizeImage = thumbnailContext.generateImage()?.cgImage
                 }
             }
             
@@ -252,6 +285,10 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
                 } else {
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }
+            }
+
+            if blurredThumbnailImage != nil {
+                fullSizeImage = nil
             }
             
             if let blurredThumbnailImage = blurredThumbnailImage, fullSizeImage == nil {

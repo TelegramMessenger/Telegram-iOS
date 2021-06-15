@@ -250,7 +250,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     } else {
                         self.imageNode.alpha = 1.0
 
-                        imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
+                        imageSignal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, blurred: file.settings.blur, synchronousLoad: synchronousLoad)
 
                         self.updateIsLoaded(isLoaded: true, animated: false)
                         self.isLoadedDisposable.set(nil)
