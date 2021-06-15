@@ -342,10 +342,10 @@ public class WallpaperGalleryController: ViewController {
         return GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: updateItems, focusOnItem: self.galleryNode.pager.centralItemNode()?.index, synchronous: false)
     }
 
-    private func updateCurrentEntryTransaction(entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) -> GalleryPagerTransaction {
+    private func updateCurrentEntryTransaction(entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, index: Int) -> GalleryPagerTransaction {
         var updateItems: [GalleryPagerUpdateItem] = []
-        for index in 0 ..< self.entries.count {
-            if index == self.centralEntryIndex {
+        for i in 0 ..< self.entries.count {
+            if i == index {
                 let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source))
                 updateItems.append(item)
             }
@@ -770,7 +770,7 @@ public class WallpaperGalleryController: ViewController {
         entries[centralEntryIndex] = currentEntry
         self.entries = entries
 
-        self.galleryNode.pager.transaction(self.updateCurrentEntryTransaction(entry: currentEntry, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: false, patternEnabled: self.patternPanelEnabled)))
+        self.galleryNode.pager.transaction(self.updateCurrentEntryTransaction(entry: currentEntry, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: false, patternEnabled: self.patternPanelEnabled), index: centralEntryIndex))
     }
     
     private func updateEntries(pattern: TelegramWallpaper?, intensity: Int32? = nil, preview: Bool = false) {

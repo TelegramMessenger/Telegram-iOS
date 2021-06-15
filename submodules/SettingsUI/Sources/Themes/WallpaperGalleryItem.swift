@@ -105,6 +105,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     private let messagesContainerNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
+    private var validMessages: [String]?
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -1130,18 +1131,22 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
-            for i in 0 ..< items.count {
-                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
-                    let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+            if self.validMessages != [topMessageText, bottomMessageText] {
+                self.validMessages = [topMessageText, bottomMessageText]
+                for i in 0 ..< items.count {
+                    items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                        let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
 
-                    messageNodes[i].contentSize = layout.contentSize
-                    messageNodes[i].insets = layout.insets
-                    messageNodes[i].frame = nodeFrame
+                        messageNodes[i].contentSize = layout.contentSize
+                        messageNodes[i].insets = layout.insets
+                        messageNodes[i].frame = nodeFrame
 
-                    apply(ListViewItemApply(isOnScreen: true))
+                        apply(ListViewItemApply(isOnScreen: true))
+                    }
                 }
             }
         } else {
+            self.validMessages = [topMessageText, bottomMessageText]
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
