@@ -6498,7 +6498,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sendButtonFrame: node.view.convert(node.bounds, to: nil), textInputNode: textInputNode, completion: { [weak self] in
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.supportedOrientations = previousSupportedOrientations
                     }

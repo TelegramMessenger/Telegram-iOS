@@ -61,7 +61,7 @@ private final class PeerInfoScreenInfoItemNode: PeerInfoScreenItemNode {
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
                 
-        let infoItem = InfoListItem(presentationData: ItemListPresentationData(presentationData), title: item.title, text: item.text, style: .plain, linkAction: { link in
+        let infoItem = InfoListItem(presentationData: ItemListPresentationData(presentationData), title: item.title, text: item.text, style: .blocks, linkAction: { link in
             item.linkAction?(link)
         }, closeAction: nil)
         let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)

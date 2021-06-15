@@ -32,9 +32,8 @@ private let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
 
 private let borderLineWidth: CGFloat = 2.0
 
-
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
-private let fadeHeight: CGFloat = 50.0
+let fadeHeight: CGFloat = 50.0
 
 private var fadeImage: UIImage? = {
     return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
@@ -185,7 +184,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     private var wavesColor: UIColor?
     
     let videoContainerNode: ASDisplayNode
-    private let videoFadeNode: ASDisplayNode
+    let videoFadeNode: ASDisplayNode
     var videoNode: GroupVideoNode?
     
     private var profileNode: VoiceChatPeerProfileNode?
@@ -844,7 +843,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                         node.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                     }
                     
-                    if !strongSelf.isExtracted && !strongSelf.animatingExtraction {
+                    if !strongSelf.isExtracted && !strongSelf.animatingExtraction && strongSelf.videoContainerNode.supernode == strongSelf.offsetContainerNode {
                         strongSelf.videoFadeNode.frame = CGRect(x: 0.0, y: videoSize.height - fadeHeight, width: videoSize.width, height: fadeHeight)
                         strongSelf.videoContainerNode.bounds = CGRect(origin: CGPoint(), size: videoSize)
 

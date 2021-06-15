@@ -29,6 +29,7 @@ final class VoiceChatTileItem: Equatable {
     let videoReady: Bool
     let videoTimeouted: Bool
     let isVideoLimit: Bool
+    let videoLimit: Int32
     let isPaused: Bool
     let isOwnScreencast: Bool
     let strings: PresentationStrings
@@ -48,13 +49,14 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, videoLimit: Int32, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
         self.videoReady = videoReady
         self.videoTimeouted = videoTimeouted
         self.isVideoLimit = isVideoLimit
+        self.videoLimit = videoLimit
         self.isPaused = isPaused
         self.isOwnScreencast = isOwnScreencast
         self.strings = strings
@@ -113,7 +115,6 @@ final class VoiceChatTileItem: Equatable {
 }
 
 private let fadeColor = UIColor(rgb: 0x000000, alpha: 0.5)
-private let fadeHeight: CGFloat = 50.0
 
 var tileFadeImage: UIImage? = {
     return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
@@ -412,8 +413,8 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             
             var showPlaceholder = false
             if item.isVideoLimit {
-                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded, font: Font.semibold(13.0), textColor: .white)
-                self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Pause"), color: .white)
+                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded(String(item.videoLimit)).0, font: Font.semibold(13.0), textColor: .white)
+                self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/VideoUnavailable"), color: .white)
                 showPlaceholder = true
             } else if item.isOwnScreencast {
                 self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_YouAreSharingScreen, font: Font.semibold(13.0), textColor: .white)
@@ -580,7 +581,8 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         let placeholderTextSize = self.placeholderTextNode.updateLayout(CGSize(width: size.width - 30.0, height: 100.0))
         transition.updateFrame(node: self.placeholderTextNode, frame: CGRect(origin: CGPoint(x: floor((size.width - placeholderTextSize.width) / 2.0), y: floorToScreenPixels(size.height / 2.0) + 10.0), size: placeholderTextSize))
         if let image = self.placeholderIconNode.image {
-            let imageSize = CGSize(width: image.size.width * 0.5, height: image.size.height * 0.5)
+            let imageScale: CGFloat = item.isVideoLimit ? 1.0 : 0.5
+            let imageSize = CGSize(width: image.size.width * imageScale, height: image.size.height * imageScale)
             transition.updateFrame(node: self.placeholderIconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floorToScreenPixels(size.height / 2.0) - imageSize.height - 4.0), size: imageSize))
         }
     }

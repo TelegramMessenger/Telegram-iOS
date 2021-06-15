@@ -951,14 +951,14 @@ func peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: PeerInfoHeaderButtonKe
     var hiddenWhileExpanded = false
     if isOpenedFromChat {
         switch buttonKey {
-        case .message, .search, .videoCall, .addMember:
+        case .message, .search, .videoCall, .addMember, .leave, .discussion:
             hiddenWhileExpanded = true
         default:
             hiddenWhileExpanded = false
         }
     } else {
         switch buttonKey {
-        case .search, .call, .videoCall, .addMember:
+        case .search, .call, .videoCall, .addMember, .leave, .discussion:
             hiddenWhileExpanded = true
         default:
             hiddenWhileExpanded = false
@@ -1011,7 +1011,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.flags.contains(.hasVoiceChat) {
             hasVoiceChat = true
         }
-        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+        if channel.flags.contains(.isCreator) {
             displayMore = true
         }
         switch channel.info {
@@ -1118,6 +1118,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     }
     if isExpanded && result.count > 3 {
         result = result.filter { !peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: $0, isOpenedFromChat: isOpenedFromChat) }
+        if !result.contains(.more) {
+            result.append(.more)
+        }
     }
     return result
 }

@@ -274,6 +274,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func activateMenu() {
+        if self.content.menuItems().isEmpty {
+            return
+        }
         if case .press = self.content.menuActivation() {
             self.hapticFeedback.impact()
         }

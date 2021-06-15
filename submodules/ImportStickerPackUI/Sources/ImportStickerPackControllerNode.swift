@@ -68,6 +68,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     private var interaction: StickerPackPreviewInteraction!
     
+    var present: ((ViewController, Any?) -> Void)?
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
@@ -75,10 +76,13 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     let ready = Promise<Bool>()
     private var didSetReady = false
     
+    private var pendingItems: [StickerPackPreviewGridEntry] = []
     private var currentItems: [StickerPackPreviewGridEntry] = []
     
     private var hapticFeedback: HapticFeedback?
     
+    private let disposable = MetaDisposable()
+        
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -151,6 +155,10 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         }
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -160,31 +168,23 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
-//                    var menuItems: [PeekControllerMenuItem] = []
-//                    if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-//                        if strongSelf.sendSticker != nil {
-//                            menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
-//                                if let strongSelf = self {
-//                                    return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-//                                } else {
-//                                    return false
-//                                }
-//                            }))
-//                        }
-//                        menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
-//                                if let strongSelf = self {
-//                                    if isStarred {
-//                                        let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-//                                    } else {
-//                                        let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-//                                    }
-//                                }
-//                            return true
-//                        }))
-//                        menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true }))
-//                    }
-//                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
-                    return .single((itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: [])))
+                    var menuItems: [ContextMenuItem] = []
+                    if strongSelf.currentItems.count > 1 {
+                        menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ImportStickerPack_RemoveFromImport, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, f in
+                            f(.dismissWithoutContent)
+                            
+                            if let strongSelf = self {
+                                var updatedItems = strongSelf.currentItems
+                                updatedItems.removeAll(where: { $0.stickerItem.uuid == item.uuid })
+                                strongSelf.pendingItems = updatedItems
+                                
+                                if let (layout, navigationHeight) = strongSelf.containerLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                }
+                            }
+                        })))
+                    }
+                    return .single((itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
                 }
             }
             return nil
@@ -304,21 +304,16 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         var itemCount = 0
         var animateIn = false
         
-        if let stickerPack = self.stickerPack {
-            var updatedItems: [StickerPackPreviewGridEntry] = []
-            for item in stickerPack.stickers {
-                updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
-            }
+        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count {
+            let previousItems = self.currentItems
+            self.currentItems = self.pendingItems
             
-            if self.currentItems.isEmpty && !updatedItems.isEmpty {
-                let entities = generateTextEntities(stickerPack.name, enabledTypes: [.mention])
-                let font = Font.medium(20.0)
-                self.contentTitleNode.attributedText = stringWithAppliedEntities(stickerPack.name, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font)
-                animateIn = true
-                itemCount = updatedItems.count
-            }
-            transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
-            self.currentItems = updatedItems
+            let titleFont = Font.medium(20.0)
+            self.contentTitleNode.attributedText = stringWithAppliedEntities(self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count)), entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            animateIn = true
+            itemCount = self.currentItems.count
+
+            transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
         }
         
         let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
@@ -421,7 +416,45 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     }
     
     @objc func installActionButtonPressed() {
-
+        let controller = importStickerPackTitleController(sharedContext: self.context.sharedContext, account: self.context.account, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: "", doneButtonTitle: nil, value: nil, maxLength: 128, apply: { [weak self] title in
+            if let strongSelf = self, let stickerPack = strongSelf.stickerPack, var title = title {
+                title = title.trimmingTrailingSpaces()
+                let shortName = title.replacingOccurrences(of: " ", with: "") + "_by_laktyushin"
+                var stickers: [ImportSticker] = []
+                for item in strongSelf.currentItems {
+                    var dimensions = PixelDimensions(width: 512, height: 512)
+                    if case let .image(data) = item.stickerItem.content, let image = UIImage(data: data) {
+                        dimensions = PixelDimensions(image.size)
+                    }
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                    strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.stickerItem.data)
+                    stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+                }
+                var thumbnailSticker: ImportSticker?
+                if let thumbnail = stickerPack.thumbnail {
+                    var dimensions = PixelDimensions(width: 512, height: 512)
+                    if case let .image(data) = thumbnail.content, let image = UIImage(data: data) {
+                        dimensions = PixelDimensions(image.size)
+                    }
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                    strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
+                    thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
+                }
+                
+                strongSelf.disposable.set(createStickerSet(account: strongSelf.context.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated).start(next: { [weak self] status in
+                    if let strongSelf = self {
+                        if case let .complete(pack, items) = status {
+                            print("done!")
+                        }
+                    }
+                }, error: { error in
+                    if let strongSelf = self {
+                        
+                    }
+                }))
+            }
+        })
+        self.present?(controller, nil)
     }
     
     func animateIn() {
@@ -461,13 +494,18 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     func updateStickerPack(_ stickerPack: ImportStickerPack) {
         self.stickerPack = stickerPack
+        var updatedItems: [StickerPackPreviewGridEntry] = []
+        for item in stickerPack.stickers {
+            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
+        }
+        self.pendingItems = updatedItems
       
 //        self.interaction.playAnimatedStickers = stickerSettings.loopAnimatedStickers
         
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()
         }
-        self.installActionButtonNode.setTitle("Create Sticker Set", with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.installActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
 //        switch stickerPack {
 //            case .none, .fetching:
 //                self.installActionSeparatorNode.alpha = 0.0
