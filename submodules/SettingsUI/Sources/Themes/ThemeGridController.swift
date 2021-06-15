@@ -145,9 +145,50 @@ final class ThemeGridController: ViewController {
                 })
             }
         }, presentColors: { [weak self] in
-            if let strongSelf = self {
+            /*if let strongSelf = self {
                 let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+            }*/
+
+            if let strongSelf = self {
+                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+
+                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
+                    let themeReference: PresentationThemeReference
+                    if autoNightModeTriggered {
+                        themeReference = settings.automaticThemeSwitchSetting.theme
+                    } else {
+                        themeReference = settings.theme
+                    }
+
+                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
+                    controller.completion = { [weak self] in
+                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeColorsGridController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: false)
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeAccentColorController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    }
+                    strongSelf.push(controller)
+                })
             }
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
