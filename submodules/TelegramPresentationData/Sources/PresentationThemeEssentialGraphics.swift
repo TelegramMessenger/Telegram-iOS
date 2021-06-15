@@ -206,6 +206,7 @@ public final class PrincipalThemeEssentialGraphics {
         }
         if let incomingGradientColors = incomingGradientColors {
             self.incomingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
                 var locations: [CGFloat] = [0.0, 1.0]
                 let colors = [incomingGradientColors.0.cgColor, incomingGradientColors.1.cgColor] as NSArray
 
@@ -224,6 +225,7 @@ public final class PrincipalThemeEssentialGraphics {
         }
         if let outgoingGradientColors = outgoingGradientColors {
             self.outgoingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
                 var locations: [CGFloat] = [0.0, 1.0]
                 let colors = [outgoingGradientColors.0.cgColor, outgoingGradientColors.1.cgColor] as NSArray
 
