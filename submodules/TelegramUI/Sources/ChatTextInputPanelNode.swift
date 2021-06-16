@@ -1028,13 +1028,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.accessoryItemButtons = updatedButtons
         }
         
+        let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState
+        
         var hasMenuButton = false
         var menuButtonExpanded = false
         if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands {
             hasMenuButton = true
-            if case .none = interfaceState.inputMode {
+            if [.none, .inputButtons].contains(interfaceState.inputMode) {
                 menuButtonExpanded = true
             }
+        }
+        if mediaRecordingState != nil {
+            hasMenuButton = false
         }
         
         let leftMenuInset: CGFloat
@@ -1063,15 +1068,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateFrame(node: self.menuButtonTextNode, frame: CGRect(origin: CGPoint(x: 16.0, y: 7.0 - UIScreenPixel), size: menuTextSize))
         transition.updateAlpha(node: self.menuButtonTextNode, alpha: menuButtonExpanded ? 1.0 : 0.0)
         transition.updateFrame(node: self.menuButtonIconNode, frame: CGRect(x: 4.0 + UIScreenPixel, y: 1.0 + UIScreenPixel, width: 30.0, height: 30.0))
-        transition.updateTransformScale(node: self.menuButton, scale: hasMenuButton ? 1.0 : 0.001)
-        transition.updateAlpha(node: self.menuButton, alpha: hasMenuButton ? 1.0 : 0.0)
+        
+        let showMenuButton = hasMenuButton && interfaceState.recordedMediaPreview == nil
+        transition.updateTransformScale(node: self.menuButton, scale: showMenuButton ? 1.0 : 0.001)
+        transition.updateAlpha(node: self.menuButton, alpha: showMenuButton ? 1.0 : 0.0)
         self.menuButton.isUserInteractionEnabled = hasMenuButton
                     
         self.actionButtons.micButton.updateMode(mode: interfaceState.interfaceState.mediaRecordingMode, animated: transition.isAnimated)
         
         var hideMicButton = false
         var audioRecordingItemsAlpha: CGFloat = 1
-        let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState
         if mediaRecordingState != nil || interfaceState.recordedMediaPreview != nil {
             audioRecordingItemsAlpha = 0
         
@@ -1097,7 +1103,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     animateTimeSlideIn = true
                 }
             }
-            
             
             var animateCancelSlideIn = false
             let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
@@ -1218,7 +1223,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.audioRecordingDotNode?.removeFromSupernode()
                 audioRecordingDotNode = AnimationNode(animation: "BinRed")
                 self.audioRecordingDotNode = audioRecordingDotNode
-                self.addSubnode(audioRecordingDotNode)
+                self.insertSubnode(audioRecordingDotNode, belowSubnode: self.menuButton)
                 self.animatingBinNode?.removeFromSupernode()
                 self.animatingBinNode = nil
             }
@@ -1256,6 +1261,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 audioRecordingCancelIndicator.layer.animateAlpha(from: CGFloat(audioRecordingCancelIndicator.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
             }
         } else {
+            let update = self.actionButtons.micButton.audioRecorder != nil
             self.actionButtons.micButton.audioRecorder = nil
             self.actionButtons.micButton.videoRecordingStatus = nil
             transition.updateAlpha(layer: self.textInputBackgroundNode.layer, alpha: 1.0)
@@ -1274,7 +1280,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             if let audioRecordingDotNode = self.audioRecordingDotNode {
-                let dismissDotNode = { [weak audioRecordingDotNode, weak attachmentButton, weak self] in
+                let dismissDotNode = { [weak audioRecordingDotNode, weak self] in
                     guard let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode === self?.audioRecordingDotNode else { return }
                     
                     self?.audioRecordingDotNode = nil
@@ -1284,11 +1290,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         audioRecordingDotNode?.removeFromSupernode()
                     }
                     
-                    attachmentButton?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                    attachmentButton?.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
                 }
                 
-                audioRecordingDotNode.layer.removeAllAnimations()
+                if update {
+                    audioRecordingDotNode.layer.removeAllAnimations()
+                }
                 
                 if self.isMediaDeleted {
                     if self.prevInputPanelNode is ChatRecordingPreviewInputPanelNode {
@@ -1300,6 +1308,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 } else {
                     dismissDotNode()
+                }
+                
+                if update {
+                    self.audioRecordingDotNode?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: leftMenuInset, y: 0.0), duration: 0.15, removeOnCompletion: false, additive: true)
                 }
             }
             
@@ -1530,7 +1542,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.updateActionButtons(hasText: hasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
         
-        if let prevInputPanelNode = prevInputPanelNode {
+        if let prevInputPanelNode = self.prevInputPanelNode {
             prevInputPanelNode.frame = CGRect(origin: .zero, size: prevInputPanelNode.frame.size)
         }
         if let prevPreviewInputPanelNode = self.prevInputPanelNode as? ChatRecordingPreviewInputPanelNode {
@@ -1543,7 +1555,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 func animatePosition(for previewSubnode: ASDisplayNode) {
                     previewSubnode.layer.animatePosition(
                         from: previewSubnode.position,
-                        to: CGPoint(x: previewSubnode.position.x - 20, y: previewSubnode.position.y),
+                        to: CGPoint(x: leftMenuInset.isZero ? previewSubnode.position.x - 20 : leftMenuInset + previewSubnode.frame.width / 2.0, y: previewSubnode.position.y),
                         duration: 0.15
                     )
                 }
@@ -1591,12 +1603,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             } else {
                 dismissBin()
             }
+            
+            prevPreviewInputPanelNode.deleteButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: leftMenuInset, y: 0.0), duration: 0.15, removeOnCompletion: false, additive: true)
 
             prevPreviewInputPanelNode.sendButton.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
             prevPreviewInputPanelNode.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
             
-            actionButtons.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-            actionButtons.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+            self.actionButtons.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+            self.actionButtons.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+            
+            if hasMenuButton {
+                self.menuButton.alpha = 1.0
+                self.menuButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                self.menuButton.transform = CATransform3DIdentity
+                self.menuButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+            }
             
             prevPreviewInputPanelNode.sendButton.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
             prevPreviewInputPanelNode.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)

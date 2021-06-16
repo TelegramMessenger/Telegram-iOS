@@ -87,6 +87,10 @@ public final class DeviceAccess {
         return AVAudioSession.sharedInstance().recordPermission == .granted
     }
     
+    public static func isCameraAccessAuthorized() -> Bool {
+        return PGCamera.cameraAuthorizationStatus() == PGCameraAuthorizationStatusAuthorized
+    }
+    
     public static func authorizationStatus(applicationInForeground: Signal<Bool, NoError>? = nil, siriAuthorization: (() -> AccessType)? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
         switch subject {
             case .notifications:

@@ -224,7 +224,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: width - rightInset - 90.0 - 4.0, y: 15.0), size: CGSize(width: 35.0, height: 20.0)))
         
         prevInputPanelNode?.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
-        if let prevTextInputPanelNode = prevInputPanelNode as? ChatTextInputPanelNode {
+        if let prevTextInputPanelNode = self.prevInputPanelNode as? ChatTextInputPanelNode {
             self.prevInputPanelNode = nil
             
             if let audioRecordingDotNode = prevTextInputPanelNode.audioRecordingDotNode {

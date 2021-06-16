@@ -118,7 +118,7 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
     private let shadowNode: ASImageNode
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
-    
+        
     init() {
         self.textNode = TextNode()
         self.commandNode = TextNode()
@@ -151,7 +151,26 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
         self.backgroundNode.addSubnode(self.separatorNode)
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func didLoad() {
+        super.didLoad()
+        
+        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
+        gestureRecognizer.minimumPressDuration = 0.3
+        self.view.addGestureRecognizer(gestureRecognizer)
+    }
+    
+    @objc private func longPressed(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        switch gestureRecognizer.state {
+            case .began:
+                if let item = self.item {
+                    item.commandSelected(item.command, false)
+                }
+            default:
+                break
+        }
+    }
+    
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? CommandMenuChatInputPanelItem {
             let doLayout = self.asyncLayout()
             let merged = (top: previousItem != nil, bottom: nextItem != nil)
