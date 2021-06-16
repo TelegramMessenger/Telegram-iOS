@@ -74,7 +74,7 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
         }
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(backgroundContext.bytesPerRow), backgroundContext.bytes)
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(backgroundContext.bytesPerRow), backgroundContext.bytes)
-        telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(foregroundContext.bytesPerRow), foregroundContext.bytes)
+        telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(foregroundContext.bytesPerRow), backgroundContext.bytes)
         
         backgroundContext.withFlippedContext { context in
             context.setFillColor(UIColor(white: 0.0, alpha: 0.35).cgColor)
