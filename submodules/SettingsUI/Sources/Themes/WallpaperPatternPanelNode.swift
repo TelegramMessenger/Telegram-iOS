@@ -280,6 +280,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     if existingIds.contains(file.file.fileId) {
                         return false
                     } else {
+                        print("slug: \(file.slug)")
                         existingIds.insert(file.file.fileId)
                         return true
                     }
@@ -352,8 +353,10 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         } ?? 80
         
         var selectedFileId: Int64?
+        var selectedSlug: String?
         if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
             selectedFileId = file.id
+            selectedSlug = file.slug
         }
         
         for wallpaper in self.wallpapers {
@@ -368,7 +371,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             var selected = false
-            if case let .file(file) = wallpaper, file.id == selectedFileId {
+            if case let .file(file) = wallpaper, (file.id == selectedFileId || file.slug == selectedSlug) {
                 selected = true
             }
             
