@@ -1571,6 +1571,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
         }
+
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        let replyAlpha: CGFloat = item.controllerInteraction.selectionState == nil ? 1.0 : 0.0
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: replyAlpha)
+        }
+        if let replyBackgroundNode = self.replyBackgroundNode {
+            transition.updateAlpha(node: replyBackgroundNode, alpha: replyAlpha)
+        }
         
         if let selectionState = item.controllerInteraction.selectionState {
             var selected = false

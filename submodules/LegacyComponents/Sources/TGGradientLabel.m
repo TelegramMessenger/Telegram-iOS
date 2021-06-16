@@ -113,7 +113,7 @@
         
         _offscreenContextWidth = offscreenWidth;
         _offscreenContextHeight = offscreenHeight;
-        _offscreenContextStride = ((4 * _offscreenContextWidth + 15) & (~15));
+        _offscreenContextStride = ((4 * _offscreenContextWidth + 31) & (~31));
         _offscreenMemory = malloc(_offscreenContextStride * _offscreenContextHeight);
         
         CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();

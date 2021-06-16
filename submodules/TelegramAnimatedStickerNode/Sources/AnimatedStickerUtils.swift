@@ -136,7 +136,7 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         return
                     }
                     
-                    let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
+                    let bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(size.width))
                     
                     var currentFrame: Int32 = 0
                     

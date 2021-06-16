@@ -614,7 +614,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.data = data
         self.width = width
         self.height = height
-        self.bytesPerRow = (4 * Int(width) + 15) & (~15)
+        self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
         self.currentFrame = 0
         let rawData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         let decompressedData = transformedWithFitzModifier(data: rawData, fitzModifier: fitzModifier)

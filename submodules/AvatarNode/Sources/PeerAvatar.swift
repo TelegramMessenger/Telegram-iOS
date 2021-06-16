@@ -161,7 +161,7 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                             }
                             if shouldBlur {
                                 let imageContextSize = CGSize(width: 64.0, height: 64.0)
-                                let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, premultiplied: true, clear: true)
+                                let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, clear: true)
                                 imageContext.withFlippedContext { c in
                                     c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
                                     
