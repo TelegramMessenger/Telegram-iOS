@@ -21,7 +21,7 @@ protocol LegacyPaintEntity {
 }
 
 private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
-    let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
+    let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     assert(bytesPerRow == calculatedBytesPerRow)
     
     let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in

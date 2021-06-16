@@ -6,7 +6,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import "ASCGImageBuffer.h"
+#import <AsyncDisplayKit/ASCGImageBuffer.h>
 
 #import <sys/mman.h>
 #import <mach/mach_init.h>

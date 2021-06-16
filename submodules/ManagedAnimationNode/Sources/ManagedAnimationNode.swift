@@ -44,7 +44,7 @@ public final class ManagedAnimationState {
                 return nil
             }
             resolvedInstance = instance
-            renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, premultiplied: true, clear: true)
+            renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, clear: true)
         }
         
         self.item = item
