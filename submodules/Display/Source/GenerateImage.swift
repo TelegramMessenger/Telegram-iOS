@@ -422,6 +422,9 @@ public class DrawingContext {
     public let length: Int
     private let imageBuffer: ASCGImageBuffer
     public var bytes: UnsafeMutableRawPointer {
+        if self.hasGeneratedImage {
+            preconditionFailure()
+        }
         return self.imageBuffer.mutableBytes
     }
     private let context: CGContext
@@ -491,9 +494,7 @@ public class DrawingContext {
             return nil
         }
         if self.hasGeneratedImage {
-            #if DEBUG
-            assert(false)
-            #endif
+            preconditionFailure()
             return nil
         }
         self.hasGeneratedImage = true
