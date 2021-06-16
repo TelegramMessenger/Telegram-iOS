@@ -32,7 +32,7 @@
 {
   if (self = [super init]) {
     _length = length;
-    _isVM = (length >= vm_page_size);
+    _isVM = false;//(length >= vm_page_size);
     if (_isVM) {
       _mutableBytes = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, VM_MAKE_TAG(VM_MEMORY_COREGRAPHICS_DATA), 0);
       if (_mutableBytes == MAP_FAILED) {
@@ -43,7 +43,7 @@
     
     // Check the VM flag again because we may have failed above.
     if (!_isVM) {
-      _mutableBytes = calloc(1, length);
+      _mutableBytes = malloc(length);
     }
   }
   return self;
