@@ -1087,6 +1087,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         if let item = self.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
             isEmoji = true
         }
+
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        let replyAlpha: CGFloat = item.controllerInteraction.selectionState == nil ? 1.0 : 0.0
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: replyAlpha)
+        }
+        if let replyBackgroundNode = self.replyBackgroundNode {
+            transition.updateAlpha(node: replyBackgroundNode, alpha: replyAlpha)
+        }
         
         if let selectionState = item.controllerInteraction.selectionState {
             let selected = selectionState.selectedIds.contains(item.message.id)
