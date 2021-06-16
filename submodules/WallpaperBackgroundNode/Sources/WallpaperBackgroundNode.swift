@@ -112,10 +112,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     needsCleanBackground = true
                 }
 
+                var isInvertedGradient = false
                 var hasComplexGradient = false
                 switch wallpaper {
                 case let .file(_, _, _, _, _, _, _, _, settings):
                     hasComplexGradient = settings.colors.count >= 3
+                    if let intensity = settings.intensity, intensity < 0 {
+                        isInvertedGradient = true
+                    }
                 case let .gradient(_, colors, _):
                     hasComplexGradient = colors.count >= 3
                 default:
@@ -124,6 +128,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
                 var needsGradientBackground = false
                 var needsWallpaperBackground = false
+
+                if isInvertedGradient {
+                    switch self.bubbleType {
+                    case .free:
+                        needsCleanBackground = false
+                    case .incoming, .outgoing:
+                        break
+                    }
+                }
 
                 if needsCleanBackground {
                     if hasComplexGradient {
