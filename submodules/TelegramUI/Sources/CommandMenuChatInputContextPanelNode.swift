@@ -197,7 +197,7 @@ final class CommandMenuChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 4.5)
+        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 4.7)
         return max(size.height - minimumItemHeights, 0.0)
     }
     

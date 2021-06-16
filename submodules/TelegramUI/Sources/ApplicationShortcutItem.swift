@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramPresentationData
+import DeviceAccess
 
 enum ApplicationShortcutItemType: String {
     case search
@@ -44,11 +45,17 @@ func applicationShortcutItems(strings: PresentationStrings, otherAccountName: St
             ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil),
             ApplicationShortcutItem(type: .account, title: strings.Shortcut_SwitchAccount, subtitle: otherAccountName)
         ]
-    } else {
+    } else if DeviceAccess.isCameraAccessAuthorized() {
         return [
             ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
             ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage, subtitle: nil),
             ApplicationShortcutItem(type: .camera, title: strings.Camera_Title, subtitle: nil),
+            ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil)
+        ]
+    } else {
+        return [
+            ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
+            ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage, subtitle: nil),
             ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil)
         ]
     }
