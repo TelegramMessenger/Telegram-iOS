@@ -20,6 +20,12 @@ public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallp
         return false
     } else if case .color = wallpaper {
         return false
+    } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper {
+        if isPattern, let intensity = settings.intensity, intensity < 0 {
+            return false
+        } else {
+            return true
+        }
     } else {
         return true
     }

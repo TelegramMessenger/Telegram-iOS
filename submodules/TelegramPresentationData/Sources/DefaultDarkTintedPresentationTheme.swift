@@ -92,7 +92,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         passcode = passcode.withUpdated(backgroundColors: passcode.backgroundColors.withUpdated(topColor: accentColor?.withMultiplied(hue: 1.049, saturation: 0.573, brightness: 0.47), bottomColor: additionalBackgroundColor), buttonColor: mainBackgroundColor)
         rootController = rootController.withUpdated(
             tabBar: rootController.tabBar.withUpdated(
-                backgroundColor: mainBackgroundColor,
+                backgroundColor: mainBackgroundColor?.withAlphaComponent(0.9),
                 separatorColor: mainSeparatorColor,
                 iconColor: mainForegroundColor,
                 selectedIconColor: accentColor,
@@ -105,7 +105,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
                 secondaryTextColor: mainSecondaryColor,
                 controlColor: mainSecondaryColor,
                 accentTextColor: accentColor,
-                blurredBackgroundColor: mainBackgroundColor,
+                blurredBackgroundColor: mainBackgroundColor?.withAlphaComponent(0.9),
                 opaqueBackgroundColor: mainBackgroundColor,
                 separatorColor: mainSeparatorColor,
                 segmentedBackgroundColor: mainInputColor,
@@ -270,6 +270,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         highlightedIncomingBubbleColor = accentColor?.withMultiplied(hue: 1.03, saturation: 0.463, brightness: 0.29)
         highlightedOutgoingBubbleColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.019, saturation: 0.609, brightness: 0.63)
     }
+
+    let incomingFillColor = mainBackgroundColor?.withMultipliedAlpha(0.9)
         
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
@@ -277,14 +279,14 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
             incoming: chat.message.incoming.withUpdated(
                 bubble: chat.message.incoming.bubble.withUpdated(
                     withWallpaper: chat.message.outgoing.bubble.withWallpaper.withUpdated(
-                        fill: mainBackgroundColor,
-                        gradientFill: mainBackgroundColor,
+                        fill: incomingFillColor,
+                        gradientFill: incomingFillColor,
                         highlightedFill: highlightedIncomingBubbleColor,
                         stroke: mainBackgroundColor
                     ),
                     withoutWallpaper: chat.message.outgoing.bubble.withoutWallpaper.withUpdated(
-                        fill: mainBackgroundColor,
-                        gradientFill: mainBackgroundColor,
+                        fill: incomingFillColor,
+                        gradientFill: incomingFillColor,
                         highlightedFill: highlightedIncomingBubbleColor,
                         stroke: mainBackgroundColor
                     )
@@ -385,7 +387,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
             unreadBarStrokeColor: mainBackgroundColor
         ),
         inputPanel: chat.inputPanel.withUpdated(
-            panelBackgroundColor: mainBackgroundColor,
+            panelBackgroundColor: mainBackgroundColor?.withAlphaComponent(0.9),
             panelSeparatorColor: mainSeparatorColor,
             panelControlAccentColor: accentColor,
             panelControlColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
@@ -420,7 +422,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
             buttonHighlightedStrokeColor: accentColor?.withMultiplied(hue: 1.019, saturation: 0.39, brightness: 0.07)
         ),
         historyNavigation: chat.historyNavigation.withUpdated(
-            fillColor: mainBackgroundColor,
+            fillColor: mainBackgroundColor?.withAlphaComponent(0.9),
             strokeColor: mainSeparatorColor,
             foregroundColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
             badgeBackgroundColor: accentColor,
@@ -509,7 +511,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         secondaryTextColor: mainSecondaryColor,
         controlColor: mainSecondaryColor,
         accentTextColor: accentColor,
-        blurredBackgroundColor: mainBackgroundColor,
+        blurredBackgroundColor: mainBackgroundColor.withAlphaComponent(0.9),
         opaqueBackgroundColor: mainBackgroundColor,
         separatorColor: mainSeparatorColor,
         badgeBackgroundColor: UIColor(rgb: 0xef5b5b),
@@ -665,9 +667,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     )
     
     let buttonStrokeColor = accentColor.withMultiplied(hue: 1.014, saturation: 0.56, brightness: 0.64).withAlphaComponent(0.15)
+    let incomingFillColor = mainBackgroundColor.withMultipliedAlpha(0.9)
     
     let message = PresentationThemeChatMessage(
-        incoming: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: mainBackgroundColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: mainBackgroundColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil)), primaryTextColor: .white, secondaryTextColor: mainSecondaryTextColor.withAlphaComponent(0.5), linkTextColor: accentColor, linkHighlightColor: accentColor.withAlphaComponent(0.5), scamColor: UIColor(rgb: 0xff6767), textHighlightColor: UIColor(rgb: 0xf5c038), accentTextColor: accentColor, accentControlColor: accentColor, accentControlDisabledColor: mainSecondaryTextColor.withAlphaComponent(0.5), mediaActiveControlColor: accentColor, mediaInactiveControlColor: accentColor.withAlphaComponent(0.5), mediaControlInnerBackgroundColor: mainBackgroundColor, pendingActivityColor: mainSecondaryTextColor.withAlphaComponent(0.5), fileTitleColor: accentColor, fileDescriptionColor: mainSecondaryTextColor.withAlphaComponent(0.5), fileDurationColor: mainSecondaryTextColor.withAlphaComponent(0.5), mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23), polls: PresentationThemeChatBubblePolls(radioButton: accentColor.withMultiplied(hue: 0.995, saturation: 0.317, brightness: 0.51), radioProgress: accentColor, highlight: accentColor.withAlphaComponent(0.12), separator: mainSeparatorColor, bar: accentColor, barIconForeground: .white, barPositive: UIColor(rgb: 0x00A700), barNegative: UIColor(rgb: 0xFE3824)), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: additionalBackgroundColor.withAlphaComponent(0.5), withoutWallpaper: additionalBackgroundColor.withAlphaComponent(0.5)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: buttonStrokeColor), actionButtonsTextColor: PresentationThemeVariableColor(color: .white), textSelectionColor: accentColor.withAlphaComponent(0.2), textSelectionKnobColor: accentColor),
+        incoming: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: incomingFillColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: incomingFillColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil)), primaryTextColor: .white, secondaryTextColor: mainSecondaryTextColor.withAlphaComponent(0.5), linkTextColor: accentColor, linkHighlightColor: accentColor.withAlphaComponent(0.5), scamColor: UIColor(rgb: 0xff6767), textHighlightColor: UIColor(rgb: 0xf5c038), accentTextColor: accentColor, accentControlColor: accentColor, accentControlDisabledColor: mainSecondaryTextColor.withAlphaComponent(0.5), mediaActiveControlColor: accentColor, mediaInactiveControlColor: accentColor.withAlphaComponent(0.5), mediaControlInnerBackgroundColor: mainBackgroundColor, pendingActivityColor: mainSecondaryTextColor.withAlphaComponent(0.5), fileTitleColor: accentColor, fileDescriptionColor: mainSecondaryTextColor.withAlphaComponent(0.5), fileDurationColor: mainSecondaryTextColor.withAlphaComponent(0.5), mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23), polls: PresentationThemeChatBubblePolls(radioButton: accentColor.withMultiplied(hue: 0.995, saturation: 0.317, brightness: 0.51), radioProgress: accentColor, highlight: accentColor.withAlphaComponent(0.12), separator: mainSeparatorColor, bar: accentColor, barIconForeground: .white, barPositive: UIColor(rgb: 0x00A700), barNegative: UIColor(rgb: 0xFE3824)), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: additionalBackgroundColor.withAlphaComponent(0.5), withoutWallpaper: additionalBackgroundColor.withAlphaComponent(0.5)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: buttonStrokeColor), actionButtonsTextColor: PresentationThemeVariableColor(color: .white), textSelectionColor: accentColor.withAlphaComponent(0.2), textSelectionKnobColor: accentColor),
         outgoing: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, gradientFill: outgoingBubbleFillGradientColor, highlightedFill: highlightedOutgoingBubbleColor, stroke: outgoingBubbleFillColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, gradientFill: outgoingBubbleFillGradientColor, highlightedFill: highlightedOutgoingBubbleColor, stroke: outgoingBubbleFillColor, shadow: nil)), primaryTextColor: outgoingPrimaryTextColor, secondaryTextColor: outgoingSecondaryTextColor, linkTextColor: outgoingLinkTextColor, linkHighlightColor: UIColor.white.withAlphaComponent(0.5), scamColor: outgoingScamColor, textHighlightColor: UIColor(rgb: 0xf5c038), accentTextColor: outgoingPrimaryTextColor, accentControlColor: outgoingPrimaryTextColor, accentControlDisabledColor: mainSecondaryTextColor.withAlphaComponent(0.5), mediaActiveControlColor: outgoingPrimaryTextColor, mediaInactiveControlColor: outgoingSecondaryTextColor, mediaControlInnerBackgroundColor: outgoingBubbleFillColor, pendingActivityColor: outgoingSecondaryTextColor, fileTitleColor: outgoingPrimaryTextColor, fileDescriptionColor: outgoingSecondaryTextColor, fileDurationColor: outgoingSecondaryTextColor, mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.804, brightness: 0.51), polls: PresentationThemeChatBubblePolls(radioButton: outgoingPrimaryTextColor, radioProgress: accentColor.withMultiplied(hue: 0.99, saturation: 0.56, brightness: 1.0), highlight: accentColor.withMultiplied(hue: 0.99, saturation: 0.56, brightness: 1.0).withAlphaComponent(0.12), separator: mainSeparatorColor, bar: outgoingPrimaryTextColor, barIconForeground: .clear, barPositive: outgoingPrimaryTextColor, barNegative: outgoingPrimaryTextColor), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: additionalBackgroundColor.withAlphaComponent(0.5), withoutWallpaper: additionalBackgroundColor.withAlphaComponent(0.5)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: buttonStrokeColor), actionButtonsTextColor: PresentationThemeVariableColor(color: .white), textSelectionColor: UIColor.white.withAlphaComponent(0.2), textSelectionKnobColor: UIColor.white),
         freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: mainBackgroundColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: mainBackgroundColor, highlightedFill: highlightedIncomingBubbleColor, stroke: mainBackgroundColor, shadow: nil)),
         infoPrimaryTextColor: UIColor(rgb: 0xffffff),
@@ -754,7 +757,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     )
 
     let chat = PresentationThemeChat(
-        defaultWallpaper: .color(accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).argb),
+        defaultWallpaper: .file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: "fqv01SQemVIBAAAApND8LDRUhRU", file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 36542425), partialReference: nil, resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 600, height: 800), resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/tgv", size: nil, attributes: []), settings: WallpaperSettings(colors: [0x1b2836, 0x121a22, 0x1b2836, 0x121a22], intensity: 50)),
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,

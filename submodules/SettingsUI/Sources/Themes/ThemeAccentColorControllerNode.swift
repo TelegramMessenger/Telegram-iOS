@@ -619,6 +619,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
              
         let colorPanelCollapsed = self.state.colorPanelCollapsed
+
+        if colorPanelCollapsed != previousState.colorPanelCollapsed {
+            Queue.mainQueue().justDispatch {
+                self.colorPanelNode.view.endEditing(true)
+            }
+        }
         
         if (previousState.patternWallpaper != nil) != (self.state.patternWallpaper != nil) {
             self.patternButtonNode.setSelected(self.state.patternWallpaper != nil, animated: animated)

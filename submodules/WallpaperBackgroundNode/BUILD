@@ -19,6 +19,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/WallpaperResources:WallpaperResources",
+        "//submodules/FastBlur:FastBlur",
     ],
     visibility = [
         "//visibility:public",

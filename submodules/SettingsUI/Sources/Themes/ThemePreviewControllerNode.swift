@@ -202,7 +202,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         self.wallpaperNode.update(wallpaper: self.wallpaper)
         self.wallpaperNode.updateBubbleTheme(bubbleTheme: self.previewTheme, bubbleCorners: self.presentationData.chatBubbleCorners)
-        
+
         self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in
             if let strongSelf = self, strongSelf.blurredNode.supernode != nil {
                 var image = image
@@ -250,14 +250,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if wallpaper.isPattern {
-                    signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                    |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
-                        if let value = value {
-                            return .single(value)
-                        } else {
-                            return .complete()
-                        }
-                    }
+                    signal = .complete()
                 } else {
                     signal = .complete()
                 }

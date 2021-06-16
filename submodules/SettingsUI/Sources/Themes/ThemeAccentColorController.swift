@@ -247,7 +247,7 @@ final class ThemeAccentColorController: ViewController {
                         baseTheme = .classic
                     }
                     
-                    let wallpaper = state.initialWallpaper ?? coloredWallpaper
+                    let wallpaper = coloredWallpaper ?? state.initialWallpaper
                     
                     let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: wallpaper)
                     let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
