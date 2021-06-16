@@ -94,6 +94,9 @@ public func generateGrayscaleAlphaMaskImage(image: UIImage) -> UIImage? {
 }
 
 public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) -> Void, opaque: Bool = false, scale: CGFloat? = nil) -> UIImage? {
+    if size.width.isZero || size.height.isZero {
+        return nil
+    }
     let context = DrawingContext(size: size, scale: scale ?? 0.0, opaque: opaque, clear: false)
     context.withFlippedContext { c in
         contextGenerator(context.size, c)
@@ -102,6 +105,9 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
 }
 
 public func generateImage(_ size: CGSize, opaque: Bool = false, scale: CGFloat? = nil, rotatedContext: (CGSize, CGContext) -> Void) -> UIImage? {
+    if size.width.isZero || size.height.isZero {
+        return nil
+    }
     let context = DrawingContext(size: size, scale: scale ?? 0.0, opaque: opaque, clear: false)
     context.withContext { c in
         rotatedContext(context.size, c)
