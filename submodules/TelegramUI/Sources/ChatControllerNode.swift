@@ -371,7 +371,29 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: chatPresentationInterfaceState.theme, bubbleCorners: chatPresentationInterfaceState.bubbleCorners)
 
-        self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+        var backgroundColors: [UInt32] = []
+        switch chatPresentationInterfaceState.chatWallpaper {
+        case let .file(_, _, _, _, isPattern, _, _, _, settings):
+            if isPattern {
+                backgroundColors = settings.colors
+            }
+        case let .gradient(_, colors, _):
+            backgroundColors = colors
+        case let .color(color):
+            backgroundColors = [color]
+        default:
+            break
+        }
+        if !backgroundColors.isEmpty {
+            let averageColor = UIColor.average(of: backgroundColors.map(UIColor.init(rgb:)))
+            if averageColor.hsb.b >= 0.3 {
+                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
+            } else {
+                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
+            }
+        } else {
+            self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+        }
         self.historyNode.enableExtractedBackgrounds = true
     
         self.addSubnode(self.backgroundNode)
