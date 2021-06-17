@@ -203,7 +203,6 @@ public extension UIColor {
     
     func blitOver(_ other: UIColor, alpha: CGFloat) -> UIColor {
         let alpha = min(1.0, max(0.0, alpha))
-        let oneMinusAlpha = 1.0 - alpha
         
         var r1: CGFloat = 0.0
         var r2: CGFloat = 0.0

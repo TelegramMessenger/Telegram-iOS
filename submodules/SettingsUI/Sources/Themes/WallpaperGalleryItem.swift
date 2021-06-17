@@ -596,6 +596,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
             self.imageNode.imageUpdated = { [weak self] image in
                 if let strongSelf = self {
+                    if image != nil {
+                        strongSelf._ready.set(.single(Void()))
+                    }
                     var image = isBlurrable ? image : nil
                     if let imageToScale = image {
                         let actualSize = CGSize(width: imageToScale.size.width * imageToScale.scale, height: imageToScale.size.height * imageToScale.scale)

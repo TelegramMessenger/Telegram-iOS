@@ -547,7 +547,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
         self.frame = frame
-        self.updateAbsoluteRect(frame, within: containerSize)
+        if frame.maxY < 0.0 || frame.minY > containerSize.height {
+        } else {
+            self.updateAbsoluteRect(frame, within: containerSize)
+        }
         if let extractedBackgroundNode = self.extractedBackgroundNode {
             extractedBackgroundNode.frame = frame.offsetBy(dx: 0.0, dy: -self.insets.top)
         }

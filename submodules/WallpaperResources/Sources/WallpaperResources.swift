@@ -391,7 +391,7 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 let fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[smallestIndex].reference)
                 let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[largestIndex].reference)
                 
-                let thumbnailData = Signal<Data?, NoError> { subscriber in
+                let accountThumbnailData = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
                     let thumbnailDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
@@ -407,8 +407,37 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                         thumbnailDisposable.dispose()
                     }
                 }
+
+                let sharedThumbnailData = Signal<Data?, NoError> { subscriber in
+                    let thumbnailDisposable = accountManager.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
+                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+
+                    return ActionDisposable {
+                        thumbnailDisposable.dispose()
+                    }
+                }
+
+                let thumbnailData = combineLatest(accountThumbnailData, sharedThumbnailData)
+                |> map { thumbnailData, sharedThumbnailData -> Data? in
+                    return thumbnailData ?? sharedThumbnailData
+                }
+                |> distinctUntilChanged(isEqual: { lhs, rhs in
+                    if lhs == nil && rhs == nil {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                |> take(until: { value in
+                    if value != nil {
+                        return SignalTakeAction(passthrough: true, complete: true)
+                    } else {
+                        return SignalTakeAction(passthrough: true, complete: false)
+                    }
+                })
                 
-                let fullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                     let fetchedFullSizeDisposable = fetchedFullSize.start()
                     let fullSizeDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
@@ -424,6 +453,39 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                         fullSizeDisposable.dispose()
                     }
                 }
+
+                let sharedFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                    let fullSizeDisposable = accountManager.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
+                        subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+
+                    return ActionDisposable {
+                        fullSizeDisposable.dispose()
+                    }
+                }
+
+                let fullSizeData = combineLatest(accountFullSizeData, sharedFullSizeData)
+                |> map { accountFullSizeData, sharedFullSizeData -> (Data?, Bool) in
+                    if accountFullSizeData.0 != nil {
+                        return accountFullSizeData
+                    } else {
+                        return sharedFullSizeData
+                    }
+                }
+                |> distinctUntilChanged(isEqual: { lhs, rhs in
+                    if lhs.0 == nil && rhs.0 == nil {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                |> take(until: { value in
+                    if value.0 != nil {
+                        return SignalTakeAction(passthrough: true, complete: true)
+                    } else {
+                        return SignalTakeAction(passthrough: true, complete: false)
+                    }
+                })
                 
                 return thumbnailData |> mapToSignal { thumbnailData in
                     return fullSizeData |> map { (fullSizeData, complete) in
@@ -720,7 +782,7 @@ private func builtinWallpaperData() -> Signal<UIImage, NoError> {
         } |> runOn(Queue.concurrentDefaultQueue())
 }
 
-public func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func settingsBuiltinWallpaperImage(account: Account, thumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return builtinWallpaperData() |> map { fullSizeImage in
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
@@ -738,6 +800,11 @@ public func settingsBuiltinWallpaperImage(account: Account) -> Signal<(Transform
             
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
+                if thumbnail {
+                    c.translateBy(x: fittedRect.midX, y: fittedRect.midY)
+                    c.scaleBy(x: 3.4, y: 3.4)
+                    c.translateBy(x: -fittedRect.midX, y: -fittedRect.midY)
+                }
                 if let fullSizeImage = fullSizeImage.cgImage {
                     c.interpolationQuality = .medium
                     drawImage(context: c, image: fullSizeImage, orientation: .up, in: fittedRect)

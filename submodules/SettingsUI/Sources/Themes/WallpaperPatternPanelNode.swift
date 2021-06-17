@@ -280,7 +280,6 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     if existingIds.contains(file.file.fileId) {
                         return false
                     } else {
-                        print("slug: \(file.slug)")
                         existingIds.insert(file.file.fileId)
                         return true
                     }

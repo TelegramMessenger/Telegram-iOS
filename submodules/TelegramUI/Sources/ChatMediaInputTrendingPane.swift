@@ -338,6 +338,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         openSearch: { [weak self] in
             self?.inputNodeInteraction?.toggleSearch(true, .trending, "")
         })
+        interaction.itemContext.canPlayMedia = true
         
         let isPane = self.isPane
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)

@@ -16,7 +16,11 @@ devnull='> /dev/null 2>&1'
 BUILD_ROOT="_iosbuild"
 CONFIGURE_ARGS="--disable-docs
                 --disable-examples
-                --enable-libyuv
+                --disable-postproc
+                --disable-webm-io
+                --disable-vp9-highbitdepth
+                --disable-vp9-postproc
+                --disable-vp9-temporal-denoising
                 --disable-unit-tests
                 --enable-realtime-only
                 --enable-multi-res-encoding"

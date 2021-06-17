@@ -519,14 +519,28 @@ public class WallpaperGalleryController: ViewController {
                                             let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation)
                                             
                                             var data: Data?
+                                            var thumbnailData: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                                                 data = maybeData
                                             } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                                                 data = maybeData
                                             }
+
+                                            let thumbnailResource = file.file.previewRepresentations.first?.resource
+
+                                            if let resource = thumbnailResource {
+                                                if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                    thumbnailData = maybeData
+                                                } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                    thumbnailData = maybeData
+                                                }
+                                            }
                                             
                                             if let data = data {
                                                 strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                                if let thumbnailResource = thumbnailResource, let thumbnailData = thumbnailData {
+                                                    strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+                                                }
                                                 let _ = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
                                                 |> filter({ $0.complete })
                                                 |> take(1)

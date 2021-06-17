@@ -52,7 +52,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.displayLoading = displayLoading
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
-        self.statusNode = RadialStatusNode(backgroundNodeColor: overlayBackgroundColor)
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.2), enableBlur: true)
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
@@ -117,6 +117,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         } else if case let .color(color) = wallpaper {
             colors = [color]
         }
+        let isBlack = UIColor.average(of: colors.map(UIColor.init(rgb:))).hsb.b <= 0.01
         if colors.count >= 3 {
             if let gradientNode = self.gradientNode {
                 gradientNode.updateColors(colors: colors.map { UIColor(rgb: $0) })
@@ -131,7 +132,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             if intensity < 0.0 {
                 self.imageNode.layer.compositingFilter = nil
             } else {
-                self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                if isBlack {
+                    self.imageNode.layer.compositingFilter = nil
+                } else {
+                    self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                }
             }
             self.backgroundNode.image = nil
         } else {
@@ -143,7 +148,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             if intensity < 0.0 {
                 self.imageNode.layer.compositingFilter = nil
             } else {
-                self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                if isBlack {
+                    self.imageNode.layer.compositingFilter = nil
+                } else {
+                    self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                }
             }
 
             if colors.count >= 2 {
@@ -170,7 +179,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             switch wallpaper {
                 case .builtin:
                     self.imageNode.alpha = 1.0
-                    self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: context.account))
+                    self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: context.account, thumbnail: true))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                     self.isLoadedDisposable.set(nil)
