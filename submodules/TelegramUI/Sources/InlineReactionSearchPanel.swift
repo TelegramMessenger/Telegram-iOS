@@ -39,7 +39,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     var previewedStickerItem: StickerPackItem?
     
-    var updateBackgroundOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    var updateBackgroundOffset: ((CGFloat, Bool, ContainedViewLayoutTransition) -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
     var getControllerInteraction: (() -> ChatControllerInteraction?)?
@@ -175,13 +175,13 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.ignoreScrolling {
             self.updateVisibleItems(synchronous: false)
-            self.updateBackground(transition: .immediate)
+            self.updateBackground(animateIn: false, transition: .immediate)
         }
     }
     
-    private func updateBackground(transition: ContainedViewLayoutTransition) {
+    private func updateBackground(animateIn: Bool, transition: ContainedViewLayoutTransition) {
         if let topInset = self.topInset {
-            self.updateBackgroundOffset?(max(0.0, -self.scrollNode.view.contentOffset.y + topInset), transition)
+            self.updateBackgroundOffset?(max(0.0, -self.scrollNode.view.contentOffset.y + topInset), animateIn, transition)
         }
     }
     
@@ -228,7 +228,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             let currentBackgroundOffset = max(0.0, -self.scrollNode.view.contentOffset.y + topInset)
             if abs(currentBackgroundOffset - previousBackgroundOffset) > .ulpOfOne {
                 transition.animateOffsetAdditive(node: self.scrollNode, offset: currentBackgroundOffset - previousBackgroundOffset)
-                self.updateBackground(transition: transition)
+                self.updateBackground(animateIn: false, transition: transition)
             }
         } else {
             self.animateInOnLayout = true
@@ -247,7 +247,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         self.validLayout = size
         
         if self.animateInOnLayout {
-            self.updateBackgroundOffset?(size.height, .immediate)
+            self.updateBackgroundOffset?(size.height, false, .immediate)
         }
         
         var synchronous = false
@@ -265,12 +265,18 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         
         var backgroundTransition = transition
         
+        var animateIn = false
         if self.animateInOnLayout {
+            animateIn = true
             self.animateInOnLayout = false
             backgroundTransition = .animated(duration: 0.3, curve: .spring)
             if let topInset = self.topInset {
                 let currentBackgroundOffset = max(0.0, -self.scrollNode.view.contentOffset.y + topInset)
-                backgroundTransition.animateOffsetAdditive(node: self.scrollNode, offset: currentBackgroundOffset - size.height)
+                let bounds = self.scrollNode.bounds
+                self.scrollNode.bounds = bounds.offsetBy(dx: 0.0, dy: currentBackgroundOffset - size.height)
+                backgroundTransition.animateView {
+                    self.scrollNode.bounds = bounds
+                }
             }
         } else {
             if let previousBackgroundOffset = previousBackgroundOffset, let topInset = self.topInset {
@@ -281,7 +287,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             }
         }
         
-        self.updateBackground(transition: backgroundTransition)
+        self.updateBackground(animateIn: animateIn, transition: backgroundTransition)
     }
     
     private func updateItemsLayout(width: CGFloat) {
@@ -460,12 +466,17 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             return self?.controllerInteraction
         }
         
-        self.stickersNode.updateBackgroundOffset = { [weak self] offset, transition in
+        self.stickersNode.updateBackgroundOffset = { [weak self] offset, animateIn, transition in
             guard let strongSelf = self, let (_, _) = strongSelf.validLayout else {
                 return
             }
-            transition.updateFrame(node: strongSelf.backgroundContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize()), beginWithCurrentState: false)
-            
+            if animateIn {
+                transition.animateView {
+                    strongSelf.backgroundContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize())
+                }
+            } else {
+                transition.updateFrame(node: strongSelf.backgroundContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize()), beginWithCurrentState: false)
+            }
             let cornersTransitionDistance: CGFloat = 20.0
             let cornersTransition: CGFloat = max(0.0, min(1.0, (cornersTransitionDistance - offset) / cornersTransitionDistance))
             transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopLeftContainerNode, scale: 1.0, offset: CGPoint(x: -cornersTransition * backgroundDiameter, y: 0.0), beginWithCurrentState: true)

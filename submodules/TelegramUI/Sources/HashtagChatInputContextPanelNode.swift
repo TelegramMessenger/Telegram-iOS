@@ -190,7 +190,10 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                 }
             })

@@ -72,7 +72,10 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
     
     func animateIn() {
         let position = self.containerNode.layer.position
-        self.containerNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (self.containerNode.bounds.height)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.containerNode.position = CGPoint(x: position.x, y: position.y + (self.containerNode.bounds.height))
+        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+            self.containerNode.position = position
+        }
     }
     
     override func animateOut(completion: @escaping () -> Void) {
