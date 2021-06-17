@@ -162,10 +162,16 @@ private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper,
 }
 
 public func installWallpaper(account: Account, wallpaper: TelegramWallpaper) -> Signal<Void, NoError> {
-    guard case let .file(_, _, _, _, _, _, slug, _, settings) = wallpaper else {
+    guard case let .file(id, accessHash, _, _, _, _, slug, _, settings) = wallpaper else {
         return .complete()
     }
-    return account.network.request(Api.functions.account.installWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), settings: apiWallpaperSettings(settings)))
+    let inputWallpaper: Api.InputWallPaper
+    if id != 0 && accessHash != 0 {
+        inputWallpaper = .inputWallPaper(id: id, accessHash: accessHash)
+    } else {
+        inputWallpaper = .inputWallPaperSlug(slug: slug)
+    }
+    return account.network.request(Api.functions.account.installWallPaper(wallpaper: inputWallpaper, settings: apiWallpaperSettings(settings)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
