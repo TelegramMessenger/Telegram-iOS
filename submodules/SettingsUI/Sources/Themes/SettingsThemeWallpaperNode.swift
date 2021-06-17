@@ -30,6 +30,15 @@ private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal
     })
 }
 
+private let blackColorImage: UIImage? = {
+    let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, opaque: true, clear: false)
+    context.withContext { c in
+        c.setFillColor(UIColor.black.cgColor)
+        c.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))
+    }
+    return context.generateImage()
+}()
+
 final class SettingsThemeWallpaperNode: ASDisplayNode {
     var wallpaper: TelegramWallpaper?
     private var arguments: PatternWallpaperArguments?
@@ -202,6 +211,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let convertedFullRepresentations = [ImageRepresentationWithReference(representation: .init(dimensions: fullDimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource))]
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+                    var placeholder: UIImage?
                     if wallpaper.isPattern {
                         var patternIntensity: CGFloat = 0.5
                         if !file.settings.colors.isEmpty {
@@ -211,6 +221,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         }
 
                         if patternIntensity < 0.0 {
+                            placeholder = blackColorImage
                             self.imageNode.alpha = 1.0
                             self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0 + patternIntensity))
                         } else {

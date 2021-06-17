@@ -279,6 +279,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
     private var gradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: ASImageNode
+    private var isGeneratingPatternImage: Bool = false
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
@@ -520,6 +521,50 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.isSettingUpWallpaper = true
     }
 
+    private func updatePatternPresentation() {
+        guard let wallpaper = self.wallpaper else {
+            return
+        }
+
+        switch wallpaper {
+        case let .file(_, _, _, _, isPattern, _, _, _, settings) where isPattern:
+            let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
+            let patternIsBlack = brightness <= 0.01
+
+            let intensity = CGFloat(settings.intensity ?? 50) / 100.0
+            if intensity < 0 {
+                self.patternImageNode.alpha = 1.0
+                self.patternImageNode.layer.compositingFilter = nil
+            } else {
+                self.patternImageNode.alpha = intensity
+                if patternIsBlack {
+                    self.patternImageNode.layer.compositingFilter = nil
+                } else {
+                    self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
+                }
+            }
+            self.patternImageNode.isHidden = false
+            let invertPattern = intensity < 0
+            if invertPattern {
+                self.backgroundColor = .black
+                let contentAlpha = abs(intensity)
+                self.gradientBackgroundNode?.contentView.alpha = contentAlpha
+                self.contentNode.alpha = contentAlpha
+            } else {
+                self.backgroundColor = nil
+                self.gradientBackgroundNode?.contentView.alpha = 1.0
+                self.contentNode.alpha = 1.0
+            }
+        default:
+            self.patternImageDisposable.set(nil)
+            self.validPatternImage = nil
+            self.patternImageNode.isHidden = true
+            self.backgroundColor = nil
+            self.gradientBackgroundNode?.contentView.alpha = 1.0
+            self.contentNode.alpha = 1.0
+        }
+    }
+
     private func loadPatternForSizeIfNeeded(size: CGSize, transition: ContainedViewLayoutTransition) {
         guard let wallpaper = self.wallpaper else {
             return
@@ -527,14 +572,12 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
         var invertPattern: Bool = false
         var patternIsLight: Bool = false
-        var patternIsBlack: Bool = false
 
         switch wallpaper {
         case let .file(_, _, _, _, isPattern, _, _, file, settings) where isPattern:
             var updated = true
             let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
-            let isLight = brightness > 0.3
-            patternIsBlack = brightness <= 0.01
+            patternIsLight = brightness > 0.3
             if let previousWallpaper = self.validPatternImage?.wallpaper {
                 switch previousWallpaper {
                 case let .file(_, _, _, _, _, _, _, previousFile, _):
@@ -545,7 +588,6 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     break
                 }
             }
-            patternIsLight = isLight
 
             if updated {
                 self.validPatternGeneratedImage = nil
@@ -589,36 +631,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 }
             }
             let intensity = CGFloat(settings.intensity ?? 50) / 100.0
-            if intensity < 0 {
-                self.patternImageNode.alpha = 1.0
-                self.patternImageNode.layer.compositingFilter = nil
-            } else {
-                self.patternImageNode.alpha = intensity
-                if patternIsBlack {
-                    self.patternImageNode.layer.compositingFilter = nil
-                } else {
-                    self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
-                }
-            }
-            self.patternImageNode.isHidden = false
             invertPattern = intensity < 0
-            if invertPattern {
-                self.backgroundColor = .black
-                let contentAlpha = abs(intensity)
-                self.gradientBackgroundNode?.contentView.alpha = contentAlpha
-                self.contentNode.alpha = contentAlpha
-            } else {
-                self.backgroundColor = nil
-                self.gradientBackgroundNode?.contentView.alpha = 1.0
-                self.contentNode.alpha = 1.0
-            }
         default:
-            self.patternImageDisposable.set(nil)
-            self.validPatternImage = nil
-            self.patternImageNode.isHidden = true
-            self.backgroundColor = nil
-            self.gradientBackgroundNode?.contentView.alpha = 1.0
-            self.contentNode.alpha = 1.0
+            self.updatePatternPresentation()
         }
 
         if let validPatternImage = self.validPatternImage {
@@ -643,26 +658,35 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
                 if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
                     self.patternImageNode.image = cachedValidPatternImage.image
+                    self.updatePatternPresentation()
                 } else {
                     let patternArguments = TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false), scale: min(2.0, UIScreenScale))
                     if self.useSharedAnimationPhase || self.patternImageNode.image == nil {
                         if let drawingContext = validPatternImage.generate(patternArguments) {
                             if let image = drawingContext.generateImage() {
                                 self.patternImageNode.image = image
+                                self.updatePatternPresentation()
 
                                 if self.useSharedAnimationPhase {
                                     WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
                                 }
+                            } else {
+                                self.updatePatternPresentation()
                             }
+                        } else {
+                            self.updatePatternPresentation()
                         }
                     } else {
+                        self.isGeneratingPatternImage = true
                         DispatchQueue.global(qos: .userInteractive).async { [weak self] in
                             let image = validPatternImage.generate(patternArguments)?.generateImage()
                             Queue.mainQueue().async {
                                 guard let strongSelf = self else {
                                     return
                                 }
+                                strongSelf.isGeneratingPatternImage = false
                                 strongSelf.patternImageNode.image = image
+                                strongSelf.updatePatternPresentation()
 
                                 if let image = image, strongSelf.useSharedAnimationPhase {
                                     WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
@@ -673,6 +697,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 }
 
                 self._isReady.set(true)
+            } else {
+                if !self.isGeneratingPatternImage {
+                    self.updatePatternPresentation()
+                }
+            }
+        } else {
+            if !self.isGeneratingPatternImage {
+                self.updatePatternPresentation()
             }
         }
 
