@@ -545,7 +545,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var maxVisibleMessageIndexReported: MessageIndex?
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
     
-    var scrolledToIndex: ((MessageHistoryAnchorIndex) -> Void)?
+    var scrolledToIndex: ((MessageHistoryAnchorIndex, Bool) -> Void)?
     var scrolledToSomeIndex: (() -> Void)?
     var beganDragging: (() -> Void)?
     
@@ -1887,7 +1887,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 if let scrolledToIndex = transition.scrolledToIndex {
                     if let strongSelf = self {
-                        strongSelf.scrolledToIndex?(scrolledToIndex)
+                        let isInitial: Bool
+                        if case .Initial = transition.reason {
+                            isInitial = true
+                        } else {
+                            isInitial = false
+                        }
+                        strongSelf.scrolledToIndex?(scrolledToIndex, isInitial)
                     }
                 } else if transition.scrolledToSomeIndex {
                     self?.scrolledToSomeIndex?()

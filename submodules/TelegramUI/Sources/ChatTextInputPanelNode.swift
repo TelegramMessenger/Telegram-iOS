@@ -264,6 +264,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
+    private var leftMenuInset: CGFloat = 0.0
     
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
@@ -1034,7 +1035,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var menuButtonExpanded = false
         if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands {
             hasMenuButton = true
-            if [.none, .inputButtons].contains(interfaceState.inputMode) {
+            
+            var inputHasText = false
+            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
+                inputHasText = true
+            }
+            
+            if [.none, .inputButtons].contains(interfaceState.inputMode) && !inputHasText {
                 menuButtonExpanded = true
             }
         }
@@ -1055,6 +1062,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else {
             leftMenuInset = 0.0
         }
+        self.leftMenuInset = leftMenuInset
         
         let baseWidth = width - leftInset - leftMenuInset - rightInset
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
@@ -1664,7 +1672,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 composeButtonsOffset = 44.0
             }
             
-            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - self.leftMenuInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             var textFieldMinHeight: CGFloat = 33.0
             if let presentationInterfaceState = self.presentationInterfaceState {
@@ -1851,7 +1859,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private func updateTextHeight(animated: Bool) {
         if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
-            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right, maxHeight: maxHeight, metrics: metrics)
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right - self.leftMenuInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
                 self.updateHeight(animated)

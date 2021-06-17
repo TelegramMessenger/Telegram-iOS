@@ -6515,3 +6515,8 @@ Sorry for the inconvenience.";
 
 "Conversation.InputMenu" = "Menu";
 "Conversation.MessageDoesntExist" = "Message doesn't exist";
+
+"Settings.CheckPasswordTitle" = "Is %@ still your number?";
+"Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
+"Settings.KeepPassword" = "Yes, definitely";
+"Settings.TryEnterPassword" = "Not sure, let me try";

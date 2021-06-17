@@ -4526,9 +4526,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toIndex in
+        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toIndex, initial in
             if let strongSelf = self, case let .message(index) = toIndex {
-                if let controllerInteraction = strongSelf.controllerInteraction {
+                if case let .message(messageId, _) = strongSelf.subject, initial, messageId != index.id {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist), elevatedLayout: false, action: { _ in return true }), in: .current)
+                } else if let controllerInteraction = strongSelf.controllerInteraction {
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(index.id) {
                         let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
                         controllerInteraction.highlightedState = highlightedState

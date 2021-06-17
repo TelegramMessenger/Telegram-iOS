@@ -112,6 +112,7 @@ final class PeerInfoState {
 
 final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
+    let suggestPasswordConfirmation: Bool
     let accountsAndPeers: [(Account, Peer, Int32)]
     let activeSessionsContext: ActiveSessionsContext?
     let webSessionsContext: WebSessionsContext?
@@ -130,6 +131,7 @@ final class TelegramGlobalSettings {
     
     init(
         suggestPhoneNumberConfirmation: Bool,
+        suggestPasswordConfirmation: Bool,
         accountsAndPeers: [(Account, Peer, Int32)],
         activeSessionsContext: ActiveSessionsContext?,
         webSessionsContext: WebSessionsContext?,
@@ -147,6 +149,7 @@ final class TelegramGlobalSettings {
         enableQRLogin: Bool
     ) {
         self.suggestPhoneNumberConfirmation = suggestPhoneNumberConfirmation
+        self.suggestPasswordConfirmation = suggestPasswordConfirmation
         self.accountsAndPeers = accountsAndPeers
         self.activeSessionsContext = activeSessionsContext
         self.webSessionsContext = webSessionsContext
@@ -417,7 +420,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 enableQRLogin = true
             }
             
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
+            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), suggestPasswordConfirmation: suggestions.contains(.validatePassword), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
             
             return PeerInfoScreenData(
                 peer: peerView.peers[peerId],
