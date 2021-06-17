@@ -117,6 +117,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         } else if case let .color(color) = wallpaper {
             colors = [color]
         }
+        let isBlack = UIColor.average(of: colors.map(UIColor.init(rgb:))).hsb.b <= 0.01
         if colors.count >= 3 {
             if let gradientNode = self.gradientNode {
                 gradientNode.updateColors(colors: colors.map { UIColor(rgb: $0) })
@@ -131,7 +132,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             if intensity < 0.0 {
                 self.imageNode.layer.compositingFilter = nil
             } else {
-                self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                if isBlack {
+                    self.imageNode.layer.compositingFilter = nil
+                } else {
+                    self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                }
             }
             self.backgroundNode.image = nil
         } else {
@@ -143,7 +148,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             if intensity < 0.0 {
                 self.imageNode.layer.compositingFilter = nil
             } else {
-                self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                if isBlack {
+                    self.imageNode.layer.compositingFilter = nil
+                } else {
+                    self.imageNode.layer.compositingFilter = "softLightBlendMode"
+                }
             }
 
             if colors.count >= 2 {
