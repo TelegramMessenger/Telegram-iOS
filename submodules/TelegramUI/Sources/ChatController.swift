@@ -67,6 +67,10 @@ import Speak
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
 
+#if DEBUG
+import os.signpost
+#endif
+
 extension ChatLocation {
     var peerId: PeerId {
         switch self {
@@ -174,6 +178,37 @@ enum ChatLoadingMessageSubject {
     case generic
     case pinnedMessage
 }
+
+#if DEBUG
+private final class SignpostData {
+    @available(iOSApplicationExtension 12.0, iOS 12.0, *)
+    final class Impl {
+        let signpostLog: OSLog
+        let signpostId: OSSignpostID
+
+        init() {
+            self.signpostLog = OSLog(
+                subsystem: "org.telegram.Telegram-iOS",
+                category: "ChatAppear"
+            )
+            self.signpostId = OSSignpostID(log: self.signpostLog)
+        }
+    }
+
+    private static var _impl: AnyObject? = {
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            return Impl()
+        } else {
+            return nil
+        }
+    }()
+
+    @available(iOSApplicationExtension 12.0, iOS 12.0, *)
+    static var impl: Impl {
+        return self._impl! as! Impl
+    }
+}
+#endif
 
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
@@ -6935,6 +6970,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func viewWillAppear(_ animated: Bool) {
+        #if DEBUG
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            os_signpost(
+                .begin,
+                log: SignpostData.impl.signpostLog,
+                name: "Appear",
+                signpostID: SignpostData.impl.signpostId
+            )
+        }
+        #endif
+
         super.viewWillAppear(animated)
         
         if self.willAppear {
@@ -6958,6 +7004,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func viewDidAppear(_ animated: Bool) {
+        #if DEBUG
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            os_signpost(
+                .end,
+                log: SignpostData.impl.signpostLog,
+                name: "Appear",
+                signpostID: SignpostData.impl.signpostId
+            )
+        }
+        #endif
+
         super.viewDidAppear(animated)
         
         self.didAppear = true
