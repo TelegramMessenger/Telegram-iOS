@@ -720,7 +720,7 @@ private func builtinWallpaperData() -> Signal<UIImage, NoError> {
         } |> runOn(Queue.concurrentDefaultQueue())
 }
 
-public func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func settingsBuiltinWallpaperImage(account: Account, thumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return builtinWallpaperData() |> map { fullSizeImage in
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
@@ -738,6 +738,11 @@ public func settingsBuiltinWallpaperImage(account: Account) -> Signal<(Transform
             
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
+                if thumbnail {
+                    c.translateBy(x: fittedRect.midX, y: fittedRect.midY)
+                    c.scaleBy(x: 3.4, y: 3.4)
+                    c.translateBy(x: -fittedRect.midX, y: -fittedRect.midY)
+                }
                 if let fullSizeImage = fullSizeImage.cgImage {
                     c.interpolationQuality = .medium
                     drawImage(context: c, image: fullSizeImage, orientation: .up, in: fittedRect)
