@@ -330,6 +330,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.patternButtonNode.isSelected = false
                     self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                 }
+            case .asset:
+                self.nativeNode._internalUpdateIsSettingUpWallpaper()
+                self.nativeNode.isHidden = true
+                self.patternButtonNode.isSelected = false
+                self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
             default:
                 self.nativeNode.isHidden = true
                 self.patternButtonNode.isSelected = false

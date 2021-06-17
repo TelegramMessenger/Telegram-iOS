@@ -86,7 +86,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 return
             }
 
-            if let bubbleTheme = backgroundNode.bubbleTheme, let wallpaper = backgroundNode.wallpaper, let bubbleCorners = backgroundNode.bubbleCorners {
+            if let bubbleTheme = backgroundNode.bubbleTheme, let bubbleCorners = backgroundNode.bubbleCorners {
+                let wallpaper = backgroundNode.wallpaper ?? bubbleTheme.chat.defaultWallpaper
+
                 let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
                 var needsCleanBackground = false
                 switch self.bubbleType {
@@ -280,6 +282,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
+    private var isSettingUpWallpaper: Bool = false
 
     private struct CachedValidPatternImage {
         let generate: (TransformImageArguments) -> DrawingContext?
@@ -513,6 +516,10 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
+    public func _internalUpdateIsSettingUpWallpaper() {
+        self.isSettingUpWallpaper = true
+    }
+
     private func loadPatternForSizeIfNeeded(size: CGSize, transition: ContainedViewLayoutTransition) {
         guard let wallpaper = self.wallpaper else {
             return
@@ -711,19 +718,28 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     public func hasBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> Bool {
-        guard let bubbleTheme = self.bubbleTheme, let wallpaper = self.wallpaper, let bubbleCorners = self.bubbleCorners else {
+        guard let bubbleTheme = self.bubbleTheme, let bubbleCorners = self.bubbleCorners else {
+            return false
+        }
+        if self.wallpaper == nil && !self.isSettingUpWallpaper {
             return false
         }
 
         var hasPlainWallpaper = false
-        switch wallpaper {
-        case .color:
-            hasPlainWallpaper = true
-        default:
-            break
+        let graphicsWallpaper: TelegramWallpaper
+        if let wallpaper = self.wallpaper {
+            switch wallpaper {
+            case .color:
+                hasPlainWallpaper = true
+            default:
+                break
+            }
+            graphicsWallpaper = wallpaper
+        } else {
+            graphicsWallpaper = bubbleTheme.chat.defaultWallpaper
         }
 
-        let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+        let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: graphicsWallpaper, bubbleCorners: bubbleCorners)
         switch type {
         case .incoming:
             if graphics.incomingBubbleGradientImage != nil {
