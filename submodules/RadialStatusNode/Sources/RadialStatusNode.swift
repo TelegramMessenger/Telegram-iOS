@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
 
 public enum RadialStatusNodeState: Equatable {
     case none
@@ -190,14 +191,19 @@ public final class RadialStatusNode: ASControlNode {
             self.transitionToBackgroundColor(self.state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, synchronous: false, completion: {})
         }
     }
-    
+
+    private let enableBlur: Bool
+
     public private(set) var state: RadialStatusNodeState = .none
     
-    private var backgroundNode: RadialStatusBackgroundNode?
+    private var backgroundNode: NavigationBackgroundNode?
+    private var currentBackgroundNodeColor: UIColor?
+
     private var contentNode: RadialStatusContentNode?
     private var nextContentNode: RadialStatusContentNode?
     
-    public init(backgroundNodeColor: UIColor) {
+    public init(backgroundNodeColor: UIColor, enableBlur: Bool = false) {
+        self.enableBlur = enableBlur
         self.backgroundNodeColor = backgroundNodeColor
         
         super.init()
@@ -287,7 +293,7 @@ public final class RadialStatusNode: ASControlNode {
     }
     
     private func transitionToBackgroundColor(_ color: UIColor?, previousContentNode: RadialStatusContentNode?, animated: Bool, synchronous: Bool, completion: @escaping () -> Void) {
-        let currentColor = self.backgroundNode?.color
+        let currentColor = self.currentBackgroundNodeColor
         
         var updated = false
         if let color = color, let currentColor = currentColor {
@@ -299,11 +305,16 @@ public final class RadialStatusNode: ASControlNode {
         if updated {
             if let color = color {
                 if let backgroundNode = self.backgroundNode {
-                    backgroundNode.color = color
+                    backgroundNode.updateColor(color: color, transition: .immediate)
+                    self.currentBackgroundNodeColor = color
+
                     completion()
                 } else {
-                    let backgroundNode = RadialStatusBackgroundNode(color: color, synchronous: synchronous)
+                    let backgroundNode = NavigationBackgroundNode(color: color, enableBlur: self.enableBlur)
+                    self.currentBackgroundNodeColor = color
+
                     backgroundNode.frame = self.bounds
+                    backgroundNode.update(size: backgroundNode.bounds.size, cornerRadius: backgroundNode.bounds.size.height / 2.0, transition: .immediate)
                     self.backgroundNode = backgroundNode
                     self.insertSubnode(backgroundNode, at: 0)
                     
@@ -318,6 +329,7 @@ public final class RadialStatusNode: ASControlNode {
                 }
             } else if let backgroundNode = self.backgroundNode {
                 self.backgroundNode = nil
+                self.currentBackgroundNodeColor = nil
                 if animated {
                     backgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                     previousContentNode?.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
@@ -336,7 +348,10 @@ public final class RadialStatusNode: ASControlNode {
     }
     
     override public func layout() {
-        self.backgroundNode?.frame = self.bounds
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.frame = self.bounds
+            backgroundNode.update(size: backgroundNode.bounds.size, cornerRadius: backgroundNode.bounds.size.height / 2.0, transition: .immediate)
+        }
         if let contentNode = self.contentNode {
             contentNode.frame = self.bounds
         }
