@@ -78,7 +78,6 @@ public enum CreateStickerSetError {
     case generic
 }
 
-
 public struct ImportSticker {
     let resource: MediaResource
     let emojis: [String]
@@ -96,7 +95,7 @@ public enum CreateStickerSetStatus {
     case complete(StickerPackCollectionInfo, [ItemCollectionItem])
 }
 
-public func createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
     return account.postbox.loadedPeerWithId(account.peerId)
     |> castError(CreateStickerSetError.self)
     |> mapToSignal { peer -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
@@ -207,5 +206,37 @@ public func createStickerSet(account: Account, title: String, shortName: String,
                 return .single(.progress(normalizedProgress, completeCount, Int32(uploadedStickers.count)))
             }
         }
+    }
+}
+
+func _internal_getStickerSetShortNameSuggestion(account: Account, title: String) -> Signal<String?, NoError> {
+    return account.network.request(Api.functions.stickers.suggestShortName(title: title))
+    |> map (Optional.init)
+    |> `catch` { _ in
+        return .single(nil)
+    }
+    |> map { result in
+        guard let result = result else {
+            return nil
+        }
+        switch result {
+            case let .suggestedShortName(shortName):
+                return shortName
+        }
+    }
+}
+
+func _internal_stickerSetShortNameAvailability(account: Account, shortName: String) -> Signal<AddressNameAvailability, NoError> {
+    return account.network.request(Api.functions.stickers.checkShortName(shortName: shortName))
+    |> map { result -> AddressNameAvailability in
+        switch result {
+            case .boolTrue:
+                return .available
+            case .boolFalse:
+                return .taken
+        }
+    }
+    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+        return .single(.invalid)
     }
 }

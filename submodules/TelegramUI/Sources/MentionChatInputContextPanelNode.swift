@@ -287,4 +287,14 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         let listViewFrame = self.listView.frame
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
+    
+    override var topItemFrame: CGRect? {
+        var topItemFrame: CGRect?
+        self.listView.forEachItemNode { itemNode in
+            if topItemFrame == nil {
+                topItemFrame = itemNode.frame
+            }
+        }
+        return topItemFrame
+    }
 }

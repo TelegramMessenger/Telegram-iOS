@@ -366,4 +366,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             strongSelf.updateInternalResults(mergedResults)
         }))
     }
+    
+    override var topItemFrame: CGRect? {
+        var topItemFrame: CGRect?
+        self.listView.forEachItemNode { itemNode in
+            if topItemFrame == nil {
+                topItemFrame = itemNode.frame
+            }
+        }
+        return topItemFrame
+    }
 }

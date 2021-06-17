@@ -621,6 +621,44 @@ public struct upload {
 }
 }
 public extension Api {
+public struct stickers {
+    public enum SuggestedShortName: TypeConstructorDescription {
+        case suggestedShortName(shortName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .suggestedShortName(let shortName):
+                    if boxed {
+                        buffer.appendInt32(-2046910401)
+                    }
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .suggestedShortName(let shortName):
+                return ("suggestedShortName", [("shortName", shortName)])
+    }
+    }
+    
+        public static func parse_suggestedShortName(_ reader: BufferReader) -> SuggestedShortName? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stickers.SuggestedShortName.suggestedShortName(shortName: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+}
+public extension Api {
 public struct storage {
     public enum FileType: TypeConstructorDescription {
         case fileUnknown
@@ -6369,6 +6407,20 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func suggestShortName(title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stickers.SuggestedShortName>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1303364867)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stickers.suggestShortName", parameters: [("title", title)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stickers.SuggestedShortName? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stickers.SuggestedShortName?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stickers.SuggestedShortName
                         }
                         return result
                     })

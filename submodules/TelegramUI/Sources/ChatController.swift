@@ -4927,7 +4927,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                     let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                         if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
                             strongSelf.updateItemNodesSearchTextHighlightStates()
                             strongSelf.chatDisplayNode.ensureInputViewFocused()
                         } else {
@@ -4988,6 +4988,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             updated = updated.updatedInputMode({ _ in
                                 return .text
                             })
+                            updated = updated.updatedShowCommands(false)
                             
                             return updated
                         }, completion: completion)
@@ -4999,7 +5000,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, beginMessageSelection: { [weak self] messageIds, completion in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedSelectedMessages(messageIds) } }, completion: completion)
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedSelectedMessages(messageIds) }.updatedShowCommands(false) }, completion: completion)
                     
                     if let selectionState = strongSelf.presentationInterfaceState.interfaceState.selectionState {
                         let count = selectionState.selectedIds.count
