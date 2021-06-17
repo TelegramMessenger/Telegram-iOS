@@ -411,6 +411,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     }
                 }
             }
+
+            /*if !entries.isEmpty {
+                entries = [entries[0]]
+            }*/
             
             let previous = previousEntries.swap(entries)
             return (preparedThemeGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)

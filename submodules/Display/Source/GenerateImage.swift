@@ -450,6 +450,9 @@ public class DrawingContext {
     }
     
     public init(size: CGSize, scale: CGFloat = 0.0, opaque: Bool = false, clear: Bool = false) {
+        assert(!size.width.isZero && !size.height.isZero)
+        let size: CGSize = CGSize(width: max(1.0, size.width), height: max(1.0, size.height))
+
         let actualScale: CGFloat
         if scale.isZero {
             actualScale = deviceScale

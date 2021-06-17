@@ -362,13 +362,18 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
         
         let size: CGSize?
+        var scaleFromCenter: CGFloat?
         switch mode {
             case .thumbnail:
                 size = largestRepresentation.dimensions.cgSize.fitted(CGSize(width: 640.0, height: 640.0))
+                let factor = smallestRepresentation.dimensions.cgSize.width / largestRepresentation.dimensions.cgSize.width
+                if smallestRepresentation.dimensions.height >= 700 && abs(factor - 1.0) <= .ulpOfOne {
+                    scaleFromCenter = 2.1
+                }
             default:
                 size = nil
         }
-        let maybeFullSize = combineLatest(accountManager.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: false), account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: false))
+        let maybeFullSize = combineLatest(accountManager.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: false), account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: false))
         
         let signal = maybeFullSize
         |> take(1)
@@ -388,12 +393,12 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 
                 let thumbnailData = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
-                    let thumbnailDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start(next: { next in
+                    let thumbnailDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
                         
                         if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                             accountManager.mediaBox.storeResourceData(representations[smallestIndex].representation.resource.id, data: data)
-                            let _ = accountManager.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
+                            let _ = accountManager.mediaBox.cachedResourceRepresentation(representations[smallestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start()
                         }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
@@ -405,12 +410,12 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 
                 let fullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                     let fetchedFullSizeDisposable = fetchedFullSize.start()
-                    let fullSizeDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start(next: { next in
+                    let fullSizeDisposable = account.postbox.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                         
                         if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                             accountManager.mediaBox.storeResourceData(representations[largestIndex].representation.resource.id, data: data)
-                            let _ = accountManager.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
+                            let _ = accountManager.mediaBox.cachedResourceRepresentation(representations[largestIndex].representation.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: scaleFromCenter), complete: false, fetch: true).start()
                         }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
@@ -535,6 +540,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
+
                         if let image = image {
                             var fittedSize = CGSize(width: image.width, height: image.height)
                             if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {

@@ -16,8 +16,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
     
-    public init(context: AccountContext) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
+    public init(context: AccountContext, displayBackground: Bool = false) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, displayBackground: displayBackground)
         
         super.init()
         

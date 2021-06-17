@@ -83,7 +83,7 @@ CGSize aspectFillSize(CGSize size, CGSize bounds) {
 
 @end
 
-UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor) {
+UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor, CGFloat scaleFromCenter) {
     NSDate *startTime = [NSDate date];
     
     NSXMLParser *parser = [[NSXMLParser alloc] initWithData:data];
@@ -104,9 +104,9 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         [xmlString replaceOccurrencesOfString:[NSString stringWithFormat:@"class=\"%@\"", styleName] withString:[NSString stringWithFormat:@"style=\"%@\"", styleValue] options:0 range:NSMakeRange(0, xmlString.length)];
     }
     
-    char *zeroTerminatedData = xmlString.UTF8String;
+    const char *zeroTerminatedData = xmlString.UTF8String;
     
-    NSVGimage *image = nsvgParse(zeroTerminatedData, "px", 96);
+    NSVGimage *image = nsvgParse((char *)zeroTerminatedData, "px", 96);
     if (image == nil || image->width < 1.0f || image->height < 1.0f) {
         return nil;
     }
@@ -128,6 +128,10 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
     
     CGContextScaleCTM(context, scale, scale);
     CGContextTranslateCTM(context, (size.width - drawingSize.width) / 2.0, (size.height - drawingSize.height) / 2.0);
+
+    CGContextTranslateCTM(context, size.width / 2.0f, size.height / 2.0f);
+    CGContextScaleCTM(context, scaleFromCenter, scaleFromCenter);
+    CGContextTranslateCTM(context, -size.width / 2.0f, -size.height / 2.0f);
     
     for (NSVGshape *shape = image->shapes; shape != NULL; shape = shape->next) {
         if (!(shape->flags & NSVG_FLAGS_VISIBLE)) {
@@ -135,7 +139,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         }
         
         if (shape->fill.type != NSVG_PAINT_NONE) {
-            //CGContextSetFillColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetFillColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
 
             bool isFirst = true;
@@ -173,7 +176,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         }
         
         if (shape->stroke.type != NSVG_PAINT_NONE) {
-            //CGContextSetStrokeColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetStrokeColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
             CGContextSetMiterLimit(context, shape->miterLimit);
             
@@ -196,10 +198,10 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
                     CGContextSetLineJoin(context, kCGLineJoinBevel);
                     break;
                 case NSVG_JOIN_MITER:
-                    CGContextSetLineCap(context, kCGLineJoinMiter);
+                    CGContextSetLineJoin(context, kCGLineJoinMiter);
                     break;
                 case NSVG_JOIN_ROUND:
-                    CGContextSetLineCap(context, kCGLineJoinRound);
+                    CGContextSetLineJoin(context, kCGLineJoinRound);
                     break;
                 default:
                     break;

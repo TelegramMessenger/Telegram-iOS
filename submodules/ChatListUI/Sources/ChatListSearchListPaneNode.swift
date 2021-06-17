@@ -1721,7 +1721,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, displayBackground: true)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.close = { [weak self] in
                     if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
