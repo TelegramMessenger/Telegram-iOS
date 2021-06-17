@@ -52,7 +52,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.displayLoading = displayLoading
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
-        self.statusNode = RadialStatusNode(backgroundNodeColor: overlayBackgroundColor, enableBlur: true)
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.2), enableBlur: true)
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false

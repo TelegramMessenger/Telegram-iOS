@@ -145,12 +145,12 @@ final class ThemeGridController: ViewController {
                 })
             }
         }, presentColors: { [weak self] in
-            /*if let strongSelf = self {
+            if let strongSelf = self {
                 let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
-            }*/
+            }
 
-            if let strongSelf = self {
+            /*if let strongSelf = self {
                 let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] sharedData in
@@ -189,7 +189,7 @@ final class ThemeGridController: ViewController {
                     }
                     strongSelf.push(controller)
                 })
-            }
+            }*/
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
                 if empty != strongSelf.isEmpty {
