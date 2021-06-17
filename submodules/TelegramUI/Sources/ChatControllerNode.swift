@@ -1911,7 +1911,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func frameForVisibleArea() -> CGRect {
-        let rect = CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
+        var rect = CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
+        if let inputContextPanelNode = self.inputContextPanelNode, let topItemFrame = inputContextPanelNode.topItemFrame {
+            rect.size.height = topItemFrame.minY
+        }
         if let containerNode = self.containerNode {
             return containerNode.view.convert(rect, to: self.view)
         } else {

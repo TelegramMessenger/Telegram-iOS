@@ -653,6 +653,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
     dict[-1231326505] = { return Api.messages.ChatAdminsWithInvites.parse_chatAdminsWithInvites($0) }
     dict[-1729618630] = { return Api.BotInfo.parse_botInfo($0) }
+    dict[-2046910401] = { return Api.stickers.SuggestedShortName.parse_suggestedShortName($0) }
     dict[-1519637954] = { return Api.updates.State.parse_state($0) }
     dict[537022650] = { return Api.User.parse_userEmpty($0) }
     dict[-1820043071] = { return Api.User.parse_user($0) }
@@ -1404,6 +1405,8 @@ public struct Api {
             case let _1 as Api.messages.ChatAdminsWithInvites:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotInfo:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stickers.SuggestedShortName:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.updates.State:
                 _1.serialize(buffer, boxed)

@@ -527,92 +527,100 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.cancel?()
     }
     
+    private func createStickerSet(title: String, shortName: String) {
+        guard let stickerPack = self.stickerPack else {
+            return
+        }
+        
+        var stickers: [ImportSticker] = []
+        for item in self.currentItems {
+            var dimensions = PixelDimensions(width: 512, height: 512)
+            if case let .image(data) = item.stickerItem.content, let image = UIImage(data: data) {
+                dimensions = PixelDimensions(image.size)
+            }
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.stickerItem.data)
+            stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+        }
+        var thumbnailSticker: ImportSticker?
+        if let thumbnail = stickerPack.thumbnail {
+            var dimensions = PixelDimensions(width: 512, height: 512)
+            if case let .image(data) = thumbnail.content, let image = UIImage(data: data) {
+                dimensions = PixelDimensions(image.size)
+            }
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
+            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
+        }
+        
+        self.progress = (0.0, 0, Int32(stickers.count))
+        self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, 0.0), cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
+        if let (layout, navigationBarHeight) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition:  .animated(duration: 0.2, curve: .easeInOut))
+        }
+        
+        self.disposable.set((self.context.engine.stickers.createStickerSet(title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                if case let .complete(info, items) = status {
+                    if let (_, _, count) = strongSelf.progress {
+                        strongSelf.progress = (1.0, count, count)
+                        if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                        }
+                    }
+                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+                    
+                    strongSelf.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
+                    strongSelf.radialCheck.transitionToState(.check(strongSelf.presentationData.theme.list.itemAccentColor), animated: true, synchronous: true, completion: {})
+                    strongSelf.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialStatus.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
+                    strongSelf.radialStatusBackground.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialStatusBackground.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
+                    strongSelf.radialCheck.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.radialCheck.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
+                    })
+                    strongSelf.radialStatusText.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    strongSelf.radialStatusText.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    
+                    strongSelf.cancelButtonNode.isUserInteractionEnabled = false
+                    
+                    Queue.mainQueue().after(1.0) {
+                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
+                        strongSelf.dismiss?()
+                    }
+                } else if case let .progress(progress, count, total) = status {
+                    strongSelf.progress = (CGFloat(progress), count, total)
+                    strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, CGFloat(progress)), cancelEnabled: false, animateRotation: false), animated: true, synchronous: true, completion: {})
+                    if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                    }
+                }
+            }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                
+            }
+        }))
+    }
+    
     @objc func installActionButtonPressed() {
         let controller = importStickerPackTitleController(sharedContext: self.context.sharedContext, account: self.context.account, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: "", doneButtonTitle: nil, value: nil, maxLength: 128, apply: { [weak self] title in
             if let strongSelf = self, let stickerPack = strongSelf.stickerPack, var title = title {
                 title = title.trimmingTrailingSpaces()
-                let shortName = title.replacingOccurrences(of: " ", with: "") + "_by_laktyushin"
-                var stickers: [ImportSticker] = []
-                for item in strongSelf.currentItems {
-                    var dimensions = PixelDimensions(width: 512, height: 512)
-                    if case let .image(data) = item.stickerItem.content, let image = UIImage(data: data) {
-                        dimensions = PixelDimensions(image.size)
-                    }
-                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                    strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.stickerItem.data)
-                    stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
-                }
-                var thumbnailSticker: ImportSticker?
-                if let thumbnail = stickerPack.thumbnail {
-                    var dimensions = PixelDimensions(width: 512, height: 512)
-                    if case let .image(data) = thumbnail.content, let image = UIImage(data: data) {
-                        dimensions = PixelDimensions(image.size)
-                    }
-                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                    strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
-                    thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
-                }
+             
                 
-                strongSelf.progress = (0.0, 0, Int32(stickers.count))
-                strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, 0.0), cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
-                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
-                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition:  .animated(duration: 0.2, curve: .easeInOut))
-                }
-                
-                strongSelf.disposable.set((createStickerSet(account: strongSelf.context.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated)
-                |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
-                        if case let .complete(info, items) = status {
-                            if let (_, _, count) = strongSelf.progress {
-                                strongSelf.progress = (1.0, count, count)
-                                if let (layout, navigationBarHeight) = strongSelf.containerLayout {
-                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                                }
-                            }
-                            let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
-                            
-                            strongSelf.radialCheck.transitionToState(.progress(color: .clear, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
-                            strongSelf.radialCheck.transitionToState(.check(strongSelf.presentationData.theme.list.itemAccentColor), animated: true, synchronous: true, completion: {})
-                            strongSelf.radialStatus.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.radialStatus.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
-                            })
-                            strongSelf.radialStatusBackground.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.radialStatusBackground.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
-                            })
-                            strongSelf.radialCheck.layer.animateScale(from: 1.0, to: 1.05, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, additive: false, completion: { [weak self] _ in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.radialCheck.layer.animateScale(from: 1.05, to: 1.0, duration: 0.07, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, additive: false)
-                            })
-                            strongSelf.radialStatusText.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                            strongSelf.radialStatusText.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                            
-                            strongSelf.cancelButtonNode.isUserInteractionEnabled = false
-                            
-                            Queue.mainQueue().after(1.0) {
-                                strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
-                                strongSelf.dismiss?()
-                            }
-                        } else if case let .progress(progress, count, total) = status {
-                            strongSelf.progress = (CGFloat(progress), count, total)
-                            strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, CGFloat(progress)), cancelEnabled: false, animateRotation: false), animated: true, synchronous: true, completion: {})
-                            if let (layout, navigationBarHeight) = strongSelf.containerLayout {
-                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                            }
-                        }
-                    }
-                }, error: { error in
-                    if let strongSelf = self {
-                        
-                    }
-                }))
             }
         })
         self.present?(controller, nil)

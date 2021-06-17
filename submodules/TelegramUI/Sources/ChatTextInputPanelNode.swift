@@ -257,6 +257,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var searchActivityIndicator: ActivityIndicator?
     var audioRecordingInfoContainerNode: ASDisplayNode?
     var audioRecordingDotNode: AnimationNode?
+    var audioRecordingDotNodeDismissed = false
     var audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode?
     var audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator?
     var animatingBinNode: AnimationNode?
@@ -479,11 +480,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let strongSelf = self {
                 if let strongSelf = self {
                     if highlighted {
-                        strongSelf.menuButton.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.menuButton.alpha = 0.4
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 0.85)
                     } else {
-                        strongSelf.menuButton.alpha = 1.0
-                        strongSelf.menuButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 1.0)
                     }
                 }
             }
@@ -1033,7 +1034,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         var hasMenuButton = false
         var menuButtonExpanded = false
-        if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands {
+        if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands && interfaceState.editMessageState == nil {
             hasMenuButton = true
             
             var inputHasText = false
@@ -1231,6 +1232,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.audioRecordingDotNode?.removeFromSupernode()
                 audioRecordingDotNode = AnimationNode(animation: "BinRed")
                 self.audioRecordingDotNode = audioRecordingDotNode
+                self.audioRecordingDotNodeDismissed = false
                 self.insertSubnode(audioRecordingDotNode, belowSubnode: self.menuButton)
                 self.animatingBinNode?.removeFromSupernode()
                 self.animatingBinNode = nil
@@ -1269,7 +1271,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 audioRecordingCancelIndicator.layer.animateAlpha(from: CGFloat(audioRecordingCancelIndicator.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
             }
         } else {
-            let update = self.actionButtons.micButton.audioRecorder != nil
+            var update = self.actionButtons.micButton.audioRecorder != nil || self.actionButtons.micButton.videoRecordingStatus != nil
             self.actionButtons.micButton.audioRecorder = nil
             self.actionButtons.micButton.videoRecordingStatus = nil
             transition.updateAlpha(layer: self.textInputBackgroundNode.layer, alpha: 1.0)
@@ -1302,7 +1304,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
                 }
                 
-                if update {
+                if update && !self.audioRecordingDotNodeDismissed {
                     audioRecordingDotNode.layer.removeAllAnimations()
                 }
                 
@@ -1311,15 +1313,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         self.audioRecordingDotNode?.removeFromSupernode()
                         self.audioRecordingDotNode = nil
                     } else {
+                        if !self.audioRecordingDotNodeDismissed {
+                            audioRecordingDotNode.layer.removeAllAnimations()
+                        }
                         audioRecordingDotNode.completion = dismissDotNode
                         audioRecordingDotNode.play()
+                        update = true
                     }
                 } else {
                     dismissDotNode()
                 }
                 
-                if update {
+                if update && !self.audioRecordingDotNodeDismissed {
                     self.audioRecordingDotNode?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: leftMenuInset, y: 0.0), duration: 0.15, removeOnCompletion: false, additive: true)
+                    self.audioRecordingDotNodeDismissed = true
                 }
             }
             
@@ -2174,6 +2181,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func menuButtonPressed() {
+        self.hapticFeedback.impact(.light)
         self.interfaceInteraction?.updateShowCommands { value in
             return !value
         }

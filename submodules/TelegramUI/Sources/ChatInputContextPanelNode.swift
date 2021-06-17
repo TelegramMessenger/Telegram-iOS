@@ -34,4 +34,8 @@ class ChatInputContextPanelNode: ASDisplayNode {
     func animateOut(completion: @escaping () -> Void) {
         completion()
     }
+    
+    var topItemFrame: CGRect? {
+        return nil
+    }
 }
