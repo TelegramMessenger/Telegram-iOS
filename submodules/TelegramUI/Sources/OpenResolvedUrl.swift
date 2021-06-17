@@ -481,7 +481,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case .importStickers:
             dismissInput()
-            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerpack"), let stickerPack = ImportStickerPack(data: data), !stickerPack.stickers.isEmpty {
+            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerset"), let stickerPack = ImportStickerPack(data: data), !stickerPack.stickers.isEmpty {
                 for controller in navigationController.overlayControllers {
                     if controller is ImportStickerPackController {
                         controller.dismiss()

@@ -170,10 +170,10 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     @objc public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         self.updateTextNodeText(animated: true)
         self.updateText?(editableTextNode.attributedText?.string ?? "")
+        self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
     }
     
     public func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.placeholderNode.isHidden = true
         self.clearButton.isHidden = false
         
         if self.selectTextOnce {

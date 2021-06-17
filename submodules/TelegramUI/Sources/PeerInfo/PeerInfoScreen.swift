@@ -707,6 +707,8 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
                 interaction.openSettings(.phoneNumber)
             }))
+        } else if settings.suggestPasswordConfirmation {
+            
         }
         
         if !settings.accountsAndPeers.isEmpty {
