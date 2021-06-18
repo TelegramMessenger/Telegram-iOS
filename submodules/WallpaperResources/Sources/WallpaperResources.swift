@@ -603,6 +603,14 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
 
+                        if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                            c.setBlendMode(.copy)
+                            c.setFillColor(UIColor.black.cgColor)
+                            c.fill(CGRect(origin: CGPoint(), size: size))
+                        } else {
+                            c.setBlendMode(.normal)
+                        }
+
                         if let image = image {
                             var fittedSize = CGSize(width: image.width, height: image.height)
                             if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
@@ -614,14 +622,6 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                             fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
 
                             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-
-                            if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
-                                c.setBlendMode(.copy)
-                                c.setFillColor(UIColor.black.cgColor)
-                                c.fill(CGRect(origin: CGPoint(), size: size))
-                            } else {
-                                c.setBlendMode(.normal)
-                            }
 
                             c.interpolationQuality = customArguments.preview ? .low : .medium
                             c.clip(to: fittedRect, mask: image)

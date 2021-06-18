@@ -983,7 +983,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let inputPanelNode = self.inputPanelNode {
                     self.insertSubnode(accessoryPanelNode, belowSubnode: inputPanelNode)
                 } else {
-                    self.insertSubnode(accessoryPanelNode, aboveSubnode: self.navigateButtons)
+                    self.insertSubnode(accessoryPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
                 
                 accessoryPanelNode.dismiss = { [weak self, weak accessoryPanelNode] in
