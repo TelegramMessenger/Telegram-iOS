@@ -284,15 +284,11 @@ private final class MediaPlayerContext {
             }
             let currentTimestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
             var duration: Double = 0.0
-            var videoStatus: MediaTrackFrameBufferStatus?
             if let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer {
-                videoStatus = videoTrackFrameBuffer.status(at: currentTimestamp)
                 duration = max(duration, CMTimeGetSeconds(videoTrackFrameBuffer.duration))
             }
-            
-            var audioStatus: MediaTrackFrameBufferStatus?
+
             if let audioTrackFrameBuffer = loadedState.mediaBuffers.audioBuffer {
-                audioStatus = audioTrackFrameBuffer.status(at: currentTimestamp)
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
             loadedDuration = duration
@@ -447,6 +443,7 @@ private final class MediaPlayerContext {
         
         switch self.state {
             case .empty:
+                self.stoppedAtEnd = false
                 self.lastStatusUpdateTimestamp = nil
                 if self.enableSound {
                     let queue = self.queue
@@ -476,6 +473,7 @@ private final class MediaPlayerContext {
                 }
                 self.seek(timestamp: 0.0, action: .play)
             case let .seeking(frameSource, timestamp, seekState, disposable, _, enableSound):
+                self.stoppedAtEnd = false
                 self.state = .seeking(frameSource: frameSource, timestamp: timestamp, seekState: seekState, disposable: disposable, action: .play, enableSound: enableSound)
                 self.lastStatusUpdateTimestamp = nil
             case let .paused(loadedState):
@@ -499,12 +497,14 @@ private final class MediaPlayerContext {
                     fadeTimer.start()
                 }
                 
-                if loadedState.lostAudioSession {
+                if loadedState.lostAudioSession && !self.stoppedAtEnd {
+                    self.stoppedAtEnd = false
                     let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
                     self.seek(timestamp: timestamp, action: .play)
                 } else {
                     self.lastStatusUpdateTimestamp = nil
                     if self.stoppedAtEnd {
+                        self.stoppedAtEnd = false
                         self.seek(timestamp: 0.0, action: .play)
                     } else {
                         self.state = .playing(loadedState)
@@ -512,10 +512,8 @@ private final class MediaPlayerContext {
                     }
                 }
             case .playing:
-                break
+                self.stoppedAtEnd = false
         }
-        
-        self.stoppedAtEnd = false
     }
     
     fileprivate func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
@@ -962,28 +960,28 @@ private final class MediaPlayerContext {
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         }
-        
-        if performActionAtEndNow && !self.stoppedAtEnd {
-            switch self.actionAtEnd {
-                case let .loop(f):
-                    self.stoppedAtEnd = false
-                    self.seek(timestamp: 0.0, action: .play)
-                    f?()
-                case .stop:
-                    self.stoppedAtEnd = true
-                    self.pause(lostAudioSession: false)
-                case let .action(f):
-                    self.stoppedAtEnd = true
-                    self.pause(lostAudioSession: false)
-                    f()
-                case let .loopDisablingSound(f):
-                    self.stoppedAtEnd = false
-                    self.enableSound = false
-                    self.seek(timestamp: 0.0, action: .play)
-                    f()
+
+        if performActionAtEndNow {
+            if !self.stoppedAtEnd {
+                switch self.actionAtEnd {
+                    case let .loop(f):
+                        self.stoppedAtEnd = false
+                        self.seek(timestamp: 0.0, action: .play)
+                        f?()
+                    case .stop:
+                        self.stoppedAtEnd = true
+                        self.pause(lostAudioSession: false)
+                    case let .action(f):
+                        self.stoppedAtEnd = true
+                        self.pause(lostAudioSession: false)
+                        f()
+                    case let .loopDisablingSound(f):
+                        self.stoppedAtEnd = false
+                        self.enableSound = false
+                        self.seek(timestamp: 0.0, action: .play)
+                        f()
+                }
             }
-        } else {
-            self.stoppedAtEnd = false
         }
     }
 }
