@@ -229,7 +229,9 @@ class ChatMessageBackground: ASDisplayNode {
             }
         } else if transition.isAnimated {
             if let previousContents = self.imageNode.layer.contents, let image = image {
-                self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                if (previousContents as AnyObject) !== image.cgImage {
+                    self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                }
             }
         }
         
