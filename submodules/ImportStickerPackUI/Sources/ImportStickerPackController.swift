@@ -74,7 +74,8 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         self.controllerNode.presentInGlobalOverlay = { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }
-      
+        self.controllerNode.navigationController = self.parentNavigationController
+        
         Queue.mainQueue().after(0.1) {
             self.controllerNode.updateStickerPack(self.stickerPack)
         }
