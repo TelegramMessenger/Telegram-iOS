@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Postbox
 
 public class ImportStickerPack {
     public class Sticker: Equatable {
@@ -15,6 +16,7 @@ public class ImportStickerPack {
         let content: Content
         let emojis: [String]
         let uuid: UUID
+        var resource: MediaResource?
         
         init(content: Content, emojis: [String], uuid: UUID = UUID()) {
             self.content = content

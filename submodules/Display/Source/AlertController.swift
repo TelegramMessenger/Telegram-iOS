@@ -86,11 +86,15 @@ open class AlertController: ViewController, StandalonePresentableController {
     private let contentNode: AlertContentNode
     private let allowInputInset: Bool
     
+    private weak var existingAlertController: AlertController?
+    
+    public var willDismiss: (() -> Void)?
     public var dismissed: (() -> Void)?
     
-    public init(theme: AlertControllerTheme, contentNode: AlertContentNode, allowInputInset: Bool = true) {
+    public init(theme: AlertControllerTheme, contentNode: AlertContentNode, existingAlertController: AlertController? = nil, allowInputInset: Bool = true) {
         self.theme = theme
         self.contentNode = contentNode
+        self.existingAlertController = existingAlertController
         self.allowInputInset = allowInputInset
         
         super.init(navigationBarPresentationData: nil)
@@ -108,8 +112,11 @@ open class AlertController: ViewController, StandalonePresentableController {
         self.displayNode = AlertControllerNode(contentNode: self.contentNode, theme: self.theme, allowInputInset: self.allowInputInset)
         self.displayNodeDidLoad()
         
+        self.controllerNode.existingAlertControllerNode = self.existingAlertController?.controllerNode
+        
         self.controllerNode.dismiss = { [weak self] in
             if let strongSelf = self, strongSelf.contentNode.dismissOnOutsideTap {
+                strongSelf.willDismiss?()
                 strongSelf.controllerNode.animateOut {
                     self?.dismiss()
                 }
@@ -119,6 +126,9 @@ open class AlertController: ViewController, StandalonePresentableController {
     
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        self.existingAlertController?.dismiss(completion: nil)
+        self.existingAlertController = nil
         
         self.controllerNode.animateIn()
     }

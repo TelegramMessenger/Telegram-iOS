@@ -79,9 +79,9 @@ public enum CreateStickerSetError {
 }
 
 public struct ImportSticker {
-    let resource: MediaResource
+    public let resource: MediaResource
     let emojis: [String]
-    let dimensions: PixelDimensions
+    public let dimensions: PixelDimensions
     
     public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions) {
         self.resource = resource
@@ -200,6 +200,9 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                             completeCount += 1
                         case let .progress(progress):
                             totalProgress += progress
+                            if progress == 1.0 {
+                                completeCount += 1
+                            }
                     }
                 }
                 let normalizedProgress = min(1.0, max(0.0, totalProgress / Float(stickers.count)))
@@ -237,6 +240,9 @@ func _internal_stickerSetShortNameAvailability(account: Account, shortName: Stri
         }
     }
     |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+        if error.errorDescription == "SHORT_NAME_OCCUPIED" {
+            return .single(.taken)
+        }
         return .single(.invalid)
     }
 }
