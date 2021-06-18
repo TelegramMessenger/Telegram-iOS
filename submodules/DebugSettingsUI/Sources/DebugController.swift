@@ -824,7 +824,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
     
-    entries.append(.testStickerImport(presentationData.theme))
+//    entries.append(.testStickerImport(presentationData.theme))
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
     entries.append(.sendShareLogs)
