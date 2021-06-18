@@ -732,6 +732,10 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 transition = .animated(duration: 0.4, curve: .spring)
             } else {
                 transition = .immediate
+                
+                self.contentTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.installActionButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             
