@@ -70,8 +70,8 @@ public extension TelegramEngine {
             return _internal_stickerPacksAttachedToMedia(account: self.account, media: media)
         }
         
-        public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
-            return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, isAnimated: isAnimated)
+        public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+            return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, isAnimated: isAnimated, software: software)
         }
         
         public func getStickerSetShortNameSuggestion(title: String) -> Signal<String?, NoError> {

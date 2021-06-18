@@ -95,7 +95,7 @@ public enum CreateStickerSetStatus {
     case complete(StickerPackCollectionInfo, [ItemCollectionItem])
 }
 
-func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
     return account.postbox.loadedPeerWithId(account.peerId)
     |> castError(CreateStickerSetError.self)
     |> mapToSignal { peer -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
@@ -140,7 +140,10 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     flags |= (1 << 2)
                     thumbnailDocument = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))
                 }
-                return account.network.request(Api.functions.stickers.createStickerSet(flags: flags, userId: inputUser, title: title, shortName: shortName, thumb: thumbnailDocument, stickers: inputStickers))
+                if let software = software, !software.isEmpty {
+                    flags |= (1 << 3)
+                }
+                return account.network.request(Api.functions.stickers.createStickerSet(flags: flags, userId: inputUser, title: title, shortName: shortName, thumb: thumbnailDocument, stickers: inputStickers, software: software))
                 |> mapError { error -> CreateStickerSetError in
                     return .generic
                 }

@@ -6316,9 +6316,9 @@ public extension Api {
                 }
             }
             public struct stickers {
-                public static func createStickerSet(flags: Int32, userId: Api.InputUser, title: String, shortName: String, thumb: Api.InputDocument?, stickers: [Api.InputStickerSetItem]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                public static func createStickerSet(flags: Int32, userId: Api.InputUser, title: String, shortName: String, thumb: Api.InputDocument?, stickers: [Api.InputStickerSetItem], software: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-251435136)
+                    buffer.appendInt32(-1876841625)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -6329,7 +6329,8 @@ public extension Api {
                     for item in stickers {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "stickers.createStickerSet", parameters: [("flags", flags), ("userId", userId), ("title", title), ("shortName", shortName), ("thumb", thumb), ("stickers", stickers)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(software!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stickers.createStickerSet", parameters: [("flags", flags), ("userId", userId), ("title", title), ("shortName", shortName), ("thumb", thumb), ("stickers", stickers), ("software", software)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.StickerSet?
                         if let signature = reader.readInt32() {

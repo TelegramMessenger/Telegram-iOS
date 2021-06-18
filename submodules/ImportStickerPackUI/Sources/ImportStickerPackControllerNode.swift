@@ -15,6 +15,7 @@ import AccountContext
 import ContextUI
 import RadialStatusNode
 import UndoUI
+import StickerPackPreviewUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -76,6 +77,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let infoText: ImmediateTextNode
     
     private var interaction: StickerPackPreviewInteraction!
+    
+    weak var navigationController: NavigationController?
     
     var present: ((ViewController, Any?) -> Void)?
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
@@ -583,7 +586,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition:  .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        self.disposable.set((self.context.engine.stickers.createStickerSet(title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated)
+        self.disposable.set((self.context.engine.stickers.createStickerSet(title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated, software: stickerPack.software)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
                 if case let .complete(info, items) = status {
@@ -620,12 +623,19 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     
                     strongSelf.cancelButtonNode.isUserInteractionEnabled = false
                     
+                    let navigationController = strongSelf.navigationController
+                    let context = strongSelf.context
+                    
                     Queue.mainQueue().after(1.0) {
                         var firstItem: StickerPackItem?
                         if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
                             firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: stickerPack.isAnimated ? "application/x-tgsticker": "image/png", size: nil, attributes: [.FileName(fileName: stickerPack.isAnimated ? "sticker.tgs" : "sticker.png"), .ImageSize(size: firstStickerItem.dimensions)]), indexKeys: [])
                         }
-                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
+                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in
+                            (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _, _, _ in
+                            }), in: .window(.root))
+                            return true
+                        }), nil)
                         strongSelf.cancel?()
                     }
                 } else if case let .progress(progress, count, total) = status {
@@ -645,7 +655,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     @objc func installActionButtonPressed() {
         var proceedImpl: ((String, String?) -> Void)?
-        let titleController = importStickerPackTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: "", value: nil, maxLength: 128, apply: { [weak self] title in
+        let titleController = importStickerPackTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 128, apply: { [weak self] title in
             if let strongSelf = self, let title = title {
                 strongSelf.shortNameSuggestionDisposable.set((strongSelf.context.engine.stickers.getStickerSetShortNameSuggestion(title: title)
                 |> deliverOnMainQueue).start(next: { suggestedShortName in

@@ -12,18 +12,28 @@ import UrlEscaping
 import ActivityIndicator
 
 private class TextField: UITextField, UIScrollViewDelegate {
+    let placeholderLabel: ImmediateTextNode
+    var placeholderString: NSAttributedString? {
+        didSet {
+            self.placeholderLabel.attributedText = self.placeholderString
+            self.setNeedsLayout()
+        }
+    }
+    
     fileprivate func updatePrefixWidth(_ prefixWidth: CGFloat) {
         let previousPrefixWidth = self.prefixWidth
+        guard previousPrefixWidth != prefixWidth else {
+            return
+        }
         self.prefixWidth = prefixWidth
-        let leftOffset = prefixWidth
         if let scrollView = self.scrollView {
-            if scrollView.contentInset.left != leftOffset {
-                scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            if scrollView.contentInset.left != prefixWidth {
+                scrollView.contentInset = UIEdgeInsets(top: 0.0, left: prefixWidth, bottom: 0.0, right: 0.0)
             }
-            if leftOffset.isZero {
+            if prefixWidth.isZero {
                 scrollView.contentOffset = CGPoint()
-            } else if self.prefixWidth != previousPrefixWidth {
-                scrollView.contentOffset = CGPoint(x: -leftOffset, y: 0.0)
+            } else if prefixWidth != previousPrefixWidth {
+                scrollView.contentOffset = CGPoint(x: -prefixWidth, y: 0.0)
             }
             self.updatePrefixPosition(transition: .immediate)
         }
@@ -45,10 +55,17 @@ private class TextField: UITextField, UIScrollViewDelegate {
         self.prefixLabel.displaysAsynchronously = false
         self.prefixLabel.maximumNumberOfLines = 1
         self.prefixLabel.truncationMode = .byTruncatingTail
+        
+        self.placeholderLabel = ImmediateTextNode()
+        self.placeholderLabel.isUserInteractionEnabled = false
+        self.placeholderLabel.displaysAsynchronously = false
+        self.placeholderLabel.maximumNumberOfLines = 1
+        self.placeholderLabel.truncationMode = .byTruncatingTail
                 
         super.init(frame: CGRect())
         
         self.addSubnode(self.prefixLabel)
+        self.addSubnode(self.placeholderLabel)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -86,6 +103,17 @@ private class TextField: UITextField, UIScrollViewDelegate {
                 self.updatePrefixPosition()
             }
         }
+    }
+    
+    func selectWhole() {
+        guard let scrollView = self.scrollView else {
+            return
+        }
+//        if scrollView.contentSize.width > scrollView.frame.width - scrollView.contentInset.left {
+//            scrollView.contentOffset = CGPoint(x: -scrollView.contentInset.left + scrollView.contentSize.width - (scrollView.frame.width - scrollView.contentInset.left), y: 0.0)
+//            self.updatePrefixPosition()
+//        }
+        self.selectAll(nil)
     }
     
     var fixAutoScroll: CGPoint?
@@ -164,13 +192,10 @@ private class TextField: UITextField, UIScrollViewDelegate {
             return
         }
                 
-        var placeholderOffset: CGFloat = 0.0
-        if #available(iOS 14.0, *) {
-            placeholderOffset = 1.0
-        } else {
-        }
-        
         let textRect = self.textRect(forBounds: bounds)
+
+        let labelSize = self.placeholderLabel.updateLayout(textRect.size)
+        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: floorToScreenPixels((bounds.height - labelSize.height) / 2.0)), size: labelSize)
         
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
@@ -182,7 +207,6 @@ private class TextField: UITextField, UIScrollViewDelegate {
 private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
-//    private let textInputNode: EditableTextNode
     private let textInputNode: TextField
     private let clearButton: HighlightableButtonNode
     
@@ -199,6 +223,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         }
         set {
             self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
+            self.textInputNode.placeholderLabel.isHidden = !newValue.isEmpty
             if self.textInputNode.isFirstResponder {
                 self.clearButton.isHidden = newValue.isEmpty
             } else {
@@ -234,6 +259,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         self.textInputNode.font = Font.regular(14.0)
         self.textInputNode.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
         self.textInputNode.clipsToBounds = true
+        self.textInputNode.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: theme.actionSheet.secondaryTextColor)
 //        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = keyboardType
@@ -265,7 +291,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
     }
     
     func selectAll() {
-        self.textInputNode.selectAll(nil)
+        self.textInputNode.selectWhole()
     }
     
     func updateTheme(_ theme: PresentationTheme) {
@@ -287,7 +313,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: width - backgroundInsets.left - backgroundInsets.right, height: panelHeight - backgroundInsets.top - backgroundInsets.bottom))
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
-        transition.updateFrame(view: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
+        transition.updateFrame(view: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 22.0, height: backgroundFrame.size.height)))
         
         if let image = self.clearButton.image(for: []) {
             transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 8.0 - image.size.width, y: backgroundFrame.minY + floor((backgroundFrame.size.height - image.size.height) / 2.0)), size: image.size))
@@ -315,7 +341,8 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
     func textFieldDidUpdateText(_ text: String) {
         self.updateTextNodeText(animated: true)
         self.textChanged?(text)
-        self.clearButton.isHidden = (text).isEmpty
+        self.clearButton.isHidden = text.isEmpty
+        self.textInputNode.placeholderLabel.isHidden = !text.isEmpty
     }
         
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
