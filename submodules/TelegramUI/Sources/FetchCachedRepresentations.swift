@@ -168,7 +168,13 @@ private func videoFirstFrameData(account: Account, resource: MediaResource, chun
 private func fetchCachedStickerAJpegRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedStickerAJpegRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = WebP.convert(fromWebP: data) {
+            var image: UIImage?
+            if let webpImage = WebP.convert(fromWebP: data) {
+                image = webpImage
+            } else if let pngImage = UIImage(data: data) {
+                image = pngImage
+            }
+            if let image = image {
                 let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 

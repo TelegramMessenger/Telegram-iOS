@@ -11,12 +11,179 @@ import AccountContext
 import UrlEscaping
 import ActivityIndicator
 
-private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
+private class TextField: UITextField, UIScrollViewDelegate {
+    fileprivate func updatePrefixWidth(_ prefixWidth: CGFloat) {
+        let previousPrefixWidth = self.prefixWidth
+        self.prefixWidth = prefixWidth
+        let leftOffset = prefixWidth
+        if let scrollView = self.scrollView {
+            if scrollView.contentInset.left != leftOffset {
+                scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            }
+            if leftOffset.isZero {
+                scrollView.contentOffset = CGPoint()
+            } else if self.prefixWidth != previousPrefixWidth {
+                scrollView.contentOffset = CGPoint(x: -leftOffset, y: 0.0)
+            }
+            self.updatePrefixPosition(transition: .immediate)
+        }
+    }
+    
+    private var prefixWidth: CGFloat = 0.0
+
+    let prefixLabel: ImmediateTextNode
+    var prefixString: NSAttributedString? {
+        didSet {
+            self.prefixLabel.attributedText = self.prefixString
+            self.setNeedsLayout()
+        }
+    }
+    
+    init() {
+        self.prefixLabel = ImmediateTextNode()
+        self.prefixLabel.isUserInteractionEnabled = false
+        self.prefixLabel.displaysAsynchronously = false
+        self.prefixLabel.maximumNumberOfLines = 1
+        self.prefixLabel.truncationMode = .byTruncatingTail
+                
+        super.init(frame: CGRect())
+        
+        self.addSubnode(self.prefixLabel)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func addSubview(_ view: UIView) {
+        super.addSubview(view)
+        
+        if let scrollView = view as? UIScrollView {
+            scrollView.delegate = self
+        }
+    }
+    
+    private weak var _scrollView: UIScrollView?
+    var scrollView: UIScrollView? {
+        if let scrollView = self._scrollView {
+            return scrollView
+        }
+        for view in self.subviews {
+            if let scrollView = view as? UIScrollView {
+                _scrollView = scrollView
+                return scrollView
+            }
+        }
+        return nil
+    }
+    
+    override func deleteBackward() {
+        super.deleteBackward()
+        
+        if let scrollView = self.scrollView {
+            if scrollView.contentSize.width <= scrollView.frame.width && scrollView.contentOffset.x > -scrollView.contentInset.left {
+                scrollView.contentOffset = CGPoint(x: max(scrollView.contentOffset.x - 5.0, -scrollView.contentInset.left), y: 0.0)
+                self.updatePrefixPosition()
+            }
+        }
+    }
+    
+    var fixAutoScroll: CGPoint?
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let fixAutoScroll = self.fixAutoScroll {
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: true)
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: false)
+            self.fixAutoScroll = nil
+        } else {
+            self.updatePrefixPosition()
+        }
+    }
+    
+    override func becomeFirstResponder() -> Bool {
+        if let contentOffset = self.scrollView?.contentOffset {
+            self.fixAutoScroll = contentOffset
+            Queue.mainQueue().after(0.1) {
+                self.fixAutoScroll = nil
+            }
+        }
+        return super.becomeFirstResponder()
+    }
+    
+    private func updatePrefixPosition(transition: ContainedViewLayoutTransition = .immediate) {
+        if let scrollView = self.scrollView {
+            transition.updateFrame(node: self.prefixLabel, frame: CGRect(origin: CGPoint(x: -scrollView.contentOffset.x - scrollView.contentInset.left, y: self.prefixLabel.frame.minY), size: self.prefixLabel.frame.size))
+        }
+    }
+        
+    override var keyboardAppearance: UIKeyboardAppearance {
+        get {
+            return super.keyboardAppearance
+        }
+        set {
+            let resigning = self.isFirstResponder
+            if resigning {
+                self.resignFirstResponder()
+            }
+            super.keyboardAppearance = newValue
+            if resigning {
+                let _ = self.becomeFirstResponder()
+            }
+        }
+    }
+    
+    override func textRect(forBounds bounds: CGRect) -> CGRect {
+        if bounds.size.width.isZero {
+            return CGRect(origin: CGPoint(), size: CGSize())
+        }
+        var rect = bounds.insetBy(dx: 0.0, dy: 4.0)
+        if #available(iOS 14.0, *) {
+        } else {
+            rect.origin.y += 1.0
+        }
+        if !self.prefixWidth.isZero && self.scrollView?.superview == nil {
+            var offset = self.prefixWidth
+            if let scrollView = self.scrollView {
+                offset = scrollView.contentOffset.x * -1.0
+            }
+            rect.origin.x += offset
+            rect.size.width -= offset
+         }
+        rect.size.width = max(rect.size.width, 10.0)
+        return rect
+    }
+    
+    override func editingRect(forBounds bounds: CGRect) -> CGRect {
+        return self.textRect(forBounds: bounds)
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        let bounds = self.bounds
+        if bounds.size.width.isZero {
+            return
+        }
+                
+        var placeholderOffset: CGFloat = 0.0
+        if #available(iOS 14.0, *) {
+            placeholderOffset = 1.0
+        } else {
+        }
+        
+        let textRect = self.textRect(forBounds: bounds)
+        
+        let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
+        let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
+        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: floorToScreenPixels((bounds.height - prefixSize.height) / 2.0)), size: prefixSize)
+        self.updatePrefixWidth(prefixSize.width)
+    }
+}
+
+private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
-    private let textInputNode: EditableTextNode
-    private let placeholderNode: ASTextNode
-    private let prefixNode: ASTextNode
+//    private let textInputNode: EditableTextNode
+    private let textInputNode: TextField
     private let clearButton: HighlightableButtonNode
     
     var updateHeight: (() -> Void)?
@@ -32,8 +199,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         }
         set {
             self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
-            self.placeholderNode.isHidden = !newValue.isEmpty
-            if self.textInputNode.isFirstResponder() {
+            if self.textInputNode.isFirstResponder {
                 self.clearButton.isHidden = newValue.isEmpty
             } else {
                 self.clearButton.isHidden = true
@@ -41,15 +207,9 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         }
     }
     
-    var placeholder: String = "" {
-        didSet {
-            self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
-        }
-    }
-    
     var prefix: String = "" {
         didSet {
-            self.prefixNode.attributedText = NSAttributedString(string: self.prefix, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
+            self.textInputNode.prefixString = NSAttributedString(string: self.prefix, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
         }
     }
     
@@ -66,33 +226,22 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         self.maxLength = maxLength
         
         self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         
-        self.textInputNode = EditableTextNode()
-        self.textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(14.0), NSAttributedString.Key.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
+        self.textInputNode = TextField()
+        self.textInputNode.font = Font.regular(14.0)
+        self.textInputNode.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
         self.textInputNode.clipsToBounds = true
-        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
+//        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = keyboardType
         self.textInputNode.autocapitalizationType = .sentences
         self.textInputNode.returnKeyType = returnKeyType
         self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
-        
-        self.placeholderNode = ASTextNode()
-        self.placeholderNode.isUserInteractionEnabled = false
-        self.placeholderNode.displaysAsynchronously = false
-        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
-        
-        self.prefixNode = ASTextNode()
-        self.prefixNode.isUserInteractionEnabled = false
-        self.prefixNode.displaysAsynchronously = false
-        self.prefixNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
-        
+                
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
@@ -101,16 +250,22 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         self.clearButton.isHidden = true
         
         super.init()
-        
-        self.textInputNode.delegate = self
-        
+                
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.textInputNode)
-        self.addSubnode(self.placeholderNode)
-        self.addSubnode(self.prefixNode)
         self.addSubnode(self.clearButton)
         
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.textInputNode.delegate = self
+        self.view.insertSubview(self.textInputNode, aboveSubview: self.backgroundNode.view)
+    }
+    
+    func selectAll() {
+        self.textInputNode.selectAll(nil)
     }
     
     func updateTheme(_ theme: PresentationTheme) {
@@ -118,7 +273,6 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         self.textInputNode.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
-        self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
         self.clearButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.actionSheet.inputClearButtonColor), for: [])
     }
@@ -133,13 +287,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: width - backgroundInsets.left - backgroundInsets.right, height: panelHeight - backgroundInsets.top - backgroundInsets.bottom))
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
-        let placeholderSize = self.placeholderNode.measure(backgroundFrame.size)
-        transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
-        
-        let prefixSize = self.prefixNode.measure(backgroundFrame.size)
-        transition.updateFrame(node: self.prefixNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - prefixSize.height) / 2.0)), size: prefixSize))
-        
-        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left + prefixSize.width, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
+        transition.updateFrame(view: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
         
         if let image = self.clearButton.image(for: []) {
             transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 8.0 - image.size.width, y: backgroundFrame.minY + floor((backgroundFrame.size.height - image.size.height) / 2.0)), size: image.size))
@@ -149,51 +297,46 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
     }
     
     func activateInput() {
-        self.textInputNode.becomeFirstResponder()
+        let _ = self.textInputNode.becomeFirstResponder()
     }
     
     func deactivateInput() {
         self.textInputNode.resignFirstResponder()
     }
     
-    @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
-        self.updateTextNodeText(animated: true)
-        self.textChanged?(editableTextNode.textView.text)
-        self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
-        self.clearButton.isHidden = !self.placeholderNode.isHidden
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.clearButton.isHidden = (textField.text ?? "").isEmpty
     }
     
-    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.clearButton.isHidden = (editableTextNode.textView.text ?? "").isEmpty
-    }
-    
-    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+    func textFieldDidEndEditing(_ textField: UITextField) {
         self.clearButton.isHidden = true
     }
     
-    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+    func textFieldDidUpdateText(_ text: String) {
+        self.updateTextNodeText(animated: true)
+        self.textChanged?(text)
+        self.clearButton.isHidden = (text).isEmpty
+    }
+        
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if self.disabled {
             return false
         }
-        let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
+        let updatedText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
         if updatedText.count > maxLength {
             self.textInputNode.layer.addShakeAnimation()
             return false
         }
-        if text == "\n" {
+        if string == "\n" {
             self.complete?()
             return false
         }
+        self.textFieldDidUpdateText(updatedText)
         return true
     }
     
     private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
-        let backgroundInsets = self.backgroundInsets
-        let inputInsets = self.inputInsets
-        
-        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right - 20.0, height: CGFloat.greatestFiniteMagnitude)).height))
-        
-        return min(61.0, max(33.0, unboundTextFieldHeight))
+        return 33.0
     }
     
     private func updateTextNodeText(animated: Bool) {
@@ -208,11 +351,11 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
     }
     
     @objc func clearPressed() {
-        self.placeholderNode.isHidden = false
         self.clearButton.isHidden = true
         
         self.textInputNode.attributedText = nil
         self.updateHeight?()
+        self.textChanged?("")
     }
 }
 
@@ -552,6 +695,9 @@ func importStickerPackTitleController(context: AccountContext, title: String, te
     contentNode.inputFieldNode.textChanged = { [weak contentNode] title in
         contentNode?.actionNodes.last?.actionEnabled = !title.trimmingTrailingSpaces().isEmpty
     }
+    controller.willDismiss = { [weak contentNode] in
+        contentNode?.inputFieldNode.deactivateInput()
+    }
     controller.dismissed = {
         presentationDataDisposable.dispose()
     }
@@ -603,6 +749,11 @@ func importStickerPackShortNameController(context: AccountContext, title: String
     let checkDisposable = MetaDisposable()
     var value = value ?? ""
     contentNode.actionNodes.last?.actionEnabled = !value.isEmpty
+    if !value.isEmpty {
+        Queue.mainQueue().after(0.25) {
+            contentNode.inputFieldNode.selectAll()
+        }
+    }
     contentNode.inputFieldNode.textChanged = { [weak contentNode] value in
         if value.isEmpty {
             checkDisposable.set(nil)
@@ -633,6 +784,9 @@ func importStickerPackShortNameController(context: AccountContext, title: String
                 }
             }))
         }
+    }
+    controller.willDismiss = { [weak contentNode] in
+        contentNode?.inputFieldNode.deactivateInput()
     }
     controller.dismissed = {
         presentationDataDisposable.dispose()
