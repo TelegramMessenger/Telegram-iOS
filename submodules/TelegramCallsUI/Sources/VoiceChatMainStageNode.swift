@@ -1098,7 +1098,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             layoutMode = .fillOrFitToSquare
             bottomInset = 0.0
         } else {
-            layoutMode = isLandscape ? .fillHorizontal : .fillVertical
+            if let (_, _, _, isPresentation, _) = self.currentPeer, isPresentation {
+                layoutMode = .fit
+            } else {
+                layoutMode = isLandscape ? .fillHorizontal : .fillVertical
+            }
         }
         
         if let currentVideoNode = self.currentVideoNode {

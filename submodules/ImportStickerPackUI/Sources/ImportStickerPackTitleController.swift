@@ -195,12 +195,12 @@ private class TextField: UITextField, UIScrollViewDelegate {
         let textRect = self.textRect(forBounds: bounds)
 
         let labelSize = self.placeholderLabel.updateLayout(textRect.size)
-        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: floorToScreenPixels((bounds.height - labelSize.height) / 2.0)), size: labelSize)
+        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX + 3.0, y: floorToScreenPixels((bounds.height - labelSize.height) / 2.0)), size: labelSize)
         
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: floorToScreenPixels((bounds.height - prefixSize.height) / 2.0)), size: prefixSize)
-        self.updatePrefixWidth(prefixSize.width)
+        self.updatePrefixWidth(prefixSize.width + 3.0)
     }
 }
 

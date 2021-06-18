@@ -19,6 +19,7 @@ final class GroupVideoNode: ASDisplayNode {
         case fillOrFitToSquare
         case fillHorizontal
         case fillVertical
+        case fit
     }
     
     let sourceContainerNode: PinchSourceContainerNode
@@ -252,6 +253,8 @@ final class GroupVideoNode: ASDisplayNode {
         let filledToSquareSize = rotatedVideoSize.aspectFilled(CGSize(width: squareSide, height: squareSide))
         
         switch layoutMode {
+            case .fit:
+                rotatedVideoSize = fittedSize
             case .fillOrFitToSquare:
                 rotatedVideoSize = filledToSquareSize
             case .fillHorizontal:
