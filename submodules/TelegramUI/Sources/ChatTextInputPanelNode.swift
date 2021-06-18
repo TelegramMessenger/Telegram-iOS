@@ -901,11 +901,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
             }
+
+            let dismissedButtonMessageUpdated = interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != previousState?.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId
+            let replyMessageUpdated = interfaceState.interfaceState.replyMessageId != previousState?.interfaceState.replyMessageId
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated {
                 self.initializedPlaceholder = true
                 
-                let placeholder: String
+                var placeholder: String
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     if interfaceState.interfaceState.silentPosting {
                         placeholder = interfaceState.strings.Conversation_InputTextSilentBroadcastPlaceholder
@@ -923,6 +926,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                 }
+
+                if let keyboardButtonsMessage = interfaceState.keyboardButtonsMessage, interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != keyboardButtonsMessage.id {
+                    if keyboardButtonsMessage.requestsSetupReply && keyboardButtonsMessage.id != interfaceState.interfaceState.replyMessageId {
+                    } else {
+                        if let placeholderValue = interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder, !placeholderValue.isEmpty {
+                            placeholder = placeholderValue
+                        }
+                    }
+                }
+
                 if self.currentPlaceholder != placeholder || themeUpdated {
                     self.currentPlaceholder = placeholder
                     let baseFontSize = max(minInputFontSize, interfaceState.fontSize.baseDisplaySize)
@@ -1041,9 +1054,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
                 inputHasText = true
             }
-            
-            if [.none, .inputButtons].contains(interfaceState.inputMode) && !inputHasText {
-                menuButtonExpanded = true
+
+            if !inputHasText {
+                switch interfaceState.inputMode {
+                case .none, .inputButtons:
+                    menuButtonExpanded = true
+                default:
+                    break
+                }
             }
         }
         if mediaRecordingState != nil {

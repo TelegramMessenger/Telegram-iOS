@@ -140,7 +140,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     flags |= (1 << 2)
                     thumbnailDocument = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))
                 }
-                return account.network.request(Api.functions.stickers.createStickerSet(flags: flags, userId: inputUser, title: title, shortName: shortName, thumb: thumbnailDocument, stickers: inputStickers))
+                return account.network.request(Api.functions.stickers.createStickerSet(flags: flags, userId: inputUser, title: title, shortName: shortName, thumb: thumbnailDocument, stickers: inputStickers, software: nil))
                 |> mapError { error -> CreateStickerSetError in
                     return .generic
                 }

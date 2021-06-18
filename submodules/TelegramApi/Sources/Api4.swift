@@ -5391,19 +5391,36 @@ public extension Api {
                     })
                 }
             
-                public static func setBotCommands(commands: [Api.BotCommand]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func setBotCommands(scope: Api.BotCommandScope, langCode: String, commands: [Api.BotCommand]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2141370634)
+                    buffer.appendInt32(85399130)
+                    scope.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(commands.count))
                     for item in commands {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "bots.setBotCommands", parameters: [("commands", commands)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "bots.setBotCommands", parameters: [("scope", scope), ("langCode", langCode), ("commands", commands)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getBotCommands(scope: Api.BotCommandScope, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.BotCommand]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-481554986)
+                    scope.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "bots.getBotCommands", parameters: [("scope", scope), ("langCode", langCode)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.BotCommand]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.BotCommand]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
                         }
                         return result
                     })
@@ -6316,9 +6333,9 @@ public extension Api {
                 }
             }
             public struct stickers {
-                public static func createStickerSet(flags: Int32, userId: Api.InputUser, title: String, shortName: String, thumb: Api.InputDocument?, stickers: [Api.InputStickerSetItem]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                public static func createStickerSet(flags: Int32, userId: Api.InputUser, title: String, shortName: String, thumb: Api.InputDocument?, stickers: [Api.InputStickerSetItem], software: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-251435136)
+                    buffer.appendInt32(-1876841625)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -6329,7 +6346,8 @@ public extension Api {
                     for item in stickers {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "stickers.createStickerSet", parameters: [("flags", flags), ("userId", userId), ("title", title), ("shortName", shortName), ("thumb", thumb), ("stickers", stickers)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(software!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stickers.createStickerSet", parameters: [("flags", flags), ("userId", userId), ("title", title), ("shortName", shortName), ("thumb", thumb), ("stickers", stickers), ("software", software)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.StickerSet?
                         if let signature = reader.readInt32() {

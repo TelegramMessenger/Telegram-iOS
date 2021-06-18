@@ -529,8 +529,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-786326563] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyAddedByPhone($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
     dict[-1606526075] = { return Api.ReplyMarkup.parse_replyKeyboardHide($0) }
-    dict[-200242528] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
-    dict[889353612] = { return Api.ReplyMarkup.parse_replyKeyboardMarkup($0) }
+    dict[-2035021048] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
+    dict[-2049074735] = { return Api.ReplyMarkup.parse_replyKeyboardMarkup($0) }
     dict[1218642516] = { return Api.ReplyMarkup.parse_replyInlineMarkup($0) }
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
@@ -584,6 +584,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-58224696] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-275956116] = { return Api.messages.AffectedFoundMessages.parse_affectedFoundMessages($0) }
+    dict[795652779] = { return Api.BotCommandScope.parse_botCommandScopeDefault($0) }
+    dict[1011811544] = { return Api.BotCommandScope.parse_botCommandScopeUsers($0) }
+    dict[1877059713] = { return Api.BotCommandScope.parse_botCommandScopeChats($0) }
+    dict[-1180016534] = { return Api.BotCommandScope.parse_botCommandScopeChatAdmins($0) }
+    dict[-610432643] = { return Api.BotCommandScope.parse_botCommandScopePeer($0) }
+    dict[1071145937] = { return Api.BotCommandScope.parse_botCommandScopePeerAdmins($0) }
+    dict[169026035] = { return Api.BotCommandScope.parse_botCommandScopePeerUser($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-528465642] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
@@ -1345,6 +1352,8 @@ public struct Api {
             case let _1 as Api.StatsDateRangeDays:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedFoundMessages:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BotCommandScope:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WallPaper:
                 _1.serialize(buffer, boxed)
