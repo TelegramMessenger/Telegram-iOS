@@ -9,6 +9,7 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 import UrlEscaping
+import ActivityIndicator
 
 private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
@@ -23,14 +24,14 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
     var textChanged: ((String) -> Void)?
     
     private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
-    private let inputInsets = UIEdgeInsets(top: 5.0, left: 12.0, bottom: 5.0, right: 12.0)
+    private let inputInsets = UIEdgeInsets(top: 8.0, left: 8.0, bottom: 8.0, right: 8.0)
     
     var text: String {
         get {
             return self.textInputNode.attributedText?.string ?? ""
         }
         set {
-            self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputTextColor)
+            self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
             self.placeholderNode.isHidden = !newValue.isEmpty
             if self.textInputNode.isFirstResponder() {
                 self.clearButton.isHidden = newValue.isEmpty
@@ -42,19 +43,25 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
     
     var placeholder: String = "" {
         didSet {
-            self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+            self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         }
     }
     
     var prefix: String = "" {
         didSet {
-            self.prefixNode.attributedText = NSAttributedString(string: self.prefix, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputTextColor)
+            self.prefixNode.attributedText = NSAttributedString(string: self.prefix, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputTextColor)
+        }
+    }
+    
+    var disabled: Bool = false {
+        didSet {
+            self.clearButton.isHidden = true
         }
     }
     
     private let maxLength: Int
     
-    init(theme: PresentationTheme, placeholder: String, maxLength: Int, returnKeyType: UIReturnKeyType = .done) {
+    init(theme: PresentationTheme, placeholder: String, maxLength: Int, keyboardType: UIKeyboardType = .default, returnKeyType: UIReturnKeyType = .done) {
         self.theme = theme
         self.maxLength = maxLength
         
@@ -65,12 +72,12 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         
         self.textInputNode = EditableTextNode()
-        self.textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
+        self.textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(14.0), NSAttributedString.Key.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
         self.textInputNode.clipsToBounds = true
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
-        self.textInputNode.keyboardType = .default
+        self.textInputNode.keyboardType = keyboardType
         self.textInputNode.autocapitalizationType = .sentences
         self.textInputNode.returnKeyType = returnKeyType
         self.textInputNode.autocorrectionType = .default
@@ -79,12 +86,12 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
-        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         
         self.prefixNode = ASTextNode()
         self.prefixNode.isUserInteractionEnabled = false
         self.prefixNode.displaysAsynchronously = false
-        self.prefixNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.prefixNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
@@ -129,7 +136,10 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
         let placeholderSize = self.placeholderNode.measure(backgroundFrame.size)
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
         
-        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
+        let prefixSize = self.prefixNode.measure(backgroundFrame.size)
+        transition.updateFrame(node: self.prefixNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - prefixSize.height) / 2.0)), size: prefixSize))
+        
+        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left + prefixSize.width, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 20.0, height: backgroundFrame.size.height)))
         
         if let image = self.clearButton.image(for: []) {
             transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 8.0 - image.size.width, y: backgroundFrame.minY + floor((backgroundFrame.size.height - image.size.height) / 2.0)), size: image.size))
@@ -162,6 +172,9 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
     }
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if self.disabled {
+            return false
+        }
         let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
         if updatedText.count > maxLength {
             self.textInputNode.layer.addShakeAnimation()
@@ -204,16 +217,63 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, ASEdita
 }
 
 private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
+    enum InfoText {
+        case info
+        case checking
+        case available
+        case taken
+        case generating
+    }
+    private var theme: PresentationTheme
+    private var alertTheme: AlertControllerTheme
     private let strings: PresentationStrings
     private let title: String
     private let text: String
     
+    var infoText: InfoText? {
+        didSet {
+            let text: String
+            let color: UIColor
+            var activity = false
+            if let infoText = self.infoText {
+                switch infoText {
+                    case .info:
+                        text = self.strings.ImportStickerPack_ChooseLinkDescription
+                        color = self.alertTheme.primaryColor
+                    case .checking:
+                        text = self.strings.ImportStickerPack_CheckingLink
+                        color = self.alertTheme.secondaryColor
+                        activity = true
+                    case .available:
+                        text = self.strings.ImportStickerPack_LinkAvailable
+                        color = self.theme.list.freeTextSuccessColor
+                    case .taken:
+                        text = self.strings.ImportStickerPack_LinkTaken
+                        color = self.theme.list.freeTextErrorColor
+                    case .generating:
+                        text = self.strings.ImportStickerPack_GeneratingLink
+                        color = self.alertTheme.secondaryColor
+                        activity = true
+                }
+                self.activityIndicator.isHidden = !activity
+            } else {
+                text = self.text
+                color = self.alertTheme.primaryColor
+            }
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: color)
+            if let size = self.validLayout {
+                _ = self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
+    
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
+    private let activityIndicator: ActivityIndicator
     let inputFieldNode: ImportStickerPackTitleInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [TextAlertContentActionNode]
+    fileprivate let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
     private let disposable = MetaDisposable()
@@ -227,13 +287,15 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
             self.inputFieldNode.complete = self.complete
         }
     }
-    
+        
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int, asciiOnly: Bool = false) {
         self.strings = strings
+        self.alertTheme = theme
+        self.theme = ptheme
         self.title = title
         self.text = text
         
@@ -242,7 +304,13 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 8
         
-        self.inputFieldNode = ImportStickerPackTitleInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength)
+        self.activityIndicator = ActivityIndicator(type: .custom(ptheme.rootController.navigationBar.secondaryTextColor, 20.0, 1.5, false), speed: .slow)
+        self.activityIndicator.isHidden = true
+                
+        self.inputFieldNode = ImportStickerPackTitleInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength, keyboardType: asciiOnly ? .asciiCapable : .default, returnKeyType: asciiOnly ? .done : .next)
+        if asciiOnly {
+            self.inputFieldNode.prefix = "t.me/addstickers/"
+        }
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()
@@ -266,6 +334,7 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.activityIndicator)
         
         self.addSubnode(self.inputFieldNode)
 
@@ -299,6 +368,8 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
     }
 
     override func updateTheme(_ theme: AlertControllerTheme) {
+        self.alertTheme = theme
+        
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
 
@@ -331,8 +402,13 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 4.0
         
+        let activitySize = CGSize(width: 20.0, height: 20.0)
         let textSize = self.textNode.measure(measureSize)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
+        let activityInset: CGFloat = self.activityIndicator.isHidden ? 0.0 : activitySize.width + 5.0
+        let totalWidth = textSize.width + activityInset
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0), y: origin.y - 1.0), size: activitySize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0) + activityInset, y: origin.y), size: textSize))
+        
         origin.y += textSize.height + 6.0 + spacing
         
         let actionButtonHeight: CGFloat = 44.0
@@ -435,14 +511,15 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
     }
 }
 
-func importStickerPackTitleController(sharedContext: SharedAccountContext, account: Account, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, maxLength: Int, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+func importStickerPackTitleController(context: AccountContext, title: String, text: String, placeholder: String, value: String?, maxLength: Int, apply: @escaping (String?) -> Void, cancel: @escaping () -> Void) -> AlertController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: doneButtonTitle ?? presentationData.strings.Common_Done, action: {
+        cancel()
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Next, action: {
         applyImpl?()
     })]
     
@@ -454,18 +531,27 @@ func importStickerPackTitleController(sharedContext: SharedAccountContext, accou
         guard let contentNode = contentNode else {
             return
         }
-        dismissImpl?(true)
-        
-        let previousValue = value ?? ""
         let newValue = contentNode.value.trimmingCharacters(in: .whitespacesAndNewlines)
-        apply(previousValue != newValue || value == nil ? newValue : nil)
+        guard !newValue.isEmpty else {
+            return
+        }
+        
+        contentNode.infoText = .generating
+        contentNode.inputFieldNode.disabled = true
+        contentNode.actionNodes.last?.actionEnabled = false
+        
+        apply(newValue)
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
+    contentNode.actionNodes.last?.actionEnabled = false
+    contentNode.inputFieldNode.textChanged = { [weak contentNode] title in
+        contentNode?.actionNodes.last?.actionEnabled = !title.trimmingTrailingSpaces().isEmpty
+    }
     controller.dismissed = {
         presentationDataDisposable.dispose()
     }
@@ -481,18 +567,18 @@ func importStickerPackTitleController(sharedContext: SharedAccountContext, accou
 }
 
 
-func importStickerPackShortNameController(sharedContext: SharedAccountContext, account: Account, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, maxLength: Int, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+func importStickerPackShortNameController(context: AccountContext, title: String, text: String, placeholder: String, value: String?, maxLength: Int, existingAlertController: AlertController?, apply: @escaping (String?) -> Void) -> AlertController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: doneButtonTitle ?? presentationData.strings.Common_Done, action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ImportStickerPack_Create, action: {
         applyImpl?()
     })]
     
-    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength)
+    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength, asciiOnly: true)
     contentNode.complete = {
         applyImpl?()
     }
@@ -500,18 +586,54 @@ func importStickerPackShortNameController(sharedContext: SharedAccountContext, a
         guard let contentNode = contentNode else {
             return
         }
-        dismissImpl?(true)
-        
-        let previousValue = value ?? ""
         let newValue = contentNode.value.trimmingCharacters(in: .whitespacesAndNewlines)
-        apply(previousValue != newValue || value == nil ? newValue : nil)
+        guard !newValue.isEmpty else {
+            return
+        }
+        
+        dismissImpl?(true)
+        apply(newValue)
     }
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode, existingAlertController: existingAlertController)
+    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
+    let checkDisposable = MetaDisposable()
+    var value = value ?? ""
+    contentNode.actionNodes.last?.actionEnabled = !value.isEmpty
+    contentNode.inputFieldNode.textChanged = { [weak contentNode] value in
+        if value.isEmpty {
+            checkDisposable.set(nil)
+            contentNode?.infoText = .info
+            contentNode?.actionNodes.last?.actionEnabled = false
+        } else {
+            checkDisposable.set((context.engine.stickers.validateStickerSetShortNameInteractive(shortName: value)
+            |> deliverOnMainQueue).start(next: { [weak contentNode] result in
+                switch result {
+                    case .checking:
+                        contentNode?.infoText = .checking
+                        contentNode?.actionNodes.last?.actionEnabled = false
+                    case let .availability(availability):
+                        switch availability {
+                            case .available:
+                                contentNode?.infoText = .available
+                                contentNode?.actionNodes.last?.actionEnabled = true
+                            case .taken:
+                                contentNode?.infoText = .taken
+                                contentNode?.actionNodes.last?.actionEnabled = false
+                            case .invalid:
+                                contentNode?.infoText = .info
+                                contentNode?.actionNodes.last?.actionEnabled = false
+                        }
+                    case .invalidFormat:
+                        contentNode?.infoText = .info
+                        contentNode?.actionNodes.last?.actionEnabled = false
+                }
+            }))
+        }
+    }
     controller.dismissed = {
         presentationDataDisposable.dispose()
     }

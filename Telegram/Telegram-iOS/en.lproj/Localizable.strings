@@ -6507,9 +6507,16 @@ Sorry for the inconvenience.";
 "ImportStickerPack.RemoveFromImport" = "Remove From Import";
 "ImportStickerPack.ChooseName" = "Choose Name";
 "ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
+"ImportStickerPack.GeneratingLink" = "generating link...";
+"ImportStickerPack.CheckingLink" = "checking availability...";
+"ImportStickerPack.ChooseLink" = "Choose Link";
+"ImportStickerPack.ChooseLinkDescription" = "You can use a-z, 0-9 and underscores.";
+"ImportStickerPack.LinkTaken" = "Sorry, this link is alreay taken.";
+"ImportStickerPack.LinkAvailable" = "Link is available.";
 "ImportStickerPack.ImportingStickers" = "Importing Stickers";
 "ImportStickerPack.Of" = "%1$@ of %2$@ Imported";
 "ImportStickerPack.InProgress" = "Please keep this window open\nuntil the import is completed.";
+"ImportStickerPack.Create" = "Create";
 
 "WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
 

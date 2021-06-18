@@ -73,6 +73,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let radialStatusBackground: ASImageNode
     private let radialStatusText: ImmediateTextNode
     private let progressText: ImmediateTextNode
+    private let infoText: ImmediateTextNode
     
     private var interaction: StickerPackPreviewInteraction!
     
@@ -90,6 +91,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private var hapticFeedback: HapticFeedback?
     
     private let disposable = MetaDisposable()
+    private let shortNameSuggestionDisposable = MetaDisposable()
     
     private var progress: (CGFloat, Int32, Int32)?
         
@@ -134,23 +136,37 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.installActionSeparatorNode.displaysAsynchronously = false
         
         self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
+        self.radialStatus.alpha = 0.0
         self.radialCheck = RadialStatusNode(backgroundNodeColor: .clear)
+        self.radialCheck.alpha = 0.0
+        
         self.radialStatusBackground = ASImageNode()
         self.radialStatusBackground.isUserInteractionEnabled = false
         self.radialStatusBackground.displaysAsynchronously = false
         self.radialStatusBackground.image = generateCircleImage(diameter: 180.0, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
+        self.radialStatusBackground.alpha = 0.0
         
         self.radialStatusText = ImmediateTextNode()
         self.radialStatusText.isUserInteractionEnabled = false
         self.radialStatusText.displaysAsynchronously = false
         self.radialStatusText.maximumNumberOfLines = 1
         self.radialStatusText.isAccessibilityElement = false
+        self.radialStatusText.alpha = 0.0
         
         self.progressText = ImmediateTextNode()
         self.progressText.isUserInteractionEnabled = false
         self.progressText.displaysAsynchronously = false
         self.progressText.maximumNumberOfLines = 1
         self.progressText.isAccessibilityElement = false
+        self.progressText.alpha = 0.0
+        
+        self.infoText = ImmediateTextNode()
+        self.infoText.isUserInteractionEnabled = false
+        self.infoText.displaysAsynchronously = false
+        self.infoText.maximumNumberOfLines = 4
+        self.infoText.isAccessibilityElement = false
+        self.infoText.textAlignment = .center
+        self.infoText.alpha = 0.0
         
         super.init()
         
@@ -184,6 +200,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.wrappingScrollNode.addSubnode(self.radialCheck)
         self.wrappingScrollNode.addSubnode(self.radialStatusText)
         self.wrappingScrollNode.addSubnode(self.progressText)
+        self.wrappingScrollNode.addSubnode(self.infoText)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -192,6 +209,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     deinit {
         self.disposable.dispose()
+        self.shortNameSuggestionDisposable.dispose()
     }
     
     override func didLoad() {
@@ -254,18 +272,6 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.presentationData = presentationData
         
         let theme = presentationData.theme
-        let solidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-        
-        let highlightedSolidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-        
         let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
@@ -337,7 +343,6 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         
         var transaction: StickerPackPreviewGridTransaction?
         
-        var itemCount = 0
         var animateIn = false
         
         var forceTitleUpdate = false
@@ -359,12 +364,12 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             }
             self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
             animateIn = true
-            itemCount = self.currentItems.count
 
             if !forceTitleUpdate {
                 transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
             }
         }
+        let itemCount = self.currentItems.count
         
         let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
         let titleFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.size.width - titleSize.width) / 2.0), y: self.contentBackgroundNode.frame.minY + 15.0), size: titleSize)
@@ -406,63 +411,80 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 
         transition.updateAlpha(node: self.contentGridNode, alpha: self.progress == nil ? 1.0 : 0.0)
         
-        if let (progress, count, total) = self.progress {
-            let effectiveProgress = progress
-            
-            let availableHeight: CGFloat = 330.0
-            var radialStatusSize = CGSize(width: 186.0, height: 186.0)
-            var maxIconStatusSpacing: CGFloat = 46.0
-            var maxProgressTextSpacing: CGFloat = 33.0
-            var progressStatusSpacing: CGFloat = 14.0
-            var statusButtonSpacing: CGFloat = 19.0
-            
-            var maxK: CGFloat = availableHeight / (30.0 + maxProgressTextSpacing + 320.0)
-            maxK = max(0.5, min(1.0, maxK))
-            
-            radialStatusSize.width = floor(radialStatusSize.width * maxK)
-            radialStatusSize.height = floor(radialStatusSize.height * maxK)
-            maxIconStatusSpacing = floor(maxIconStatusSpacing * maxK)
-            maxProgressTextSpacing = floor(maxProgressTextSpacing * maxK)
-            progressStatusSpacing = floor(progressStatusSpacing * maxK)
-            statusButtonSpacing = floor(statusButtonSpacing * maxK)
-            
-            var updateRadialBackround = false
-            if let width = self.radialStatusBackground.image?.size.width {
-                if abs(width - radialStatusSize.width) > 0.01 {
-                    updateRadialBackround = true
-                }
-            } else {
+        var effectiveProgress: CGFloat = 0.0
+        var count: Int32 = 0
+        var total: Int32 = 0
+        
+        var hasProgress = false
+        if let (progress, progressCount, progressTotal) = self.progress {
+            effectiveProgress = progress
+            count = progressCount
+            total = progressTotal
+            hasProgress = true
+        }
+           
+        let availableHeight: CGFloat = 330.0
+        var radialStatusSize = CGSize(width: 186.0, height: 186.0)
+        var maxIconStatusSpacing: CGFloat = 46.0
+        var maxProgressTextSpacing: CGFloat = 33.0
+        var progressStatusSpacing: CGFloat = 14.0
+        var statusButtonSpacing: CGFloat = 19.0
+        
+        var maxK: CGFloat = availableHeight / (30.0 + maxProgressTextSpacing + 320.0)
+        maxK = max(0.5, min(1.0, maxK))
+        
+        radialStatusSize.width = floor(radialStatusSize.width * maxK)
+        radialStatusSize.height = floor(radialStatusSize.height * maxK)
+        maxIconStatusSpacing = floor(maxIconStatusSpacing * maxK)
+        maxProgressTextSpacing = floor(maxProgressTextSpacing * maxK)
+        progressStatusSpacing = floor(progressStatusSpacing * maxK)
+        statusButtonSpacing = floor(statusButtonSpacing * maxK)
+        
+        var updateRadialBackround = false
+        if let width = self.radialStatusBackground.image?.size.width {
+            if abs(width - radialStatusSize.width) > 0.01 {
                 updateRadialBackround = true
             }
-            
-            if updateRadialBackround {
-                self.radialStatusBackground.image = generateCircleImage(diameter: radialStatusSize.width, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
-            }
-            
-            let contentOrigin = self.contentBackgroundNode.frame.minY + 72.0
+        } else {
+            updateRadialBackround = true
+        }
         
+        if updateRadialBackround {
+            self.radialStatusBackground.image = generateCircleImage(diameter: radialStatusSize.width, lineWidth: 6.0, color: self.presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.2))
+        }
+        
+        let contentOrigin = self.contentBackgroundNode.frame.minY + 72.0
+        if hasProgress {
             transition.updateAlpha(node: self.radialStatusText, alpha: 1.0)
             transition.updateAlpha(node: self.progressText, alpha: 1.0)
             transition.updateAlpha(node: self.radialStatus, alpha: 1.0)
+            transition.updateAlpha(node: self.infoText, alpha: 1.0)
+            transition.updateAlpha(node: self.radialCheck, alpha: 1.0)
+            transition.updateAlpha(node: self.radialStatusBackground, alpha: 1.0)
             transition.updateAlpha(node: self.installActionButtonNode, alpha: 0.0)
             transition.updateAlpha(node: self.contentSeparatorNode, alpha: 0.0)
             transition.updateAlpha(node: self.installActionSeparatorNode, alpha: 0.0)
-            
-            self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-            
-            self.progressText.attributedText = NSAttributedString(string:  self.presentationData.strings.ImportStickerPack_Of(String(count), String(total)).0, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
-            
-            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOrigin), size: radialStatusSize)
-            let checkSize: CGFloat = 130.0
-            self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
-            self.radialStatusBackground.frame = self.radialStatus.frame
-            
-            self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
-            
-            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
         }
+        
+        self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
+        
+        self.progressText.attributedText = NSAttributedString(string:  self.presentationData.strings.ImportStickerPack_Of(String(count), String(total)).0, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+        
+        self.infoText.attributedText = NSAttributedString(string: self.presentationData.strings.ImportStickerPack_InProgress, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        let infoTextSize = self.infoText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+        
+        transition.updateFrame(node: self.radialStatus, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOrigin), size: radialStatusSize))
+        let checkSize: CGFloat = 130.0
+        transition.updateFrame(node: self.radialCheck, frame: CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+        transition.updateFrame(node: self.radialStatusBackground, frame: self.radialStatus.frame)
+        
+        transition.updateFrame(node: self.radialStatusText, frame: CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize))
+        
+        transition.updateFrame(node: self.progressText, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize))
+        
+        transition.updateFrame(node: self.infoText, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - infoTextSize.width) / 2.0), y: (self.progressText.frame.maxY + maxProgressTextSpacing) + 10.0), size: infoTextSize))
     }
     
     private func gridPresentationLayoutUpdated(_ presentationLayout: GridNodeCurrentPresentationLayout, transition: ContainedViewLayoutTransition) {
@@ -498,7 +520,6 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 backgroundFrame.origin.y -= buttonHeight + 32.0 - backgroundFrame.size.height
                 backgroundFrame.size.height = buttonHeight + 32.0
             }
-            var compactFrame = false
             let backgroundDeltaY = backgroundFrame.minY - self.contentBackgroundNode.frame.minY
             transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
             transition.animatePositionAdditive(node: self.contentGridNode, offset: CGPoint(x: 0.0, y: -backgroundDeltaY))
@@ -509,7 +530,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         
             transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: backgroundFrame.minY + titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: UIScreenPixel)))
             
-            if !compactFrame && CGFloat(0.0).isLessThanOrEqualTo(presentationLayout.contentOffset.y) {
+            if CGFloat(0.0).isLessThanOrEqualTo(presentationLayout.contentOffset.y) {
                 self.contentSeparatorNode.alpha = 1.0
             } else {
                 self.contentSeparatorNode.alpha = 0.0
@@ -524,6 +545,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     }
     
     @objc func cancelButtonPressed() {
+        self.disposable.set(nil)
         self.cancel?()
     }
     
@@ -538,9 +560,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             if case let .image(data) = item.stickerItem.content, let image = UIImage(data: data) {
                 dimensions = PixelDimensions(image.size)
             }
-            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.stickerItem.data)
-            stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+            if let resource = item.stickerItem.resource {
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+            }
         }
         var thumbnailSticker: ImportSticker?
         if let thumbnail = stickerPack.thumbnail {
@@ -552,6 +574,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
             thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
         }
+        
+        let firstStickerItem = thumbnailSticker ?? stickers.first
         
         self.progress = (0.0, 0, Int32(stickers.count))
         self.radialStatus.transitionToState(.progress(color: self.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: max(0.01, 0.0), cancelEnabled: false, animateRotation: false), animated: false, synchronous: true, completion: {})
@@ -597,8 +621,12 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     strongSelf.cancelButtonNode.isUserInteractionEnabled = false
                     
                     Queue.mainQueue().after(1.0) {
-                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
-                        strongSelf.dismiss?()
+                        var firstItem: StickerPackItem?
+                        if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
+                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: stickerPack.isAnimated ? "application/x-tgsticker": "image/png", size: nil, attributes: [.FileName(fileName: stickerPack.isAnimated ? "sticker.tgs" : "sticker.png"), .ImageSize(size: firstStickerItem.dimensions)]), indexKeys: [])
+                        }
+                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in return true}), nil)
+                        strongSelf.cancel?()
                     }
                 } else if case let .progress(progress, count, total) = status {
                     strongSelf.progress = (CGFloat(progress), count, total)
@@ -616,14 +644,31 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     }
     
     @objc func installActionButtonPressed() {
-        let controller = importStickerPackTitleController(sharedContext: self.context.sharedContext, account: self.context.account, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: "", doneButtonTitle: nil, value: nil, maxLength: 128, apply: { [weak self] title in
-            if let strongSelf = self, let stickerPack = strongSelf.stickerPack, var title = title {
-                title = title.trimmingTrailingSpaces()
-             
-                
+        var proceedImpl: ((String, String?) -> Void)?
+        let titleController = importStickerPackTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: "", value: nil, maxLength: 128, apply: { [weak self] title in
+            if let strongSelf = self, let title = title {
+                strongSelf.shortNameSuggestionDisposable.set((strongSelf.context.engine.stickers.getStickerSetShortNameSuggestion(title: title)
+                |> deliverOnMainQueue).start(next: { suggestedShortName in
+                    proceedImpl?(title, suggestedShortName)
+                }))
+            }
+        }, cancel: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.shortNameSuggestionDisposable.set(nil)
             }
         })
-        self.present?(controller, nil)
+        proceedImpl = { [weak titleController, weak self] title, suggestedShortName in
+            guard let strongSelf = self else {
+                return
+            }
+            let controller = importStickerPackShortNameController(context: strongSelf.context, title: strongSelf.presentationData.strings.ImportStickerPack_ChooseLink, text: strongSelf.presentationData.strings.ImportStickerPack_ChooseLinkDescription, placeholder: "", value: suggestedShortName, maxLength: 60, existingAlertController: titleController, apply: { [weak self] shortName in
+                if let shortName = shortName {
+                    self?.createStickerSet(title: title, shortName: shortName)
+                }
+            })
+            strongSelf.present?(controller, nil)
+        }
+        self.present?(titleController, nil)
     }
     
     func animateIn() {
@@ -665,49 +710,19 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.stickerPack = stickerPack
         var updatedItems: [StickerPackPreviewGridEntry] = []
         for item in stickerPack.stickers {
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.data)
+            item.resource = resource
             updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
         }
         self.pendingItems = updatedItems
       
-//        self.interaction.playAnimatedStickers = stickerSettings.loopAnimatedStickers
+        self.interaction.playAnimatedStickers = true
         
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()
         }
         self.installActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
-//        switch stickerPack {
-//            case .none, .fetching:
-//                self.installActionSeparatorNode.alpha = 0.0
-//                self.shareActionSeparatorNode.alpha = 0.0
-//                self.shareActionButtonNode.alpha = 0.0
-//                self.installActionButtonNode.alpha = 0.0
-//                self.installActionButtonNode.setTitle("", with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-//            case let .result(info, _, installed):
-//                if self.stickerPackInitiallyInstalled == nil {
-//                    self.stickerPackInitiallyInstalled = installed
-//                }
-//                self.installActionSeparatorNode.alpha = 1.0
-//                self.shareActionSeparatorNode.alpha = 1.0
-//                self.shareActionButtonNode.alpha = 1.0
-//                self.installActionButtonNode.alpha = 1.0
-//                if installed {
-//                    let text: String
-//                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-//                        text = self.presentationData.strings.StickerPack_RemoveStickerCount(info.count)
-//                    } else {
-//                        text = self.presentationData.strings.StickerPack_RemoveMaskCount(info.count)
-//                    }
-//                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.destructiveActionTextColor, for: .normal)
-//                } else {
-//                    let text: String
-//                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-//                        text = self.presentationData.strings.StickerPack_AddStickerCount(info.count)
-//                    } else {
-//                        text = self.presentationData.strings.StickerPack_AddMaskCount(info.count)
-//                    }
-//                    self.installActionButtonNode.setTitle(text, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
-//                }
-//        }
     }
     
     func dequeueUpdateStickerPack() {

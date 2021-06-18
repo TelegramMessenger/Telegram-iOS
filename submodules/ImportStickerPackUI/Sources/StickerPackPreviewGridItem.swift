@@ -119,14 +119,16 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             self.imageNode.image = image
                             dimensions = image.size
                         }
-                    case let .animation(data):
+                    case .animation:
                         self.imageNode.isHidden = true
                         let animationNode = AnimatedStickerNode()
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                         
                         let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-//                        animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                        if let resource = stickerItem.resource {
+                            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                        }
                         animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                 }
             } else {

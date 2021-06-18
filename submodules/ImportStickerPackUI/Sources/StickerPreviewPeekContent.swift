@@ -68,26 +68,24 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         self.textNode = ASTextNode()
         self.imageNode = ASImageNode()
         self.imageNode.displaysAsynchronously = false
+        switch item.content {
+            case let .image(data):
+                self.imageNode.image = UIImage(data: data)
+            case .animation:
+                let animationNode = AnimatedStickerNode()
+                self.animationNode = animationNode
+                let dimensions = PixelDimensions(width: 512, height: 512)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
+                if let resource = item.resource {
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                }
+                self.animationNode?.visibility = true
+        }
         if case let .image(data) = item.content, let image = UIImage(data: data) {
             self.imageNode.image = image
         }
         self.textNode.attributedText = NSAttributedString(string: item.emojis.joined(separator: " "), font: Font.regular(32.0), textColor: .black)
                 
-//        if item.file.isAnimatedSticker {
-//            let animationNode = AnimatedStickerNode()
-//            self.animationNode = animationNode
-//
-//            let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-//            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
-//
-//            self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
-//            self.animationNode?.visibility = true
-//            self.animationNode?.addSubnode(self.textNode)
-//        } else {
-//            self.imageNode.addSubnode(self.textNode)
-//            self.animationNode = nil
-//        }
-        
         super.init()
         
         self.isUserInteractionEnabled = false
@@ -110,26 +108,11 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0), y: -textSize.height - textSpacing), size: textSize)
         
         self.imageNode.frame = imageFrame
-        return boundingSize
         
-//        if let dimensitons = self.item.file.dimensions {
-//            let textSpacing: CGFloat = 10.0
-//            let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
-//
-//            let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
-//            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-//            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
-//            self.imageNode.frame = imageFrame
-//            if let animationNode = self.animationNode {
-//                animationNode.frame = imageFrame
-//                animationNode.updateLayout(size: imageSize)
-//            }
-//
-//            self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0), y: -textSize.height - textSpacing), size: textSize)
-//
-//            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
-//        } else {
-//            return CGSize(width: size.width, height: 10.0)
-//        }
+        if let animationNode = self.animationNode {
+            animationNode.frame = imageFrame
+            animationNode.updateLayout(size: imageFrame.size)
+        }
+        return boundingSize
     }
 }
