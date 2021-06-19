@@ -61,6 +61,37 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
             }
         }
         return nil
+    } else if let cloudDocumentMediaResource = resource as? CloudDocumentMediaResource {
+        if cloudDocumentMediaResource.fileId == 5789658100176783156 {
+            if let url = getAppBundle().url(forResource: "fqv01SQemVIBAAAApND8LDRUhRU", withExtension: "tgv") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+    } else if let cloudDocumentSizeMediaResource = resource as? CloudDocumentSizeMediaResource {
+        if cloudDocumentSizeMediaResource.documentId == 5789658100176783156 && cloudDocumentSizeMediaResource.sizeSpec == "m" {
+            if let url = getAppBundle().url(forResource: "5789658100176783156-m", withExtension: "resource") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+        return nil
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in

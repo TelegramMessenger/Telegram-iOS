@@ -430,7 +430,7 @@ private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResour
             if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
                 let size = representation.size ?? CGSize(width: 1440.0, height: 2960.0)
                 
-                if let image = drawSvgImage(data, size, .black, .white, representation.scaleFromCenter ?? 1.0) {
+                if let image = drawSvgImage(data, size, .black, .white) {
                     if let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
                         CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
                         
@@ -496,7 +496,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
             if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
                 let defaultSize = CGSize(width: 1440.0, height: 2960.0)
                 size = defaultSize
-                if let image = drawSvgImage(data, defaultSize, .black, .white, 1.0) {
+                if let image = drawSvgImage(data, defaultSize, .black, .white) {
                     maskImage = image
                 }
             } else if let image = UIImage(data: data) {

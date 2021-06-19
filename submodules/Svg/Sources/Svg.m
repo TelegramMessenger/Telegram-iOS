@@ -83,7 +83,7 @@ CGSize aspectFillSize(CGSize size, CGSize bounds) {
 
 @end
 
-UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor, CGFloat scaleFromCenter) {
+UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor) {
     NSDate *startTime = [NSDate date];
     
     NSXMLParser *parser = [[NSXMLParser alloc] initWithData:data];
@@ -128,10 +128,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
     
     CGContextScaleCTM(context, scale, scale);
     CGContextTranslateCTM(context, (size.width - drawingSize.width) / 2.0, (size.height - drawingSize.height) / 2.0);
-
-    CGContextTranslateCTM(context, size.width / 2.0f, size.height / 2.0f);
-    CGContextScaleCTM(context, scaleFromCenter, scaleFromCenter);
-    CGContextTranslateCTM(context, -size.width / 2.0f, -size.height / 2.0f);
     
     for (NSVGshape *shape = image->shapes; shape != NULL; shape = shape->next) {
         if (!(shape->flags & NSVG_FLAGS_VISIBLE)) {

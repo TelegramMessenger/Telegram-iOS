@@ -859,7 +859,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let dimensions = file.file.dimensions ?? PixelDimensions(width: 1440, height: 2960)
             
             let size = dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0))
-            let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size, scaleFromCenter: nil), complete: false, fetch: true).start()
+            let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
         }
     }
     

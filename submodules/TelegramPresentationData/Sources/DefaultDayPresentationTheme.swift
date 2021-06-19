@@ -738,7 +738,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         badgeTextColor: UIColor(rgb: 0xffffff)
     )
 
-    let defaultPatternWallpaper: TelegramWallpaper = .file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: "fqv01SQemVIBAAAApND8LDRUhRU", file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 36542425), partialReference: nil, resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), previewRepresentations: [TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 600, height: 800), resource: WallpaperDataResource(slug: "fqv01SQemVIBAAAApND8LDRUhRU"), progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/tgv", size: nil, attributes: []), settings: WallpaperSettings(colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), intensity: 50))
+    let defaultPatternWallpaper: TelegramWallpaper = defaultBuiltinWallpaper(colors: defaultBuiltinWallpaperGradientColors.map(\.rgb))
 
     let chat = PresentationThemeChat(
         defaultWallpaper: day ? .color(0xffffff) : defaultPatternWallpaper,
@@ -841,3 +841,50 @@ public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
     UIColor(rgb: 0xd5d88d),
     UIColor(rgb: 0x88b884)
 ]
+
+public func defaultBuiltinWallpaper(colors: [UInt32], intensity: Int32 = 50, rotation: Int32? = nil) -> TelegramWallpaper {
+    return .file(
+        id: 5933856211186221059,
+        accessHash: 7039846297018949116,
+        isCreator: false,
+        isDefault: false,
+        isPattern: true,
+        isDark: false,
+        slug: "fqv01SQemVIBAAAApND8LDRUhRU",
+        file: TelegramMediaFile(
+            fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: 5789658100176783156),
+            partialReference: nil,
+            resource: CloudDocumentMediaResource(
+                datacenterId: 1,
+                fileId: 5789658100176783156,
+                accessHash: 5949005087206403318,
+                size: 183832,
+                fileReference: Data(),
+                fileName: "pattern.tgv"
+            ),
+            previewRepresentations: [
+                TelegramMediaImageRepresentation(
+                    dimensions: PixelDimensions(width: 155, height: 320),
+                    resource: CloudDocumentSizeMediaResource(
+                        datacenterId: 1,
+                        documentId: 5789658100176783156,
+                        accessHash: 5949005087206403318,
+                        sizeSpec: "m",
+                        fileReference: Data()
+                    ),
+                    progressiveSizes: [],
+                    immediateThumbnailData: nil
+                )
+            ],
+            videoThumbnails: [],
+            immediateThumbnailData: nil,
+            mimeType: "application/x-tgwallpattern",
+            size: 183832,
+            attributes: [
+                .ImageSize(size: PixelDimensions(width: 1440, height: 2960)),
+                .FileName(fileName: "pattern.tgv")
+            ]
+        ),
+        settings: WallpaperSettings(colors: colors, intensity: intensity, rotation: rotation)
+    )
+}
