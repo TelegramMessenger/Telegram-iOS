@@ -456,7 +456,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButtonBackgroundNode = ASDisplayNode()
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
-        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: [:])
+        
+        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: ["1.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor])
         self.menuButtonTextNode = ImmediateTextNode()
         
         self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
@@ -810,9 +811,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
                 if interfaceState.showCommands {
-                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: [:])
+                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
                 } else {
-                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: [:])
+                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
                 }
                 self.menuButtonIconNode.playOnce()
             }
