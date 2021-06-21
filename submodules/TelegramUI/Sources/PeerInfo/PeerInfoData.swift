@@ -1050,7 +1050,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.discussion)
         }
         result.append(.search)
-        if displayLeave {
+        if displayLeave && result.count < 4 {
             result.append(.leave)
         }
         var canReport = true

@@ -479,14 +479,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButton.addTarget(self, action: #selector(self.menuButtonPressed), forControlEvents: .touchUpInside)
         self.menuButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if let strongSelf = self {
-                    if highlighted {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
-                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 0.85)
-                    } else {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
-                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 1.0)
-                    }
+                if highlighted {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                    transition.updateTransformScale(node: strongSelf.menuButton, scale: 0.85)
+                } else {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                    transition.updateTransformScale(node: strongSelf.menuButton, scale: 1.0)
                 }
             }
         }

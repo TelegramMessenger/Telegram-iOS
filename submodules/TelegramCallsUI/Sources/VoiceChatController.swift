@@ -1179,7 +1179,7 @@ public final class VoiceChatController: ViewController {
             self.itemInteraction = Interaction(updateIsMuted: { [weak self] peerId, isMuted in
                 let _ = self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
             }, switchToPeer: { [weak self] peerId, videoEndpointId, expand in
-                if let strongSelf = self {
+                if let strongSelf = self, strongSelf.connectedOnce {
                     if expand, let videoEndpointId = videoEndpointId {
                         strongSelf.currentDominantSpeaker = (peerId, videoEndpointId, CACurrentMediaTime() + 3.0)
                         strongSelf.updateDisplayMode(.fullscreen(controlsHidden: false))
@@ -3711,7 +3711,7 @@ public final class VoiceChatController: ViewController {
                     forceUpdate = true
                 }
                 leftBorderFrame = CGRect(origin: CGPoint(x: -additionalInset - additionalLeftInset, y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalLeftInset + (contentLeftInset.isZero ? additionalSideInset : contentLeftInset), height: layout.size.height))
-                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset - (contentLeftInset.isZero ? additionalSideInset : 0.0), y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalSideInset, height: layout.size.height))
+                rightBorderFrame = CGRect(origin: CGPoint(x: size.width - sideInset - (contentLeftInset.isZero ? additionalSideInset : 0.0), y: topPanelFrame.maxY - additionalInset * (isFullscreen ? 0.95 : 0.8)), size: CGSize(width: sideInset + additionalInset + additionalLeftInset + additionalSideInset, height: layout.size.height))
             }
             
             let topCornersFrame = CGRect(x: sideInset + (contentLeftInset.isZero ? floorToScreenPixels((size.width - contentWidth) / 2.0) : contentLeftInset), y: topPanelFrame.maxY - 60.0, width: contentWidth - sideInset * 2.0, height: 50.0 + 60.0)
@@ -3722,23 +3722,31 @@ public final class VoiceChatController: ViewController {
             let previousRightBorderFrame = self.rightBorderNode.frame
             
             if !topPanelFrame.equalTo(previousTopPanelFrame) || forceUpdate {
-                self.topPanelNode.frame = topPanelFrame
-                let positionDelta = CGPoint(x: 0.0, y: topPanelFrame.minY - previousTopPanelFrame.minY)
-                transition.animateOffsetAdditive(layer: self.topPanelNode.layer, offset: positionDelta.y, completion: completion)
+                if topPanelFrame.width != previousTopPanelFrame.width {
+                    transition.updateFrame(node: self.topPanelNode, frame: topPanelFrame)
+                    transition.updateFrame(node: self.topCornersNode, frame: topCornersFrame)
+                    transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+                    transition.updateFrame(node: self.leftBorderNode, frame: leftBorderFrame)
+                    transition.updateFrame(node: self.rightBorderNode, frame: rightBorderFrame)
+                } else {
+                    self.topPanelNode.frame = topPanelFrame
+                    let positionDelta = CGPoint(x: 0.0, y: topPanelFrame.minY - previousTopPanelFrame.minY)
+                    transition.animateOffsetAdditive(layer: self.topPanelNode.layer, offset: positionDelta.y, completion: completion)
 
-                transition.updateFrame(node: self.topCornersNode, frame: topCornersFrame)
+                    transition.updateFrame(node: self.topCornersNode, frame: topCornersFrame)
 
-                self.backgroundNode.frame = backgroundFrame
-                let backgroundPositionDelta = CGPoint(x: 0.0, y: previousBackgroundFrame.minY - backgroundFrame.minY)
-                transition.animatePositionAdditive(node: self.backgroundNode, offset: backgroundPositionDelta)
-                
-                self.leftBorderNode.frame = leftBorderFrame
-                let leftBorderPositionDelta = CGPoint(x: previousLeftBorderFrame.maxX - leftBorderFrame.maxX, y: previousLeftBorderFrame.minY - leftBorderFrame.minY)
-                transition.animatePositionAdditive(node: self.leftBorderNode, offset: leftBorderPositionDelta)
-                
-                self.rightBorderNode.frame = rightBorderFrame
-                let rightBorderPositionDelta = CGPoint(x: previousRightBorderFrame.minX - rightBorderFrame.minX, y: previousRightBorderFrame.minY - rightBorderFrame.minY)
-                transition.animatePositionAdditive(node: self.rightBorderNode, offset: rightBorderPositionDelta)
+                    self.backgroundNode.frame = backgroundFrame
+                    let backgroundPositionDelta = CGPoint(x: 0.0, y: previousBackgroundFrame.minY - backgroundFrame.minY)
+                    transition.animatePositionAdditive(node: self.backgroundNode, offset: backgroundPositionDelta)
+                    
+                    self.leftBorderNode.frame = leftBorderFrame
+                    let leftBorderPositionDelta = CGPoint(x: previousLeftBorderFrame.maxX - leftBorderFrame.maxX, y: previousLeftBorderFrame.minY - leftBorderFrame.minY)
+                    transition.animatePositionAdditive(node: self.leftBorderNode, offset: leftBorderPositionDelta)
+                    
+                    self.rightBorderNode.frame = rightBorderFrame
+                    let rightBorderPositionDelta = CGPoint(x: previousRightBorderFrame.minX - rightBorderFrame.minX, y: previousRightBorderFrame.minY - rightBorderFrame.minY)
+                    transition.animatePositionAdditive(node: self.rightBorderNode, offset: rightBorderPositionDelta)
+                }
             } else {
                 completion?()
             }
@@ -3749,14 +3757,20 @@ public final class VoiceChatController: ViewController {
             let bottomOffset = min(0.0, bottomEdge - listMaxY) + layout.size.height - bottomPanelHeight
 
             let bottomCornersFrame = CGRect(origin: CGPoint(x: sideInset + floorToScreenPixels((size.width - contentWidth) / 2.0), y: -50.0 + bottomOffset + bottomGradientHeight), size: CGSize(width: contentWidth - sideInset * 2.0, height: 50.0 + 60.0))
+            let bottomPanelBackgroundFrame = CGRect(x: 0.0, y: bottomOffset + bottomGradientHeight, width: size.width, height: 2000.0)
             let previousBottomCornersFrame = self.bottomCornersNode.frame
             if !bottomCornersFrame.equalTo(previousBottomCornersFrame) {
-                self.bottomCornersNode.frame = bottomCornersFrame
-                self.bottomPanelBackgroundNode.frame = CGRect(x: 0.0, y: bottomOffset + bottomGradientHeight, width: size.width, height: 2000.0)
-                
-                let positionDelta = CGPoint(x: 0.0, y: previousBottomCornersFrame.minY - bottomCornersFrame.minY)
-                transition.animatePositionAdditive(node: self.bottomCornersNode, offset: positionDelta)
-                transition.animatePositionAdditive(node: self.bottomPanelBackgroundNode, offset: positionDelta)
+                if bottomCornersFrame.width != previousBottomCornersFrame.width {
+                    transition.updateFrame(node: self.bottomCornersNode, frame: bottomCornersFrame)
+                    transition.updateFrame(node: self.bottomPanelBackgroundNode, frame: bottomPanelBackgroundFrame)
+                } else {
+                    self.bottomCornersNode.frame = bottomCornersFrame
+                    self.bottomPanelBackgroundNode.frame = bottomPanelBackgroundFrame
+                    
+                    let positionDelta = CGPoint(x: 0.0, y: previousBottomCornersFrame.minY - bottomCornersFrame.minY)
+                    transition.animatePositionAdditive(node: self.bottomCornersNode, offset: positionDelta)
+                    transition.animatePositionAdditive(node: self.bottomPanelBackgroundNode, offset: positionDelta)
+                }
             }
         }
         

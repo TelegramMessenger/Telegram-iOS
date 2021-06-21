@@ -724,7 +724,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         let peer = peerEntry.peer
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
-            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
+            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 240.0, height: 240.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
             self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
         }
                 
