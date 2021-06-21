@@ -17,6 +17,7 @@ import SettingsUI
 import PhoneNumberFormat
 import LegacyComponents
 import LegacyMediaPickerUI
+import PasswordSetupUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -564,29 +565,68 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }).start()
             })
             controller.recoverWithCode = { [weak self, weak controller] code in
-                if let strongSelf = self {
-                    controller?.inProgress = true
-                    
-                    strongSelf.actionDisposable.set((performPasswordRecovery(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, syncContacts: syncContacts) |> deliverOnMainQueue).start(error: { error in
-                        Queue.mainQueue().async {
-                            if let strongSelf = self, let controller = controller {
-                                controller.inProgress = false
-                                
-                                let text: String
-                                switch error {
-                                    case .limitExceeded:
-                                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
-                                    case .invalidCode:
-                                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                                    case .expired:
-                                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
-                                }
-                                
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            }
-                        }
-                    }))
+                guard let strongSelf = self else {
+                    return
                 }
+
+                controller?.inProgress = true
+
+                strongSelf.actionDisposable.set((checkPasswordRecoveryCode(network: strongSelf.account.network, code: code)
+                |> deliverOnMainQueue).start(error: { error in
+                    guard let strongSelf = self, let controller = controller else {
+                        return
+                    }
+                    controller.inProgress = false
+
+                    let text: String
+                    switch error {
+                    case .limitExceeded:
+                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
+                    case .invalidCode:
+                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                    case .expired:
+                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
+                    case .generic:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
+                    }
+
+                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }, completed: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    controller?.inProgress = false
+
+                    let setupController = TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.account.network, mode: .passwordRecovery(TwoFactorDataInputMode.Recovery(code: code, syncContacts: syncContacts, account: strongSelf.account)), stateUpdated: { _ in
+                        guard let _ = self else {
+                            return
+                        }
+                    })
+                    strongSelf.setViewControllers(strongSelf.viewControllers + [setupController], animated: true)
+                }))
+
+                /*controller?.inProgress = true
+
+                strongSelf.actionDisposable.set((performPasswordRecovery(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, syncContacts: syncContacts, updatedPassword: .password(password: "123", hint: "", email: nil))
+                |> deliverOnMainQueue).start(error: { error in
+                    Queue.mainQueue().async {
+                        if let strongSelf = self, let controller = controller {
+                            controller.inProgress = false
+
+                            let text: String
+                            switch error {
+                                case .limitExceeded:
+                                    text = strongSelf.presentationData.strings.LoginPassword_FloodError
+                                case .invalidCode:
+                                    text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                case .expired:
+                                    text = strongSelf.presentationData.strings.Login_CodeExpiredError
+                            }
+
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        }
+                    }
+                }))*/
             }
             controller.noAccess = { [weak self, weak controller] in
                 if let strongSelf = self, let controller = controller {

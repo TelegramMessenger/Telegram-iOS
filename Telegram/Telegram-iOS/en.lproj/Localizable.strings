@@ -6528,3 +6528,13 @@ Sorry for the inconvenience.";
 "Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
 "Settings.KeepPassword" = "Yes, definitely";
 "Settings.TryEnterPassword" = "Not sure, let me try";
+
+"TwoFactorSetup.PasswordRecovery.Title" = "Create New Password";
+"TwoFactorSetup.PasswordRecovery.Text" = "You have successfully reset your password.\nPlease enter a new password to continue";
+"TwoFactorSetup.PasswordRecovery.PlaceholderPassword" = "New Password";
+"TwoFactorSetup.PasswordRecovery.PlaceholderConfirmPassword" = "Re-enter New Password";
+"TwoFactorSetup.PasswordRecovery.Action" = "Continue";
+"TwoFactorSetup.PasswordRecovery.Skip" = "Skip";
+"TwoFactorSetup.PasswordRecovery.SkipAlertTitle" = "Attention!";
+"TwoFactorSetup.PasswordRecovery.SkipAlertText" = "Skipping this step will disable 2-step verification for your account. Are you sure you want to skip?";
+"TwoFactorSetup.PasswordRecovery.SkipAlertAction" = "Skip";

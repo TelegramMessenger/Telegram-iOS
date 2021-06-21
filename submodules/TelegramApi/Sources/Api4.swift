@@ -1325,13 +1325,13 @@ public struct account {
     
     }
     public enum Password: TypeConstructorDescription {
-        case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer)
+        case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom):
+                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate):
                     if boxed {
-                        buffer.appendInt32(-1390001672)
+                        buffer.appendInt32(408623183)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {currentAlgo!.serialize(buffer, true)}
@@ -1342,14 +1342,15 @@ public struct account {
                     newAlgo.serialize(buffer, true)
                     newSecureAlgo.serialize(buffer, true)
                     serializeBytes(secureRandom, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(pendingResetDate!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom):
-                return ("password", [("flags", flags), ("currentAlgo", currentAlgo), ("srpB", srpB), ("srpId", srpId), ("hint", hint), ("emailUnconfirmedPattern", emailUnconfirmedPattern), ("newAlgo", newAlgo), ("newSecureAlgo", newSecureAlgo), ("secureRandom", secureRandom)])
+                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate):
+                return ("password", [("flags", flags), ("currentAlgo", currentAlgo), ("srpB", srpB), ("srpId", srpId), ("hint", hint), ("emailUnconfirmedPattern", emailUnconfirmedPattern), ("newAlgo", newAlgo), ("newSecureAlgo", newSecureAlgo), ("secureRandom", secureRandom), ("pendingResetDate", pendingResetDate)])
     }
     }
     
@@ -1378,6 +1379,8 @@ public struct account {
             }
             var _9: Buffer?
             _9 = parseBytes(reader)
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_10 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
@@ -1387,8 +1390,9 @@ public struct account {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!)
+            let _c10 = (Int(_1!) & Int(1 << 5) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10)
             }
             else {
                 return nil
@@ -5250,11 +5254,13 @@ public extension Api {
                     })
                 }
             
-                public static func recoverPassword(code: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
+                public static func recoverPassword(flags: Int32, code: String, newSettings: Api.account.PasswordInputSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1319464594)
+                    buffer.appendInt32(923364464)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(code, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.recoverPassword", parameters: [("code", code)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
+                    if Int(flags) & Int(1 << 0) != 0 {newSettings!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "auth.recoverPassword", parameters: [("flags", flags), ("code", code), ("newSettings", newSettings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.Authorization?
                         if let signature = reader.readInt32() {
@@ -5355,6 +5361,20 @@ public extension Api {
                         var result: Api.Authorization?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Authorization
+                        }
+                        return result
+                    })
+                }
+            
+                public static func checkRecoveryPassword(code: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(221691769)
+                    serializeString(code, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.checkRecoveryPassword", parameters: [("code", code)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
@@ -7479,6 +7499,34 @@ public extension Api {
                     reason.serialize(buffer, true)
                     serializeString(message, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "account.reportProfilePhoto", parameters: [("peer", peer), ("photoId", photoId), ("reason", reason), ("message", message)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func resetPassword() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1517436040)
+                    
+                    return (FunctionDescription(name: "account.resetPassword", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func declinePasswordReset() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1284770294)
+                    
+                    return (FunctionDescription(name: "account.declinePasswordReset", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

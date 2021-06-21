@@ -335,21 +335,32 @@ public enum RecoverTwoStepVerificationPasswordError {
 }
 
 public func recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-    return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
-        |> mapError { error -> RecoverTwoStepVerificationPasswordError in
-            if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
-                return .limitExceeded
-            } else if error.errorDescription == "PASSWORD_RECOVERY_EXPIRED" {
-                return .codeExpired
-            } else if error.errorDescription == "CODE_INVALID" {
-                return .invalidCode
-            } else {
-                return .generic
+    return twoStepAuthData(network)
+    |> mapError { _ -> RecoverTwoStepVerificationPasswordError in
+        return .generic
+    }
+    |> mapToSignal { authData -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
+        var flags: Int32 = (1 << 1)
+        if authData.currentPasswordDerivation != nil {
+            flags |= (1 << 0)
+        }
+
+        return network.request(Api.functions.auth.recoverPassword(flags: 0, code: code, newSettings: nil), automaticFloodWait: false)
+            |> mapError { error -> RecoverTwoStepVerificationPasswordError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PASSWORD_RECOVERY_EXPIRED" {
+                    return .codeExpired
+                } else if error.errorDescription == "CODE_INVALID" {
+                    return .invalidCode
+                } else {
+                    return .generic
+                }
             }
-        }
-        |> mapToSignal { _ -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
-            return .complete()
-        }
+            |> mapToSignal { _ -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
+                return .complete()
+            }
+    }
 }
 
 public func cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
