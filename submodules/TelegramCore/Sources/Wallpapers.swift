@@ -7,7 +7,7 @@ import SyncCore
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
     let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
-        network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
+        network.request(Api.functions.account.getWallPapers(hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int32), NoError> in
             switch result {

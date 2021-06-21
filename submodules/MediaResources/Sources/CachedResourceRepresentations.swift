@@ -121,28 +121,23 @@ public final class CachedPatternWallpaperMaskRepresentation: CachedMediaResource
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
     public let size: CGSize?
-    public let scaleFromCenter: CGFloat?
     
     public var uniqueId: String {
         if let size = self.size {
             var result = "pattern-wallpaper-mask-\(Int(size.width))x\(Int(size.height))"
-            if let scaleFromCenter = self.scaleFromCenter {
-                result.append("-scale\(scaleFromCenter)")
-            }
             return result
         } else {
             return "pattern-wallpaper-mask"
         }
     }
     
-    public init(size: CGSize?, scaleFromCenter: CGFloat?) {
+    public init(size: CGSize?) {
         self.size = size
-        self.scaleFromCenter = scaleFromCenter
     }
     
     public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
         if let to = to as? CachedPatternWallpaperMaskRepresentation {
-            return self.size == to.size && self.scaleFromCenter == to.scaleFromCenter
+            return self.size == to.size
         } else {
             return false
         }
