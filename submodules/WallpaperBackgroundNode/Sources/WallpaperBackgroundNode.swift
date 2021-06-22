@@ -550,15 +550,22 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 let contentAlpha = abs(intensity)
                 self.gradientBackgroundNode?.contentView.alpha = contentAlpha
                 self.contentNode.alpha = contentAlpha
+                if self.patternImageNode.image != nil {
+                    self.patternImageNode.backgroundColor = nil
+                } else {
+                    self.patternImageNode.backgroundColor = .black
+                }
             } else {
                 self.backgroundColor = nil
                 self.gradientBackgroundNode?.contentView.alpha = 1.0
                 self.contentNode.alpha = 1.0
+                self.patternImageNode.backgroundColor = nil
             }
         default:
             self.patternImageDisposable.set(nil)
             self.validPatternImage = nil
             self.patternImageNode.isHidden = true
+            self.patternImageNode.backgroundColor = nil
             self.backgroundColor = nil
             self.gradientBackgroundNode?.contentView.alpha = 1.0
             self.contentNode.alpha = 1.0
@@ -574,7 +581,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         var patternIsLight: Bool = false
 
         switch wallpaper {
-        case let .file(_, _, _, _, isPattern, _, _, file, settings) where isPattern:
+        case let .file(_, _, _, _, isPattern, _, slug, file, settings) where isPattern:
             var updated = true
             let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
             patternIsLight = brightness > 0.3
@@ -600,7 +607,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                         if let message = message {
                             return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
                         }
-                        return .wallpaper(wallpaper: nil, resource: resource)
+                        return .wallpaper(wallpaper: .slug(slug), resource: resource)
                     }
 
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -642,6 +649,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             if invertPattern {
                 patternColor = .clear
                 patternBackgroundColor = .clear
+                if self.patternImageNode.image == nil {
+                    self.patternImageNode.backgroundColor = .black
+                } else {
+                    self.patternImageNode.backgroundColor = nil
+                }
             } else {
                 if patternIsLight {
                     patternColor = .black
@@ -649,6 +661,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     patternColor = .white
                 }
                 patternBackgroundColor = .clear
+                self.patternImageNode.backgroundColor = nil
             }
 
             let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb, invertPattern: invertPattern)

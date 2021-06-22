@@ -133,14 +133,11 @@ final class VoiceChatTileGridNode: ASDisplayNode {
             }
             if let itemNode = itemNode {
                 itemNode.visibility = self.visibility
-                if wasAdded {
-                    itemNode.frame = itemFrame
-                    if !isFirstTime {
-                        itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: wasEmpty ? 0.4 : 0.3)
-                        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    }
-                } else {
-                    transition.updateFrame(node: itemNode, frame: itemFrame)
+                let itemTransition: ContainedViewLayoutTransition = wasAdded ? .immediate : transition
+                itemTransition.updateFrameAsPositionAndBounds(node: itemNode, frame: itemFrame)
+                if wasAdded && !isFirstTime {
+                    itemNode.layer.animateScale(from: 0.0, to: 1.0, duration: wasEmpty ? 0.4 : 0.3)
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
                 
                 if let (rect, containerSize) = self.absoluteLocation {
@@ -160,7 +157,7 @@ final class VoiceChatTileGridNode: ASDisplayNode {
         }
         for id in removeIds {
             if let itemNode = self.itemNodes.removeValue(forKey: id) {
-                itemNode.layer.animateScale(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                itemNode.layer.animateScale(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, additive: true)
                 itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemNode] _ in
                     itemNode?.removeFromSupernode()
                 })
