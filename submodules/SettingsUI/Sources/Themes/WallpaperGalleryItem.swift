@@ -72,11 +72,11 @@ class WallpaperGalleryItem: GalleryItem {
 private let progressDiameter: CGFloat = 50.0
 private let motionAmount: CGFloat = 32.0
 
-private func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
+private func reference(for resource: MediaResource, media: Media, message: Message?, slug: String?) -> MediaResourceReference {
     if let message = message {
         return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
     }
-    return .wallpaper(wallpaper: nil, resource: resource)
+    return .wallpaper(wallpaper: slug.flatMap(WallpaperReference.slug), resource: resource)
 }
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
@@ -382,9 +382,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message, slug: file.slug)))
                             }
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: message)))
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: message, slug: file.slug)))
                             
                             if wallpaper.isPattern {
                                 var patternColors: [UIColor] = []

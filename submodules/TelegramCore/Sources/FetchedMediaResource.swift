@@ -69,6 +69,19 @@ public func stickerPackFileReference(_ file: TelegramMediaFile) -> FileMediaRefe
     return .standalone(media: file)
 }
 
+private func areResourcesEqual(_ lhs: MediaResource, _ rhs: MediaResource) -> Bool {
+    if let lhsResource = lhs as? CloudDocumentMediaResource, let rhsResource = rhs as? CloudDocumentMediaResource {
+        if lhsResource.fileId == rhsResource.fileId {
+            return true
+        }
+    } else if let lhsResource = lhs as? CloudDocumentSizeMediaResource, let rhsResource = rhs as? CloudDocumentSizeMediaResource {
+        if lhsResource.documentId == rhsResource.documentId && lhsResource.sizeSpec == rhsResource.sizeSpec {
+            return true
+        }
+    }
+    return lhs.id.isEqual(to: rhs.id)
+}
+
 private func findMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
     if let image = media as? TelegramMediaImage {
         for representation in image.representations {
@@ -87,11 +100,11 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
             }
         }
     } else if let file = media as? TelegramMediaFile {
-        if file.resource.id.isEqual(to: resource.id) {
+        if areResourcesEqual(file.resource, resource) {
             return file.resource
         } else {
             for representation in file.previewRepresentations {
-                if representation.resource.id.isEqual(to: resource.id) {
+                if areResourcesEqual(representation.resource, resource) {
                     return representation.resource
                 }
             }
@@ -387,7 +400,13 @@ final class MediaReferenceRevalidationContext {
     }
     
     func wallpapers(postbox: Postbox, network: Network, background: Bool, wallpaper: WallpaperReference?) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
-        return self.genericItem(key: .wallpapers, background: background, request: { next, error in
+        let key: MediaReferenceRevalidationKey
+        if let wallpaper = wallpaper {
+            key = .wallpaper(wallpaper: wallpaper)
+        } else {
+            key = .wallpapers
+        }
+        return self.genericItem(key: key, background: background, request: { next, error in
             let signal: Signal<[TelegramWallpaper]?, RevalidateMediaReferenceError>
             if let wallpaper = wallpaper, case let .slug(slug) = wallpaper {
                 signal = getWallpaper(network: network, slug: slug)
@@ -399,7 +418,6 @@ final class MediaReferenceRevalidationContext {
                 signal = telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
                 |> last
                 |> mapError { _ -> RevalidateMediaReferenceError in
-                    return .generic
                 }
             }
             return (signal
