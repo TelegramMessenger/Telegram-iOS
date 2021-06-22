@@ -374,7 +374,7 @@ public enum PasswordRecoveryError {
 }
 
 public func checkPasswordRecoveryCode(network: Network, code: String) -> Signal<Never, PasswordRecoveryError> {
-    return network.request(Api.functions.auth.checkRecoveryPassword(code: code))
+    return network.request(Api.functions.auth.checkRecoveryPassword(code: code), automaticFloodWait: false)
     |> mapError { error -> PasswordRecoveryError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -416,7 +416,7 @@ public func performPasswordRecovery(accountManager: AccountManager, account: Una
         if newSettings != nil {
             flags |= 1 << 0
         }
-        return account.network.request(Api.functions.auth.recoverPassword(flags: flags, code: code, newSettings: newSettings))
+        return account.network.request(Api.functions.auth.recoverPassword(flags: flags, code: code, newSettings: newSettings), automaticFloodWait: false)
         |> mapError { error -> PasswordRecoveryError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .limitExceeded

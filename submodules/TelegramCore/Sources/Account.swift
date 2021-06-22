@@ -370,6 +370,7 @@ public struct TwoStepAuthData {
     public let unconfirmedEmailPattern: String?
     public let secretRandom: Data
     public let nextSecurePasswordDerivation: TwoStepSecurePasswordDerivation
+    public let pendingResetTimestamp: Int32?
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
@@ -398,7 +399,7 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
                     srpSessionData = TwoStepSRPSessionData(id: srpId, B: srpB.makeData())
                 }
                 
-                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation, pendingResetTimestamp: pendingResetDate)
         }
     }
 }
