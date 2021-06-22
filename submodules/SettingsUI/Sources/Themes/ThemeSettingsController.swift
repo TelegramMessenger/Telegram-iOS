@@ -549,6 +549,10 @@ private final class ThemeSettingsControllerImpl: ItemListController, ThemeSettin
 }
 
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
+    #if DEBUG
+    BuiltinWallpaperData.generate(account: context.account)
+    #endif
+
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var updateControllersImpl: ((([UIViewController]) -> [UIViewController]) -> Void)?
@@ -844,14 +848,14 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
                     theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference)
                 } else {
-                    var wallpaperGradientColors: [UInt32]?
+                    var baseColor: PresentationThemeBaseColor?
                     switch accentColor {
                     case let .accentColor(value):
-                        wallpaperGradientColors = value.baseColor.wallpaperGradientColors
+                        baseColor = value.baseColor
                     default:
                         break
                     }
-                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper, wallpaperGradientColors: wallpaperGradientColors)
+                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper, baseColor: baseColor)
                 }
                 effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
@@ -1301,7 +1305,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     updatedTheme = generalThemeReference
                 }
                 
-                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, wallpaperGradientColors: accentColor?.baseColor.wallpaperGradientColors) else {
+                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, baseColor: accentColor?.baseColor) else {
                     return current
                 }
                 
