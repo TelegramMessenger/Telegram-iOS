@@ -30,11 +30,9 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
             |> mapToSignal { sourceItems in
                 var items: [OrderedItemListEntry] = []
                 if let sourceItems = sourceItems {
-                    var existingIds = Set<MediaId>()
+                    var existingIds = Set<Data>()
                     for item in sourceItems {
-                        guard let id = (item.contents as? RecentMediaItem)?.media.id else {
-                            continue
-                        }
+                        let id = item.id.makeData()
                         if !existingIds.contains(id) {
                             existingIds.insert(id)
                             items.append(item)

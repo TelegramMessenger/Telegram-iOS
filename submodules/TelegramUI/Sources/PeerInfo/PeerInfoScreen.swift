@@ -3689,19 +3689,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 self?.openDeletePeer()
                             })))
                         } else {
-                            if filteredButtons.contains(.leave) {
-                                if case .member = channel.participationStatus {
-                                    if !items.isEmpty {
-                                        items.append(.separator)
-                                    }
-                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
-                                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-                                    }, action: { [weak self] _, f in
-                                        f(.dismissWithoutContent)
-                                        
-                                        self?.openLeavePeer()
-                                    })))
+                            if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
+                                if !items.isEmpty {
+                                    items.append(.separator)
                                 }
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                }, action: { [weak self] _, f in
+                                    f(.dismissWithoutContent)
+                                    
+                                    self?.openLeavePeer()
+                                })))
                             }
                         }
                     case .group:
@@ -3717,7 +3715,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 self?.openDeletePeer()
                             })))
                         } else {
-                            if case .member = channel.participationStatus {
+                            if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
                                 if !items.isEmpty {
                                     items.append(.separator)
                                 }
@@ -3732,7 +3730,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     }
                 } else if let group = peer as? TelegramGroup {
-                    if case .Member = group.membership {
+                    if case .Member = group.membership, !headerButtons.contains(.leave) {
                         if !items.isEmpty {
                             items.append(.separator)
                         }

@@ -453,10 +453,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButton = HighlightTrackingButtonNode()
         self.menuButton.clipsToBounds = true
         self.menuButton.cornerRadius = 16.0
+        self.menuButton.accessibilityLabel = presentationInterfaceState.strings.Conversation_InputMenu
         self.menuButtonBackgroundNode = ASDisplayNode()
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
-        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: [:])
+        
+        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: ["1.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor])
         self.menuButtonTextNode = ImmediateTextNode()
         
         self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
@@ -478,14 +480,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButton.addTarget(self, action: #selector(self.menuButtonPressed), forControlEvents: .touchUpInside)
         self.menuButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if let strongSelf = self {
-                    if highlighted {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
-                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 0.85)
-                    } else {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
-                        transition.updateTransformScale(node: strongSelf.menuButton, scale: 1.0)
-                    }
+                if highlighted {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                    transition.updateTransformScale(node: strongSelf.menuButton, scale: 0.85)
+                } else {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                    transition.updateTransformScale(node: strongSelf.menuButton, scale: 1.0)
                 }
             }
         }
@@ -810,9 +810,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
                 if interfaceState.showCommands {
-                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: [:])
+                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
                 } else {
-                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: [:])
+                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
                 }
                 self.menuButtonIconNode.playOnce()
             }
@@ -851,6 +851,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 self.menuButtonBackgroundNode.backgroundColor = interfaceState.theme.chat.inputPanel.actionControlFillColor
                 self.menuButtonTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_InputMenu, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+                self.menuButton.accessibilityLabel = interfaceState.strings.Conversation_InputMenu
                 menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
                 
                 if isEditingMedia {
