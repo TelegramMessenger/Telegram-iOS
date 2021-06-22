@@ -8,7 +8,38 @@ import Postbox
 private let defaultDarkTintedAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkTintedPresentationTheme = makeDefaultDarkTintedPresentationTheme(preview: false)
 
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, wallpaperGradientColors: [UInt32]? = nil) -> PresentationTheme {
+private extension PresentationThemeBaseColor {
+    var colorWallpaper: (BuiltinWallpaperData, Int32, [UInt32])? {
+        switch self {
+        case .blue:
+            return (.variant7, 40, [0x1e3557, 0x182036, 0x1c4352, 0x16263a])
+        case .cyan:
+            return (.variant3, 40, [0x1e3557, 0x151a36, 0x1c4352, 0x2a4541])
+        case .green:
+            return (.variant3, 40, [0x2d4836, 0x172b19, 0x364331, 0x103231])
+        case .pink:
+            return (.variant9, 40, [0x2c0b22, 0x290020, 0x160a22, 0x3b1834])
+        case .orange:
+            return (.variant10, 40, [0x2c211b, 0x442917, 0x22191f, 0x3b2714])
+        case .purple:
+            return (.variant11, 40, [0x3a1c3a, 0x24193c, 0x392e3e, 0x1a1632])
+        case .red:
+            return (.variant4, 40, [0x2c211b, 0x44332a, 0x22191f, 0x3b2d36])
+        case .yellow:
+            return (.variant2, 40, [0x2c2512, 0x45360b, 0x221d08, 0x3b2f13])
+        case .gray:
+            return (.variant6, 40, [0x1c2731, 0x1a1c25, 0x27303b, 0x1b1b21])
+        case .black:
+            return nil
+        case .white:
+            return nil
+        case .custom, .preset, .theme:
+            return nil
+        }
+    }
+}
+
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
     }
@@ -47,8 +78,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
         if let accentColor = accentColor {
-            if let wallpaperGradientColors = wallpaperGradientColors, !wallpaperGradientColors.isEmpty {
-                suggestedWallpaper = defaultBuiltinWallpaper(colors: wallpaperGradientColors)
+            if let baseColor = baseColor, let (variant, intensity, colors) = baseColor.colorWallpaper, !colors.isEmpty {
+                suggestedWallpaper = defaultBuiltinWallpaper(data: variant, colors: colors, intensity: intensity)
             } else {
                 let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
                 suggestedWallpaper = .color(color.argb)
@@ -757,7 +788,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     )
 
     let chat = PresentationThemeChat(
-        defaultWallpaper: defaultBuiltinWallpaper(colors: [0x1b2836, 0x121a22, 0x1b2836, 0x121a22]),
+        defaultWallpaper: defaultBuiltinWallpaper(data: .default, colors: [0x1b2836, 0x121a22, 0x1b2836, 0x121a22]),
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,
