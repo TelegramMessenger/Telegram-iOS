@@ -4989,7 +4989,7 @@ public final class VoiceChatController: ViewController {
             
             self.joinedVideo = joinedVideo
             
-            if !joinedVideo && !tileItems.isEmpty || !gridTileItems.isEmpty, let peer = self.peer {
+            if !joinedVideo && (!tileItems.isEmpty || !gridTileItems.isEmpty), let peer = self.peer {
                 tileItems.removeAll()
                 gridTileItems.removeAll()
                 
