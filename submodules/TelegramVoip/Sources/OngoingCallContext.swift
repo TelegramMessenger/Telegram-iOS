@@ -435,10 +435,6 @@ public final class OngoingCallVideoCapturer {
         self.impl.setIsVideoEnabled(value)
     }
 
-    public func injectSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        self.impl.submitSampleBuffer(sampleBuffer)
-    }
-
     public func injectPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: CGImagePropertyOrientation) {
         var videoRotation: OngoingCallVideoOrientation = .rotation0
         switch rotation {
