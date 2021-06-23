@@ -1256,21 +1256,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             |> mapToSignal { cachedWallpaper in
                 if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors.count >= 1 ? file.settings.colors : [0xd6e2ee], intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
                             
                     let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
 
-                    let _ = (context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: true)
-                    |> filter({ $0.complete })).start(next: { data in
-                        if data.complete, let path = context.account.postbox.mediaBox.completedResourcePath(resource) {
-                            if let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                                context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: maybeData, synchronous: true)
-                            }
-                            if let maybeData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedRead) {
-                                context.sharedContext.accountManager.mediaBox.storeCachedResourceRepresentation(resource, representation: representation, data: maybeData)
-                            }
-                        }
-                    })
                     return .single(wallpaper)
     
                 } else {
