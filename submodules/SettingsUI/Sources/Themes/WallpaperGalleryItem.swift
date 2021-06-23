@@ -407,32 +407,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
-                                /*if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.colors != previousFile.settings.colors || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
-                                    
-                                    let makeImageLayout = self.imageNode.asyncLayout()
-                                    Queue.concurrentDefaultQueue().async {
-                                        let apply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))
-                                        Queue.mainQueue().async {
-                                            if self.colorPreview {
-                                                apply()
-                                            }
-                                        }
-                                    }
-                                    return
-                                } else if let offset = self.validOffset, self.arguments.colorPreview && abs(offset) > 0.0 {
-                                    return
-                                } else {
-                                    patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
-                                }*/
-                                
                                 self.colorPreview = self.arguments.colorPreview
 
                                 signal = .single({ _ in nil })
-                                /*if file.settings.colors.count >= 3 {
-                                    signal = .single({ _ in nil })
-                                } else {
-                                    signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
-                                }*/
+
                                 colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
@@ -855,12 +833,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     private func preparePatternEditing() {
-        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper {
-            let dimensions = file.file.dimensions ?? PixelDimensions(width: 1440, height: 2960)
-            
-            let size = dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0))
-            let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
-        }
     }
     
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {

@@ -516,8 +516,6 @@ public class WallpaperGalleryController: ViewController {
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
                                         if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
-                                            let representation = CachedPatternWallpaperRepresentation(colors: file.settings.colors, intensity: intensity, rotation: file.settings.rotation)
-                                            
                                             var data: Data?
                                             var thumbnailData: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -541,12 +539,7 @@ public class WallpaperGalleryController: ViewController {
                                                 if let thumbnailResource = thumbnailResource, let thumbnailData = thumbnailData {
                                                     strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
                                                 }
-                                                let _ = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
-                                                |> filter({ $0.complete })
-                                                |> take(1)
-                                                |> deliverOnMainQueue).start(next: { _ in
-                                                    completion(wallpaper)
-                                                })
+                                                completion(wallpaper)
                                             }
                                         } else if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                                                 strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)

@@ -29,7 +29,7 @@ private func intensityToSliderValue(_ value: Int32, allowDark: Bool) -> CGFloat 
 private func sliderValueToIntensity(_ value: CGFloat, allowDark: Bool) -> Int32 {
     if allowDark {
         if value < 100.0 {
-            return -Int32(value)
+            return -Int32(max(1.0, value))
         } else {
             return Int32(value - 100.0)
         }

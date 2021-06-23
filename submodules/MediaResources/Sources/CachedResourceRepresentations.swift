@@ -117,68 +117,6 @@ public final class CachedBlurredWallpaperRepresentation: CachedMediaResourceRepr
     }
 }
 
-public final class CachedPatternWallpaperMaskRepresentation: CachedMediaResourceRepresentation {
-    public let keepDuration: CachedMediaRepresentationKeepDuration = .general
-    
-    public let size: CGSize?
-    
-    public var uniqueId: String {
-        if let size = self.size {
-            var result = "pattern-wallpaper-mask-\(Int(size.width))x\(Int(size.height))"
-            return result
-        } else {
-            return "pattern-wallpaper-mask"
-        }
-    }
-    
-    public init(size: CGSize?) {
-        self.size = size
-    }
-    
-    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
-        if let to = to as? CachedPatternWallpaperMaskRepresentation {
-            return self.size == to.size
-        } else {
-            return false
-        }
-    }
-}
-
-
-public final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
-    public let keepDuration: CachedMediaRepresentationKeepDuration = .general
-    
-    public let colors: [UInt32]
-    public let intensity: Int32
-    public let rotation: Int32?
-    
-    public var uniqueId: String {
-        var id: String = "pattern-wallpaper"
-        for color in self.colors {
-            id.append("-\(color)")
-        }
-        id.append("-\(self.intensity)")
-        if let rotation = self.rotation, rotation != 0 {
-            id += "-\(rotation)deg"
-        }
-        return id
-    }
-    
-    public init(colors: [UInt32], intensity: Int32, rotation: Int32?) {
-        self.colors = colors
-        self.intensity = intensity
-        self.rotation = rotation
-    }
-    
-    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
-        if let to = to as? CachedPatternWallpaperRepresentation {
-            return self.colors == to.colors && self.intensity == intensity && self.rotation == to.rotation
-        } else {
-            return false
-        }
-    }
-}
-
 public final class CachedAlbumArtworkRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
