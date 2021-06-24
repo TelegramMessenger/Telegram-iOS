@@ -24,6 +24,7 @@ import AlertUI
 import PresentationDataUtils
 import LocationUI
 import AppLock
+import WallpaperBackgroundNode
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -161,7 +162,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -1218,66 +1219,65 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PeerSelectionControllerImpl(params)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
-        if tapMessage != nil || clickThroughMessage != nil {
-            controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-                return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in
-                }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-                }, tapMessage: { message in
-                    tapMessage?(message)
-            }, clickThroughMessage: {
-                clickThroughMessage?()
-            }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in
-                return false
-            }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-            }, presentController: { _, _ in }, navigationController: {
-                return nil
-            }, chatControllerNode: {
-                return nil
-            }, reactionContainerNode: {
-                return nil
-            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
-            }, canSetupReply: { _ in
-                return .none
-            }, navigateToFirstDateMessage: { _ in
-            }, requestRedeliveryOfFailedMessages: { _ in
-            }, addContact: { _ in
-            }, rateCall: { _, _, _ in
-            }, requestSelectMessagePollOptions: { _, _ in
-            }, requestOpenMessagePollResults: { _, _ in
-            }, openAppStorePage: {
-            }, displayMessageTooltip: { _, _, _, _ in
-            }, seekToTimecode: { _, _, _ in
-            }, scheduleCurrentMessage: {
-            }, sendScheduledMessagesNow: { _ in
-            }, editScheduledMessagesTime: { _ in
-            }, performTextSelectionAction: { _, _, _ in
-            }, updateMessageLike: { _, _ in
-            }, openMessageReactions: { _ in
-            }, displayImportedMessageTooltip: { _ in
-            }, displaySwipeToReplyHint: {
-            }, dismissReplyMarkupMessage: { _ in
-            }, openMessagePollResults: { _, _ in
-            }, openPollCreation: { _ in
-            }, displayPollSolution: { _, _ in
-            }, displayPsa: { _, _ in
-            }, displayDiceTooltip: { _ in
-            }, animateDiceSuccess: { _ in
-            }, openPeerContextMenu: { _, _, _, _, _ in
-            }, openMessageReplies: { _, _, _ in
-            }, openReplyThreadOriginalMessage: { _ in
-            }, openMessageStats: { _ in
-            }, editMessageMedia: { _, _ in
-            }, copyText: { _ in
-            }, displayUndo: { _ in
-            }, requestMessageUpdate: { _ in
-            }, cancelInteractiveKeyboardGestures: {
-            }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-               pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
-        } else {
-            controllerInteraction = defaultChatControllerInteraction
-        }
+
+        controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in
+            }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
+            }, tapMessage: { message in
+                tapMessage?(message)
+        }, clickThroughMessage: {
+            clickThroughMessage?()
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
+            return false
+        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, presentController: { _, _ in }, navigationController: {
+            return nil
+        }, chatControllerNode: {
+            return nil
+        }, reactionContainerNode: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, canSetupReply: { _ in
+            return .none
+        }, navigateToFirstDateMessage: { _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
+        }, addContact: { _ in
+        }, rateCall: { _, _, _ in
+        }, requestSelectMessagePollOptions: { _, _ in
+        }, requestOpenMessagePollResults: { _, _ in
+        }, openAppStorePage: {
+        }, displayMessageTooltip: { _, _, _, _ in
+        }, seekToTimecode: { _, _, _ in
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
+        }, performTextSelectionAction: { _, _, _ in
+        }, updateMessageLike: { _, _ in
+        }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
+        }, displaySwipeToReplyHint: {
+        }, dismissReplyMarkupMessage: { _ in
+        }, openMessagePollResults: { _, _ in
+        }, openPollCreation: { _ in
+        }, displayPollSolution: { _, _ in
+        }, displayPsa: { _, _ in
+        }, displayDiceTooltip: { _ in
+        }, animateDiceSuccess: { _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
+        }, openMessageReplies: { _, _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
+        }, editMessageMedia: { _, _ in
+        }, copyText: { _ in
+        }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
+        }, requestMessageUpdate: { _ in
+        }, cancelInteractiveKeyboardGestures: {
+        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
         let content: ChatMessageItemContent
         let chatLocation: ChatLocation

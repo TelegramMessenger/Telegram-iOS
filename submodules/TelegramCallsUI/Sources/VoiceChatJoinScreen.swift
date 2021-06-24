@@ -183,7 +183,7 @@ public final class VoiceChatJoinScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {
@@ -515,10 +515,16 @@ public final class VoiceChatJoinScreen: ViewController {
                 self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
                 
                 let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-                
                 let dimPosition = self.dimNode.layer.position
-                self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                let targetBounds = self.bounds
+                self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
+                self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
+                transition.animateView({
+                    self.bounds = targetBounds
+                    self.dimNode.position = dimPosition
+                })
             }
         }
         

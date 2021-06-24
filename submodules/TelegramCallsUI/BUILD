@@ -45,6 +45,9 @@ swift_library(
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
         "//submodules/WebSearchUI:WebSearchUI",
         "//submodules/MapResourceToAvatarSizes:MapResourceToAvatarSizes",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
+        "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
     ],
     visibility = [
         "//visibility:public",

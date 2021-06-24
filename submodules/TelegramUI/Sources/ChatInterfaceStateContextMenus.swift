@@ -550,13 +550,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     } else {
                         let copyTextWithEntities = {
                             var messageEntities: [MessageTextEntity]?
+                            var restrictedText: String?
                             for attribute in message.attributes {
                                 if let attribute = attribute as? TextEntitiesMessageAttribute {
                                     messageEntities = attribute.entities
-                                    break
+                                }
+                                if let attribute = attribute as? RestrictedContentMessageAttribute {
+                                    restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
                                 }
                             }
-                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                            
+                            if let restrictedText = restrictedText {
+                                storeMessageTextInPasteboard(restrictedText, entities: nil)
+                            } else {
+                                storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                            }
                             
                             Queue.mainQueue().after(0.2, {
                                 let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)

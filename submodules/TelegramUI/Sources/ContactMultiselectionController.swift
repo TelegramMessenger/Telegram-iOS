@@ -216,7 +216,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(context: self.context, mode: self.mode, options: self.options, filters: self.filters)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, mode: self.mode, options: self.options, filters: self.filters)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)
@@ -525,11 +525,31 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             break
         }
     }
+
+    private var suspendNavigationBarLayout: Bool = false
+    private var suspendedNavigationBarLayout: ContainerViewLayout?
+    private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+
+    override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        if self.suspendNavigationBarLayout {
+            self.suspendedNavigationBarLayout = layout
+            return
+        }
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+    }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.suspendNavigationBarLayout = true
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.additionalNavigationBarBackgroundHeight = self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+
+        self.suspendNavigationBarLayout = false
+        if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
+            self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+        }
     }
     
     @objc func cancelPressed() {

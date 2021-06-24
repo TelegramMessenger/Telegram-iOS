@@ -370,13 +370,14 @@ public struct TwoStepAuthData {
     public let unconfirmedEmailPattern: String?
     public let secretRandom: Data
     public let nextSecurePasswordDerivation: TwoStepSecurePasswordDerivation
+    public let pendingResetTimestamp: Int32?
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom):
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate):
                 let hasRecovery = (flags & (1 << 0)) != 0
                 let hasSecureValues = (flags & (1 << 1)) != 0
                 
@@ -398,7 +399,7 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
                     srpSessionData = TwoStepSRPSessionData(id: srpId, B: srpB.makeData())
                 }
                 
-                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation)
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation, pendingResetTimestamp: pendingResetDate)
         }
     }
 }
@@ -1259,9 +1260,9 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.postbox.mediaBox.preFetchedResourcePath = preFetchedResourcePath
     account.postbox.mediaBox.fetchResource = { [weak account] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
+            if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
+            } else if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
                 return result
             } else {
                 return .never()

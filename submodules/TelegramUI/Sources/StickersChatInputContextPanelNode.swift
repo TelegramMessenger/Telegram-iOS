@@ -136,7 +136,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                     .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                     f(.default)
                                     
-                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode, itemNode.bounds)
                                     })),
                                     .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                         f(.default)
@@ -159,7 +159,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                     if let packReference = packReference {
                                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                return controllerInteraction.sendSticker(file, nil, true, sourceNode, sourceRect)
+                                                                return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect)
                                                             } else {
                                                                 return false
                                                             }
@@ -303,7 +303,10 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                 }
             })

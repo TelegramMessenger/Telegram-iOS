@@ -294,30 +294,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
-            var topColor: UIColor?
-            var bottomColor: UIColor?
+            var colors: [UInt32] = []
             var intensity: Int32?
             var rotation: Int32?
             switch parameter {
-                case let .slug(slug, wallpaperOptions, firstColor, secondColor, intensityValue, rotationValue):
+                case let .slug(slug, wallpaperOptions, colorsValue, intensityValue, rotationValue):
                     signal = getWallpaper(network: context.account.network, slug: slug)
                     options = wallpaperOptions
-                    topColor = firstColor
-                    bottomColor = secondColor
+                    colors = colorsValue
                     intensity = intensityValue
                     rotation = rotationValue
                     controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
                     signal = .single(.color(color.argb))
-                case let .gradient(topColor, bottomColor, rotation):
-                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)))
+                case let .gradient(colors, rotation):
+                    signal = .single(.gradient(nil, colors, WallpaperSettings(rotation: rotation)))
             }
             
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, topColor, bottomColor, intensity, rotation, nil))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, colors, intensity, rotation, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
@@ -400,7 +398,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController?.pushViewController(previewController)
                     }
                 } else if let settings = dataAndTheme.1 {
-                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
+                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
                         let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
                         navigationController?.pushViewController(previewController)
                     }
@@ -483,7 +481,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case .importStickers:
             dismissInput()
-            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerpack"), let stickerPack = ImportStickerPack(data: data) {
+            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerset"), let stickerPack = ImportStickerPack(data: data), !stickerPack.stickers.isEmpty {
                 for controller in navigationController.overlayControllers {
                     if controller is ImportStickerPackController {
                         controller.dismiss()

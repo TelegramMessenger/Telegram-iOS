@@ -362,14 +362,19 @@
     AVMutableCompositionTrack *compositionTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
     [compositionTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:NULL];
     
-    CMTime frameDuration = CMTimeMake(1, 30);
+    CMTime frameDuration30FPS = CMTimeMake(1, 30);
+    CMTime frameDuration = frameDuration30FPS;
     if (videoTrack.nominalFrameRate > 0)
         frameDuration = CMTimeMake(1, (int32_t)videoTrack.nominalFrameRate);
     else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
         frameDuration = videoTrack.minFrameDuration;
     
     if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil || entityRenderer != nil || adjustments.toolsApplied)
-        frameDuration = CMTimeMake(1, 30);
+        frameDuration = frameDuration30FPS;
+    
+    if (CMTimeCompare(frameDuration, frameDuration30FPS)) {
+        frameDuration = frameDuration30FPS;
+    }
     
     NSInteger fps = (NSInteger)(1.0 / CMTimeGetSeconds(frameDuration));
     
@@ -889,7 +894,7 @@
 
 + (NSURL *)_randomTemporaryURL
 {
-    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.tmp", (int)arc4random()]]];
+    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.mp4", (int)arc4random()]]];
 }
 
 + (NSUInteger)estimatedSizeForPreset:(TGMediaVideoConversionPreset)preset duration:(NSTimeInterval)duration hasAudio:(bool)hasAudio
@@ -1320,7 +1325,8 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     {
     AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
     AVVideoCleanApertureKey: videoCleanApertureSettings,
-    AVVideoPixelAspectRatioKey: videoAspectRatioSettings
+    AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
+    AVVideoExpectedSourceFrameRateKey: @30
     };
     
     NSDictionary *hdVideoProperties = @

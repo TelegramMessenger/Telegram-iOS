@@ -327,7 +327,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                     } else {
                         return false
                     }
@@ -338,6 +338,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         openSearch: { [weak self] in
             self?.inputNodeInteraction?.toggleSearch(true, .trending, "")
         })
+        interaction.itemContext.canPlayMedia = true
         
         let isPane = self.isPane
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)

@@ -63,6 +63,21 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
     } else if let httpReference = resource as? HttpReferenceMediaResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
         |> then(fetchHttpResource(url: httpReference.url))
+    } else if let wallpaperResource = resource as? WallpaperDataResource {
+        return getWallpaper(network: account.network, slug: wallpaperResource.slug)
+        |> mapError { _ -> MediaResourceDataFetchError in
+            return .generic
+        }
+        |> mapToSignal { wallpaper -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+            guard case let .file(file) = wallpaper else {
+                return .fail(.generic)
+            }
+            guard let cloudResource = file.file.resource as? TelegramMultipartFetchableResource else {
+                return .fail(.generic)
+            }
+            return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
+            |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: MediaResourceFetchParameters(tag: nil, info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), isRandomAccessAllowed: true)))
+        }
     }
     return nil
 }

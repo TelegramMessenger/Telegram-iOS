@@ -23,7 +23,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
     private var validLayout: ContainerViewLayout?
     
     private var content: PeekControllerContent
-    private var contentNode: PeekControllerContentNode & ASDisplayNode
+    var contentNode: PeekControllerContentNode & ASDisplayNode
     private var contentNodeHasValidLayout = false
     
     private var topAccessoryNode: ASDisplayNode?
@@ -274,6 +274,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func activateMenu() {
+        if self.content.menuItems().isEmpty {
+            return
+        }
         if case .press = self.content.menuActivation() {
             self.hapticFeedback.impact()
         }
@@ -307,6 +310,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 self.highlightedActionNode = nil
                 highlightedActionNode.performAction()
             }
+        } else if self.actionsContainerNode.alpha.isZero {
+            self.requestDismiss()
         }
     }
     

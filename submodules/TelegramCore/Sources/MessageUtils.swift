@@ -25,6 +25,22 @@ public extension Message {
         }
         return nil
     }
+
+    var visibleReplyMarkupPlaceholder: String? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                if !attribute.flags.contains(.inline) {
+                    if attribute.flags.contains(.personal) {
+                        if !personal {
+                            return nil
+                        }
+                    }
+                    return attribute.placeholder
+                }
+            }
+        }
+        return nil
+    }
     
     var muted: Bool {
         for attribute in self.attributes {

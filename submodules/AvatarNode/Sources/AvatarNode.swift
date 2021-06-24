@@ -623,11 +623,13 @@ public final class AvatarNode: ASDisplayNode {
     }
 }
 
-public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont, letters: [String], peerId: PeerId) {
-    context.beginPath()
-    context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
-        size.height))
-    context.clip()
+public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool = true, font: UIFont, letters: [String], peerId: PeerId) {
+    if round {
+        context.beginPath()
+        context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
+            size.height))
+        context.clip()
+    }
     
     let colorIndex: Int
     if peerId.namespace == .max {

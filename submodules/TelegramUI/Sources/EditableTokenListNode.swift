@@ -112,6 +112,7 @@ private final class CaretIndicatorNode: ASImageNode {
 
 final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let theme: EditableTokenListNodeTheme
+    private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
     private let placeholderNode: ASTextNode
     private var tokenNodes: [TokenNode] = []
@@ -127,6 +128,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     
     init(theme: EditableTokenListNodeTheme, placeholder: String) {
         self.theme = theme
+
+        self.backgroundNode = NavigationBackgroundNode(color: theme.backgroundColor)
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.alwaysBounceVertical = true
@@ -157,9 +160,9 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.separatorNode.backgroundColor = theme.separatorColor
         
         super.init()
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.scrollNode)
-        
-        self.backgroundColor = theme.backgroundColor
+
         self.addSubnode(self.separatorNode)
         self.scrollNode.addSubnode(self.placeholderNode)
         self.scrollNode.addSubnode(self.textFieldScrollNode)
@@ -306,8 +309,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         let contentHeight = currentOffset.y + 29.0 + verticalInset
         let nodeHeight = min(contentHeight, 110.0)
         
-        let separatorHeight = UIScreenPixel
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: nodeHeight - separatorHeight), size: CGSize(width: width, height: separatorHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
         
         if !abs(previousContentHeight - contentHeight).isLess(than: CGFloat.ulpOfOne) {
@@ -322,6 +324,9 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             }
         }
         self.scrollNode.view.contentSize = CGSize(width: width, height: contentHeight)
+
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         
         return nodeHeight
     }

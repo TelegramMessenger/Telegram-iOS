@@ -19,7 +19,7 @@
     
     const struct { int width, height; } targetContextSize = { width, height};
     
-    size_t targetBytesPerRow = ((4 * (int)targetContextSize.width) + 15) & (~15);
+    size_t targetBytesPerRow = ((4 * (int)targetContextSize.width) + 31) & (~31);
     
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     

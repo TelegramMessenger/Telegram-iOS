@@ -36,7 +36,7 @@ public class TermsOfServiceControllerTheme {
 
 public extension TermsOfServiceControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(statusBarStyle: presentationTheme.rootController.statusBarStyle.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
+        self.init(statusBarStyle: presentationTheme.rootController.statusBarStyle.style, navigationBackground: presentationTheme.rootController.navigationBar.opaqueBackgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
     }
 }
 
@@ -145,7 +145,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     override public func viewDidAppear(_ animated: Bool) {

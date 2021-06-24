@@ -11,7 +11,9 @@ import ProgressNavigationButtonNode
 import AccountContext
 
 public class SetupTwoStepVerificationController: ViewController {
-    private let context: AccountContext
+    private let network: Network
+    private let sharedContext: SharedAccountContext
+
     private let initialState: SetupTwoStepVerificationInitialState
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void
     
@@ -32,20 +34,26 @@ public class SetupTwoStepVerificationController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
-        self.context = context
+    convenience public init(context: AccountContext, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
+        self.init(sharedContext: context.sharedContext, network: context.account.network, initialState: initialState, stateUpdated: stateUpdated)
+    }
+
+    public init(sharedContext: SharedAccountContext, network: Network, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
+        self.sharedContext = sharedContext
+        self.network = network
+
         self.initialState = initialState
         self.stateUpdated = stateUpdated
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -95,7 +103,7 @@ public class SetupTwoStepVerificationController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = SetupTwoStepVerificationControllerNode(context: self.context, updateBackAction: { [weak self] action in
+        self.displayNode = SetupTwoStepVerificationControllerNode(sharedContext: self.sharedContext, network: self.network, updateBackAction: { [weak self] action in
             guard let strongSelf = self else {
                 return
             }
@@ -151,7 +159,7 @@ public class SetupTwoStepVerificationController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc private func nextPressed() {

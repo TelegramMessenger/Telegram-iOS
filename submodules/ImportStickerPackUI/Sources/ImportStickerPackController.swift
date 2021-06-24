@@ -68,10 +68,14 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         self.controllerNode.cancel = { [weak self] in
             self?.dismiss()
         }
+        self.controllerNode.present = { [weak self] controller, arguments in
+            self?.present(controller, in: .window(.root), with: arguments)
+        }
         self.controllerNode.presentInGlobalOverlay = { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }
-      
+        self.controllerNode.navigationController = self.parentNavigationController
+        
         Queue.mainQueue().after(0.1) {
             self.controllerNode.updateStickerPack(self.stickerPack)
         }
@@ -101,7 +105,7 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 

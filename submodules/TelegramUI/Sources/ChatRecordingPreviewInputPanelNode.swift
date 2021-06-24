@@ -224,7 +224,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: width - rightInset - 90.0 - 4.0, y: 15.0), size: CGSize(width: 35.0, height: 20.0)))
         
         prevInputPanelNode?.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
-        if let prevTextInputPanelNode = prevInputPanelNode as? ChatTextInputPanelNode {
+        if let prevTextInputPanelNode = self.prevInputPanelNode as? ChatTextInputPanelNode {
             self.prevInputPanelNode = nil
             
             if let audioRecordingDotNode = prevTextInputPanelNode.audioRecordingDotNode {
@@ -253,7 +253,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
             self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
                         
-            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.1)
             
             self.waveformScubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.3, delay: 0.1)
             self.waveformScubberNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)

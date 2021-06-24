@@ -34,9 +34,11 @@ import CoreSpotlight
 import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
-
-#if canImport(BackgroundTasks)
 import BackgroundTasks
+
+#if canImport(AppCenter)
+import AppCenter
+import AppCenterCrashes
 #endif
 
 private let handleVoipNotifications = false
@@ -486,14 +488,7 @@ final class SharedApplicationContext {
         telegramUIDeclareEncodables()
         
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
-        
         GlobalExperimentalSettings.enableFeed = false
-        #if DEBUG
-            //GlobalExperimentalSettings.enableFeed = true
-            #if targetEnvironment(simulator)
-                //GlobalTelegramCoreConfiguration.readMessages = false
-            #endif
-        #endif
         
         self.window?.makeKeyAndVisible()
         
@@ -640,6 +635,8 @@ final class SharedApplicationContext {
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                        PresentationAppIcon(name: "New2", imageName: "New2_180x180"),
+                        PresentationAppIcon(name: "New1", imageName: "New1_180x180"),
                         PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
                         PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
                         PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
@@ -785,7 +782,6 @@ final class SharedApplicationContext {
             self.mainWindow?.hostView.containerView.backgroundColor =  initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
             let legacyBasePath = appGroupUrl.path
-            let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
@@ -793,7 +789,7 @@ final class SharedApplicationContext {
             })
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -852,7 +848,7 @@ final class SharedApplicationContext {
                 }
                 var exists = false
                 strongSelf.mainWindow.forEachViewController({ controller in
-                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
+                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController || controller is ThemePreviewController {
                         exists = true
                     }
                     return true
@@ -1334,6 +1330,14 @@ final class SharedApplicationContext {
         }*/
         
         self.maybeCheckForUpdates()
+
+        #if canImport(AppCenter)
+        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
+            AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
+                Crashes.self
+            ])
+        }
+        #endif
         
         return true
     }

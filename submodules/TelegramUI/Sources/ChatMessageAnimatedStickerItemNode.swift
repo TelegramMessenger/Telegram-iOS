@@ -22,6 +22,7 @@ import ManagedAnimationNode
 import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
+import WallpaperBackgroundNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -51,8 +52,9 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
 }
 
 class ChatMessageShareButton: HighlightableButtonNode {
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: NavigationBackgroundNode
     private let iconNode: ASImageNode
+    private var iconOffset = CGPoint()
     
     private var theme: PresentationTheme?
     private var isReplies: Bool = false
@@ -60,7 +62,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
     private var textNode: ImmediateTextNode?
     
     init() {
-        self.backgroundNode = ASImageNode()
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.iconNode = ASImageNode()
         
         super.init(pointerStyle: nil)
@@ -73,7 +75,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account) -> CGSize {
+    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account, disableComments: Bool = false) -> CGSize {
         var isReplies = false
         var replyCount = 0
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -89,26 +91,30 @@ class ChatMessageShareButton: HighlightableButtonNode {
             replyCount = 0
             isReplies = false
         }
+        if disableComments {
+            replyCount = 0
+            isReplies = false
+        }
         
         if self.theme !== presentationData.theme.theme || self.isReplies != isReplies {
             self.theme = presentationData.theme.theme
             self.isReplies = isReplies
-            
-            let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
-            var updatedShareButtonBackground: UIImage?
+
             var updatedIconImage: UIImage?
+            var updatedIconOffset = CGPoint()
             if case .pinnedMessages = subject {
-                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if isReplies {
-                updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
-                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
             } else {
-                updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
+                updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
-            self.backgroundNode.image = updatedShareButtonBackground
+            self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
             self.iconNode.image = updatedIconImage
+            self.iconOffset = updatedIconOffset
         }
         var size = CGSize(width: 30.0, height: 30.0)
         var offsetIcon = false
@@ -144,8 +150,9 @@ class ChatMessageShareButton: HighlightableButtonNode {
             textNode.removeFromSupernode()
         }
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0)), size: image.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
         }
         return size
     }
@@ -156,6 +163,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
     private var enableSynchronousImageApply: Bool = false
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
@@ -174,12 +182,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let disposable = MetaDisposable()
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
-    private var forwardBackgroundNode: ASImageNode?
+    private var forwardBackgroundNode: NavigationBackgroundNode?
     
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
-    private var replyBackgroundNode: ASImageNode?
+    private var replyBackgroundNode: NavigationBackgroundNode?
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
@@ -261,11 +269,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.removePlaceholder(animated: false)
                     } else {
                         strongSelf.imageNode.alpha = 0.0
-                        strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        strongSelf.removePlaceholder(animated: true)
                     }
                 } else {
-                    strongSelf.removePlaceholder(animated: true)
+                    if strongSelf.setupTimestamp == nil {
+                        strongSelf.removePlaceholder(animated: true)
+                    }
                 }
                 firstTime = false
             }
@@ -302,10 +310,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func removePlaceholder(animated: Bool) {
+        self.placeholderNode.alpha = 0.0
         if !animated {
             self.placeholderNode.removeFromSupernode()
         } else {
-            self.placeholderNode.alpha = 0.0
             self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
                 self?.placeholderNode.removeFromSupernode()
             })
@@ -389,6 +397,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private var setupTimestamp: Double?
     private func setupNode(item: ChatMessageItem) {
         guard self.animationNode == nil else {
             return
@@ -421,6 +430,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             animationNode.started = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.imageNode.alpha = 0.0
+                    if !strongSelf.enableSynchronousImageApply {
+                        let current = CACurrentMediaTime()
+                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                            if !strongSelf.placeholderNode.alpha.isZero {
+                                strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                strongSelf.removePlaceholder(animated: true)
+                            }
+                        } else {
+                            strongSelf.removePlaceholder(animated: false)
+                        }
+                    }
                     
                     if let item = strongSelf.item {
                         if let _ = strongSelf.emojiFile {
@@ -511,6 +531,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
+                if isPlaying && self.setupTimestamp == nil {
+                    self.setupTimestamp = CACurrentMediaTime()
+                }
                 animationNode.visibility = isPlaying
                 
                 if self.didSetUpAnimationNode && alreadySeen {
@@ -575,6 +598,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
 
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            
+            if let backgroundNode = self.backgroundNode {
+                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+            }
+        }
+    }
+    
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -620,13 +653,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
-        let currentForwardBackgroundNode = self.forwardBackgroundNode
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
-        let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
-        let currentItem = self.item
         let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
@@ -821,8 +851,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: ASImageNode?
-            var replyBackgroundImage: UIImage?
+            var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var ignoreForward = self.telegramDice == nil
@@ -888,14 +917,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             if replyInfoApply != nil || viaBotApply != nil {
-                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                    updatedReplyBackgroundNode = currentReplyBackgroundNode
-                } else {
-                    updatedReplyBackgroundNode = ASImageNode()
-                }
-                
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+                needsReplyBackground = true
             }
             
             var updatedShareButtonNode: ChatMessageShareButton?
@@ -915,8 +937,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var forwardPsaType: String?
             
             var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
-            var updatedForwardBackgroundNode: ASImageNode?
-            var forwardBackgroundImage: UIImage?
+            var needsForwardBackground = false
             
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
                 forwardPsaType = forwardInfo.psaType
@@ -941,15 +962,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 let availableWidth = max(60.0, availableContentWidth + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
-                
-                if let currentForwardBackgroundNode = currentForwardBackgroundNode {
-                    updatedForwardBackgroundNode = currentForwardBackgroundNode
-                } else {
-                    updatedForwardBackgroundNode = ASImageNode()
-                }
-                
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                forwardBackgroundImage = graphics.chatServiceBubbleFillImage
+
+                needsForwardBackground = true
             }
             
             var maxContentWidth = imageSize.width
@@ -1003,6 +1017,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let file = file, let immediateThumbnailData = file.immediateThumbnailData {
+                        if strongSelf.backgroundNode == nil {
+                            if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                strongSelf.backgroundNode = backgroundNode
+                                strongSelf.placeholderNode.addBackdropNode(backgroundNode)
+                                
+                                if let (rect, size) = strongSelf.absoluteRect {
+                                    strongSelf.updateAbsoluteRect(rect, within: size)
+                                }
+                            }
+                        }
+                        
                         let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
@@ -1041,18 +1066,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     dateAndStatusApply(false)
                     strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
-                    
-                    if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
-                        if strongSelf.replyBackgroundNode == nil {
-                            strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                            strongSelf.contextSourceNode.contentNode.addSubnode(updatedReplyBackgroundNode)
-                            updatedReplyBackgroundNode.image = replyBackgroundImage
+
+                    if needsReplyBackground {
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            strongSelf.replyBackgroundNode?.image = replyBackgroundImage
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            strongSelf.replyBackgroundNode = replyBackgroundNode
+                            strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
                     } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        replyBackgroundNode.removeFromSupernode()
                         strongSelf.replyBackgroundNode = nil
+                        replyBackgroundNode.removeFromSupernode()
                     }
                     
                     if let (viaBotLayout, viaBotApply) = viaBotApply {
@@ -1063,7 +1088,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 14.0)), y: 8.0), size: viaBotLayout.size)
                         viaBotNode.frame = viaBotFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                     } else if let viaBotNode = strongSelf.viaBotNode {
                         viaBotNode.removeFromSupernode()
                         strongSelf.viaBotNode = nil
@@ -1086,7 +1114,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         replyInfoNode.frame = replyInfoFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                        if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                            replyBackgroundNode.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                            replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                         
                         if let _ = item.controllerInteraction.selectionState, isEmoji {
                             replyInfoNode.alpha = 0.0
@@ -1127,16 +1158,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             deliveryFailedNode?.removeFromSupernode()
                         })
                     }
-                    
-                    if let updatedForwardBackgroundNode = updatedForwardBackgroundNode {
-                        if strongSelf.forwardBackgroundNode == nil {
-                            strongSelf.forwardBackgroundNode = updatedForwardBackgroundNode
-                            strongSelf.addSubnode(updatedForwardBackgroundNode)
-                            updatedForwardBackgroundNode.image = forwardBackgroundImage
+
+                    if needsForwardBackground {
+                        if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                            forwardBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                        } else {
+                            let forwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            strongSelf.forwardBackgroundNode = forwardBackgroundNode
+                            strongSelf.addSubnode(forwardBackgroundNode)
                         }
-                    } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
-                        forwardBackgroundNode.removeFromSupernode()
-                        strongSelf.forwardBackgroundNode = nil
                     }
                     
                     if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
@@ -1147,7 +1177,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                         forwardInfoNode.frame = forwardInfoFrame
-                        strongSelf.forwardBackgroundNode?.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                        if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                            forwardBackgroundNode.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                            forwardBackgroundNode.update(size: forwardBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
+                        }
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
                         forwardInfoNode.removeFromSupernode()
                         strongSelf.forwardInfoNode = nil
@@ -1465,7 +1498,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -1537,6 +1570,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
+        }
+
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        let replyAlpha: CGFloat = item.controllerInteraction.selectionState == nil ? 1.0 : 0.0
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: replyAlpha)
+        }
+        if let replyBackgroundNode = self.replyBackgroundNode {
+            transition.updateAlpha(node: replyBackgroundNode, alpha: replyAlpha)
         }
         
         if let selectionState = item.controllerInteraction.selectionState {
@@ -1667,7 +1709,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 
-    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: ContainedViewLayoutTransition) {
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -1697,14 +1739,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             y: sourceCenter.y - self.imageNode.frame.midY
         )
 
-        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
-        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.imageNode, from: sourceScale)
         if let animationNode = self.animationNode {
-            transition.animatePositionAdditive(node: animationNode, offset: offset)
-            transition.animateTransformScale(node: animationNode, from: sourceScale)
+            transition.animatePositionAdditive(layer: animationNode.layer, offset: offset)
+            transition.horizontal.animateTransformScale(node: animationNode, from: sourceScale)
         }
-        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
-        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.placeholderNode, from: sourceScale)
 
         let inverseScale = 1.0 / sourceScale
 
@@ -1712,7 +1754,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
             y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
         ), removeOnCompletion: false)
-        transition.updateTransformScale(layer: textInput.contentView.layer, scale: 1.0 / sourceScale)
+        transition.horizontal.updateTransformScale(layer: textInput.contentView.layer, scale: 1.0 / sourceScale)
 
         textInput.contentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
             textInput.contentView.removeFromSuperview()
@@ -1727,7 +1769,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.16)
     }
 
-    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: ContainedViewLayoutTransition) {
+    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -1772,14 +1814,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             y: sourceCenter.y - self.imageNode.frame.midY
         )
 
-        transition.animatePositionAdditive(node: self.imageNode, offset: offset)
-        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.imageNode, from: sourceScale)
         if let animationNode = self.animationNode {
-            transition.animatePositionAdditive(node: animationNode, offset: offset)
-            transition.animateTransformScale(node: animationNode, from: sourceScale)
+            transition.animatePositionAdditive(layer: animationNode.layer, offset: offset)
+            transition.horizontal.animateTransformScale(node: animationNode, from: sourceScale)
         }
-        transition.animatePositionAdditive(node: self.placeholderNode, offset: offset)
-        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
+        transition.horizontal.animateTransformScale(node: self.placeholderNode, from: sourceScale)
 
         let inverseScale = 1.0 / sourceScale
 
@@ -1788,7 +1830,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 x: -offset.x - localSourceOffset.x * (inverseScale - 1.0),
                 y: -offset.y - localSourceOffset.y * (inverseScale - 1.0)
             ), removeOnCompletion: false)
-            transition.updateTransformScale(layer: snapshotView.layer, scale: 1.0 / sourceScale)
+            transition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: 1.0 / sourceScale)
 
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
@@ -1817,13 +1859,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: ContainedViewLayoutTransition) {
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
-            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, horizontalTransition: transition, verticalTransition: transition)
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
             if let replyBackgroundNode = self.replyBackgroundNode {
-                transition.animatePositionAdditive(node: replyBackgroundNode, offset: offset)
+                transition.animatePositionAdditive(layer: replyBackgroundNode.layer, offset: offset)
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }

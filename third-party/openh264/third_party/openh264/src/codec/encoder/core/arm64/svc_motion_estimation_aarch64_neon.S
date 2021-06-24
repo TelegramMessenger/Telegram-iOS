@@ -31,7 +31,7 @@
  */
 
 #ifdef HAVE_NEON_AARCH64
-#include "third-party/openh264/src/codec/common/arm64/arm_arch64_common_macro.S"
+#include "arm_arch64_common_macro.S"
 //int32_t SumOf8x8SingleBlock_AArch64_neon (uint8_t* pRef, const int32_t kiRefStride);
 WELS_ASM_AARCH64_FUNC_BEGIN SumOf8x8SingleBlock_AArch64_neon
     SIGN_EXTENSION x1,w1

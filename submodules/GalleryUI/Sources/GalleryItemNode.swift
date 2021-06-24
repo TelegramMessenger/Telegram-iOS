@@ -22,6 +22,7 @@ open class GalleryItemNode: ASDisplayNode {
     
     public var toggleControlsVisibility: () -> Void = { }
     public var updateControlsVisibility: (Bool) -> Void = { _ in }
+    public var updateOrientation: (UIInterfaceOrientation) -> Void = { _ in }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }

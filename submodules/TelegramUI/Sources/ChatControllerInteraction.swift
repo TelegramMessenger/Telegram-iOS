@@ -62,9 +62,9 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, String?, Bool, ASDisplayNode, CGRect) -> Bool
-    let sendGif: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
-    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
+    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool
+    let sendGif: (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool
+    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     let activateSwitchInline: (PeerId?, String) -> Void
@@ -121,6 +121,7 @@ public final class ChatControllerInteraction {
     let editMessageMedia: (MessageId, Bool) -> Void
     let copyText: (String) -> Void
     let displayUndo: (UndoOverlayContent) -> Void
+    let isAnimatingMessage: (UInt32) -> Bool
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -138,6 +139,7 @@ public final class ChatControllerInteraction {
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()
     var currentMessageWithLoadingReplyThread: MessageId?
+    let presentationContext: ChatPresentationContext
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
@@ -153,9 +155,9 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, String?, Bool, ASDisplayNode, CGRect) -> Bool,
-        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
-        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool,
+        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool,
+        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String) -> Void,
@@ -212,11 +214,13 @@ public final class ChatControllerInteraction {
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         copyText: @escaping (String) -> Void,
         displayUndo: @escaping (UndoOverlayContent) -> Void,
+        isAnimatingMessage: @escaping (UInt32) -> Bool,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
-        stickerSettings: ChatInterfaceStickerSettings
+        stickerSettings: ChatInterfaceStickerSettings,
+        presentationContext: ChatPresentationContext
     ) {
         self.openMessage = openMessage
         self.openPeer = openPeer
@@ -290,6 +294,7 @@ public final class ChatControllerInteraction {
         self.editMessageMedia = editMessageMedia
         self.copyText = copyText
         self.displayUndo = displayUndo
+        self.isAnimatingMessage = isAnimatingMessage
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -297,11 +302,13 @@ public final class ChatControllerInteraction {
         
         self.pollActionState = pollActionState
         self.stickerSettings = stickerSettings
+
+        self.presentationContext = presentationContext
     }
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -342,9 +349,14 @@ public final class ChatControllerInteraction {
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
         }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
+        pollActionState: ChatInterfacePollActionState(),
+        stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false),
+        presentationContext: ChatPresentationContext(backgroundNode: nil)
+        )
     }
 }

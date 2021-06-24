@@ -35,28 +35,25 @@ private struct ChatInstantVideoMessageDurationNodeState: Equatable {
 private final class ChatInstantVideoMessageDurationNodeParameters: NSObject {
     let state: ChatInstantVideoMessageDurationNodeState
     let isSeen: Bool
-    let backgroundColor: UIColor
     let textColor: UIColor
     
-    init(state: ChatInstantVideoMessageDurationNodeState, isSeen: Bool, backgroundColor: UIColor, textColor: UIColor) {
+    init(state: ChatInstantVideoMessageDurationNodeState, isSeen: Bool, textColor: UIColor) {
         self.state = state
         self.isSeen = isSeen
-        self.backgroundColor = backgroundColor
         self.textColor = textColor
         
         super.init()
     }
 }
 
-final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
+final class ChatInstantVideoMessageDurationNode: ASImageNode {
     private var textColor: UIColor
-    private var fillColor: UIColor
     
     var defaultDuration: Double? {
         didSet {
             if self.defaultDuration != oldValue {
                 self.updateTimestamp()
-                self.setNeedsDisplay()
+                self.updateContents()
             }
         }
     }
@@ -64,7 +61,7 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
     var isSeen: Bool = false {
         didSet {
             if self.isSeen != oldValue {
-                self.setNeedsDisplay()
+                self.updateContents()
             }
         }
     }
@@ -87,7 +84,7 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
     private var state = ChatInstantVideoMessageDurationNodeState() {
         didSet {
             if self.state != oldValue {
-                self.setNeedsDisplay()
+                self.updateContents()
             }
         }
     }
@@ -104,10 +101,12 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
             }
         }
     }
+
+    var size: CGSize = CGSize()
+    var sizeUpdated: ((CGSize) -> Void)?
     
-    init(textColor: UIColor, fillColor: UIColor) {
+    init(textColor: UIColor) {
         self.textColor = textColor
-        self.fillColor = fillColor
         
         super.init()
         
@@ -128,11 +127,10 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
         self.updateTimer?.invalidate()
     }
     
-    func updateTheme(textColor: UIColor, fillColor: UIColor) {
-        if !self.textColor.isEqual(textColor) || !self.fillColor.isEqual(textColor) {
+    func updateTheme(textColor: UIColor) {
+        if !self.textColor.isEqual(textColor) {
             self.textColor = textColor
-            self.fillColor = fillColor
-            self.setNeedsDisplay()
+            self.updateContents()
         }
     }
     
@@ -168,12 +166,22 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
             self.state = ChatInstantVideoMessageDurationNodeState()
         }
     }
-    
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return ChatInstantVideoMessageDurationNodeParameters(state: self.state, isSeen: self.isSeen, backgroundColor: self.fillColor, textColor: self.textColor)
+
+    private func updateContents() {
+        let image = self.generateContents(withParameters: self.getParameters(), isCancelled: { return false })
+        let previousSize = self.image?.size
+        self.image = image
+        if let image = image, previousSize != image.size {
+            self.size = image.size
+            self.sizeUpdated?(image.size)
+        }
     }
     
-    @objc override public class func display(withParameters: Any?, isCancelled: () -> Bool) -> UIImage? {
+    private func getParameters() -> NSObjectProtocol? {
+        return ChatInstantVideoMessageDurationNodeParameters(state: self.state, isSeen: self.isSeen, textColor: self.textColor)
+    }
+    
+    private func generateContents(withParameters: Any?, isCancelled: () -> Bool) -> UIImage? {
         guard let parameters = withParameters as? ChatInstantVideoMessageDurationNodeParameters else {
             return nil
         }
@@ -196,20 +204,14 @@ final class ChatInstantVideoMessageDurationNode: ASDisplayNode {
         
         return generateImage(imageSize, rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-            context.setBlendMode(.copy)
-            context.setFillColor(parameters.backgroundColor.cgColor)
-            
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
+            context.setBlendMode(.normal)
             
             if !parameters.isSeen {
                 context.setFillColor(parameters.textColor.cgColor)
                 let diameter: CGFloat = 4.0
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height + floor((size.height - diameter) / 2.0), y: floor((size.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)))
             }
-        
-            context.setBlendMode(.normal)
+
             UIGraphicsPushContext(context)
             string.draw(at: CGPoint(x: floor((size.width - unseenInset - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y + UIScreenPixel))
             UIGraphicsPopContext()

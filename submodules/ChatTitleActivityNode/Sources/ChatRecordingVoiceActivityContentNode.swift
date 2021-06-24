@@ -90,7 +90,7 @@ class ChatRecordingVoiceActivityContentNode: ChatTitleActivityContentNode {
         self.addSubnode(self.indicatorNode)
     }
     
-    override func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
+    override func updateLayout(_ constrainedSize: CGSize, offset: CGFloat, alignment: NSTextAlignment) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
         let indicatorSize = CGSize(width: 24.0, height: 16.0)
         let originX: CGFloat
@@ -99,7 +99,7 @@ class ChatRecordingVoiceActivityContentNode: ChatTitleActivityContentNode {
         } else {
             originX = indicatorSize.width
         }
-        self.textNode.frame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: size)
+        self.textNode.frame = CGRect(origin: CGPoint(x: originX, y: offset), size: size)
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: self.textNode.frame.minX - indicatorSize.width, y: 0.0), size: indicatorSize)
         return CGSize(width: size.width + indicatorSize.width, height: size.height)
     }

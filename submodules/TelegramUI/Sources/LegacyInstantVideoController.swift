@@ -54,6 +54,9 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
     func bindCaptureController(_ captureController: TGVideoMessageCaptureController?) {
         self.captureController = captureController
         if let captureController = captureController {
+            captureController.view.disablesInteractiveKeyboardGestureRecognizer = true
+            captureController.view.disablesInteractiveTransitionGestureRecognizer = true
+
             captureController.micLevel = { [weak self] (level: CGFloat) -> Void in
                 self?.micLevelValue.set(Float(level))
             }
@@ -124,7 +127,7 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
 
 func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
     let inputPanelTheme = theme.chat.inputPanel
-    return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
+    return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: theme.rootController.navigationBar.opaqueBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
 func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, hasSchedule: Bool, send: @escaping (InstantVideoController, EnqueueMessage?) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) -> InstantVideoController {

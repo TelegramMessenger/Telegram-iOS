@@ -12,6 +12,7 @@ enum ChatHistoryNavigationButtonType {
 }
 
 class ChatHistoryNavigationButtonNode: ASControlNode {
+    private let backgroundNode: NavigationBackgroundNode
     private let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
     private let badgeTextNode: ASTextNode
@@ -42,6 +43,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         self.type = type
+
+        self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
@@ -65,7 +68,11 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.badgeTextNode.displaysAsynchronously = false
         
         super.init()
-        
+
+        self.addSubnode(self.backgroundNode)
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 38.0 / 2.0, transition: .immediate)
+
         self.addSubnode(self.imageNode)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
@@ -78,7 +85,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     func updateTheme(theme: PresentationTheme) {
         if self.theme !== theme {
             self.theme = theme
-            
+
+            self.backgroundNode.updateColor(color: theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
             switch self.type {
                 case .down:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)

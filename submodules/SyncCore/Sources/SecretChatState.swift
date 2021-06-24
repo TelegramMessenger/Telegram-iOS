@@ -249,7 +249,7 @@ public struct SecretChatLayerNegotiationState: PostboxCoding, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.activeLayer = SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("a", orElse: 0)) ?? .layer46
+        self.activeLayer = SecretChatSequenceBasedLayer(rawValue: decoder.decodeInt32ForKey("a", orElse: 0)) ?? .layer73
         self.locallyRequestedLayer = decoder.decodeOptionalInt32ForKey("lr")
         self.remotelyRequestedLayer = decoder.decodeOptionalInt32ForKey("rr")
     }

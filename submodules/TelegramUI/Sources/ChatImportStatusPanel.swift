@@ -28,7 +28,7 @@ final class ChatImportStatusPanel: ASDisplayNode {
         if self.theme !== presentationData.theme.theme {
             self.theme = presentationData.theme.theme
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+            let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             self.backgroundNode.image = graphics.dateFloatingBackground
             self.secondaryBackgroundNode.image = graphics.dateFloatingBackground
         }

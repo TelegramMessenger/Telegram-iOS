@@ -479,7 +479,7 @@ public final class ThemePreviewController: ViewController {
         
         self.validLayout = layout
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     @objc private func actionPressed() {

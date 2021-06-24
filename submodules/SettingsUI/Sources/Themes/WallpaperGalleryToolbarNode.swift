@@ -98,7 +98,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
-        self.backgroundNode.color = theme.rootController.tabBar.backgroundColor
+        self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.cancelHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor

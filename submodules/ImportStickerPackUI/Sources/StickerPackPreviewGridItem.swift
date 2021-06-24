@@ -57,12 +57,10 @@ final class StickerPackPreviewGridItem: GridItem {
 private let textFont = Font.regular(20.0)
 
 final class StickerPackPreviewGridItemNode: GridItemNode {
-    private var currentState: (Account, ImportStickerPack.Sticker?)?
+    private var currentState: (Account, ImportStickerPack.Sticker?, CGSize)?
     private var isEmpty: Bool?
-//    private let imageNode: TransformImageNode
     private let imageNode: ASImageNode
     private var animationNode: AnimatedStickerNode?
-    private var placeholderNode: StickerShimmerEffectNode?
     
     private var theme: PresentationTheme?
     
@@ -86,48 +84,14 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = ASImageNode()
-//        self.imageNode = TransformImageNode()
-//        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
-        self.placeholderNode = StickerShimmerEffectNode()
-        self.placeholderNode?.isUserInteractionEnabled = false
-        
+
         super.init()
         
         self.addSubnode(self.imageNode)
-        if let placeholderNode = self.placeholderNode {
-//            self.addSubnode(placeholderNode)
-        }
-        
-        var firstTime = true
-//        self.imageNode.imageUpdated = { [weak self] image in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            if image != nil {
-//                strongSelf.removePlaceholder(animated: !firstTime)
-//            }
-//            firstTime = false
-//        }
     }
     
     deinit {
         self.stickerFetchedDisposable.dispose()
-    }
-    
-    private func removePlaceholder(animated: Bool) {
-        if let placeholderNode = self.placeholderNode {
-            self.placeholderNode = nil
-            if !animated {
-                placeholderNode.removeFromSupernode()
-            } else {
-                placeholderNode.allowsGroupOpacity = true
-                placeholderNode.alpha = 0.0
-                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
-                    placeholderNode?.removeFromSupernode()
-                    placeholderNode?.allowsGroupOpacity = false
-                })
-            }
-        }
     }
     
     override func didLoad() {
@@ -141,47 +105,36 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.theme = theme
         
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 !== stickerItem || self.isEmpty != isEmpty {
+            var dimensions = CGSize(width: 512.0, height: 512.0)
             if let stickerItem = stickerItem {
-                self.imageNode.image = stickerItem.image
-//                if stickerItem.file.isAnimatedSticker {
-//                    let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-//                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
-//
-//                    if self.animationNode == nil {
-//                        let animationNode = AnimatedStickerNode()
-//                        self.animationNode = animationNode
-//                        self.addSubnode(animationNode)
-//                        animationNode.started = { [weak self] in
-//                            self?.imageNode.isHidden = true
-//                            self?.removePlaceholder(animated: false)
-//                        }
-//                    }
-//                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-//                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
-//                    self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
-//                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
-//                } else {
-//                    if let animationNode = self.animationNode {
-//                        animationNode.visibility = false
-//                        self.animationNode = nil
-//                        animationNode.removeFromSupernode()
-//                    }
-//                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-//                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
-//                }
-            } else {
-                if let placeholderNode = self.placeholderNode {
-                    if isEmpty {
-                        if !placeholderNode.alpha.isZero {
-                            placeholderNode.alpha = 0.0
-                            placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                switch stickerItem.content {
+                    case let .image(data):
+                        if let animationNode = self.animationNode {
+                            animationNode.visibility = false
+                            self.animationNode = nil
+                            animationNode.removeFromSupernode()
                         }
-                    } else {
-                        placeholderNode.alpha = 1.0
-                    }
+                        self.imageNode.isHidden = false
+                        if let image = UIImage(data: data) {
+                            self.imageNode.image = image
+                            dimensions = image.size
+                        }
+                    case .animation:
+                        self.imageNode.isHidden = true
+                        let animationNode = AnimatedStickerNode()
+                        self.animationNode = animationNode
+                        self.addSubnode(animationNode)
+                        
+                        let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                        if let resource = stickerItem.resource {
+                            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                        }
+                        animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                 }
+            } else {
+                dimensions = CGSize()
             }
-            self.currentState = (account, stickerItem)
+            self.currentState = (account, stickerItem, dimensions)
             self.setNeedsLayout()
         }
         self.isEmpty = isEmpty
@@ -194,32 +147,13 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         let boundsSide = min(bounds.size.width - 14.0, bounds.size.height - 14.0)
         let boundingSize = CGSize(width: boundsSide, height: boundsSide)
         
-        if let placeholderNode = self.placeholderNode {
-            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
-            placeholderNode.frame = bounds
-            
-//            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
-//                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
-//            }
-        }
-        
-        self.imageNode.frame = bounds
-//        if let (_, item) = self.currentState {
-//            if let item = item, let dimensions = item.file.dimensions?.cgSize {
-//                let imageSize = dimensions.aspectFitted(boundingSize)
-//                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-//                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
-//                if let animationNode = self.animationNode {
-//                    animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
-//                    animationNode.updateLayout(size: imageSize)
-//                }
-//            }
-//        }
-    }
-    
-    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
-        if let placeholderNode = self.placeholderNode {
-            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
+        if let (_, _, dimensions) = self.currentState {
+            let imageSize = dimensions.aspectFitted(boundingSize)
+            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+            if let animationNode = self.animationNode {
+                animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+                animationNode.updateLayout(size: imageSize)
+            }
         }
     }
     
@@ -232,7 +166,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
-        if let (_, maybeItem) = self.currentState, let interaction = self.interaction, let item = maybeItem {
+        if let (_, maybeItem, _) = self.currentState, let interaction = self.interaction, let item = maybeItem {
             isPreviewing = interaction.previewedItem === item
         }
         if self.currentIsPreviewing != isPreviewing {

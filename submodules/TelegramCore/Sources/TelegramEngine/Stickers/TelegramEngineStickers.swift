@@ -69,5 +69,28 @@ public extension TelegramEngine {
         public func stickerPacksAttachedToMedia(media: AnyMediaReference) -> Signal<[StickerPackReference], NoError> {
             return _internal_stickerPacksAttachedToMedia(account: self.account, media: media)
         }
+        
+        public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+            return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, isAnimated: isAnimated, software: software)
+        }
+        
+        public func getStickerSetShortNameSuggestion(title: String) -> Signal<String?, NoError> {
+            return _internal_getStickerSetShortNameSuggestion(account: self.account, title: title)
+        }
+        
+        public func validateStickerSetShortNameInteractive(shortName: String) -> Signal<AddressNameValidationStatus, NoError> {
+            if let error = _internal_checkAddressNameFormat(shortName) {
+                return .single(.invalidFormat(error))
+            } else {
+                return .single(.checking)
+                |> then(
+                    _internal_stickerSetShortNameAvailability(account: self.account, shortName: shortName)
+                    |> delay(0.3, queue: Queue.concurrentDefaultQueue())
+                    |> map { result -> AddressNameValidationStatus in
+                        .availability(result)
+                    }
+                )
+            }
+        }
     }
 }

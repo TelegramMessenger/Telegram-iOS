@@ -2,6 +2,19 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
+import Accelerate
+
+private func shiftArray(array: [CGPoint], offset: Int) -> [CGPoint] {
+    var newArray = array
+    var offset = offset
+    while offset > 0 {
+        let element = newArray.removeFirst()
+        newArray.append(element)
+        offset -= 1
+    }
+    return newArray
+}
 
 private func gatherPositions(_ list: [CGPoint]) -> [CGPoint] {
     var result: [CGPoint] = []
@@ -19,7 +32,46 @@ private func interpolatePoints(_ point1: CGPoint, _ point2: CGPoint, at factor: 
     return CGPoint(x: interpolateFloat(point1.x, point2.x, at: factor), y: interpolateFloat(point1.y, point2.y, at: factor))
 }
 
-private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoint]) -> UIImage {
+public func adjustSaturationInContext(context: DrawingContext, saturation: CGFloat) {
+    var buffer = vImage_Buffer()
+    buffer.data = context.bytes
+    buffer.width = UInt(context.size.width * context.scale)
+    buffer.height = UInt(context.size.height * context.scale)
+    buffer.rowBytes = context.bytesPerRow
+
+    let divisor: Int32 = 0x1000
+
+    let rwgt: CGFloat = 0.3086
+    let gwgt: CGFloat = 0.6094
+    let bwgt: CGFloat = 0.0820
+
+    let adjustSaturation = saturation
+
+    let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
+    let b = (1.0 - adjustSaturation) * rwgt
+    let c = (1.0 - adjustSaturation) * rwgt
+    let d = (1.0 - adjustSaturation) * gwgt
+    let e = (1.0 - adjustSaturation) * gwgt + adjustSaturation
+    let f = (1.0 - adjustSaturation) * gwgt
+    let g = (1.0 - adjustSaturation) * bwgt
+    let h = (1.0 - adjustSaturation) * bwgt
+    let i = (1.0 - adjustSaturation) * bwgt + adjustSaturation
+
+    let satMatrix: [CGFloat] = [
+        a, b, c, 0,
+        d, e, f, 0,
+        g, h, i, 0,
+        0, 0, 0, 1
+    ]
+
+    var matrix: [Int16] = satMatrix.map { value in
+        return Int16(value * CGFloat(divisor))
+    }
+
+    vImageMatrixMultiply_ARGB8888(&buffer, &buffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
+}
+
+private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
     let width = Int(size.width)
     let height = Int(size.height)
 
@@ -102,18 +154,71 @@ private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoi
         }
     }
 
+    if abs(adjustSaturation - 1.0) > .ulpOfOne {
+        adjustSaturationInContext(context: context, saturation: adjustSaturation)
+    }
+
     return context.generateImage()!
 }
 
-final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNode {
+public final class GradientBackgroundNode: ASDisplayNode {
+    public final class CloneNode: ASImageNode {
+        private weak var parentNode: GradientBackgroundNode?
+        private var index: SparseBag<Weak<CloneNode>>.Index?
+
+        public init(parentNode: GradientBackgroundNode) {
+            self.parentNode = parentNode
+
+            super.init()
+
+            self.index = parentNode.cloneNodes.add(Weak<CloneNode>(self))
+            self.image = parentNode.dimmedImage
+        }
+
+        deinit {
+            if let parentNode = self.parentNode, let index = self.index {
+                parentNode.cloneNodes.remove(index)
+            }
+        }
+    }
+
+    private static let basePositions: [CGPoint] = [
+        CGPoint(x: 0.80, y: 0.10),
+        CGPoint(x: 0.60, y: 0.20),
+        CGPoint(x: 0.35, y: 0.25),
+        CGPoint(x: 0.25, y: 0.60),
+        CGPoint(x: 0.20, y: 0.90),
+        CGPoint(x: 0.40, y: 0.80),
+        CGPoint(x: 0.65, y: 0.75),
+        CGPoint(x: 0.75, y: 0.40)
+    ]
+
+    public static func generatePreview(size: CGSize, colors: [UIColor]) -> UIImage {
+        let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: 0))
+        return generateGradient(size: size, colors: colors, positions: positions)
+    }
+
+    private var colors: [UIColor]
     private var phase: Int = 0
 
-    private let contentView: UIImageView
+    public let contentView: UIImageView
     private var validPhase: Int?
+    private var invalidated: Bool = false
+
+    private var dimmedImageParams: (size: CGSize, colors: [UIColor], positions: [CGPoint])?
+    private var _dimmedImage: UIImage?
+    private var dimmedImage: UIImage? {
+        if let current = self._dimmedImage {
+            return current
+        } else if let (size, colors, positions) = self.dimmedImageParams {
+            self._dimmedImage = generateGradient(size: size, colors: colors, positions: positions, adjustSaturation: 1.7)
+            return self._dimmedImage
+        } else {
+            return nil
+        }
+    }
 
     private var validLayout: CGSize?
-
-    private var timer: Timer?
 
     private struct PhaseTransitionKey: Hashable {
         var width: Int
@@ -123,164 +228,219 @@ final class SoftwareGradientBackgroundNode: ASDisplayNode, GradientBackgroundNod
         var numberOfFrames: Int
         var curve: ContainedViewLayoutTransitionCurve
     }
-    private var cachedPhaseTransition: [PhaseTransitionKey: [UIImage]] = [:]
 
-    override public init() {
+    private let cloneNodes = SparseBag<Weak<CloneNode>>()
+
+    private let useSharedAnimationPhase: Bool
+    static var sharedPhase: Int = 0
+
+    public init(colors: [UIColor]? = nil, useSharedAnimationPhase: Bool = false) {
+        self.useSharedAnimationPhase = useSharedAnimationPhase
         self.contentView = UIImageView()
-
-        super.init()
-
-        self.view.addSubview(self.contentView)
-
-        self.phase = 0
-
-        self.backgroundColor = .white
-
-        /*if #available(iOS 10.0, *) {
-            let timer = Timer(timeInterval: 1.0, repeats: true, block: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.phase += 1
-                if let size = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .spring))
-                }
-            })
-            self.timer = timer
-            RunLoop.main.add(timer, forMode: .common)
-        }*/
-    }
-
-    deinit {
-        self.timer?.invalidate()
-    }
-
-    private func generateAndCachePhaseTransition(key: PhaseTransitionKey) {
-        DispatchQueue.global().async { [weak self] in
-            let basePositions: [CGPoint] = [
-                CGPoint(x: 0.80, y: 0.10),
-                CGPoint(x: 0.60, y: 0.20),
-                CGPoint(x: 0.35, y: 0.25),
-                CGPoint(x: 0.25, y: 0.60),
-                CGPoint(x: 0.20, y: 0.90),
-                CGPoint(x: 0.40, y: 0.80),
-                CGPoint(x: 0.65, y: 0.75),
-                CGPoint(x: 0.75, y: 0.40)
-            ]
-
-            let colors: [UIColor] = [
-                UIColor(rgb: 0x7FA381),
-                UIColor(rgb: 0xFFF5C5),
-                UIColor(rgb: 0x336F55),
-                UIColor(rgb: 0xFBE37D)
-            ]
-
-            var images: [UIImage] = []
-
-            let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: key.fromPhase % 8))
-            let positions = gatherPositions(shiftArray(array: basePositions, offset: key.toPhase % 8))
-
-            let startTime = CFAbsoluteTimeGetCurrent()
-            for i in 0 ..< key.numberOfFrames {
-                let t = key.curve.solve(at: CGFloat(i) / CGFloat(key.numberOfFrames - 1))
-
-                let morphedPositions = Array(zip(previousPositions, positions).map { previous, current -> CGPoint in
-                    return interpolatePoints(previous, current, at: t)
-                })
-
-                images.append(generateGradient(size: CGSize(width: key.width, height: key.height), colors: colors, positions: morphedPositions))
-            }
-            print("Animation cached in \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-
-            DispatchQueue.main.async {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.cachedPhaseTransition.removeAll()
-                strongSelf.cachedPhaseTransition[key] = images
-            }
-        }
-    }
-
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let sizeUpdated = self.validLayout != size
-        self.validLayout = size
-
-        let imageSize = size.fitted(CGSize(width: 80.0, height: 80.0)).integralFloor
-
-        let basePositions: [CGPoint] = [
-            CGPoint(x: 0.80, y: 0.10),
-            CGPoint(x: 0.60, y: 0.20),
-            CGPoint(x: 0.35, y: 0.25),
-            CGPoint(x: 0.25, y: 0.60),
-            CGPoint(x: 0.20, y: 0.90),
-            CGPoint(x: 0.40, y: 0.80),
-            CGPoint(x: 0.65, y: 0.75),
-            CGPoint(x: 0.75, y: 0.40)
-        ]
-
-        let colors: [UIColor] = [
+        let defaultColors: [UIColor] = [
             UIColor(rgb: 0x7FA381),
             UIColor(rgb: 0xFFF5C5),
             UIColor(rgb: 0x336F55),
             UIColor(rgb: 0xFBE37D)
         ]
+        self.colors = colors ?? defaultColors
 
-        let positions = gatherPositions(shiftArray(array: basePositions, offset: self.phase % 8))
+        super.init()
+
+        self.view.addSubview(self.contentView)
+
+        if useSharedAnimationPhase {
+            self.phase = GradientBackgroundNode.sharedPhase
+        } else {
+            self.phase = 0
+        }
+    }
+
+    deinit {
+    }
+
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+        let sizeUpdated = self.validLayout != size
+        self.validLayout = size
+
+        let imageSize = size.fitted(CGSize(width: 80.0, height: 80.0)).integralFloor
+
+        let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: self.phase % 8))
 
         if let validPhase = self.validPhase {
-            if validPhase != self.phase {
+            if validPhase != self.phase || self.invalidated {
                 self.validPhase = self.phase
+                self.invalidated = false
 
-                let previousPositions = gatherPositions(shiftArray(array: basePositions, offset: validPhase % 8))
+                var steps: [[CGPoint]] = []
+                if extendAnimation {
+                    let phaseCount = 4
+                    var stepPhase = (self.phase + phaseCount) % 8
+                    for _ in 0 ... phaseCount {
+                        steps.append(gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: stepPhase)))
+                        stepPhase = stepPhase - 1
+                        if stepPhase < 0 {
+                            stepPhase = 7
+                        }
+                    }
+                } else {
+                    steps.append(gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: validPhase % 8)))
+                    steps.append(positions)
+                }
 
-                if case let .animated(duration, curve) = transition {
+                if case let .animated(duration, curve) = transition, duration > 0.001 {
                     var images: [UIImage] = []
 
-                    let cacheKey = PhaseTransitionKey(width: Int(imageSize.width), height: Int(imageSize.height), fromPhase: validPhase, toPhase: self.phase, numberOfFrames: Int(duration * 60), curve: curve)
-                    if let current = self.cachedPhaseTransition[cacheKey] {
-                        images = current
-                    } else {
-                        let startTime = CFAbsoluteTimeGetCurrent()
-                        let maxFrame = Int(duration * 30)
-                        for i in 0 ..< maxFrame {
-                            let t = curve.solve(at: CGFloat(i) / CGFloat(maxFrame - 1))
+                    var dimmedImages: [UIImage] = []
+                    let needDimmedImages = !self.cloneNodes.isEmpty
 
-                            let morphedPositions = Array(zip(previousPositions, positions).map { previous, current -> CGPoint in
-                                return interpolatePoints(previous, current, at: t)
-                            })
+                    let stepCount = steps.count - 1
 
-                            images.append(generateGradient(size: imageSize, colors: colors, positions: morphedPositions))
+                    let fps: Double = extendAnimation ? 60 : 30
+                    let maxFrame = Int(duration * fps)
+                    let framesPerAnyStep = maxFrame / stepCount
+
+                    for frameIndex in 0 ..< maxFrame {
+                        let t = curve.solve(at: CGFloat(frameIndex) / CGFloat(maxFrame - 1))
+                        let globalStep = Int(t * CGFloat(maxFrame))
+                        let stepIndex = min(stepCount - 1, globalStep / framesPerAnyStep)
+
+                        let stepFrameIndex = globalStep - stepIndex * framesPerAnyStep
+                        let stepFrames: Int
+                        if stepIndex == stepCount - 1 {
+                            stepFrames = maxFrame - framesPerAnyStep * (stepCount - 1)
+                        } else {
+                            stepFrames = framesPerAnyStep
                         }
-                        print("Animation generated in \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                        let stepT = CGFloat(stepFrameIndex) / CGFloat(stepFrames - 1)
+
+                        var morphedPositions: [CGPoint] = []
+                        for i in 0 ..< steps[0].count {
+                            morphedPositions.append(interpolatePoints(steps[stepIndex][i], steps[stepIndex + 1][i], at: stepT))
+                        }
+
+                        images.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions))
+                        if needDimmedImages {
+                            dimmedImages.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions, adjustSaturation: 1.7))
+                        }
                     }
 
+                    self.dimmedImageParams = (imageSize, self.colors, gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: self.phase % 8)))
+
                     self.contentView.image = images.last
+
                     let animation = CAKeyframeAnimation(keyPath: "contents")
                     animation.values = images.map { $0.cgImage! }
                     animation.duration = duration * UIView.animationDurationFactor()
-                    animation.calculationMode = .linear
-                    self.contentView.layer.add(animation, forKey: "image")
+                    if extendAnimation {
+                        animation.calculationMode = .discrete
+                    } else {
+                        animation.calculationMode = .linear
+                    }
+                    animation.isRemovedOnCompletion = true
+                    if extendAnimation {
+                        animation.fillMode = .backwards
+                        animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
+                    }
+
+                    self.contentView.layer.removeAnimation(forKey: "contents")
+                    self.contentView.layer.add(animation, forKey: "contents")
+
+                    if !self.cloneNodes.isEmpty {
+                        let animation = CAKeyframeAnimation(keyPath: "contents")
+                        animation.values = dimmedImages.map { $0.cgImage! }
+                        animation.duration = duration * UIView.animationDurationFactor()
+                        if extendAnimation {
+                            animation.calculationMode = .discrete
+                        } else {
+                            animation.calculationMode = .linear
+                        }
+                        animation.isRemovedOnCompletion = true
+                        if extendAnimation {
+                            animation.fillMode = .backwards
+                            animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
+                        }
+
+                        self._dimmedImage = dimmedImages.last
+
+                        for cloneNode in self.cloneNodes {
+                            if let value = cloneNode.value {
+                                value.image = dimmedImages.last
+                                value.layer.removeAnimation(forKey: "contents")
+                                value.layer.add(animation, forKey: "contents")
+                            }
+                        }
+                    }
                 } else {
-                    self.contentView.image = generateGradient(size: imageSize, colors: colors, positions: positions)
+                    let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
+                    self.contentView.image = image
+
+                    let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: 1.7)
+                    self._dimmedImage = dimmedImage
+                    self.dimmedImageParams = (imageSize, self.colors, positions)
+
+                    for cloneNode in self.cloneNodes {
+                        cloneNode.value?.image = dimmedImage
+                    }
                 }
             }
         } else if sizeUpdated {
-            self.contentView.image = generateGradient(size: imageSize, colors: colors, positions: positions)
+            let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
+            self.contentView.image = image
+
+            let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: 1.7)
+            self.dimmedImageParams = (imageSize, self.colors, positions)
+
+            for cloneNode in self.cloneNodes {
+                cloneNode.value?.image = dimmedImage
+            }
+
             self.validPhase = self.phase
         }
 
         transition.updateFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition) {
-        if self.phase == 0 {
-            self.phase = 7
+    public func updateColors(colors: [UIColor]) {
+        var updated = false
+        if self.colors.count != colors.count {
+            updated = true
         } else {
-            self.phase = self.phase - 1
+            for i in 0 ..< self.colors.count {
+                if !self.colors[i].isEqual(colors[i]) {
+                    updated = true
+                    break
+                }
+            }
+        }
+        if updated {
+            self.colors = colors
+            self.invalidated = true
+            if let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
+
+    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+        guard case let .animated(duration, _) = transition, duration > 0.001 else {
+            return
+        }
+
+        if extendAnimation {
+            self.invalidated = true
+        } else {
+            if self.phase == 0 {
+                self.phase = 7
+            } else {
+                self.phase = self.phase - 1
+            }
+        }
+        if self.useSharedAnimationPhase {
+            GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: transition)
+            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation)
         }
     }
 }

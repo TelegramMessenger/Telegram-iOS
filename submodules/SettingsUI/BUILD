@@ -89,6 +89,7 @@ swift_library(
         "//submodules/WidgetSetupScreen:WidgetSetupScreen",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
         "//submodules/DebugSettingsUI:DebugSettingsUI",
+        "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
     ],
     visibility = [
         "//visibility:public",

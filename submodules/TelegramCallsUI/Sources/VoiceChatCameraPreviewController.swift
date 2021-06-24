@@ -13,6 +13,8 @@ import PresentationDataUtils
 import UIKitRuntimeUtils
 import ReplayKit
 
+private let accentColor: UIColor = UIColor(rgb: 0x007aff)
+
 final class VoiceChatCameraPreviewController: ViewController {
     private var controllerNode: VoiceChatCameraPreviewControllerNode {
         return self.displayNode as! VoiceChatCameraPreviewControllerNode
@@ -23,12 +25,12 @@ final class VoiceChatCameraPreviewController: ViewController {
     private var animatedIn = false
 
     private let cameraNode: GroupVideoNode
-    private let shareCamera: (ASDisplayNode) -> Void
+    private let shareCamera: (ASDisplayNode, Bool) -> Void
     private let switchCamera: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode) -> Void, switchCamera: @escaping () -> Void) {
+    init(context: AccountContext, cameraNode: GroupVideoNode, shareCamera: @escaping (ASDisplayNode, Bool) -> Void, switchCamera: @escaping () -> Void) {
         self.context = context
         self.cameraNode = cameraNode
         self.shareCamera = shareCamera
@@ -60,15 +62,15 @@ final class VoiceChatCameraPreviewController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = VoiceChatCameraPreviewControllerNode(controller: self, context: self.context, cameraNode: self.cameraNode)
-        self.controllerNode.shareCamera = { [weak self] in
+        self.controllerNode.shareCamera = { [weak self] unmuted in
             if let strongSelf = self {
-                strongSelf.shareCamera(strongSelf.cameraNode)
+                strongSelf.shareCamera(strongSelf.cameraNode, unmuted)
                 strongSelf.dismiss()
             }
         }
         self.controllerNode.switchCamera = { [weak self] in
             self?.switchCamera()
-            self?.cameraNode.flip(withBackground: true)
+            self?.cameraNode.flip(withBackground: false)
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -98,7 +100,7 @@ final class VoiceChatCameraPreviewController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -116,10 +118,15 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
     private let previewContainerNode: ASDisplayNode
+    private let shimmerNode: ShimmerEffectForegroundNode
     private let cameraButton: SolidRoundedButtonNode
     private let screenButton: SolidRoundedButtonNode
     private var broadcastPickerView: UIView?
     private let cancelButton: SolidRoundedButtonNode
+    
+    private let microphoneButton: HighlightTrackingButtonNode
+    private let microphoneEffectView: UIVisualEffectView
+    private let microphoneIconNode: VoiceChatMicrophoneNode
     
     private let switchCameraButton: HighlightTrackingButtonNode
     private let switchCameraEffectView: UIVisualEffectView
@@ -129,7 +136,11 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
     private var applicationStateDisposable: Disposable?
     
-    var shareCamera: (() -> Void)?
+    private let hapticFeedback = HapticFeedback()
+    
+    private let readyDisposable = MetaDisposable()
+    
+    var shareCamera: ((Bool) -> Void)?
     var switchCamera: (() -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
@@ -174,7 +185,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
                 
-        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.cameraButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: accentColor, foregroundColor: .white), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
         self.cameraButton.title = self.presentationData.strings.VoiceChat_VideoPreviewShareCamera
         
         self.screenButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
@@ -182,7 +193,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 
         if #available(iOS 12.0, *) {
             let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
-            broadcastPickerView.alpha = 0.1
+            broadcastPickerView.alpha = 0.02
             broadcastPickerView.preferredExtension = "\(self.context.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
             broadcastPickerView.showsMicrophoneButton = false
             self.broadcastPickerView = broadcastPickerView
@@ -192,8 +203,22 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.cancelButton.title = self.presentationData.strings.Common_Cancel
         
         self.previewContainerNode = ASDisplayNode()
+        self.previewContainerNode.clipsToBounds = true
         self.previewContainerNode.cornerRadius = 11.0
-        self.previewContainerNode.backgroundColor = .black
+        self.previewContainerNode.backgroundColor = UIColor(rgb: 0x2b2b2f)
+        
+        self.shimmerNode = ShimmerEffectForegroundNode(size: 200.0)
+        self.previewContainerNode.addSubnode(self.shimmerNode)
+        
+        self.microphoneButton = HighlightTrackingButtonNode()
+        self.microphoneButton.isSelected = true
+        self.microphoneEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+        self.microphoneEffectView.clipsToBounds = true
+        self.microphoneEffectView.layer.cornerRadius = 24.0
+        self.microphoneEffectView.isUserInteractionEnabled = false
+        
+        self.microphoneIconNode = VoiceChatMicrophoneNode()
+        self.microphoneIconNode.update(state: .init(muted: false, filled: true, color: .white), animated: false)
         
         self.switchCameraButton = HighlightTrackingButtonNode()
         self.switchCameraEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
@@ -203,7 +228,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.switchCameraIconNode = ASImageNode()
         self.switchCameraIconNode.displaysAsynchronously = false
-        self.switchCameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSwitchCameraButton"), color: .white)
+        self.switchCameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/SwitchCameraIcon"), color: .white)
         self.switchCameraIconNode.contentMode = .center
         
         super.init()
@@ -233,18 +258,34 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.contentContainerNode.addSubnode(self.previewContainerNode)
         
         self.previewContainerNode.addSubnode(self.cameraNode)
+        self.previewContainerNode.addSubnode(self.microphoneButton)
+        self.microphoneButton.view.addSubview(self.microphoneEffectView)
+        self.microphoneButton.addSubnode(self.microphoneIconNode)
         self.previewContainerNode.addSubnode(self.switchCameraButton)
         self.switchCameraButton.view.addSubview(self.switchCameraEffectView)
         self.switchCameraButton.addSubnode(self.switchCameraIconNode)
         
         self.cameraButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.shareCamera?()
+                strongSelf.shareCamera?(strongSelf.microphoneButton.isSelected)
             }
         }
         self.cancelButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.cancel?()
+            }
+        }
+        
+        self.microphoneButton.addTarget(self, action: #selector(self.microphonePressed), forControlEvents: .touchUpInside)
+        self.microphoneButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 0.9)
+                } else {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 1.0)
+                }
             }
         }
         
@@ -260,10 +301,38 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
                 }
             }
         }
+        
+        self.readyDisposable.set(self.cameraNode.ready.start(next: { [weak self] ready in
+            if let strongSelf = self, ready {
+                Queue.mainQueue().after(0.07) {
+                    strongSelf.shimmerNode.alpha = 0.0
+                    strongSelf.shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                }
+            }
+        }))
+    }
+    
+    deinit {
+        self.readyDisposable.dispose()
+        self.applicationStateDisposable?.dispose()
+    }
+    
+    @objc private func microphonePressed() {
+        self.hapticFeedback.impact(.light)
+        self.microphoneButton.isSelected = !self.microphoneButton.isSelected
+        self.microphoneIconNode.update(state: .init(muted: !self.microphoneButton.isSelected, filled: true, color: .white), animated: true)
     }
     
     @objc private func switchCameraPressed() {
+        self.hapticFeedback.impact(.light)
         self.switchCamera?()
+        
+        let springDuration: Double = 0.7
+        let springDamping: CGFloat = 100.0
+        self.switchCameraButton.isUserInteractionEnabled = false
+        self.switchCameraIconNode.layer.animateSpring(from: 0.0 as NSNumber, to: CGFloat.pi as NSNumber, keyPath: "transform.rotation.z", duration: springDuration, damping: springDamping, completion: { [weak self] _ in
+            self?.switchCameraButton.isUserInteractionEnabled = true
+        })
     }
         
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -356,29 +425,65 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
+        let isLandscape: Bool
+        if layout.size.width > layout.size.height {
+            isLandscape = true
+        } else {
+            isLandscape = false
+        }
+        let isTablet: Bool
+        if case .regular = layout.metrics.widthClass {
+            isTablet = true
+        } else {
+            isTablet = false
+        }
+        
         var insets = layout.insets(options: [.statusBar, .input])
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        let buttonOffset: CGFloat = 120.0
-
-        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        var buttonOffset: CGFloat = 60.0
+        if let _ = self.broadcastPickerView {
+            buttonOffset *= 2.0
+        }
+        let bottomInset: CGFloat = isTablet ? 31.0 : 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let innerContentHeight: CGFloat = layout.size.height - contentHeight - 160.0
-        contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
-        
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        if isLandscape {
+            if isTablet {
+                width = 870.0
+                contentHeight = 690.0
+            } else {
+                contentHeight = layout.size.height
+                width = layout.size.width
+            }
+        } else {
+            if isTablet {
+                width = 600.0
+                contentHeight = 960.0
+            } else {
+                contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
+            }
+        }
         
         let previewInset: CGFloat = 16.0
         let sideInset = floor((layout.size.width - width) / 2.0)
-        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
-        let contentFrame = contentContainerFrame
-        
-        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height + 2000.0))
+        let contentFrame: CGRect
+        if isTablet {
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((layout.size.height - contentHeight) / 2.0)), size: CGSize(width: width, height: contentHeight))
+        } else {
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
+        }
+        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height))
+        if !isTablet {
+            backgroundFrame.size.height += 2000.0
+        }
         if backgroundFrame.minY < contentFrame.minY {
             backgroundFrame.origin.y = contentFrame.minY
         }
+        transition.updateAlpha(node: self.titleNode, alpha: isLandscape && !isTablet ? 0.0 : 1.0)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
@@ -389,30 +494,95 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset)
-        transition.updateFrame(node: self.previewContainerNode, frame: CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize))
+        var previewSize: CGSize
+        var previewFrame: CGRect
+        if isLandscape {
+            let previewHeight = contentHeight - 21.0 - 52.0 - 10.0
+            previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, previewHeight * 1.7778), height: previewHeight)
+            if isTablet {
+                previewSize.width -= previewInset * 2.0
+                previewSize.height -= 46.0
+            }
+            previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
+            if isTablet {
+                previewFrame.origin.y += 56.0
+            }
+        } else {
+            previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset + (120.0 - buttonOffset))
+            if isTablet {
+                previewSize.height += 17.0
+            }
+            previewFrame = CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize)
+        }
+        transition.updateFrame(node: self.previewContainerNode, frame: previewFrame)
+        transition.updateFrame(node: self.shimmerNode, frame: CGRect(origin: CGPoint(), size: previewFrame.size))
+        self.shimmerNode.update(foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.07))
+        self.shimmerNode.updateAbsoluteRect(previewFrame, within: layout.size)
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
-        self.cameraNode.updateLayout(size: previewSize, isLandscape: false, transition: .immediate)
+        self.cameraNode.updateLayout(size: previewSize, layoutMode: isLandscape ? .fillHorizontal : .fillVertical, transition: .immediate)
+        
+        let microphoneFrame = CGRect(x: 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
+        transition.updateFrame(node: self.microphoneButton, frame: microphoneFrame)
+        transition.updateFrame(view: self.microphoneEffectView, frame: CGRect(origin: CGPoint(), size: microphoneFrame.size))
+        transition.updateFrameAsPositionAndBounds(node: self.microphoneIconNode, frame: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: microphoneFrame.size).insetBy(dx: 6.0, dy: 6.0))
+        self.microphoneIconNode.transform = CATransform3DMakeScale(1.2, 1.2, 1.0)
         
         let switchCameraFrame = CGRect(x: previewSize.width - 48.0 - 16.0, y: previewSize.height - 48.0 - 16.0, width: 48.0, height: 48.0)
         transition.updateFrame(node: self.switchCameraButton, frame: switchCameraFrame)
         transition.updateFrame(view: self.switchCameraEffectView, frame: CGRect(origin: CGPoint(), size: switchCameraFrame.size))
         transition.updateFrame(node: self.switchCameraIconNode, frame: CGRect(origin: CGPoint(), size: switchCameraFrame.size))
         
-        let buttonInset: CGFloat = 16.0
-        let cameraButtonHeight = self.cameraButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.cameraButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: cameraButtonHeight))
-        
-        let screenButtonHeight = self.screenButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: screenButtonHeight))
-        if let broadcastPickerView = self.broadcastPickerView {
-            broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - insets.bottom - 16.0, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+        if isLandscape {
+            var buttonsCount: Int = 2
+            if let _ = self.broadcastPickerView {
+                buttonsCount += 1
+            } else {
+                self.screenButton.isHidden = true
+            }
+            
+            let buttonInset: CGFloat = 6.0
+            var leftButtonInset = buttonInset
+            let availableWidth: CGFloat
+            if isTablet {
+                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right - previewInset * 2.0
+                leftButtonInset += previewInset
+            } else {
+                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right
+            }
+            let buttonWidth = floorToScreenPixels((availableWidth - CGFloat(buttonsCount + 1) * buttonInset) / CGFloat(buttonsCount))
+            
+            let cameraButtonHeight = self.cameraButton.updateLayout(width: buttonWidth, transition: transition)
+            let screenButtonHeight = self.screenButton.updateLayout(width: buttonWidth, transition: transition)
+            let cancelButtonHeight = self.cancelButton.updateLayout(width: buttonWidth, transition: transition)
+            
+            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cancelButtonHeight))
+            if let broadcastPickerView = self.broadcastPickerView {
+                transition.updateFrame(node: self.screenButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight))
+                broadcastPickerView.frame = CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: screenButtonHeight)
+                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
+            } else {
+                transition.updateFrame(node: self.cameraButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
+            }
+            
+        } else {
+            let bottomInset = isTablet ? 21.0 : insets.bottom + 16.0
+            let buttonInset: CGFloat = 16.0
+            let cameraButtonHeight = self.cameraButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+            transition.updateFrame(node: self.cameraButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - bottomInset - buttonOffset, width: contentFrame.width, height: cameraButtonHeight))
+            
+            let screenButtonHeight = self.screenButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+            transition.updateFrame(node: self.screenButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - bottomInset, width: contentFrame.width, height: screenButtonHeight))
+            if let broadcastPickerView = self.broadcastPickerView {
+                broadcastPickerView.frame = CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - 8.0 - screenButtonHeight - bottomInset, width: contentFrame.width + 1000.0, height: screenButtonHeight)
+            } else {
+                self.screenButton.isHidden = true
+            }
+           
+            let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - bottomInset, width: contentFrame.width, height: cancelButtonHeight))
         }
-       
-        let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: cancelButtonHeight))
         
-        transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
+        transition.updateFrame(node: self.contentContainerNode, frame: contentFrame)
     }
 }

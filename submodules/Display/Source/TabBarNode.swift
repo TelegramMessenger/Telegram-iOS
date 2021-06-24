@@ -393,7 +393,7 @@ class TabBarNode: ASDisplayNode {
             self.theme = theme
             
             self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
-            self.backgroundNode.color = theme.tabBarBackgroundColor
+            self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
             
             self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, strokeColor: theme.tabBarBadgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)!
             for container in self.tabBarNodeContainers {

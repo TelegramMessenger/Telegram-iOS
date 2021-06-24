@@ -80,7 +80,9 @@ func _internal_removeStickerPacksInteractively(postbox: Postbox, ids: [ItemColle
                 let items = transaction.getItemCollectionItems(collectionId: id)
                 
                 addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content, noDelay: false)
-                transaction.removeItemCollection(collectionId: id)
+                for id in ids {
+                    transaction.removeItemCollection(collectionId: id)
+                }
                 return index.flatMap { ($0, items) }
             } else {
                 return nil

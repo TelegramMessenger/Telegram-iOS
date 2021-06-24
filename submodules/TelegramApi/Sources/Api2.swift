@@ -3302,17 +3302,19 @@ public extension Api {
     
     }
     public enum WallPaperSettings: TypeConstructorDescription {
-        case wallPaperSettings(flags: Int32, backgroundColor: Int32?, secondBackgroundColor: Int32?, intensity: Int32?, rotation: Int32?)
+        case wallPaperSettings(flags: Int32, backgroundColor: Int32?, secondBackgroundColor: Int32?, thirdBackgroundColor: Int32?, fourthBackgroundColor: Int32?, intensity: Int32?, rotation: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .wallPaperSettings(let flags, let backgroundColor, let secondBackgroundColor, let intensity, let rotation):
+                case .wallPaperSettings(let flags, let backgroundColor, let secondBackgroundColor, let thirdBackgroundColor, let fourthBackgroundColor, let intensity, let rotation):
                     if boxed {
-                        buffer.appendInt32(84438264)
+                        buffer.appendInt32(499236004)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(backgroundColor!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(secondBackgroundColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(thirdBackgroundColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(fourthBackgroundColor!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(intensity!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(rotation!, buffer: buffer, boxed: false)}
                     break
@@ -3321,8 +3323,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .wallPaperSettings(let flags, let backgroundColor, let secondBackgroundColor, let intensity, let rotation):
-                return ("wallPaperSettings", [("flags", flags), ("backgroundColor", backgroundColor), ("secondBackgroundColor", secondBackgroundColor), ("intensity", intensity), ("rotation", rotation)])
+                case .wallPaperSettings(let flags, let backgroundColor, let secondBackgroundColor, let thirdBackgroundColor, let fourthBackgroundColor, let intensity, let rotation):
+                return ("wallPaperSettings", [("flags", flags), ("backgroundColor", backgroundColor), ("secondBackgroundColor", secondBackgroundColor), ("thirdBackgroundColor", thirdBackgroundColor), ("fourthBackgroundColor", fourthBackgroundColor), ("intensity", intensity), ("rotation", rotation)])
     }
     }
     
@@ -3334,16 +3336,22 @@ public extension Api {
             var _3: Int32?
             if Int(_1!) & Int(1 << 4) != 0 {_3 = reader.readInt32() }
             var _4: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 5) != 0 {_4 = reader.readInt32() }
             var _5: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 6) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_6 = reader.readInt32() }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_7 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 4) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.WallPaperSettings.wallPaperSettings(flags: _1!, backgroundColor: _2, secondBackgroundColor: _3, intensity: _4, rotation: _5)
+            let _c4 = (Int(_1!) & Int(1 << 5) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 6) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.WallPaperSettings.wallPaperSettings(flags: _1!, backgroundColor: _2, secondBackgroundColor: _3, thirdBackgroundColor: _4, fourthBackgroundColor: _5, intensity: _6, rotation: _7)
             }
             else {
                 return nil
@@ -3596,13 +3604,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, about: String?, raiseHandRating: Int64?, video: Api.DataJSON?, presentation: Api.DataJSON?)
+        case groupCallParticipant(flags: Int32, peer: Api.Peer, date: Int32, activeDate: Int32?, source: Int32, volume: Int32?, about: String?, raiseHandRating: Int64?, video: Api.GroupCallParticipantVideo?, presentation: Api.GroupCallParticipantVideo?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating, let video, let presentation):
                     if boxed {
-                        buffer.appendInt32(-1464184409)
+                        buffer.appendInt32(-341428482)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -3644,13 +3652,13 @@ public extension Api {
             if Int(_1!) & Int(1 << 11) != 0 {_7 = parseString(reader) }
             var _8: Int64?
             if Int(_1!) & Int(1 << 13) != 0 {_8 = reader.readInt64() }
-            var _9: Api.DataJSON?
+            var _9: Api.GroupCallParticipantVideo?
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                _9 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipantVideo
             } }
-            var _10: Api.DataJSON?
+            var _10: Api.GroupCallParticipantVideo?
             if Int(_1!) & Int(1 << 14) != 0 {if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                _10 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipantVideo
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -4662,7 +4670,7 @@ public extension Api {
         case updateTheme(theme: Api.Theme)
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
         case updateLoginToken
-        case updateMessagePollVote(pollId: Int64, userId: Int32, options: [Buffer])
+        case updateMessagePollVote(pollId: Int64, userId: Int32, options: [Buffer], qts: Int32)
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
@@ -5291,9 +5299,9 @@ public extension Api {
                     }
                     
                     break
-                case .updateMessagePollVote(let pollId, let userId, let options):
+                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
                     if boxed {
-                        buffer.appendInt32(1123585836)
+                        buffer.appendInt32(938909451)
                     }
                     serializeInt64(pollId, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
@@ -5302,6 +5310,7 @@ public extension Api {
                     for item in options {
                         serializeBytes(item, buffer: buffer, boxed: false)
                     }
+                    serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateDialogFilter(let flags, let id, let filter):
                     if boxed {
@@ -5632,8 +5641,8 @@ public extension Api {
                 return ("updateGeoLiveViewed", [("peer", peer), ("msgId", msgId)])
                 case .updateLoginToken:
                 return ("updateLoginToken", [])
-                case .updateMessagePollVote(let pollId, let userId, let options):
-                return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options)])
+                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
+                return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options), ("qts", qts)])
                 case .updateDialogFilter(let flags, let id, let filter):
                 return ("updateDialogFilter", [("flags", flags), ("id", id), ("filter", filter)])
                 case .updateDialogFilterOrder(let order):
@@ -6904,11 +6913,14 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
             }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!, qts: _4!)
             }
             else {
                 return nil
@@ -7340,6 +7352,50 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.PopularContact.popularContact(clientId: _1!, importers: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum GroupCallParticipantVideoSourceGroup: TypeConstructorDescription {
+        case groupCallParticipantVideoSourceGroup(semantics: String, sources: [Int32])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallParticipantVideoSourceGroup(let semantics, let sources):
+                    if boxed {
+                        buffer.appendInt32(-592373577)
+                    }
+                    serializeString(semantics, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sources.count))
+                    for item in sources {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallParticipantVideoSourceGroup(let semantics, let sources):
+                return ("groupCallParticipantVideoSourceGroup", [("semantics", semantics), ("sources", sources)])
+    }
+    }
+    
+        public static func parse_groupCallParticipantVideoSourceGroup(_ reader: BufferReader) -> GroupCallParticipantVideoSourceGroup? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.GroupCallParticipantVideoSourceGroup.groupCallParticipantVideoSourceGroup(semantics: _1!, sources: _2!)
             }
             else {
                 return nil
@@ -13251,8 +13307,8 @@ public extension Api {
     }
     public enum ReplyMarkup: TypeConstructorDescription {
         case replyKeyboardHide(flags: Int32)
-        case replyKeyboardForceReply(flags: Int32)
-        case replyKeyboardMarkup(flags: Int32, rows: [Api.KeyboardButtonRow])
+        case replyKeyboardForceReply(flags: Int32, placeholder: String?)
+        case replyKeyboardMarkup(flags: Int32, rows: [Api.KeyboardButtonRow], placeholder: String?)
         case replyInlineMarkup(rows: [Api.KeyboardButtonRow])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -13263,15 +13319,16 @@ public extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
-                case .replyKeyboardForceReply(let flags):
+                case .replyKeyboardForceReply(let flags, let placeholder):
                     if boxed {
-                        buffer.appendInt32(-200242528)
+                        buffer.appendInt32(-2035021048)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(placeholder!, buffer: buffer, boxed: false)}
                     break
-                case .replyKeyboardMarkup(let flags, let rows):
+                case .replyKeyboardMarkup(let flags, let rows, let placeholder):
                     if boxed {
-                        buffer.appendInt32(889353612)
+                        buffer.appendInt32(-2049074735)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -13279,6 +13336,7 @@ public extension Api {
                     for item in rows {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(placeholder!, buffer: buffer, boxed: false)}
                     break
                 case .replyInlineMarkup(let rows):
                     if boxed {
@@ -13297,10 +13355,10 @@ public extension Api {
         switch self {
                 case .replyKeyboardHide(let flags):
                 return ("replyKeyboardHide", [("flags", flags)])
-                case .replyKeyboardForceReply(let flags):
-                return ("replyKeyboardForceReply", [("flags", flags)])
-                case .replyKeyboardMarkup(let flags, let rows):
-                return ("replyKeyboardMarkup", [("flags", flags), ("rows", rows)])
+                case .replyKeyboardForceReply(let flags, let placeholder):
+                return ("replyKeyboardForceReply", [("flags", flags), ("placeholder", placeholder)])
+                case .replyKeyboardMarkup(let flags, let rows, let placeholder):
+                return ("replyKeyboardMarkup", [("flags", flags), ("rows", rows), ("placeholder", placeholder)])
                 case .replyInlineMarkup(let rows):
                 return ("replyInlineMarkup", [("rows", rows)])
     }
@@ -13320,9 +13378,12 @@ public extension Api {
         public static func parse_replyKeyboardForceReply(_ reader: BufferReader) -> ReplyMarkup? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_2 = parseString(reader) }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ReplyMarkup.replyKeyboardForceReply(flags: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.ReplyMarkup.replyKeyboardForceReply(flags: _1!, placeholder: _2)
             }
             else {
                 return nil
@@ -13335,10 +13396,13 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButtonRow.self)
             }
+            var _3: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_3 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ReplyMarkup.replyKeyboardMarkup(flags: _1!, rows: _2!)
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ReplyMarkup.replyKeyboardMarkup(flags: _1!, rows: _2!, placeholder: _3)
             }
             else {
                 return nil
@@ -14877,6 +14941,54 @@ public extension Api {
         }
     
     }
+    public enum GroupCallParticipantVideo: TypeConstructorDescription {
+        case groupCallParticipantVideo(flags: Int32, endpoint: String, sourceGroups: [Api.GroupCallParticipantVideoSourceGroup])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
+                    if boxed {
+                        buffer.appendInt32(2028213859)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(endpoint, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sourceGroups.count))
+                    for item in sourceGroups {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
+                return ("groupCallParticipantVideo", [("flags", flags), ("endpoint", endpoint), ("sourceGroups", sourceGroups)])
+    }
+    }
+    
+        public static func parse_groupCallParticipantVideo(_ reader: BufferReader) -> GroupCallParticipantVideo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.GroupCallParticipantVideoSourceGroup]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipantVideoSourceGroup.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PhoneCallProtocol: TypeConstructorDescription {
         case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32, libraryVersions: [String])
     
@@ -14967,9 +15079,143 @@ public extension Api {
         }
     
     }
+    public enum BotCommandScope: TypeConstructorDescription {
+        case botCommandScopeDefault
+        case botCommandScopeUsers
+        case botCommandScopeChats
+        case botCommandScopeChatAdmins
+        case botCommandScopePeer(peer: Api.InputPeer)
+        case botCommandScopePeerAdmins(peer: Api.InputPeer)
+        case botCommandScopePeerUser(peer: Api.InputPeer, userId: Api.InputUser)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botCommandScopeDefault:
+                    if boxed {
+                        buffer.appendInt32(795652779)
+                    }
+                    
+                    break
+                case .botCommandScopeUsers:
+                    if boxed {
+                        buffer.appendInt32(1011811544)
+                    }
+                    
+                    break
+                case .botCommandScopeChats:
+                    if boxed {
+                        buffer.appendInt32(1877059713)
+                    }
+                    
+                    break
+                case .botCommandScopeChatAdmins:
+                    if boxed {
+                        buffer.appendInt32(-1180016534)
+                    }
+                    
+                    break
+                case .botCommandScopePeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-610432643)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .botCommandScopePeerAdmins(let peer):
+                    if boxed {
+                        buffer.appendInt32(1071145937)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .botCommandScopePeerUser(let peer, let userId):
+                    if boxed {
+                        buffer.appendInt32(169026035)
+                    }
+                    peer.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botCommandScopeDefault:
+                return ("botCommandScopeDefault", [])
+                case .botCommandScopeUsers:
+                return ("botCommandScopeUsers", [])
+                case .botCommandScopeChats:
+                return ("botCommandScopeChats", [])
+                case .botCommandScopeChatAdmins:
+                return ("botCommandScopeChatAdmins", [])
+                case .botCommandScopePeer(let peer):
+                return ("botCommandScopePeer", [("peer", peer)])
+                case .botCommandScopePeerAdmins(let peer):
+                return ("botCommandScopePeerAdmins", [("peer", peer)])
+                case .botCommandScopePeerUser(let peer, let userId):
+                return ("botCommandScopePeerUser", [("peer", peer), ("userId", userId)])
+    }
+    }
+    
+        public static func parse_botCommandScopeDefault(_ reader: BufferReader) -> BotCommandScope? {
+            return Api.BotCommandScope.botCommandScopeDefault
+        }
+        public static func parse_botCommandScopeUsers(_ reader: BufferReader) -> BotCommandScope? {
+            return Api.BotCommandScope.botCommandScopeUsers
+        }
+        public static func parse_botCommandScopeChats(_ reader: BufferReader) -> BotCommandScope? {
+            return Api.BotCommandScope.botCommandScopeChats
+        }
+        public static func parse_botCommandScopeChatAdmins(_ reader: BufferReader) -> BotCommandScope? {
+            return Api.BotCommandScope.botCommandScopeChatAdmins
+        }
+        public static func parse_botCommandScopePeer(_ reader: BufferReader) -> BotCommandScope? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.BotCommandScope.botCommandScopePeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_botCommandScopePeerAdmins(_ reader: BufferReader) -> BotCommandScope? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.BotCommandScope.botCommandScopePeerAdmins(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_botCommandScopePeerUser(_ reader: BufferReader) -> BotCommandScope? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BotCommandScope.botCommandScopePeerUser(peer: _1!, userId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum WallPaper: TypeConstructorDescription {
         case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document, settings: Api.WallPaperSettings?)
-        case wallPaperNoFile(flags: Int32, settings: Api.WallPaperSettings?)
+        case wallPaperNoFile(id: Int64, flags: Int32, settings: Api.WallPaperSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -14984,10 +15230,11 @@ public extension Api {
                     document.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {settings!.serialize(buffer, true)}
                     break
-                case .wallPaperNoFile(let flags, let settings):
+                case .wallPaperNoFile(let id, let flags, let settings):
                     if boxed {
-                        buffer.appendInt32(-1963717851)
+                        buffer.appendInt32(-528465642)
                     }
+                    serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {settings!.serialize(buffer, true)}
                     break
@@ -14998,8 +15245,8 @@ public extension Api {
         switch self {
                 case .wallPaper(let id, let flags, let accessHash, let slug, let document, let settings):
                 return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document), ("settings", settings)])
-                case .wallPaperNoFile(let flags, let settings):
-                return ("wallPaperNoFile", [("flags", flags), ("settings", settings)])
+                case .wallPaperNoFile(let id, let flags, let settings):
+                return ("wallPaperNoFile", [("id", id), ("flags", flags), ("settings", settings)])
     }
     }
     
@@ -15034,16 +15281,19 @@ public extension Api {
             }
         }
         public static func parse_wallPaperNoFile(_ reader: BufferReader) -> WallPaper? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.WallPaperSettings?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.WallPaperSettings?
+            if Int(_2!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
             } }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.WallPaper.wallPaperNoFile(flags: _1!, settings: _2)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_2!) & Int(1 << 2) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WallPaper.wallPaperNoFile(id: _1!, flags: _2!, settings: _3)
             }
             else {
                 return nil
@@ -18016,7 +18266,7 @@ public extension Api {
     public enum InputWallPaper: TypeConstructorDescription {
         case inputWallPaper(id: Int64, accessHash: Int64)
         case inputWallPaperSlug(slug: String)
-        case inputWallPaperNoFile
+        case inputWallPaperNoFile(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18033,11 +18283,11 @@ public extension Api {
                     }
                     serializeString(slug, buffer: buffer, boxed: false)
                     break
-                case .inputWallPaperNoFile:
+                case .inputWallPaperNoFile(let id):
                     if boxed {
-                        buffer.appendInt32(-2077770836)
+                        buffer.appendInt32(-1770371538)
                     }
-                    
+                    serializeInt64(id, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -18048,8 +18298,8 @@ public extension Api {
                 return ("inputWallPaper", [("id", id), ("accessHash", accessHash)])
                 case .inputWallPaperSlug(let slug):
                 return ("inputWallPaperSlug", [("slug", slug)])
-                case .inputWallPaperNoFile:
-                return ("inputWallPaperNoFile", [])
+                case .inputWallPaperNoFile(let id):
+                return ("inputWallPaperNoFile", [("id", id)])
     }
     }
     
@@ -18079,7 +18329,15 @@ public extension Api {
             }
         }
         public static func parse_inputWallPaperNoFile(_ reader: BufferReader) -> InputWallPaper? {
-            return Api.InputWallPaper.inputWallPaperNoFile
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputWallPaper.inputWallPaperNoFile(id: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

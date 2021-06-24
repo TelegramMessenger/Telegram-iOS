@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import WallpaperBackgroundNode
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
@@ -15,20 +16,22 @@ class ChatReplyCountItem: ListViewItem {
     let count: Int
     let presentationData: ChatPresentationData
     let header: ChatMessageDateHeader
+    let controllerInteraction: ChatControllerInteraction
     
-    init(index: MessageIndex, isComments: Bool, count: Int, presentationData: ChatPresentationData, context: AccountContext) {
+    init(index: MessageIndex, isComments: Bool, count: Int, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.index = index
         self.isComments = isComments
         self.count = count
         self.presentationData = presentationData
         self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, context: context)
+        self.controllerInteraction = controllerInteraction
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatReplyCountItemNode()
-            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
+                node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -60,22 +63,24 @@ class ChatReplyCountItem: ListViewItem {
 
 class ChatReplyCountItemNode: ListViewItemNode {
     var item: ChatReplyCountItem?
-    let labelNode: TextNode
-    let filledBackgroundNode: LinkHighlightingNode
+    private let labelNode: TextNode
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private let backgroundColorNode: ASDisplayNode
     
     private var theme: ChatPresentationThemeData?
     
     private let layoutConstants = ChatMessageItemLayoutConstants.default
+
+    private var absoluteRect: (CGRect, CGSize)?
     
     init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
-        
-        self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+
+        self.backgroundColorNode = ASDisplayNode()
         
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
-        
-        self.addSubnode(self.filledBackgroundNode)
+
         self.addSubnode(self.labelNode)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -106,7 +111,6 @@ class ChatReplyCountItemNode: ListViewItemNode {
     
     func asyncLayout() -> (_ item: ChatReplyCountItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
-        let backgroundLayout = self.filledBackgroundNode.asyncLayout()
         
         let layoutConstants = self.layoutConstants
         
@@ -145,9 +149,6 @@ class ChatReplyCountItemNode: ListViewItemNode {
                 labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
             }
             
-            let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-            let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
-            
             let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
             
             return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: backgroundSize.height), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
@@ -156,13 +157,57 @@ class ChatReplyCountItemNode: ListViewItemNode {
                     strongSelf.theme = item.presentationData.theme
                     
                     let _ = apply()
-                    let _ = backgroundApply()
+
+                    if strongSelf.backgroundNode == nil {
+                        if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                            strongSelf.backgroundNode = backgroundNode
+                            backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                            strongSelf.insertSubnode(backgroundNode, at: 0)
+                        }
+                    }
                     
                     let labelFrame = CGRect(origin: CGPoint(x: floor((params.width - backgroundSize.width) / 2.0) + 8.0, y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
-                    strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+
+                    strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+
+                    let baseBackgroundFrame = CGRect(origin: CGPoint(x: labelFrame.minX - 6.0, y: labelFrame.minY - 2.0), size: CGSize(width: labelFrame.width + 6.0 * 2.0, height: labelFrame.height + 2.0 * 2.0))
+
+                    if let backgroundNode = strongSelf.backgroundNode {
+                        backgroundNode.frame = baseBackgroundFrame
+
+                        backgroundNode.clipsToBounds = true
+                        backgroundNode.cornerRadius = baseBackgroundFrame.height / 2.0
+
+                        if let (rect, size) = strongSelf.absoluteRect {
+                            strongSelf.updateAbsoluteRect(rect, within: size)
+                        }
+                    }
+
+                    strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: baseBackgroundFrame.size)
                 }
             })
+        }
+    }
+
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+        
+        self.absoluteRect = (rect, containerSize)
+
+        if let backgroundNode = self.backgroundNode {
+            var backgroundFrame = backgroundNode.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            
+            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+        }
+    }
+
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: CGPoint(x: value.x, y: -value.y), animationCurve: animationCurve, duration: duration)
         }
     }
     

@@ -41,6 +41,10 @@ public final class PeekController: ViewController, ContextControllerProtocol {
         return self.displayNode as! PeekControllerNode
     }
     
+    public var contentNode: PeekControllerContentNode & ASDisplayNode {
+        return self.controllerNode.contentNode
+    }
+    
     private let presentationData: PresentationData
     private let content: PeekControllerContent
     var sourceNode: () -> ASDisplayNode?

@@ -30,6 +30,8 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     public var areControlsHidden = false
     public var controlsVisibilityChanged: ((Bool) -> Void)?
     
+    public var updateOrientation: ((UIInterfaceOrientation) -> Void)?
+    
     public var isBackgroundExtendedOverNavigationBar = true {
         didSet {
             if let (navigationBarHeight, layout) = self.containerLayout {
@@ -38,7 +40,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
     }
     
-    public init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0) {
+    public init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0, disableTapNavigation: Bool = false) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
@@ -48,7 +50,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
 
-        self.pager = GalleryPagerNode(pageGap: pageGap)
+        self.pager = GalleryPagerNode(pageGap: pageGap, disableTapNavigation: disableTapNavigation)
         self.footerNode = GalleryFooterNode(controllerInteraction: controllerInteraction)
         
         super.init()
@@ -66,6 +68,12 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.pager.updateControlsVisibility = { [weak self] visible in
             if let strongSelf = self {
                 strongSelf.setControlsHidden(!visible, animated: true)
+            }
+        }
+        
+        self.pager.updateOrientation = { [weak self] orientation in
+            if let strongSelf = self {
+                strongSelf.updateOrientation?(orientation)
             }
         }
         
@@ -275,6 +283,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
         
         self.pager.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
+
         self.pager.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     

@@ -727,7 +727,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: { data in
-        var intro = false
+        let intro = false
         if let data = data {
             switch data {
             case .set:
@@ -735,7 +735,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             case let .notSet(pendingEmail):
                 //intro = pendingEmail == nil
                 if pendingEmail == nil {
-                    let controller = TwoFactorAuthSplashScreen(context: context, mode: .intro)
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, network: context.account.network, mode: .intro)
                     pushControllerImpl?(controller, true)
                     return
                 } else {

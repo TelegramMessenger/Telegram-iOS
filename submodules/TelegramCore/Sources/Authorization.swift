@@ -370,10 +370,11 @@ public enum PasswordRecoveryError {
     case invalidCode
     case limitExceeded
     case expired
+    case generic
 }
 
-public func performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool) -> Signal<Void, PasswordRecoveryError> {
-    return account.network.request(Api.functions.auth.recoverPassword(code: code))
+public func checkPasswordRecoveryCode(network: Network, code: String) -> Signal<Never, PasswordRecoveryError> {
+    return network.request(Api.functions.auth.checkRecoveryPassword(code: code), automaticFloodWait: false)
     |> mapError { error -> PasswordRecoveryError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -383,26 +384,67 @@ public func performPasswordRecovery(accountManager: AccountManager, account: Una
             return .invalidCode
         }
     }
-    |> mapToSignal { result -> Signal<Void, PasswordRecoveryError> in
-        return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-            switch result {
-            case let .authorization(_, _, user):
-                let user = TelegramUser(user: user)
-                let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
-                 return peer
-                 })*/
-                initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
-                transaction.setState(state)
-                return accountManager.transaction { transaction -> Void in
-                    switchToAuthorizedAccount(transaction: transaction, account: account)
-                }
-            case .authorizationSignUpRequired:
-                return .complete()
+    |> mapToSignal { result -> Signal<Never, PasswordRecoveryError> in
+        return .complete()
+    }
+}
+
+public func performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
+    return twoStepAuthData(account.network)
+    |> mapError { _ -> PasswordRecoveryError in
+        return .generic
+    }
+    |> mapToSignal { authData -> Signal<Void, PasswordRecoveryError> in
+        let newSettings: Api.account.PasswordInputSettings?
+        switch updatedPassword {
+        case .none:
+            newSettings = nil
+        case let .password(password, hint, email):
+            var flags: Int32 = 1 << 0
+            if email != nil {
+                flags |= (1 << 1)
+            }
+
+            guard let (updatedPasswordHash, updatedPasswordDerivation) = passwordUpdateKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: authData.nextPasswordDerivation) else {
+                return .fail(.invalidCode)
+            }
+
+            newSettings = Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: updatedPasswordDerivation.apiAlgo, newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSettings: nil)
+        }
+
+        var flags: Int32 = 0
+        if newSettings != nil {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.auth.recoverPassword(flags: flags, code: code, newSettings: newSettings), automaticFloodWait: false)
+        |> mapError { error -> PasswordRecoveryError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else if error.errorDescription.hasPrefix("PASSWORD_RECOVERY_EXPIRED") {
+                return .expired
+            } else {
+                return .invalidCode
             }
         }
-        |> switchToLatest
-        |> mapError { _ -> PasswordRecoveryError in }
+        |> mapToSignal { result -> Signal<Void, PasswordRecoveryError> in
+            return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                switch result {
+                case let .authorization(_, _, user):
+                    let user = TelegramUser(user: user)
+                    let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+
+                    initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
+                    transaction.setState(state)
+                    return accountManager.transaction { transaction -> Void in
+                        switchToAuthorizedAccount(transaction: transaction, account: account)
+                    }
+                case .authorizationSignUpRequired:
+                    return .complete()
+                }
+            }
+            |> switchToLatest
+            |> mapError { _ -> PasswordRecoveryError in }
+        }
     }
 }
 

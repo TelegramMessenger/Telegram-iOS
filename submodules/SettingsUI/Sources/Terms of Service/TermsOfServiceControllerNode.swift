@@ -79,7 +79,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
-        self.toolbarNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.toolbarNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.toolbarSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.contentBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor

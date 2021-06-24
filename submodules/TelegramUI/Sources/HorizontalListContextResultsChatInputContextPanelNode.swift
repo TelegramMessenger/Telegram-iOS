@@ -162,7 +162,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     if let strongSelf = self {
                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
                                             if let strongSelf = self {
-                                                return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceNode, sourceRect) ?? false
                                             } else {
                                                 return false
                                             }
@@ -317,12 +317,17 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: HorizontalListContextResultsOpaqueState(entryCount: transition.entryCount, hasMore: transition.hasMore), completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     let position = strongSelf.listView.position
-                    strongSelf.listView.isHidden = false
-                    strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + strongSelf.listView.bounds.size.width), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    
-                    strongSelf.separatorNode.isHidden = false
                     let separatorPosition = strongSelf.separatorNode.layer.position
-                    strongSelf.separatorNode.layer.animatePosition(from: CGPoint(x: separatorPosition.x, y: separatorPosition.y + strongSelf.listView.bounds.size.width), to: separatorPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    
+                    strongSelf.listView.isHidden = false
+                    strongSelf.separatorNode.isHidden = false
+                    
+                    strongSelf.listView.position = CGPoint(x: position.x, y: position.y + strongSelf.listView.bounds.size.width)
+                    strongSelf.separatorNode.position = CGPoint(x: separatorPosition.x, y: separatorPosition.y + strongSelf.listView.bounds.size.width)
+                    ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                        strongSelf.listView.position = position
+                        strongSelf.separatorNode.position = separatorPosition
+                    }
                 }
             })
         }

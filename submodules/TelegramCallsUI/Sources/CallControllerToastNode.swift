@@ -222,9 +222,6 @@ private class CallControllerToastItemNode: ASDisplayNode {
         self.clipNode = ASDisplayNode()
         self.clipNode.clipsToBounds = true
         self.clipNode.layer.cornerRadius = 14.0
-        if #available(iOS 13.0, *) {
-            self.clipNode.layer.cornerCurve = .continuous
-        }
         
         self.effectView = UIVisualEffectView()
         self.effectView.effect = UIBlurEffect(style: .light)
@@ -246,6 +243,14 @@ private class CallControllerToastItemNode: ASDisplayNode {
         self.clipNode.view.addSubview(self.effectView)
         self.clipNode.addSubnode(self.iconNode)
         self.clipNode.addSubnode(self.textNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.clipNode.layer.cornerCurve = .continuous
+        }
     }
     
     func update(width: CGFloat, content: Content, transition: ContainedViewLayoutTransition) -> CGFloat {
