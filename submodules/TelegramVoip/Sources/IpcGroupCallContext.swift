@@ -557,7 +557,8 @@ public final class IpcGroupCallBufferBroadcastContext {
             return
         }
         
-        if let currentId = self.currentId, currentId == cutoffPayload.id {
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        if let currentId = self.currentId, currentId == cutoffPayload.id && cutoffPayload.timestamp > timestamp - 10 {
             self.statusPromise.set(.single(.finished(.screencastEnded)))
             return
         }
