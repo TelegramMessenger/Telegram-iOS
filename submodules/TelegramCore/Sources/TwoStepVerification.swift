@@ -8,7 +8,7 @@ import SyncCore
 
 public enum TwoStepVerificationConfiguration {
     case notSet(pendingEmail: TwoStepVerificationPendingEmail?)
-    case set(hint: String, hasRecoveryEmail: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
+    case set(hint: String, hasRecoveryEmail: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool, pendingResetTimestamp: Int32?)
 }
 
 public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStepVerificationConfiguration, NoError> {
@@ -18,7 +18,7 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
         switch result {
             case let .password(password):
                 if password.currentAlgo != nil {
-                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0)
+                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0, pendingResetTimestamp: nil/*password.pendingResetDate*/)
                 } else {
                     return .notSet(pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }))
                 }
@@ -335,21 +335,32 @@ public enum RecoverTwoStepVerificationPasswordError {
 }
 
 public func recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-    return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
-        |> mapError { error -> RecoverTwoStepVerificationPasswordError in
-            if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
-                return .limitExceeded
-            } else if error.errorDescription == "PASSWORD_RECOVERY_EXPIRED" {
-                return .codeExpired
-            } else if error.errorDescription == "CODE_INVALID" {
-                return .invalidCode
-            } else {
-                return .generic
+    return twoStepAuthData(network)
+    |> mapError { _ -> RecoverTwoStepVerificationPasswordError in
+        return .generic
+    }
+    |> mapToSignal { authData -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
+        var flags: Int32 = (1 << 1)
+        if authData.currentPasswordDerivation != nil {
+            flags |= (1 << 0)
+        }
+
+        return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
+            |> mapError { error -> RecoverTwoStepVerificationPasswordError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PASSWORD_RECOVERY_EXPIRED" {
+                    return .codeExpired
+                } else if error.errorDescription == "CODE_INVALID" {
+                    return .invalidCode
+                } else {
+                    return .generic
+                }
             }
-        }
-        |> mapToSignal { _ -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
-            return .complete()
-        }
+            |> mapToSignal { _ -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
+                return .complete()
+            }
+    }
 }
 
 public func cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
@@ -402,3 +413,53 @@ public func requestTemporaryTwoStepPasswordToken(account: Account, password: Str
         }
     }
 }
+
+public enum RequestTwoStepPasswordResetResult {
+    public enum ErrorReason {
+        case generic
+        case limitExceeded
+    }
+
+    case done
+    case waitingForReset(resetAtTimestamp: Int32)
+    case declined
+    case error(reason: ErrorReason)
+}
+
+/*public func requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
+    return network.request(Api.functions.account.resetPassword(), automaticFloodWait: false)
+    |> map { _ -> RequestTwoStepPasswordResetResult in
+        return .done
+    }
+    |> `catch` { error -> Signal<RequestTwoStepPasswordResetResult, NoError> in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .single(.error(reason: .limitExceeded))
+        } else if error.errorDescription.hasPrefix("RESET_WAIT_") {
+            if let remainingSeconds = Int32(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "RESET_WAIT_".count)...]) {
+                let timestamp = Int32(network.globalTime)
+                return .single(.waitingForReset(resetAtTimestamp: timestamp + remainingSeconds))
+            } else {
+                return .single(.error(reason: .generic))
+            }
+        } else if error.errorDescription.hasPrefix("RESET_PREVIOUS_WAIT_") {
+            if let remainingSeconds = Int32(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "RESET_PREVIOUS_WAIT_".count)...]) {
+                let timestamp = Int32(network.globalTime)
+                return .single(.waitingForReset(resetAtTimestamp: timestamp + remainingSeconds))
+            } else {
+                return .single(.error(reason: .generic))
+            }
+        } else if error.errorDescription == "RESET_PREVIOUS_DECLINE" {
+            return .single(.declined)
+        } else {
+            return .single(.error(reason: .generic))
+        }
+    }
+}
+
+public func declineTwoStepPasswordReset(network: Network) -> Signal<Never, NoError> {
+    return network.request(Api.functions.account.declinePasswordReset())
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
+}*/

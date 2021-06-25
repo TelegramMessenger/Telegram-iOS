@@ -176,8 +176,7 @@ final class ThemeAccentColorController: ViewController {
                 let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, !state.backgroundColors.isEmpty {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(colors: state.backgroundColors.count >= 1 ? state.backgroundColors : [0], intensity: state.patternIntensity, rotation: state.rotation)
-                    
+
                     var data: Data?
                     if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                         data = maybeData
@@ -187,13 +186,7 @@ final class ThemeAccentColorController: ViewController {
                     
                     if let data = data {
                         strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                        prepareWallpaper = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
-                        |> filter({ $0.complete })
-                        |> take(1)
-                        |> castError(CreateThemeError.self)
-                        |> mapToSignal { _ -> Signal<CreateThemeResult, CreateThemeError> in
-                            return .complete()
-                        })
+                        prepareWallpaper = .complete()
                     } else {
                         prepareWallpaper = .complete()
                     }
@@ -470,7 +463,7 @@ final class ThemeAccentColorController: ViewController {
                     } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                         wallpaper = customWallpaper
                     } else {
-                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper, wallpaperGradientColors: themeSpecificAccentColor?.baseColor.wallpaperGradientColors) ?? defaultPresentationTheme
+                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper, baseColor: themeSpecificAccentColor?.baseColor) ?? defaultPresentationTheme
                         referenceTheme = theme
                         wallpaper = theme.chat.defaultWallpaper
                     }

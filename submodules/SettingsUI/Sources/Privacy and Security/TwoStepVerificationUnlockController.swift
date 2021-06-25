@@ -246,7 +246,7 @@ enum TwoStepVerificationAccessConfiguration: Equatable {
         switch configuration {
             case let .notSet(pendingEmail):
                 self = .notSet(pendingEmail: pendingEmail.flatMap({ TwoStepVerificationPendingEmailState(password: password, email: $0) }))
-            case let .set(hint, hasRecoveryEmail, _, hasSecureValues):
+            case let .set(hint, hasRecoveryEmail, _, hasSecureValues, _):
                 self = .set(hint: hint, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues)
         }
     }

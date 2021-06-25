@@ -10,6 +10,7 @@ import AnimatedStickerNode
 import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
+import TelegramCore
 
 public enum TwoFactorAuthSplashMode {
     case intro
@@ -17,15 +18,17 @@ public enum TwoFactorAuthSplashMode {
 }
 
 public final class TwoFactorAuthSplashScreen: ViewController {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let network: Network
     private var presentationData: PresentationData
     private var mode: TwoFactorAuthSplashMode
     
-    public init(context: AccountContext, mode: TwoFactorAuthSplashMode) {
-        self.context = context
+    public init(sharedContext: SharedAccountContext, network: Network, mode: TwoFactorAuthSplashMode) {
+        self.sharedContext = sharedContext
+        self.network = network
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
@@ -48,13 +51,13 @@ public final class TwoFactorAuthSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TwoFactorAuthSplashScreenNode(context: self.context, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        self.displayNode = TwoFactorAuthSplashScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             switch strongSelf.mode {
             case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(context: strongSelf.context, mode: .password, stateUpdated: { _ in
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .password, stateUpdated: { _ in
                 }))
             case .done:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
@@ -92,7 +95,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, action: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         
@@ -191,9 +194,9 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        var maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
+        let maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
         
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         

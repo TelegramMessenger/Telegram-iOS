@@ -126,7 +126,6 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setOnIsActiveUpdated:(void (^_Nonnull)(bool))onIsActiveUpdated;
 
 #if TARGET_OS_IOS
-- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer;
 - (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation;
 #endif
 

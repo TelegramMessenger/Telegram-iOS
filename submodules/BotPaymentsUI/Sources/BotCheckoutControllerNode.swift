@@ -952,7 +952,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             switch value {
             case .notSet:
                 break
-            case let .set(hint, _, _, _):
+            case let .set(hint, _, _, _, _):
                 if !hint.isEmpty {
                     strongSelf.passwordTip = hint
                 }
