@@ -2637,6 +2637,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     accessHash: callInfo.accessHash
                 ).start())
             }
+            
+            self.screencastBufferServerContext?.stopScreencast()
         }
         /*if let _ = self.screencastIpcContext {
             self.screencastIpcContext = nil

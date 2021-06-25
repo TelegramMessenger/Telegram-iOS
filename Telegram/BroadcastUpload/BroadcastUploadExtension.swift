@@ -4,6 +4,7 @@ import CoreVideo
 import TelegramVoip
 import SwiftSignalKit
 import BuildConfig
+import BroadcastUploadHelpers
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
@@ -34,28 +35,29 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         super.beginRequest(with: context)
     }
 
-    private func finishWithGenericError() {
-        let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
-            NSLocalizedDescriptionKey: "Finished"
-        ])
-        finishBroadcastWithError(error)
-
-        /*self.callContext?.stop()
-        self.callContext = nil
-
-        self.ipcContext = nil*/
+    private func finish(with reason: IpcGroupCallBufferBroadcastContext.Status.FinishReason) {
+        var errorString: String?
+        switch reason {
+            case .callEnded:
+                errorString = "You're not in a voice chat"
+            case .error:
+                errorString = "Finished"
+            case .screencastEnded:
+                break
+        }
+        if let errorString = errorString {
+            let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: errorString
+            ])
+            finishBroadcastWithError(error)
+        } else {
+            finishBroadcastGracefully(self)
+        }
     }
 
-    private func finishWithNoBroadcast() {
-        let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
-            NSLocalizedDescriptionKey: "You're not in a voice chat"
-        ])
-        finishBroadcastWithError(error)
-    }
-    
     override public func broadcastStarted(withSetupInfo setupInfo: [String : NSObject]?) {
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-            self.finishWithGenericError()
+            self.finish(with: .error)
             return
         }
 
@@ -65,7 +67,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
 
         guard let appGroupUrl = maybeAppGroupUrl else {
-            self.finishWithGenericError()
+            self.finish(with: .error)
             return
         }
 
@@ -83,8 +85,8 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
                 return
             }
             switch status {
-            case .finished:
-                strongSelf.finishWithNoBroadcast()
+                case let .finished(reason):
+                    strongSelf.finish(with: reason)
             }
         })
 

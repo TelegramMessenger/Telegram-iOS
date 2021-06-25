@@ -1470,6 +1470,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems",
+        "//submodules/BroadcastUploadHelpers:BroadcastUploadHelpers",
     ],
 )
 
