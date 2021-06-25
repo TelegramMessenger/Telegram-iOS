@@ -18,7 +18,7 @@ public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStep
         switch result {
             case let .password(password):
                 if password.currentAlgo != nil {
-                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0, pendingResetTimestamp: password.pendingResetDate)
+                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0, pendingResetTimestamp: nil/*password.pendingResetDate*/)
                 } else {
                     return .notSet(pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }))
                 }
@@ -345,7 +345,7 @@ public func recoverTwoStepVerificationPassword(network: Network, code: String) -
             flags |= (1 << 0)
         }
 
-        return network.request(Api.functions.auth.recoverPassword(flags: 0, code: code, newSettings: nil), automaticFloodWait: false)
+        return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
             |> mapError { error -> RecoverTwoStepVerificationPasswordError in
                 if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
                     return .limitExceeded
@@ -426,7 +426,7 @@ public enum RequestTwoStepPasswordResetResult {
     case error(reason: ErrorReason)
 }
 
-public func requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
+/*public func requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
     return network.request(Api.functions.account.resetPassword(), automaticFloodWait: false)
     |> map { _ -> RequestTwoStepPasswordResetResult in
         return .done
@@ -462,4 +462,4 @@ public func declineTwoStepPasswordReset(network: Network) -> Signal<Never, NoErr
         return .single(.boolFalse)
     }
     |> ignoreValues
-}
+}*/

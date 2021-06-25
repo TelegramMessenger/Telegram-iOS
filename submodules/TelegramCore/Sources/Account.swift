@@ -377,7 +377,8 @@ public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpc
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate):
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom/*, pendingResetDate*/):
+                let pendingResetDate: Int32? = nil
                 let hasRecovery = (flags & (1 << 0)) != 0
                 let hasSecureValues = (flags & (1 << 1)) != 0
                 
