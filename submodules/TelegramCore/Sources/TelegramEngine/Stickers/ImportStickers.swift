@@ -5,12 +5,12 @@ import TelegramApi
 
 import SyncCore
 
-private enum UploadStickerStatus {
+public enum UploadStickerStatus {
     case progress(Float)
-    case complete(TelegramMediaFile)
+    case complete(CloudDocumentMediaResource, String)
 }
 
-private enum UploadStickerError {
+public enum UploadStickerError {
     case generic
 }
 
@@ -34,7 +34,7 @@ private func uploadedSticker(postbox: Postbox, network: Network, resource: Media
     }
 }
 
-private func uploadSticker(account: Account, peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, isAnimated: Bool) -> Signal<UploadStickerStatus, UploadStickerError> {
+func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, isAnimated: Bool) -> Signal<UploadStickerStatus, UploadStickerError> {
     guard let inputPeer = apiInputPeer(peer) else {
         return .fail(.generic)
     }
@@ -59,8 +59,8 @@ private func uploadSticker(account: Account, peer: Peer, resource: MediaResource
                         |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch media {
                                 case let .messageMediaDocument(_, document, _):
-                                    if let document = document, let file = telegramMediaFileFromApiDocument(document) {
-                                        return .single(.complete(file))
+                                    if let document = document, let file = telegramMediaFileFromApiDocument(document), let resource = file.resource as? CloudDocumentMediaResource {
+                                        return .single(.complete(resource, file.mimeType))
                                     }
                                 default:
                                     break
@@ -108,35 +108,37 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             stickers.append(thumbnail)
         }
         for sticker in stickers {
-            uploadStickers.append(uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, isAnimated: isAnimated)
-            |> mapError { _ -> CreateStickerSetError in
-                return .generic
-            })
+            if let resource = sticker.resource as? CloudDocumentMediaResource {
+                uploadStickers.append(.single(.complete(resource, isAnimated ? "application/x-tgsticker": "image/png")))
+            } else {
+                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, isAnimated: isAnimated)
+                |> mapError { _ -> CreateStickerSetError in
+                    return .generic
+                })
+            }
         }
         return combineLatest(uploadStickers)
         |> mapToSignal { uploadedStickers -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
-            var documents: [TelegramMediaFile] = []
+            var resources: [CloudDocumentMediaResource] = []
             for sticker in uploadedStickers {
-                if case let .complete(document) = sticker {
-                    documents.append(document)
+                if case let .complete(resource, _) = sticker {
+                    resources.append(resource)
                 }
             }
-            if documents.count == stickers.count {
+            if resources.count == stickers.count {
                 var flags: Int32 = 0
                 if isAnimated {
                     flags |= (1 << 1)
                 }
                 var inputStickers: [Api.InputStickerSetItem] = []
-                let stickerDocuments = thumbnail != nil ? documents.dropLast() : documents
+                let stickerDocuments = thumbnail != nil ? resources.dropLast() : resources
                 for i in 0 ..< stickerDocuments.count {
                     let sticker = stickers[i]
-                    let document = documents[i]
-                    if let resource = document.resource as? CloudDocumentMediaResource {
-                        inputStickers.append(.inputStickerSetItem(flags: 0, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil))
-                    }
+                    let resource = resources[i]
+                    inputStickers.append(.inputStickerSetItem(flags: 0, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil))
                 }
                 var thumbnailDocument: Api.InputDocument?
-                if thumbnail != nil, let document = documents.last, let resource = document.resource as? CloudDocumentMediaResource {
+                if thumbnail != nil, let resource = resources.last {
                     flags |= (1 << 2)
                     thumbnailDocument = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))
                 }

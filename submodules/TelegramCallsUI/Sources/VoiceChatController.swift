@@ -4370,8 +4370,8 @@ public final class VoiceChatController: ViewController {
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, dark: self.isFullscreen, small: smallButtons, animated: true)
             
             var hasCameraButton = self.callState?.isVideoEnabled ?? false
-            if let joinedVideo = self.joinedVideo, !joinedVideo {
-                hasCameraButton = false
+            if let joinedVideo = self.joinedVideo {
+                hasCameraButton = joinedVideo
             }
             switch actionButtonState {
                 case let .active(state):
@@ -4790,7 +4790,7 @@ public final class VoiceChatController: ViewController {
                 displayPanelVideos = self.displayPanelVideos
             }
             
-            var joinedVideo = true
+            var joinedVideo = self.joinedVideo ?? true
             
             var myEntry: VoiceChatPeerEntry?
             var mainEntry: VoiceChatPeerEntry?
@@ -4929,7 +4929,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                if !isTile || (isTablet) {
+                if !isTile || isTablet || !joinedVideo {
                     entries.append(.peer(peerEntry, index))
                 }
     

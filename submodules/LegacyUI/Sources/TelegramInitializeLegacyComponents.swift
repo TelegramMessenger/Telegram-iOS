@@ -39,10 +39,6 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
         self.context = context
     }
     
-    public func checkAddressBookAuthorizationStatus(alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
-        return true
-    }
-    
     public func checkPhotoAuthorizationStatus(for intent: TGPhotoAccessIntent, alertDismissCompletion: (() -> Void)!) -> Bool {
         if let context = self.context {
             DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
@@ -58,24 +54,10 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
         return true
     }
     
-    public func checkCameraAuthorizationStatus(for intent: TGCameraAccessIntent, alertDismissCompletion: (() -> Void)!) -> Bool {
-        return true
-    }
-    
-    public func checkLocationAuthorizationStatus(for intent: TGLocationAccessIntent, alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
-        let subject: DeviceAccessLocationSubject
-        if intent == TGLocationAccessIntentSend {
-            subject = .send
-        } else if intent == TGLocationAccessIntentLiveLocation {
-            subject = .live
-        } else if intent == TGLocationAccessIntentTracking {
-            subject = .tracking
-        } else {
-            assertionFailure()
-            subject = .send
-        }
+    public func checkCameraAuthorizationStatus(for intent: TGCameraAccessIntent, completion: ((Bool) -> Void)!, alertDismissCompletion: (() -> Void)!) -> Bool {
         if let context = self.context {
-            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+            DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+                completion(value)
                 if !value {
                     alertDismissCompletion?()
                 }

@@ -271,7 +271,7 @@
 
 + (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
-    if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
+    if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault completion:^(BOOL allowed) { } alertDismissCompletion:nil])
         return;
     
     if ([context currentlyInSplitView])

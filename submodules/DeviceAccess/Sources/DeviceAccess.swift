@@ -361,7 +361,7 @@ public final class DeviceAccess {
                             switch status {
                                 case .restricted, .denied, .notDetermined:
                                     value = false
-                                case .authorized:
+                                case .authorized, .limited:
                                     value = true
                                 @unknown default:
                                     fatalError()
@@ -416,8 +416,6 @@ public final class DeviceAccess {
                                     locationManager?.requestAlwaysAuthorization(completion: { status in
                                         completion(status == .authorizedAlways)
                                     })
-                                default:
-                                    break
                             }
                         @unknown default:
                             fatalError()

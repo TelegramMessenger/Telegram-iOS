@@ -17,13 +17,13 @@ import RadialStatusNode
 import UndoUI
 import StickerPackPreviewUI
 
-private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
+private struct StickerPackPreviewGridEntry: Comparable, Equatable, Identifiable {
     let index: Int
     let stickerItem: ImportStickerPack.Sticker
+    let isVerified: Bool
     
     var stableId: Int {
         return self.index
-//        return self.stickerItem.file.fileId
     }
     
     static func <(lhs: StickerPackPreviewGridEntry, rhs: StickerPackPreviewGridEntry) -> Bool {
@@ -31,8 +31,10 @@ private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
-        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isEmpty: false)
+        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isVerified: self.isVerified)
     }
+    
+    
 }
 
 private struct StickerPackPreviewGridTransaction {
@@ -53,6 +55,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let context: AccountContext
     private var presentationData: PresentationData
     private var stickerPack: ImportStickerPack?
+    var stickerResources: [UUID: MediaResource] = [:]
+    private var uploadedStickerResources: [UUID: MediaResource] = [:]
+    private var stickerPackReady = true
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -130,6 +135,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.contentTitleNode = ImmediateTextNode()
         self.contentTitleNode.displaysAsynchronously = false
         self.contentTitleNode.maximumNumberOfLines = 1
+        self.contentTitleNode.alpha = 0.0
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
@@ -204,6 +210,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.wrappingScrollNode.addSubnode(self.radialStatusText)
         self.wrappingScrollNode.addSubnode(self.progressText)
         self.wrappingScrollNode.addSubnode(self.infoText)
+        
+        self.installActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -345,16 +353,14 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         let contentFrame = contentContainerFrame.insetBy(dx: 12.0, dy: 0.0)
         
         var transaction: StickerPackPreviewGridTransaction?
-        
-        var animateIn = false
-        
+                
         var forceTitleUpdate = false
         if self.progress != nil && !self.hadProgress {
             self.hadProgress = true
             forceTitleUpdate = true
         }
         
-        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count || forceTitleUpdate {
+        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count || self.pendingItems != self.currentItems || forceTitleUpdate {
             let previousItems = self.currentItems
             self.currentItems = self.pendingItems
             
@@ -366,7 +372,6 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
             }
             self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
-            animateIn = true
 
             if !forceTitleUpdate {
                 transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
@@ -405,13 +410,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         
         self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transaction?.deletions ?? [], insertItems: transaction?.insertions ?? [], updateItems: transaction?.updates ?? [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-        
-        if animateIn {
-            self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        }
-                
+                        
         transition.updateAlpha(node: self.contentGridNode, alpha: self.progress == nil ? 1.0 : 0.0)
         
         var effectiveProgress: CGFloat = 0.0
@@ -563,7 +562,12 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             if case let .image(data) = item.stickerItem.content, let image = UIImage(data: data) {
                 dimensions = PixelDimensions(image.size)
             }
-            if let resource = item.stickerItem.resource {
+            if let resource = self.uploadedStickerResources[item.stickerItem.uuid] {
+                if let localResource = item.stickerItem.resource {
+                    self.context.account.postbox.mediaBox.copyResourceData(from: localResource.id, to: resource.id)
+                }
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+            } else if let resource = item.stickerItem.resource {
                 stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
             }
         }
@@ -592,6 +596,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 if case let .complete(info, items) = status {
                     if let (_, _, count) = strongSelf.progress {
                         strongSelf.progress = (1.0, count, count)
+                        strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: !stickerPack.isAnimated, synchronous: true, completion: {})
                         if let (layout, navigationBarHeight) = strongSelf.containerLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }
@@ -631,9 +636,11 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                         if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
                             firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: stickerPack.isAnimated ? "application/x-tgsticker": "image/png", size: nil, attributes: [.FileName(fileName: stickerPack.isAnimated ? "sticker.tgs" : "sticker.png"), .ImageSize(size: firstStickerItem.dimensions)]), indexKeys: [])
                         }
-                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { _ in
-//                            (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _, _, _ in
-//                            }), in: .window(.root))
+                        strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { action in
+                            if case .info = action {
+                                (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _, _, _ in
+                            }), in: .window(.root))
+                            }
                             return true
                         }), nil)
                         strongSelf.cancel?()
@@ -716,23 +723,35 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         })
     }
     
-    func updateStickerPack(_ stickerPack: ImportStickerPack) {
+    func updateStickerPack(_ stickerPack: ImportStickerPack, verifiedStickers: Set<UUID>, declinedStickers: Set<UUID>, uploadedStickerResources: [UUID: MediaResource]) {
         self.stickerPack = stickerPack
+        self.uploadedStickerResources = uploadedStickerResources
         var updatedItems: [StickerPackPreviewGridEntry] = []
         for item in stickerPack.stickers {
-            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.data)
-            item.resource = resource
-            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
+            if declinedStickers.contains(item.uuid) {
+                continue
+            }
+            if let resource = self.stickerResources[item.uuid] {
+                item.resource = resource
+            } else {
+                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.data)
+                item.resource = resource
+                self.stickerResources[item.uuid] = resource
+            }
+            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item, isVerified: !item.isAnimated || verifiedStickers.contains(item.uuid)))
         }
         self.pendingItems = updatedItems
       
-        self.interaction.playAnimatedStickers = true
+        if stickerPack.isAnimated {
+            self.stickerPackReady = stickerPack.stickers.count == (verifiedStickers.count + declinedStickers.count) && updatedItems.count > 0
+        }
         
+        self.interaction.playAnimatedStickers = true
+                
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()
         }
-        self.installActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
     }
     
     func dequeueUpdateStickerPack() {
@@ -742,11 +761,17 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 transition = .animated(duration: 0.4, curve: .spring)
             } else {
                 transition = .immediate
-                
-                self.contentTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.installActionButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+            
+            self.contentTitleNode.alpha = 1.0
+            self.contentTitleNode.layer.animateAlpha(from: self.contentTitleNode.alpha, to: 1.0, duration: 0.2)
+            
+            self.contentGridNode.alpha = 1.0
+            self.contentGridNode.layer.animateAlpha(from: self.contentGridNode.alpha, to: 1.0, duration: 0.2)
+            
+            let buttonTransition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            buttonTransition.updateAlpha(node: self.installActionButtonNode, alpha: self.stickerPackReady ? 1.0 : 0.3)
+            
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             
             if !self.didSetReady {

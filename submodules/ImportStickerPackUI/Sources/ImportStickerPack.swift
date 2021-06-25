@@ -2,6 +2,12 @@ import Foundation
 import UIKit
 import Postbox
 
+enum StickerVerificationStatus {
+    case loading
+    case verified
+    case declined
+}
+
 public class ImportStickerPack {
     public class Sticker: Equatable {
         public enum Content {
@@ -30,6 +36,14 @@ public class ImportStickerPack {
                     return data
                 case let .animation(data):
                     return data
+            }
+        }
+        
+        var isAnimated: Bool {
+            if case .animation = self.content {
+                return true
+            } else {
+                return false
             }
         }
     }
