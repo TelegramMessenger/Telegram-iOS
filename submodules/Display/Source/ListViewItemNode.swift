@@ -547,7 +547,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
         self.frame = frame
-        self.updateAbsoluteRect(frame, within: containerSize)
+        if frame.maxY < 0.0 || frame.minY > containerSize.height {
+        } else {
+            self.updateAbsoluteRect(frame, within: containerSize)
+        }
         if let extractedBackgroundNode = self.extractedBackgroundNode {
             extractedBackgroundNode.frame = frame.offsetBy(dx: 0.0, dy: -self.insets.top)
         }
@@ -556,10 +559,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
     }
     
-    open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    open func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let extractedBackgroundNode = self.extractedBackgroundNode {
             let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-            transition.animatePositionAdditive(node: extractedBackgroundNode, offset: CGPoint(x: 0.0, y: -value))
+            transition.animatePositionAdditive(node: extractedBackgroundNode, offset: CGPoint(x: -value.x, y: -value.y))
         }
     }
     

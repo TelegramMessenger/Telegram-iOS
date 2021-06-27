@@ -502,13 +502,10 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 - (id)currentResultRepresentation
 {
-    if (_transitionOutView != nil && [_transitionOutView isKindOfClass:[UIImageView class]])
-    {
+    if (_transitionOutView != nil && [_transitionOutView isKindOfClass:[UIImageView class]]) {
         return ((UIImageView *)_transitionOutView).image;
-    }
-    else
-    {
-        return [_cropView croppedImageWithMaxSize:CGSizeMake(750, 750)];
+    } else {
+        return [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
     }
 }
 

@@ -74,6 +74,16 @@ public enum TabBarItemContextActionType {
 }
 
 @objc open class ViewController: UIViewController, ContainableController {
+    public struct NavigationLayout {
+        public var navigationFrame: CGRect
+        public var defaultContentHeight: CGFloat
+
+        public init(navigationFrame: CGRect, defaultContentHeight: CGFloat) {
+            self.navigationFrame = navigationFrame
+            self.defaultContentHeight = defaultContentHeight
+        }
+    }
+
     private var validLayout: ContainerViewLayout?
     public var currentlyAppliedLayout: ContainerViewLayout? {
         return self.validLayout
@@ -183,8 +193,6 @@ public enum TabBarItemContextActionType {
     public let navigationBar: NavigationBar?
     private(set) var toolbar: Toolbar?
     
-    private var previewingContext: Any?
-    
     public var displayNavigationBar = true
     open var navigationBarRequiresEntireLayoutUpdate: Bool {
         return true
@@ -196,35 +204,28 @@ public enum TabBarItemContextActionType {
     open var hasActiveInput: Bool = false
     
     private var navigationBarOrigin: CGFloat = 0.0
-    
-    public var navigationOffset: CGFloat = 0.0 {
-        didSet {
-            if let navigationBar = self.navigationBar {
-                var navigationBarFrame = navigationBar.frame
-                navigationBarFrame.origin.y = self.navigationBarOrigin + self.navigationOffset
-                navigationBar.frame = navigationBarFrame
-            }
-        }
-    }
-    
-    open var navigationHeight: CGFloat {
-        if let navigationBar = self.navigationBar {
-            return navigationBar.frame.maxY
+
+    open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        var defaultNavigationBarHeight: CGFloat
+        if self._presentedInModal {
+            defaultNavigationBarHeight = 56.0
         } else {
-            return 0.0
+            defaultNavigationBarHeight = 44.0
         }
-    }
-    
-    open var navigationInsetHeight: CGFloat {
-        if let navigationBar = self.navigationBar {
-            var height = navigationBar.frame.maxY
-            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
-                height += contentNode.nominalHeight - contentNode.height
-            }
-            return height
-        } else {
-            return 0.0
+        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight(defaultHeight: defaultNavigationBarHeight) ?? defaultNavigationBarHeight)
+
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: navigationBarHeight))
+
+        navigationBarFrame.size.height += self.additionalNavigationBarHeight
+
+        if !self.displayNavigationBar {
+            navigationBarFrame.origin.y = -navigationBarFrame.size.height
         }
+
+        self.navigationBarOrigin = navigationBarFrame.origin.y
+
+        return NavigationLayout(navigationFrame: navigationBarFrame, defaultContentHeight: defaultNavigationBarHeight)
     }
     
     open var cleanNavigationHeight: CGFloat {
@@ -238,20 +239,10 @@ public enum TabBarItemContextActionType {
             return 0.0
         }
     }
-    
-    open var visualNavigationInsetHeight: CGFloat {
-        if let navigationBar = self.navigationBar {
-            let height = navigationBar.frame.maxY
-            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
-                //height += contentNode.height
-            }
-            return height
-        } else {
-            return 0.0
-        }
+
+    open var additionalNavigationBarHeight: CGFloat {
+        return 0.0
     }
-    
-    public var additionalNavigationBarHeight: CGFloat = 0.0
     
     public var additionalSideInsets: UIEdgeInsets = UIEdgeInsets()
     
@@ -375,40 +366,33 @@ public enum TabBarItemContextActionType {
     deinit {
         
     }
-    
-    private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        var defaultNavigationBarHeight: CGFloat
-        if self._presentedInModal {
-            defaultNavigationBarHeight = 56.0
-        } else {
-            defaultNavigationBarHeight = 44.0
-        }
-        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight(defaultHeight: defaultNavigationBarHeight) ?? defaultNavigationBarHeight)
 
-        let navigationBarOffset: CGFloat
-        if statusBarHeight.isZero {
-            navigationBarOffset = 0.0
-        } else {
-            navigationBarOffset = 0.0
-        }
-        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: navigationBarHeight))
+    open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: 0.0, transition: transition)
+    }
+    
+    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, navigationLayout: NavigationLayout, additionalBackgroundHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: navigationLayout.navigationFrame.maxY))
         
         if !self.displayNavigationBar {
             navigationBarFrame.origin.y = -navigationBarFrame.size.height
         }
         
         self.navigationBarOrigin = navigationBarFrame.origin.y
-        navigationBarFrame.origin.y += self.navigationOffset
         
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
-                navigationBarFrame.origin.y += contentNode.height + statusBarHeight
+                navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight
+                navigationBarFrame.size.height += contentNode.height + navigationLayout.defaultContentHeight + statusBarHeight
+                //navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
             if let _ = navigationBar.contentNode, let _ = navigationBar.secondaryContentNode, !self.displayNavigationBar {
-                navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
+                //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, additionalHeight: 0.0, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")
@@ -609,33 +593,6 @@ public enum TabBarItemContextActionType {
             navigationController.filterController(self, animated: true)
         } else {
             self.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    public func registerForPreviewingNonNative(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme) {
-        if true || self.traitCollection.forceTouchCapability != .available {
-            if self.previewingContext == nil {
-                let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
-                    self?.presentInGlobalOverlay(c, with: a)
-                }, customPresent: { [weak self] c, n in
-                    return self?.customPresentPreviewingController?(c, n)
-                })
-                self.previewingContext = previewingContext
-            }
-        }
-    }
-    
-    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
-    open override func unregisterForPreviewing(withContext previewing: UIViewControllerPreviewing) {
-        if self.previewingContext != nil {
-            self.previewingContext = nil
-        } else {
-            super.unregisterForPreviewing(withContext: previewing)
         }
     }
     

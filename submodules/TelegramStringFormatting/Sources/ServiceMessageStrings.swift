@@ -449,17 +449,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
-                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0).0 }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0).0 }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0).0 }, yesterdayFormatString: { $0 }))
-                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0) }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0) }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0) }))
+                        attributedString = NSAttributedString(string: titleString.0, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        let timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate)
+                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduled(authorName, $0) }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrow(authorName, $0) }, todayFormatString: { strings.Notification_VoiceChatScheduledToday(authorName, $0) }))
                         let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
-                        let titleString = strings.Notification_VoiceChatScheduled(authorName, timeString)
                         attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 } else if let duration = duration {
-                    let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
-                    attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
+                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let titleString = strings.Notification_VoiceChatEndedGroup(authorName, callDurationString(strings: strings, value: duration))
+                        attributedString = addAttributesToStringWithRanges(titleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
                 } else {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
                         let titleString = strings.Notification_VoiceChatStartedChannel

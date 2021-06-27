@@ -47,7 +47,7 @@ final class ThemeColorsGridControllerItemNode: GridItemNode {
     private var interaction: ThemeColorsGridControllerInteraction?
     
     override init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: false)
         super.init()
         
         self.addSubnode(self.wallpaperNode)

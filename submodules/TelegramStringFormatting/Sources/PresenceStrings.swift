@@ -126,30 +126,30 @@ public func stringForUserPresence(strings: PresentationStrings, day: RelativeTim
     return dayString
 }
 
-private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32, format: HumanReadableStringFormat? = nil) -> String {
-    let dayString: String
+private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32, format: HumanReadableStringFormat? = nil) -> (String, [(Int, NSRange)]) {
+    let result: (String, [(Int, NSRange)])
     switch day {
         case .today:
             let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)
-            dayString = format?.todayFormatString(string) ?? strings.Time_TodayAt(string).0
+            result = format?.todayFormatString(string) ?? strings.Time_TodayAt(string)
         case .yesterday:
             let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)
-            dayString = format?.yesterdayFormatString(string) ?? strings.Time_YesterdayAt(string).0
+            result = format?.yesterdayFormatString(string) ?? strings.Time_YesterdayAt(string)
         case .tomorrow:
             let string = stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)
-            dayString = format?.tomorrowFormatString(string) ?? strings.Time_TomorrowAt(string).0
+            result = format?.tomorrowFormatString(string) ?? strings.Time_TomorrowAt(string)
         
     }
-    return dayString
+    return result
 }
 
 public struct HumanReadableStringFormat {
-    let dateFormatString: (String) -> String
-    let tomorrowFormatString: (String) -> String
-    let todayFormatString: (String) -> String
-    let yesterdayFormatString: (String) -> String
+    let dateFormatString: (String) -> (String, [(Int, NSRange)])
+    let tomorrowFormatString: (String) -> (String, [(Int, NSRange)])
+    let todayFormatString: (String) -> (String, [(Int, NSRange)])
+    let yesterdayFormatString: (String) -> (String, [(Int, NSRange)])
     
-    public init(dateFormatString: @escaping (String) -> String, tomorrowFormatString:  @escaping (String) -> String, todayFormatString: @escaping (String) -> String, yesterdayFormatString:  @escaping (String) -> String) {
+    public init(dateFormatString: @escaping (String) -> (String, [(Int, NSRange)]), tomorrowFormatString:  @escaping (String) -> (String, [(Int, NSRange)]), todayFormatString: @escaping (String) -> (String, [(Int, NSRange)]), yesterdayFormatString:  @escaping (String) -> (String, [(Int, NSRange)]) = { ($0, []) }) {
         self.dateFormatString = dateFormatString
         self.tomorrowFormatString = tomorrowFormatString
         self.todayFormatString = todayFormatString
@@ -157,7 +157,7 @@ public struct HumanReadableStringFormat {
     }
 }
 
-public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, alwaysShowTime: Bool = false, allowYesterday: Bool = true, format: HumanReadableStringFormat? = nil) -> String {
+public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, timestamp: Int32, alwaysShowTime: Bool = false, allowYesterday: Bool = true, format: HumanReadableStringFormat? = nil) -> (String, [(Int, NSRange)]) {
     var t: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
@@ -174,7 +174,7 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
         } else {
             string = stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)
         }
-        return format?.dateFormatString(string) ?? string
+        return format?.dateFormatString(string) ?? (string, [])
     }
     
     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
@@ -195,7 +195,7 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
         } else {
             string = stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)
         }
-        return format?.dateFormatString(string) ?? string
+        return format?.dateFormatString(string) ?? (string, [])
     }
 }
 

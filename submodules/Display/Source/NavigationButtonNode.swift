@@ -266,7 +266,11 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         let previousTouchCount = self.touchCount
         self.touchCount = max(0, self.touchCount - touches.count)
         
-        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled {
+        var touchInside = true
+        if let touch = touches.first {
+            touchInside = self.touchInsideApparentBounds(touch)
+        }
+        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && touchInside {
             self.pressed()
         }
     }

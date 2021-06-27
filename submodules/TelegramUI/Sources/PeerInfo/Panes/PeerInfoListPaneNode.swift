@@ -205,7 +205,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, displayBackground: true)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.close = { [weak self] in
                     if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
@@ -391,7 +391,9 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.listNode.updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve))
         if isScrollingLockedAtTop {
             switch self.listNode.visibleContentOffset() {
-            case .known(0.0), .none:
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                break
+            case .none:
                 break
             default:
                 self.listNode.scrollToEndOfHistory()

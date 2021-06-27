@@ -17,7 +17,7 @@ final class VoiceChatVolumeContextItem: ContextMenuCustomItem {
         self.valueChanged = valueChanged
     }
     
-    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
         return VoiceChatVolumeContextItemNode(presentationData: presentationData, getController: getController, minValue: self.minValue, value: self.value, valueChanged: self.valueChanged)
     }
 }
@@ -45,7 +45,7 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
     
     private let hapticFeedback = HapticFeedback()
 
-    init(presentationData: PresentationData, getController: @escaping () -> ContextController?, minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.presentationData = presentationData
         self.minValue = minValue
         self.value = value

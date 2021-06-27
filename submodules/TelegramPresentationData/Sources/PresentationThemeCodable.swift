@@ -65,11 +65,10 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
+                            self = .gradient(nil, [topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
-                            var color: UInt32?
-                            var bottomColor: UInt32?
+                            var colors: [UInt32] = []
                             var intensity: Int32?
                             var rotation: Int32?
 
@@ -83,11 +82,7 @@ extension TelegramWallpaper: Codable {
                                         continue
                                     }
                                     if [6, 8].contains(component.count), let value = UIColor(hexString: component) {
-                                        if color == nil {
-                                            color = value.argb
-                                        } else if bottomColor == nil {
-                                            bottomColor = value.argb
-                                        }
+                                        colors.append(value.rgb)
                                     } else if component.count <= 3, let value = Int32(component) {
                                         if intensity == nil {
                                             if value >= 0 && value <= 100 {
@@ -104,7 +99,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -123,10 +118,11 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(topColor, bottomColor, settings):
+            case let .gradient(_, colors, settings):
                 var components: [String] = []
-                components.append(String(format: "%06x", topColor))
-                components.append(String(format: "%06x", bottomColor))
+                for color in colors {
+                    components.append(String(format: "%06x", color))
+                }
                 if let rotation = settings.rotation {
                     components.append("\(rotation)")
                 }
@@ -141,14 +137,20 @@ extension TelegramWallpaper: Codable {
                 var components: [String] = []
                 components.append(file.slug)
                 if self.isPattern {
-                    if let color = file.settings.color {
-                        components.append(String(format: "%06x", color))
+                    if file.settings.colors.count >= 1 {
+                        components.append(String(format: "%06x", file.settings.colors[0]))
                     }
                     if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
                     }
-                    if let bottomColor = file.settings.bottomColor {
-                        components.append(String(format: "%06x", bottomColor))
+                    if file.settings.colors.count >= 2 {
+                        components.append(String(format: "%06x", file.settings.colors[1]))
+                    }
+                    if file.settings.colors.count >= 3 {
+                        components.append(String(format: "%06x", file.settings.colors[2]))
+                    }
+                    if file.settings.colors.count >= 4 {
+                        components.append(String(format: "%06x", file.settings.colors[3]))
                     }
                     if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")
@@ -407,10 +409,19 @@ extension PresentationThemeRootNavigationBar: Codable {
         case segmentedDivider
         case clearButtonBackground
         case clearButtonForeground
+        case opaqueBackground
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let blurredBackgroundColor = try decodeColor(values, .background)
+
+        let opaqueBackgroundColor: UIColor
+        if blurredBackgroundColor.alpha >= 0.99 {
+            opaqueBackgroundColor = blurredBackgroundColor
+        } else {
+            opaqueBackgroundColor = (try? decodeColor(values, .opaqueBackground)) ?? blurredBackgroundColor
+        }
 
         self.init(
             buttonColor: try decodeColor(values, .button),
@@ -419,7 +430,8 @@ extension PresentationThemeRootNavigationBar: Codable {
             secondaryTextColor: try decodeColor(values, .secondaryText),
             controlColor: try decodeColor(values, .control),
             accentTextColor: try decodeColor(values, .accentText),
-            backgroundColor: try decodeColor(values, .background),
+            blurredBackgroundColor: blurredBackgroundColor,
+            opaqueBackgroundColor: opaqueBackgroundColor,
             separatorColor: try decodeColor(values, .separator),
             badgeBackgroundColor: try decodeColor(values, .badgeFill),
             badgeStrokeColor: try decodeColor(values, .badgeStroke),
@@ -441,7 +453,8 @@ extension PresentationThemeRootNavigationBar: Codable {
         try encodeColor(&values, self.secondaryTextColor, .secondaryText)
         try encodeColor(&values, self.controlColor, .control)
         try encodeColor(&values, self.accentTextColor, .accentText)
-        try encodeColor(&values, self.backgroundColor, .background)
+        try encodeColor(&values, self.blurredBackgroundColor, .background)
+        try encodeColor(&values, self.opaqueBackgroundColor, .opaqueBackground)
         try encodeColor(&values, self.separatorColor, .separator)
         try encodeColor(&values, self.badgeBackgroundColor, .badgeFill)
         try encodeColor(&values, self.badgeStrokeColor, .badgeStroke)
@@ -1882,9 +1895,9 @@ extension PresentationTheme: Codable {
         if let decoder = decoder as? PresentationThemeDecoding {
             let serviceBackgroundColor = decoder.serviceBackgroundColor ?? defaultServiceBackgroundColor
             decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, serviceBackgroundColor: serviceBackgroundColor)
-            index = decoder.reference?.index ?? arc4random64()
+            index = decoder.reference?.index ?? Int64.random(in: Int64.min ... Int64.max)
         } else {
-            index = arc4random64()
+            index = Int64.random(in: Int64.min ... Int64.max)
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),

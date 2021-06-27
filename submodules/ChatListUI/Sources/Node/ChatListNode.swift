@@ -875,7 +875,7 @@ public final class ChatListNode: ListView {
             
             let removingPeerId = currentRemovingPeerId.with { $0 }
             
-            var disableAnimations = state.presentationData.disableAnimations
+            var disableAnimations = true
             if previousState.editing != state.editing {
                 disableAnimations = false
             } else {
@@ -1332,7 +1332,7 @@ public final class ChatListNode: ListView {
     }
     
     public func updateThemeAndStrings(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
-        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || dateTimeFormat != self.currentState.presentationData.dateTimeFormat || disableAnimations != self.currentState.presentationData.disableAnimations {
+        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || dateTimeFormat != self.currentState.presentationData.dateTimeFormat {
             self.theme = theme
             if self.keepTopItemOverscrollBackground != nil {
                 self.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color:  theme.chatList.pinnedItemBackgroundColor, direction: true)

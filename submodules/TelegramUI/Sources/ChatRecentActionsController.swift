@@ -98,7 +98,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _ in
+        }, sendSticker: { _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -138,7 +138,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
-        }, statuses: nil)
+        }, updateShowCommands: { _ in }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         
@@ -204,7 +204,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         childrenLayout.intrinsicInsets.bottom += 49.0
         self.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func activateSearch() {

@@ -8,11 +8,10 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
-import LegacyComponents
 import AnimatedCountLabelNode
 
-private let blue = UIColor(rgb: 0x0078ff)
-private let lightBlue = UIColor(rgb: 0x59c7f8)
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x3252ef)
@@ -681,8 +680,8 @@ final class CurveView: UIView {
             }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            let lv = minOffset + (maxOffset - minOffset) * level
-            shapeLayer.transform = CATransform3DMakeTranslation(0.0, lv * 16.0, 0.0)
+            let lv = self.minOffset + (self.maxOffset - self.minOffset) * self.level
+            self.shapeLayer.transform = CATransform3DMakeTranslation(0.0, lv * 16.0, 0.0)
             CATransaction.commit()
         }
     }
@@ -696,36 +695,13 @@ final class CurveView: UIView {
         return layer
     }()
     
-    private var transition: CGFloat = 0 {
-        didSet {
-            guard let currentPoints = currentPoints else { return }
-            
-            shapeLayer.path = UIBezierPath.smoothCurve(through: currentPoints, length: bounds.width, smoothness: smoothness, curve: true).cgPath
-        }
-    }
     
     override var frame: CGRect {
         didSet {
             if self.frame.size != oldValue.size {
-                self.fromPoints = nil
-                self.toPoints = nil
+                self.shapeLayer.path = nil
                 self.animateToNewShape()
             }
-        }
-    }
-    
-    private var fromPoints: [CGPoint]?
-    private var toPoints: [CGPoint]?
-    
-    private var currentPoints: [CGPoint]? {
-        guard let fromPoints = fromPoints, let toPoints = toPoints else { return nil }
-        
-        return fromPoints.enumerated().map { offset, fromPoint in
-            let toPoint = toPoints[offset]
-            return CGPoint(
-                x: fromPoint.x + (toPoint.x - fromPoint.x) * transition,
-                y: fromPoint.y + (toPoint.y - fromPoint.y) * transition
-            )
         }
     }
     
@@ -750,7 +726,7 @@ final class CurveView: UIView {
         
         super.init(frame: .zero)
         
-        layer.addSublayer(shapeLayer)
+        self.layer.addSublayer(self.shapeLayer)
     }
     
     required init?(coder: NSCoder) {
@@ -758,7 +734,7 @@ final class CurveView: UIView {
     }
     
     func setColor(_ color: UIColor) {
-        shapeLayer.fillColor = color.cgColor
+        self.shapeLayer.fillColor = color.cgColor
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
@@ -770,57 +746,40 @@ final class CurveView: UIView {
     }
     
     func startAnimating() {
-        animateToNewShape()
+        self.animateToNewShape()
     }
     
     func stopAnimating() {
-        fromPoints = currentPoints
-        toPoints = nil
-        pop_removeAnimation(forKey: "curve")
+        self.shapeLayer.removeAnimation(forKey: "path")
     }
     
     private func animateToNewShape() {
-        if pop_animation(forKey: "curve") != nil {
-            fromPoints = currentPoints
-            toPoints = nil
-            pop_removeAnimation(forKey: "curve")
+        if self.shapeLayer.path == nil {
+            let points = self.generateNextCurve(for: self.bounds.size)
+            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: self.smoothness, curve: true).cgPath
         }
         
-        if fromPoints == nil {
-            fromPoints = generateNextCurve(for: bounds.size)
-        }
-        if toPoints == nil {
-            toPoints = generateNextCurve(for: bounds.size)
-        }
+        let nextPoints = self.generateNextCurve(for: self.bounds.size)
+        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: self.smoothness, curve: true).cgPath
         
-        let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "curve.transition", initializer: { property in
-            property?.readBlock = { curveView, values in
-                guard let curveView = curveView as? CurveView, let values = values else { return }
-                
-                values.pointee = curveView.transition
-            }
-            property?.writeBlock = { curveView, values in
-                guard let curveView = curveView as? CurveView, let values = values else { return }
-                
-                curveView.transition = values.pointee
-            }
-        })  as? POPAnimatableProperty
-        animation.completionBlock = { [weak self] animation, finished in
+        let animation = CABasicAnimation(keyPath: "path")
+        let previousPath = self.shapeLayer.path
+        self.shapeLayer.path = nextPath
+        animation.duration = CFTimeInterval(1 / (self.minSpeed + (self.maxSpeed - self.minSpeed) * self.speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = previousPath
+        animation.toValue = nextPath
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .forwards
+        animation.completion = { [weak self] finished in
             if finished {
-                self?.fromPoints = self?.currentPoints
-                self?.toPoints = nil
                 self?.animateToNewShape()
             }
         }
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        animation.fromValue = 0
-        animation.toValue = 1
-        pop_add(animation, forKey: "curve")
+        self.shapeLayer.add(animation, forKey: "path")
         
-        lastSpeedLevel = speedLevel
-        speedLevel = 0
+        self.lastSpeedLevel = self.speedLevel
+        self.speedLevel = 0
     }
     
     private func generateNextCurve(for size: CGSize) -> [CGPoint] {
@@ -872,8 +831,8 @@ final class CurveView: UIView {
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
-        shapeLayer.bounds = self.bounds
+        self.shapeLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+        self.shapeLayer.bounds = self.bounds
         CATransaction.commit()
     }
 }

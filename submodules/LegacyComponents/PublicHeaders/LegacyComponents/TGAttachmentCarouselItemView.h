@@ -43,7 +43,7 @@
 @property (nonatomic, assign) bool openEditor;
 
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
-@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime);
+@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime, bool isFromPicker);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 @property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 
@@ -61,5 +61,7 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document selectionLimit:(int)selectionLimit;
+
+- (UIView *)getItemSnapshot:(NSString *)uniqueId;
 
 @end

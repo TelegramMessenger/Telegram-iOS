@@ -732,7 +732,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 
                 let completedImpl: (UIImage) -> Void = { image in
                     if let data = image.jpegData(compressionQuality: 0.6) {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
                         updateState {

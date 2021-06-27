@@ -67,7 +67,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 
                 let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                     params.enqueueMessage(outMessage)
                 }, stopLiveLocation: { messageId in
                     params.context.liveLocationManager?.cancelLiveLocation(peerId: messageId?.peerId ?? params.message.id.peerId)
@@ -92,13 +92,13 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     switch action {
                     case .add:
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
                             return true
                         }))
                     case let .remove(positionInList):
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
                             if case .undo = action {
-                                let _ = addStickerPackInteractively(postbox: params.context.account.postbox, info: info, items: items, positionInList: positionInList).start()
+                                let _ = params.context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
                             }
                             return true
                         }))
@@ -258,12 +258,12 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
                     switch parameter {
-                        case let .slug(slug, options, firstColor, secondColor, intensity, rotation):
-                            source = .slug(slug, content.file, options, firstColor, secondColor, intensity, rotation, message)
+                        case let .slug(slug, options, colors, intensity, rotation):
+                            source = .slug(slug, content.file, options, colors, intensity, rotation, message)
                         case let .color(color):
-                            source = .wallpaper(.color(color.argb), nil, nil, nil, nil, nil, message)
-                        case let .gradient(topColor, bottomColor, rotation):
-                            source = .wallpaper(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)), nil, nil, nil, nil, rotation, message)
+                            source = .wallpaper(.color(color.argb), nil, [], nil, nil, message)
+                        case let .gradient(colors, rotation):
+                            source = .wallpaper(.gradient(nil, colors, WallpaperSettings(rotation: rotation)), nil, [], nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)

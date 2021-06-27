@@ -3948,6 +3948,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.Title" = "Background Preview";
 "WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
 "WallpaperPreview.PreviewBottomText" = "Enjoy the view";
+
 "WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
 "WallpaperPreview.SwipeBottomText" = "Backgrounds for the god of backgrounds!";
 "WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
@@ -4428,6 +4429,8 @@ Sorry for the inconvenience.";
 "Appearance.AppIconClassicX" = "Classic X";
 "Appearance.AppIconFilled" = "Filled";
 "Appearance.AppIconFilledX" = "Filled X";
+"Appearance.AppIconNew1" = "Sunset";
+"Appearance.AppIconNew2" = "Aqua";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
 "Appearance.ThemeCarouselDay" = "Day";
@@ -5740,6 +5743,7 @@ Sorry for the inconvenience.";
 
 "Notification.VoiceChatStarted" = "%1$@ started a voice chat";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
+"Notification.VoiceChatEndedGroup" = "%1$@ ended the voice chat (%2$@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";
 "VoiceChat.Panel.Members_0" = "%@ participants";
@@ -6445,3 +6449,82 @@ Sorry for the inconvenience.";
 "VoiceChat.ReminderNotify" = "We will notify you when it starts.";
 
 "Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
+
+"Privacy.ContactsReset.ContactsDeleted" = "All synced contacts deleted.";
+
+"Privacy.DeleteDrafts.DraftsDeleted" = "All cloud drafts deleted.";
+
+"Privacy.PaymentsClear.PaymentInfoCleared" = "Payment info cleared.";
+"Privacy.PaymentsClear.ShippingInfoCleared" = "Shipping info cleared.";
+"Privacy.PaymentsClear.AllInfoCleared" = "Payment and shipping info cleared.";
+
+"Settings.Tips" = "Telegram Features";
+"Settings.TipsUsername" = "TelegramTips";
+
+"Calls.NoVoiceAndVideoCallsPlaceholder" = "Your recent voice and video calls will appear here.";
+"Calls.StartNewCall" = "Start New Call";
+
+"VoiceChat.VideoPreviewTitle" = "Video Preview";
+"VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
+"VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
+"VoiceChat.VideoPreviewShareScreen" = "Share Screen";
+"VoiceChat.VideoPreviewStopScreenSharing" = "Stop Screen Sharing";
+
+"VoiceChat.TapToViewCameraVideo" = "Tap to view camera video";
+"VoiceChat.TapToViewScreenVideo" = "Tap to view screen sharing";
+
+"VoiceChat.ShareScreen" = "Share Screen";
+"VoiceChat.StopScreenSharing" = "Stop Screen Sharing";
+"VoiceChat.ParticipantIsSpeaking" = "%1$@ is speaking";
+
+"WallpaperPreview.WallpaperColors" = "Colors";
+
+"VoiceChat.UnmuteSuggestion" = "You are on mute. Tap here to speak.";
+
+"VoiceChat.ContextAudio" = "Audio";
+
+"VoiceChat.VideoPaused" = "Video is paused";
+"VoiceChat.YouAreSharingScreen" = "You are sharing your screen";
+"VoiceChat.StopScreenSharingShort" = "Stop Sharing";
+
+"VoiceChat.OpenGroup" = "Open Group";
+
+"VoiceChat.NoiseSuppression" = "Noise Suppression";
+"VoiceChat.NoiseSuppressionEnabled" = "Enabled";
+"VoiceChat.NoiseSuppressionDisabled" = "Disabled";
+
+"VoiceChat.Unpin" = "Unpin";
+
+"VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first %@ members";
+
+"ImportStickerPack.StickerCount_1" = "1 Sticker";
+"ImportStickerPack.StickerCount_2" = "2 Stickers";
+"ImportStickerPack.StickerCount_3_10" = "%@ Stickers";
+"ImportStickerPack.StickerCount_any" = "%@ Stickers";
+"ImportStickerPack.StickerCount_many" = "%@ Stickers";
+"ImportStickerPack.StickerCount_0" = "%@ Stickers";
+"ImportStickerPack.CreateStickerSet" = "Create Sticker Set";
+"ImportStickerPack.RemoveFromImport" = "Remove From Import";
+"ImportStickerPack.ChooseName" = "Choose Name";
+"ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
+"ImportStickerPack.NamePlaceholder" = "Name";
+"ImportStickerPack.GeneratingLink" = "generating link...";
+"ImportStickerPack.CheckingLink" = "checking availability...";
+"ImportStickerPack.ChooseLink" = "Choose Link";
+"ImportStickerPack.ChooseLinkDescription" = "You can use a-z, 0-9 and underscores.";
+"ImportStickerPack.LinkTaken" = "Sorry, this link is already taken.";
+"ImportStickerPack.LinkAvailable" = "Link is available.";
+"ImportStickerPack.ImportingStickers" = "Importing Stickers";
+"ImportStickerPack.Of" = "%1$@ of %2$@ Imported";
+"ImportStickerPack.InProgress" = "Please keep this window open\nuntil the import is completed.";
+"ImportStickerPack.Create" = "Create";
+
+"WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
+
+"Conversation.InputMenu" = "Menu";
+"Conversation.MessageDoesntExist" = "Message doesn't exist";
+
+"Settings.CheckPasswordTitle" = "Is %@ still your number?";
+"Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
+"Settings.KeepPassword" = "Yes, definitely";
+"Settings.TryEnterPassword" = "Not sure, let me try";

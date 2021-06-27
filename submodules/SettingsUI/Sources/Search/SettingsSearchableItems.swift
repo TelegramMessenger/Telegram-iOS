@@ -708,7 +708,7 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
         let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
         present(.immediate, controller)
         
-        let _ = (downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
+        let _ = (context.engine.localization.downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, languageCode: languageCode)
         |> deliverOnMainQueue).start(completed: { [weak controller] in
             controller?.dismiss()
             present(.dismiss, nil)
@@ -883,7 +883,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
-            let _ = (context.engine.peerNames.supportPeerId()
+            let _ = (context.engine.peers.supportPeerId()
             |> deliverOnMainQueue).start(next: { peerId in
                 if let peerId = peerId {
                     present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))

@@ -92,7 +92,7 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
 
 final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
-    let backgroundNode: ASImageNode
+    let backgroundNode: NavigationBackgroundNode
     let stickBackgroundNode: ASImageNode
     let activateArea: AccessibilityAreaNode
     
@@ -116,10 +116,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = !presentationData.isPreview
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode.isUserInteractionEnabled = false
         
         self.stickBackgroundNode = ASImageNode()
         self.stickBackgroundNode.isLayerBacked = true
@@ -165,12 +163,13 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
-        self.backgroundNode.image = graphics.dateStaticBackground
+        //self.backgroundNode.image = graphics.dateStaticBackground
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
-        self.backgroundNode.addSubnode(self.stickBackgroundNode)
+        //self.backgroundNode.addSubnode(self.stickBackgroundNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
@@ -198,9 +197,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let previousPresentationData = self.presentationData
         self.presentationData = presentationData
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
-        self.backgroundNode.image = graphics.dateStaticBackground
+        //self.backgroundNode.image = graphics.dateStaticBackground
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
@@ -218,13 +218,14 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    func updateBackgroundColor(_ color: UIColor) {
-        let chatDateSize: CGFloat = 20.0
+    func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+        self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
+        /*let chatDateSize: CGFloat = 20.0
         self.backgroundNode.image = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(color.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)*/
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
@@ -237,6 +238,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - chatDateSize) / 2.0), size: backgroundSize)
         self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
         self.backgroundNode.frame = backgroundFrame
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
         
         self.activateArea.frame = backgroundFrame

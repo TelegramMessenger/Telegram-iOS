@@ -161,7 +161,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                     if let strongSelf = self, let (contactPeers, _) = result, case let .peer(peer, _, _) = contactPeers.first {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
-                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
+                        strongSelf.createActionDisposable.set((strongSelf.context.engine.peers.createSecretChat(peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
                                 (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
@@ -284,7 +284,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func activateSearch() {

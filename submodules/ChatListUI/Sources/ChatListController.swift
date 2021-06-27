@@ -147,9 +147,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let featuredFiltersDisposable = MetaDisposable()
     private var processedFeaturedFilters = false
     
-    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
-    private let preloadStickerDisposable = MetaDisposable()
-    
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private var searchContentNode: NavigationBarSearchContentNode?
@@ -192,7 +189,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             title = filter.title
         } else if self.groupId == .root {
             title = self.presentationData.strings.DialogList_Title
-            self.navigationBar?.item = nil
         } else {
             title = self.presentationData.strings.ChatList_ArchivedChatsTitle
         }
@@ -372,6 +368,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     strongSelf.navigationItem.setLeftBarButton(editItem, animated: true)
                                 }
                             }
+                        } else {
+                            let editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
+                            editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
+                            strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
                         }
                         
                         let (hasProxy, connectsViaProxy) = proxy
@@ -631,53 +631,43 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         scrollToEndIfExists = true
                     }
                     
-                    let _ = (strongSelf.preloadedSticker.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
-                        if let strongSelf = self {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
-                                self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
-                                if let promoInfo = promoInfo {
-                                    switch promoInfo {
-                                    case .proxy:
-                                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
-                                        |> deliverOnMainQueue).start(next: { value in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            if !value {
-                                                controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
-                                                let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                                            }
-                                        })
-                                    case let .psa(type, _):
-                                        let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
-                                        |> deliverOnMainQueue).start(next: { value in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            if !value {
-                                                var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
-                                                let key = "ChatList.PsaAlert.\(type)"
-                                                if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
-                                                    text = string
-                                                } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
-                                                    text = string
-                                                }
-                                                
-                                                controller.displayPromoAnnouncement(text: text)
-                                                let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
-                                            }
-                                        })
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+                        self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
+                        if let promoInfo = promoInfo {
+                            switch promoInfo {
+                            case .proxy:
+                                let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
                                     }
-                                }
-                            }))
-                            
-                            if activateInput {
-                                strongSelf.prepareRandomGreetingSticker()
+                                    if !value {
+                                        controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                    }
+                                })
+                            case let .psa(type, _):
+                                let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if !value {
+                                        var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
+                                        let key = "ChatList.PsaAlert.\(type)"
+                                        if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
+                                            text = string
+                                        } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
+                                            text = string
+                                        }
+                                        
+                                        controller.displayPromoAnnouncement(text: text)
+                                        let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                    }
+                                })
                             }
                         }
-                    })
+                    }))
                 }
             }
         }
@@ -1144,7 +1134,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         super.displayNodeDidLoad()
         
         Queue.mainQueue().after(1.0) {
-            self.prepareRandomGreetingSticker()
+            self.context.prefetchManager?.prepareNextGreetingSticker()
         }
     }
     
@@ -1165,7 +1155,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             let count = ChatControllerCount.with({ $0 })
-            if count != 0 {
+            if count > 1 {
                 strongSelf.present(textAlertController(context: strongSelf.context, title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
             }
         })
@@ -1198,7 +1188,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !self.didSuggestLocalization {
             self.didSuggestLocalization = true
             
-            let network = self.context.account.network
+            let context = self.context
             let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
                 let languageCode: String
                 if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
@@ -1224,7 +1214,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
                     return .single(nil)
                 }
-                return suggestedLocalizationInfo(network: network, languageCode: suggestedLocalization.languageCode, extractKeys: LanguageSuggestionControllerStrings.keys)
+                return context.engine.localization.suggestedLocalizationInfo(languageCode: suggestedLocalization.languageCode, extractKeys: LanguageSuggestionControllerStrings.keys)
                 |> map({ suggestedLocalization -> (String, SuggestedLocalizationInfo)? in
                     return (value.0, suggestedLocalization)
                 })
@@ -1241,11 +1231,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }) {
                     strongSelf.present(controller, in: .window(.root))
-                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.context.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                    _ = strongSelf.context.engine.localization.markSuggestedLocalizationAsSeenInteractively(languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
             
-            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(account: self.context.account)
             |> deliverOnMainQueue).start(next: { [weak self] values in
                 guard let strongSelf = self else {
                     return
@@ -1431,8 +1421,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             tabContainerOffset += layout.statusBarHeight ?? 0.0
             tabContainerOffset += 44.0 + 20.0
         }
+
+        let navigationBarHeight = self.navigationBar?.frame.maxY ?? 0.0
         
-        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.visualNavigationInsetHeight - self.additionalHeight - 46.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 46.0)))
+        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight - self.additionalNavigationBarHeight - 46.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 46.0)))
         self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.containerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: self.chatListDisplayNode.containerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         if let tabContainerData = self.tabContainerData {
             self.chatListDisplayNode.inlineTabContainerNode.isHidden = !tabContainerData.1 || tabContainerData.0.count <= 1
@@ -1441,7 +1433,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         self.chatListDisplayNode.inlineTabContainerNode.update(size: CGSize(width: layout.size.width, height: 40.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.containerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: false, transitionFraction: self.chatListDisplayNode.containerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
-        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, visualNavigationHeight: self.visualNavigationInsetHeight, cleanNavigationBarHeight: self.cleanNavigationHeight, transition: transition)
+        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, visualNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: self.cleanNavigationHeight, transition: transition)
     }
     
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {
@@ -2320,7 +2312,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }
                                 if value == .commit {
-                                    let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
+                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -2786,28 +2778,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
             }))
         }
-    }
-    
-    private func prepareRandomGreetingSticker() {
-        let context = self.context
-        self.preloadedSticker.set(.single(nil)
-        |> then(randomGreetingSticker(account: context.account)
-        |> map { item in
-            return item?.file
-        }))
-        
-        self.preloadStickerDisposable.set((self.preloadedSticker.get()
-        |> mapToSignal { sticker -> Signal<Void, NoError> in
-            if let sticker = sticker {
-                let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
-                return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
-            } else {
-                return .complete()
-            }
-        }).start())
     }
     
     override public func tabBarDisabledAction() {

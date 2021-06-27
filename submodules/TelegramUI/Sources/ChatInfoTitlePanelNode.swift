@@ -126,33 +126,27 @@ private final class ChatInfoTitlePanelButtonNode: HighlightableButtonNode {
 
 final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var theme: PresentationTheme?
-    
-    private let backgroundNode: ASDisplayNode
+
     private let separatorNode: ASDisplayNode
     private var buttons: [(ChatInfoTitleButton, ChatInfoTitlePanelButtonNode)] = []
     
     override init() {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
         super.init()
-        
-        self.addSubnode(self.backgroundNode)
+
         self.addSubnode(self.separatorNode)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         let themeUpdated = self.theme !== interfaceState.theme
         self.theme = interfaceState.theme
         
         let panelHeight: CGFloat = 55.0
         
         if themeUpdated {
-            self.backgroundNode.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         let updatedButtons: [ChatInfoTitleButton]
@@ -205,11 +199,9 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
-        
-        return panelHeight
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }
     
     @objc func buttonPressed(_ node: HighlightableButtonNode) {

@@ -433,7 +433,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     weak var parentController: ViewController?
     
-    private let coveringBackgroundNode: ASDisplayNode
+    private let coveringBackgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let tabsContainerNode: PeerInfoPaneTabsContainerNode
     private let tabsSeparatorNode: ASDisplayNode
@@ -477,8 +477,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
-        self.coveringBackgroundNode = ASDisplayNode()
-        self.coveringBackgroundNode.isLayerBacked = true
+        self.coveringBackgroundNode = NavigationBackgroundNode(color: .clear)
+        self.coveringBackgroundNode.isUserInteractionEnabled = false
         
         self.tabsContainerNode = PeerInfoPaneTabsContainerNode()
         
@@ -692,7 +692,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        self.coveringBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.coveringBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.tabsSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -700,6 +700,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.coveringBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
+        self.coveringBackgroundNode.update(size: self.coveringBackgroundNode.bounds.size, transition: transition)
         
         transition.updateFrame(node: self.tabsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: tabsHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         

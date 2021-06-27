@@ -5,9 +5,9 @@ import TelegramCore
 import SyncCore
 
 enum WallpaperPreviewMediaContent: Equatable {
-    case file(TelegramMediaFile, UIColor?, UIColor?, Int32?, Bool, Bool)
+    case file(file: TelegramMediaFile, colors: [UInt32], rotation: Int32?, intensity: Int32?, Bool, Bool)
     case color(UIColor)
-    case gradient(UIColor, UIColor, Int32?)
+    case gradient([UInt32], Int32?)
     case themeSettings(TelegramThemeSettings)
 }
 

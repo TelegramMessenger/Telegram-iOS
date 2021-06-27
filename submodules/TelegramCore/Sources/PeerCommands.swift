@@ -39,8 +39,7 @@ public func peerCommands(account: Account, id: PeerId) -> Signal<PeerCommands, N
                 }
             }
             return PeerCommands(commands: [])
-        }
-        else if let cachedGroupData = view.cachedData as? CachedGroupData {
+        } else if let cachedGroupData = view.cachedData as? CachedGroupData {
             var commands: [PeerCommand] = []
             for cachedBotInfo in cachedGroupData.botInfos {
                 if let botPeer = view.peers[cachedBotInfo.peerId] {

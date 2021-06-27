@@ -180,14 +180,14 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     let arguments = FeaturedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
         presentStickerPackController?(info)
     }, addPack: { info in
-        let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+        let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<Void, NoError> in
             switch result {
                 case let .result(info, items, installed):
                     if installed {
                         return .complete()
                     } else {
-                        return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
+                        return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                     }
                 case .fetching:
                     break
@@ -254,7 +254,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
         if !unreadIds.isEmpty {
             alreadyReadIds.formUnion(Set(unreadIds))
             
-            let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: context.account.postbox, ids: unreadIds).start()
+            let _ = context.engine.stickers.markFeaturedStickerPacksAsSeenInteractively(ids: unreadIds).start()
         }
     }
     

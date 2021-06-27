@@ -734,7 +734,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     copyView.frame = previousAlbumArtNodeFrame
                     copyView.center = largeAlbumArtFrame.center
                     self.view.insertSubview(copyView, belowSubview: largeAlbumArtNode.view)
-                    transition.animatePositionAdditive(layer: copyView.layer, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y), completion: { [weak copyView] in
+                    transition.animatePositionAdditive(layer: copyView.layer, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y), completion: { [weak copyView] _ in
                         copyView?.removeFromSuperview()
                     })
                     //copyView.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)

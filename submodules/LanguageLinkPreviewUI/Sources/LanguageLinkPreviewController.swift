@@ -65,7 +65,7 @@ public final class LanguageLinkPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        self.disposable.set((requestLocalizationPreview(network: self.context.account.network, identifier: self.identifier)
+        self.disposable.set((self.context.engine.localization.requestLocalizationPreview(identifier: self.identifier)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
@@ -107,7 +107,7 @@ public final class LanguageLinkPreviewController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func activate() {
@@ -115,7 +115,7 @@ public final class LanguageLinkPreviewController: ViewController {
             return
         }
         self.controllerNode.setInProgress(true)
-        self.disposable.set((downloadAndApplyLocalization(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox, network: self.context.account.network, languageCode: localizationInfo.languageCode)
+        self.disposable.set((self.context.engine.localization.downloadAndApplyLocalization(accountManager: self.context.sharedContext.accountManager, languageCode: localizationInfo.languageCode)
         |> deliverOnMainQueue).start(error: { [weak self] _ in
             guard let strongSelf = self else {
                 return

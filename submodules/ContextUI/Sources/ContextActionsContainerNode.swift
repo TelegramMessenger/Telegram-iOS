@@ -69,7 +69,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         }
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
         self.blurBackground = blurBackground
@@ -165,8 +165,11 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         gesture.isEnabled = self.panSelectionGestureEnabled
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
         var minActionsWidth: CGFloat = 250.0
+        if let minimalWidth = minimalWidth, minimalWidth > minActionsWidth {
+            minActionsWidth = minimalWidth
+        }
         
         switch widthClass {
         case .compact:
@@ -457,7 +460,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return self.additionalActionsNode != nil
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
         self.shadowNode.displaysAsynchronously = false
@@ -517,10 +520,10 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
         
         var contentSize = CGSize()
-        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, transition: transition)
+        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, minimalWidth: nil, transition: transition)
             
         if let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode {
-            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, transition: transition)
+            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, minimalWidth: actionsSize.width, transition: transition)
             contentSize = additionalActionsSize
             
             let bounds = CGRect(origin: CGPoint(), size: additionalActionsSize)

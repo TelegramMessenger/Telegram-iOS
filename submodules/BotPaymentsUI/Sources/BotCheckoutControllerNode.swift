@@ -460,7 +460,8 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
         "sberbank",
         "yandex",
         "privatbank",
-        "tranzzo"
+        "tranzzo",
+        "paymaster"
     ])
     if !applePayProviders.contains(nativeProvider.name) {
         return false
@@ -537,7 +538,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
@@ -584,7 +585,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
 
         self.actionButtonPanelNode = ASDisplayNode()
-        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
 
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
@@ -597,12 +598,13 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         
-        super.init(controller: nil, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: nil, navigationBar: navigationBar, state: signal)
         
         self.arguments = arguments
         
         openInfoImpl = { [weak self] focus in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutInfoController(context: context, invoice: paymentFormValue.invoice, messageId: messageId, initialFormInfo: currentFormInfo, focus: focus, formInfoUpdated: { formInfo, validatedInfo in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue {
                         strongSelf.currentFormInfo = formInfo
@@ -877,6 +879,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
+                strongSelf.controller?.view.endEditing(true)
                 let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
                     openNewCard()
@@ -892,6 +895,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openShippingMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let shippingOptions = strongSelf.currentValidatedFormInfo?.shippingOptions, !shippingOptions.isEmpty {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutPaymentShippingOptionSheetController(context: strongSelf.context, currency: paymentFormValue.invoice.currency, options: shippingOptions, currentId: strongSelf.currentShippingOptionId, applyValue: { id in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                         strongSelf.currentShippingOptionId = id
@@ -1188,12 +1192,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
         
         if !liabilityNoticeAccepted {
-            let messageId = self.messageId
             let botPeer: Signal<Peer?, NoError> = self.context.account.postbox.transaction { transaction -> Peer? in
-                if let message = transaction.getMessage(messageId) {
-                    return message.author
-                }
-                return nil
+                return transaction.getPeer(paymentForm.paymentBotId)
             }
             let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
             |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
@@ -1229,7 +1229,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
             let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
 
-            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0

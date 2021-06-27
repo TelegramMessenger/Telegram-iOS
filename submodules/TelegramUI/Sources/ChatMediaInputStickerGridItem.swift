@@ -174,8 +174,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
     let imageNode: TransformImageNode
-    var animationNode: AnimatedStickerNode?
-    private var placeholderNode: StickerShimmerEffectNode?
+    private(set) var animationNode: AnimatedStickerNode?
+    private(set) var placeholderNode: StickerShimmerEffectNode?
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?
     
@@ -308,9 +308,13 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             if let (_, _, mediaDimensions) = self.currentState {
                 let imageSize = mediaDimensions.aspectFitted(boundingSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                if self.imageNode.supernode === self {
+                    self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                }
                 if let animationNode = self.animationNode {
-                    animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                    if animationNode.supernode === self {
+                        animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                    }
                     animationNode.updateLayout(size: imageSize)
                 }
             }
@@ -318,7 +322,9 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         
         if let placeholderNode = self.placeholderNode {
             let placeholderFrame = CGRect(origin: CGPoint(x: floor((size.width - boundingSize.width) / 2.0), y: floor((size.height - boundingSize.height) / 2.0)), size: boundingSize)
-            placeholderNode.frame = placeholderFrame
+            if placeholderNode.supernode === self {
+                placeholderNode.frame = placeholderFrame
+            }
             
             let theme = item.theme
             placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: item.stickerItem.file.immediateThumbnailData, size: placeholderFrame.size)
@@ -336,7 +342,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), nil, false, self, self.bounds)
+            let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, false, nil, false, self, self.bounds)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }
     }

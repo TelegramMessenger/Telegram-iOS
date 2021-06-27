@@ -121,7 +121,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         if presentationData.theme !== self.theme {
             self.theme = presentationData.theme
             
-            self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+            self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
             self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
             
             self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.chat.inputPanel.panelControlAccentColor), for: [.normal])

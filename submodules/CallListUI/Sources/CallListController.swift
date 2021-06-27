@@ -263,6 +263,9 @@ public final class CallListController: TelegramBaseController {
                 }
             }
         })
+        self.controllerNode.startNewCall = { [weak self] in
+            self?.beginCallImpl()
+        }
         self._ready.set(self.controllerNode.ready)
         self.displayNodeDidLoad()
     }
@@ -270,7 +273,7 @@ public final class CallListController: TelegramBaseController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func callPressed() {
@@ -285,7 +288,7 @@ public final class CallListController: TelegramBaseController {
                 return
             }
             
-            var signal = clearCallHistory(account: strongSelf.context.account, forEveryone: forEveryone)
+            var signal = strongSelf.context.engine.messages.clearCallHistory(forEveryone: forEveryone)
             
             var cancelImpl: (() -> Void)?
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

@@ -56,8 +56,9 @@ extension ReplyMarkupMessageAttribute {
     convenience init(apiMarkup: Api.ReplyMarkup) {
         var rows: [ReplyMarkupRow] = []
         var flags = ReplyMarkupMessageFlags()
+        var placeholder: String?
         switch apiMarkup {
-            case let .replyKeyboardMarkup(markupFlags, apiRows):
+            case let .replyKeyboardMarkup(markupFlags, apiRows, apiPlaceholder):
                 rows = apiRows.map { ReplyMarkupRow(apiRow: $0) }
                 if (markupFlags & (1 << 0)) != 0 {
                     flags.insert(.fit)
@@ -68,10 +69,11 @@ extension ReplyMarkupMessageAttribute {
                 if (markupFlags & (1 << 2)) != 0 {
                     flags.insert(.personal)
                 }
+                placeholder = apiPlaceholder
             case let .replyInlineMarkup(apiRows):
                 rows = apiRows.map { ReplyMarkupRow(apiRow: $0) }
                 flags.insert(.inline)
-            case let .replyKeyboardForceReply(forceReplyFlags):
+            case let .replyKeyboardForceReply(forceReplyFlags, apiPlaceholder):
                 if (forceReplyFlags & (1 << 1)) != 0 {
                     flags.insert(.once)
                 }
@@ -79,11 +81,12 @@ extension ReplyMarkupMessageAttribute {
                     flags.insert(.personal)
                 }
                 flags.insert(.setupReply)
+                placeholder = apiPlaceholder
             case let .replyKeyboardHide(hideFlags):
                 if (hideFlags & (1 << 2)) != 0 {
                     flags.insert(.personal)
                 }
         }
-        self.init(rows: rows, flags: flags)
+        self.init(rows: rows, flags: flags, placeholder: placeholder)
     }
 }

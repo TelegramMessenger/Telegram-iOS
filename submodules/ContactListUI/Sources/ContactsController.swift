@@ -89,9 +89,6 @@ public class ContactsController: ViewController {
     
     public var switchToChatsController: (() -> Void)?
     
-    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
-    private let preloadStickerDisposable = MetaDisposable()
-    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
             self.contactsNode.contactListNode.updateSelectedChatLocation(data as? ChatLocation, progress: progress, transition: transition)
@@ -235,24 +232,16 @@ public class ContactsController: ViewController {
                                 scrollToEndIfExists = true
                             }
                             
-                            let _ = (strongSelf.preloadedSticker.get()
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak self] greetingSticker in
-                                if let strongSelf = self {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
-                                        if fromSearch {
-                                            self?.deactivateSearch(animated: false)
-                                            self?.switchToChatsController?()
-                                        }
-                                        }, scrollToEndIfExists: scrollToEndIfExists, greetingData: greetingSticker.flatMap({ ChatGreetingData(sticker: $0) }), options: [.removeOnMasterDetails], completion: { [weak self] _ in
-                                        if let strongSelf = self {
-                                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                                        }
-                                    }))
-                                    
-                                    strongSelf.prepareRandomGreetingSticker()
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                                if fromSearch {
+                                    self?.deactivateSearch(animated: false)
+                                    self?.switchToChatsController?()
                                 }
-                            })
+                                }, scrollToEndIfExists: scrollToEndIfExists, options: [.removeOnMasterDetails], completion: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                                }
+                            }))
                         }
                     case let .deviceContact(id, _):
                         let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
@@ -423,14 +412,6 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.enableUpdates = false
     }
     
-    public override func displayNodeDidLoad() {
-        super.displayNodeDidLoad()
-        
-        Queue.mainQueue().after(1.0) {
-            self.prepareRandomGreetingSticker()
-        }
-    }
-    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -438,7 +419,7 @@ public class ContactsController: ViewController {
         
         self.validLayout = layout
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func activateSearch() {
@@ -524,28 +505,5 @@ public class ContactsController: ViewController {
                     })]), in: .window(.root))
             }
         })
-    }
-    
-    
-    private func prepareRandomGreetingSticker() {
-        let context = self.context
-        self.preloadedSticker.set(.single(nil)
-        |> then(randomGreetingSticker(account: context.account)
-        |> map { item in
-            return item?.file
-        }))
-        
-        self.preloadStickerDisposable.set((self.preloadedSticker.get()
-        |> mapToSignal { sticker -> Signal<Void, NoError> in
-            if let sticker = sticker {
-                let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
-                return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
-            } else {
-                return .complete()
-            }
-        }).start())
     }
 }

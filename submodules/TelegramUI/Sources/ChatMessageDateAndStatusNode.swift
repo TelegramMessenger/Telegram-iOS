@@ -151,6 +151,7 @@ private final class StatusReactionNode: ASDisplayNode {
 
 class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var backgroundNode: ASImageNode?
+    private var blurredBackgroundNode: NavigationBackgroundNode?
     private var checkSentNode: ASImageNode?
     private var checkReadNode: ASImageNode?
     private var clockFrameNode: ASImageNode?
@@ -227,6 +228,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount, isPinned, hasAutoremove in
             let dateColor: UIColor
             var backgroundImage: UIImage?
+            var blurredBackgroundColor: (UIColor, Bool)?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
             var leftInset: CGFloat
             
@@ -236,11 +238,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             var repliesImage: UIImage?
-            let selfExpiringImage: UIImage? = nil
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+            let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             let isDefaultWallpaper = serviceMessageColorHasDefaultWallpaper(presentationData.theme.wallpaper)
             let offset: CGFloat = -UIScreenPixel
             
@@ -326,7 +327,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
-                    backgroundImage = graphics.dateAndStatusFreeBackground
+
+                    blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper))
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -347,7 +349,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
                     outgoingStatus = status
-                    backgroundImage = graphics.dateAndStatusFreeBackground
+                    //backgroundImage = graphics.dateAndStatusFreeBackground
+                    blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper))
                     leftInset = 0.0
                     loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -416,24 +419,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 currentRepliesIcon = nil
             }
             
-            var selfExpiringIconSize = CGSize()
-            if let selfExpiringImage = selfExpiringImage {
-                if currentSelfExpiringIcon == nil {
-                    let iconNode = ASImageNode()
-                    iconNode.isLayerBacked = true
-                    iconNode.displayWithoutProcessing = true
-                    iconNode.displaysAsynchronously = false
-                    currentSelfExpiringIcon = iconNode
-                }
-                selfExpiringIconSize = selfExpiringImage.size
-            } else {
-                currentSelfExpiringIcon = nil
-            }
-            
             if let outgoingStatus = outgoingStatus {
                 switch outgoingStatus {
                     case .Sending:
-                        statusWidth = 13.0
+                        statusWidth = floor(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
                         
                         if checkReadNode == nil {
                             checkReadNode = ASImageNode()
@@ -536,6 +525,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     currentBackgroundNode = backgroundNode
                 }
                 backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
+            } else if blurredBackgroundColor != nil {
+                backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
             }
             
             let reactionSize: CGFloat = 14.0
@@ -584,10 +575,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 reactionInset += 12.0
             }
             
-            if !selfExpiringIconSize.width.isZero {
-                reactionInset += selfExpiringIconSize.width + 1.0
-            }
-            
             leftInset += reactionInset
             
             let layoutSize = CGSize(width: leftInset + impressionWidth + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
@@ -620,6 +607,27 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             backgroundNode.removeFromSupernode()
                             strongSelf.backgroundNode = nil
                         }
+                    }
+
+                    if let blurredBackgroundColor = blurredBackgroundColor {
+                        if let blurredBackgroundNode = strongSelf.blurredBackgroundNode {
+                            blurredBackgroundNode.updateColor(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1, transition: .immediate)
+                            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
+                            if let previousLayoutSize = previousLayoutSize {
+                                blurredBackgroundNode.frame = blurredBackgroundNode.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            transition.updateFrame(node: blurredBackgroundNode, frame: CGRect(origin: CGPoint(), size: layoutSize))
+                            blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: transition)
+                        } else {
+                            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
+                            strongSelf.blurredBackgroundNode = blurredBackgroundNode
+                            strongSelf.insertSubnode(blurredBackgroundNode, at: 0)
+                            blurredBackgroundNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                            blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: .immediate)
+                        }
+                    } else if let blurredBackgroundNode = strongSelf.blurredBackgroundNode {
+                        strongSelf.blurredBackgroundNode = nil
+                        blurredBackgroundNode.removeFromSupernode()
                     }
                     
                     strongSelf.dateNode.displaysAsynchronously = !presentationData.isPreview
@@ -831,34 +839,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             })
                         } else {
                             repliesIcon.removeFromSupernode()
-                        }
-                    }
-                    
-                    if let currentSelfExpiringIcon = currentSelfExpiringIcon {
-                        currentSelfExpiringIcon.displaysAsynchronously = !presentationData.isPreview
-                        if currentSelfExpiringIcon.image !== selfExpiringImage {
-                            currentSelfExpiringIcon.image = selfExpiringImage
-                        }
-                        if currentSelfExpiringIcon.supernode == nil {
-                            strongSelf.selfExpiringIcon = currentSelfExpiringIcon
-                            strongSelf.addSubnode(currentSelfExpiringIcon)
-                            if animated {
-                                currentSelfExpiringIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                            }
-                        }
-                        currentSelfExpiringIcon.frame = CGRect(origin: CGPoint(x: reactionOffset - 2.0, y: backgroundInsets.top + offset + floor((date.size.height - selfExpiringIconSize.height) / 2.0)), size: selfExpiringIconSize)
-                        reactionOffset += 9.0
-                    } else if let selfExpiringIcon = strongSelf.selfExpiringIcon {
-                        strongSelf.selfExpiringIcon = nil
-                        if animated {
-                            if let previousLayoutSize = previousLayoutSize {
-                                selfExpiringIcon.frame = selfExpiringIcon.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
-                            }
-                            selfExpiringIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak selfExpiringIcon] _ in
-                                selfExpiringIcon?.removeFromSupernode()
-                            })
-                        } else {
-                            selfExpiringIcon.removeFromSupernode()
                         }
                     }
                     

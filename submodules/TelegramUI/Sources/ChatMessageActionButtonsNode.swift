@@ -11,7 +11,8 @@ import AccountContext
 private let titleFont = Font.medium(16.0)
 
 private final class ChatMessageActionButtonNode: ASDisplayNode {
-    private let backgroundNode: ASImageNode
+    private let backgroundBlurNode: NavigationBackgroundNode
+    private let backgroundMaskNode: ASImageNode
     private var titleNode: TextNode?
     private var iconNode: ASImageNode?
     private var buttonView: HighlightTrackingButton?
@@ -25,20 +26,21 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     private let accessibilityArea: AccessibilityAreaNode
     
     override init() {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.alpha = 1.0
-        self.backgroundNode.isUserInteractionEnabled = false
+        self.backgroundBlurNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundBlurNode.isUserInteractionEnabled = false
+
+        self.backgroundMaskNode = ASImageNode()
+        self.backgroundMaskNode.isUserInteractionEnabled = false
         
         self.accessibilityArea = AccessibilityAreaNode()
         self.accessibilityArea.accessibilityTraits = .button
         
         super.init()
         
-        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.backgroundBlurNode)
         self.addSubnode(self.accessibilityArea)
+
+        //self.backgroundBlurNode.view.mask = backgroundMaskNode.view
         
         self.accessibilityArea.activate = { [weak self] in
             self?.buttonPressed()
@@ -57,11 +59,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 0.55
+                    strongSelf.backgroundBlurNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.backgroundBlurNode.alpha = 0.55
                 } else {
-                    strongSelf.backgroundNode.alpha = 1.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    strongSelf.backgroundBlurNode.alpha = 1.0
+                    strongSelf.backgroundBlurNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -98,11 +100,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .url, .urlAuth:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
                 case .requestPhone:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingPhoneIconImage
                 case .requestMap:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLocationIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLocationIconImage : graphics.chatBubbleActionButtonOutgoingLocationIconImage
                 case .switchInline:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingShareIconImage
                 case .payment:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
                 default:
@@ -125,17 +127,17 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             
             let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
             let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor:  bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
-            
-            let backgroundImage: UIImage?
+
+            let backgroundMaskImage: UIImage?
             switch position {
-                case .middle:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingMiddleImage : graphics.chatBubbleActionButtonOutgoingMiddleImage
-                case .bottomLeft:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomLeftImage : graphics.chatBubbleActionButtonOutgoingBottomLeftImage
-                case .bottomRight:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
-                case .bottomSingle:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
+            case .middle:
+                backgroundMaskImage = graphics.chatBubbleActionButtonMiddleMaskImage
+            case .bottomLeft:
+                backgroundMaskImage = graphics.chatBubbleActionButtonBottomLeftMaskImage
+            case .bottomRight:
+                backgroundMaskImage = graphics.chatBubbleActionButtonBottomRightMaskImage
+            case .bottomSingle:
+                backgroundMaskImage = graphics.chatBubbleActionButtonBottomSingleMaskImage
             }
             
             return (titleSize.size.width + sideInset + sideInset, { width in
@@ -156,8 +158,12 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             node.longTapRecognizer?.isEnabled = false
                     }
                     
-                    node.backgroundNode.image = backgroundImage
-                    node.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
+                    node.backgroundMaskNode.image = backgroundMaskImage
+                    node.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
+
+                    node.backgroundBlurNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
+                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: bubbleCorners.auxiliaryRadius, transition: .immediate)
+                    node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
                     
                     if iconImage != nil {
                         if node.iconNode == nil {

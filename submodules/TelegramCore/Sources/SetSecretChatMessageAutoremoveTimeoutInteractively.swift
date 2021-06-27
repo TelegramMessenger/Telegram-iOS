@@ -17,7 +17,7 @@ public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account,
                     transaction.setPeerChatState(peerId, state: updatedState)
                 }
                 
-                let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(timeout == nil ? 0 : timeout!))), replyToMessageId: nil, localGroupingKey: nil))])
+                let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(timeout == nil ? 0 : timeout!))), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))])
             }
         }
     }
@@ -32,7 +32,7 @@ public func addSecretChatMessageScreenshot(account: Account, peerId: PeerId) -> 
             default:
                 break
             }
-            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil))])
+            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))])
         }
     }
 }

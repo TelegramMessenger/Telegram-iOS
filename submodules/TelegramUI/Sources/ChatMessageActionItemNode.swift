@@ -17,6 +17,7 @@ import TelegramStringFormatting
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import GalleryUI
+import WallpaperBackgroundNode
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false)
@@ -24,7 +25,9 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 
 class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
-    let filledBackgroundNode: LinkHighlightingNode
+    var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    var backgroundColorNode: ASDisplayNode
+    let backgroundMaskNode: ASImageNode
     var linkHighlightingNode: LinkHighlightingNode?
     
     private let mediaBackgroundNode: ASImageNode
@@ -33,21 +36,24 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     private let fetchDisposable = MetaDisposable()
+
+    private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
+    private var absoluteRect: (CGRect, CGSize)?
     
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
-        
-        self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+
+        self.backgroundColorNode = ASDisplayNode()
+        self.backgroundMaskNode = ASImageNode()
         
         self.mediaBackgroundNode = ASImageNode()
         self.mediaBackgroundNode.displaysAsynchronously = false
         self.mediaBackgroundNode.displayWithoutProcessing = true
         
         super.init()
-        
-        self.addSubnode(self.filledBackgroundNode)
+
         self.addSubnode(self.labelNode)
     }
     
@@ -124,7 +130,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
-        let backgroundLayout = self.filledBackgroundNode.asyncLayout()
+
+        let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
         return { item, layoutConstants, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
@@ -172,7 +179,15 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             
                 let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
+
+                let backgroundMaskImage: (CGPoint, UIImage)?
+                var backgroundMaskUpdated = false
+                if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
+                    backgroundMaskImage = (currentOffset, currentImage)
+                } else {
+                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects)
+                    backgroundMaskUpdated = true
+                }
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
                 
@@ -260,15 +275,74 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                                                         
                             let _ = apply()
-                            let _ = backgroundApply()
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
-                            strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+                            strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+
+                            let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+
+                            if let (offset, image) = backgroundMaskImage {
+                                if strongSelf.backgroundNode == nil {
+                                    if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                        strongSelf.backgroundNode = backgroundNode
+                                        backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                                        strongSelf.insertSubnode(backgroundNode, at: 0)
+                                    }
+                                }
+
+                                if backgroundMaskUpdated, let backgroundNode = strongSelf.backgroundNode {
+                                    if labelRects.count == 1 {
+                                        backgroundNode.clipsToBounds = true
+                                        backgroundNode.cornerRadius = labelRects[0].height / 2.0
+                                        backgroundNode.view.mask = nil
+                                    } else {
+                                        backgroundNode.clipsToBounds = false
+                                        backgroundNode.cornerRadius = 0.0
+                                        backgroundNode.view.mask = strongSelf.backgroundMaskNode.view
+                                    }
+                                }
+
+                                if let backgroundNode = strongSelf.backgroundNode {
+                                    backgroundNode.frame = CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size)
+                                    if let (rect, size) = strongSelf.absoluteRect {
+                                        strongSelf.updateAbsoluteRect(rect, within: size)
+                                    }
+                                }
+                                strongSelf.backgroundMaskNode.image = image
+                                strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
+
+                                strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: image.size)
+
+                                strongSelf.cachedMaskBackgroundImage = (offset, image, labelRects)
+                            }
                         }
                     })
                 })
             })
+        }
+    }
+
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+
+        if let backgroundNode = self.backgroundNode {
+            var backgroundFrame = backgroundNode.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+        }
+    }
+
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+        }
+    }
+
+    override func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+        if let backgroundNode = self.backgroundNode {
+            backgroundNode.offsetSpring(value: value, duration: duration, damping: damping)
         }
     }
     
@@ -347,7 +421,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             return .openMessage
         }
         
-        if self.filledBackgroundNode.frame.contains(point.offsetBy(dx: 0.0, dy: -10.0)) {
+        if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point.offsetBy(dx: 0.0, dy: -10.0)) {
             return .openMessage
         } else {
             return .none

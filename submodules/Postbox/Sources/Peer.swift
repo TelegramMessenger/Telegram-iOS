@@ -151,7 +151,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             self.namespace = Namespace(rawValue: UInt32(namespaceBits))
 
             let idHighBits = (data >> (32 + 3)) & 0xffffffff
-            assert(idHighBits == 0)
+            //assert(idHighBits == 0)
 
             self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
         }

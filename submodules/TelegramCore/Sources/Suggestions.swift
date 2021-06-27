@@ -7,12 +7,22 @@ import SyncCore
 public enum ServerProvidedSuggestion: String {
     case autoarchivePopular = "AUTOARCHIVE_POPULAR"
     case newcomerTicks = "NEWCOMER_TICKS"
+    case validatePhoneNumber = "VALIDATE_PHONE_NUMBER"
+    case validatePassword = "VALIDATE_PASSWORD"
 }
 
-public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProvidedSuggestion], NoError> {
+private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
+private var dismissedSuggestions: [AccountRecordId: Set<ServerProvidedSuggestion>] = [:] {
+    didSet {
+        dismissedSuggestionsPromise.set(dismissedSuggestions)
+    }
+}
+
+public func getServerProvidedSuggestions(account: Account) -> Signal<[ServerProvidedSuggestion], NoError> {
     let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
-    return postbox.combinedView(keys: [key])
-    |> map { views -> [ServerProvidedSuggestion] in
+    return combineLatest(account.postbox.combinedView(keys: [key]), dismissedSuggestionsPromise.get())
+    |> map { views, dismissedSuggestionsValue -> [ServerProvidedSuggestion] in
+        let dismissedSuggestions = dismissedSuggestionsValue[account.id] ?? Set()
         guard let view = views.views[key] as? PreferencesView else {
             return []
         }
@@ -24,12 +34,17 @@ public func getServerProvidedSuggestions(postbox: Postbox) -> Signal<[ServerProv
         }
         return list.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
-        }
+        }.filter { !dismissedSuggestions.contains($0) }
     }
     |> distinctUntilChanged
 }
 
 public func dismissServerProvidedSuggestion(account: Account, suggestion: ServerProvidedSuggestion) -> Signal<Never, NoError> {
+    if let _ = dismissedSuggestions[account.id] {
+        dismissedSuggestions[account.id]?.insert(suggestion)
+    } else {
+        dismissedSuggestions[account.id] = Set([suggestion])
+    }
     return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion.rawValue))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)

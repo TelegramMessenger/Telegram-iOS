@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both, Extracted
@@ -65,6 +66,7 @@ class ChatMessageBackground: ASDisplayNode {
     private var maskMode: Bool?
     private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
+    private weak var backgroundNode: WallpaperBackgroundNode?
     
     var hasImage: Bool {
         self.imageNode.image != nil
@@ -92,19 +94,20 @@ class ChatMessageBackground: ASDisplayNode {
     }
     
     func setMaskMode(_ maskMode: Bool) {
-        if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics {
-            self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate)
+        if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics, let backgroundNode = self.backgroundNode {
+            self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate, backgroundNode: backgroundNode)
         }
     }
     
-    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition) {
+    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
-        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
+        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
         }
         self.type = type
         self.currentHighlighted = highlighted
         self.graphics = graphics
+        self.backgroundNode = backgroundNode
         self.hasWallpaper = hasWallpaper
         
         let image: UIImage?
@@ -113,7 +116,7 @@ class ChatMessageBackground: ASDisplayNode {
         case .none:
             image = nil
         case let .incoming(mergeType):
-            if maskMode && graphics.incomingBubbleGradientImage != nil {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming) {
                 image = nil
             } else {
                 switch mergeType {
@@ -136,7 +139,7 @@ class ChatMessageBackground: ASDisplayNode {
                 }
             }
         case let .outgoing(mergeType):
-            if maskMode && graphics.outgoingBubbleGradientImage != nil {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing) {
                 image = nil
             } else {
                 switch mergeType {
@@ -226,12 +229,31 @@ class ChatMessageBackground: ASDisplayNode {
             }
         } else if transition.isAnimated {
             if let previousContents = self.imageNode.layer.contents, let image = image {
-                self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                if (previousContents as AnyObject) !== image.cgImage {
+                    self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                }
             }
         }
         
         self.imageNode.image = image
         self.outlineImageNode.image = outlineImage
+    }
+
+    func animateFrom(sourceView: UIView, transition: CombinedTransition) {
+        if transition.isAnimated {
+            self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            self.outlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+
+            self.view.addSubview(sourceView)
+
+            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak sourceView] _ in
+                sourceView?.removeFromSuperview()
+            })
+
+            transition.animateFrame(layer: self.imageNode.layer, from: sourceView.frame)
+            transition.animateFrame(layer: self.outlineImageNode.layer, from: sourceView.frame)
+            transition.updateFrame(layer: sourceView.layer, frame: CGRect(origin: self.imageNode.frame.origin, size: CGSize(width: self.imageNode.frame.width - 7.0, height: self.imageNode.frame.height)))
+        }
     }
 }
 

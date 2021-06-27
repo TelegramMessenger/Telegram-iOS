@@ -45,7 +45,7 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonBackgroundNode)

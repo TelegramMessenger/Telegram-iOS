@@ -814,7 +814,7 @@ public final class ChatImportActivityScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func beginImport() {
@@ -823,7 +823,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         let resolvedPeerId: Signal<PeerId, ImportManager.ImportError>
         if self.peerId.namespace == Namespaces.Peer.CloudGroup {
-            resolvedPeerId = convertGroupToSupergroup(account: self.context.account, peerId: self.peerId)
+            resolvedPeerId = self.context.engine.peers.convertGroupToSupergroup(peerId: self.peerId)
             |> mapError { _ -> ImportManager.ImportError in
                 return .generic
             }

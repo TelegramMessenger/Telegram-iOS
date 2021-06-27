@@ -214,6 +214,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)?
+    public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
     
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
@@ -1027,6 +1028,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         transition = .animated(duration: duration, curve: .spring)
                     case let .Default(duration):
                         transition = .animated(duration: max(updateSizeAndInsets.duration, duration ?? 0.3), curve: .easeInOut)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        transition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                 }
             }
         } else if let scrollToItem = scrollToItem {
@@ -1040,6 +1043,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         } else {
                             transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
                         }
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        transition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                 }
             }
         }
@@ -2125,6 +2130,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         offsetHeight = 0.0
                         
                         nextNode.updateFrame(nextNode.frame.offsetBy(dx: 0.0, dy: nextHeight), within: self.visibleSize)
+                        self.didScrollWithOffset?(nextHeight, .immediate, nextNode)
                         
                         nextNode.apparentHeight = 0.0
                         
@@ -2234,6 +2240,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y -= offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2245,6 +2252,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y += offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(-offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2665,10 +2673,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 scrollToItemTransition = .animated(duration: duration, curve: .spring)
                             case let .Default(duration):
                                 scrollToItemTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                            case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                                scrollToItemTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                             }
                         }
                         
-                        self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
+                        //self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
                     }
                     
                     for itemNode in self.itemNodes {
@@ -2751,10 +2761,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         updateSizeAndInsetsTransition = .animated(duration: duration, curve: .spring)
                     case let .Default(duration):
                         updateSizeAndInsetsTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                     }
                 }
-                
-                self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+
+                if !offsetFix.isZero {
+                    //self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+                }
                 
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
@@ -2765,7 +2779,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
                     offsetFix += snappedTopInset
                     
-                    self.didScrollWithOffset?(-offsetFix, .immediate, nil)
+                    //self.didScrollWithOffset?(-snappedTopInset, .immediate, nil)
                     
                     for itemNode in self.itemNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
@@ -2806,6 +2820,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             springAnimation.isAdditive = true
                             animation = springAnimation
+                        case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                            headerNodesTransition = (.animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y)), false, -completeOffset)
+                            animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
+                            let springAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            springAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            springAnimation.duration = duration * UIView.animationDurationFactor()
+                            springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
+                            springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            springAnimation.isRemovedOnCompletion = true
+
+                            animationDuration = duration
+
+                            springAnimation.isAdditive = true
+                            animation = springAnimation
                         case let .Default(duration):
                             headerNodesTransition = (.animated(duration: max(duration ?? 0.3, updateSizeAndInsets.duration), curve: .easeInOut), false, -completeOffset)
                             animationCurve = .easeInOut
@@ -2825,9 +2853,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         self?.updateItemNodesVisibilities(onlyPositive: false)
                     }
                     self.layer.add(animation, forKey: nil)
-                    for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: animationCurve, duration: animationDuration)
+                    if !completeOffset.isZero {
+                        for itemNode in self.itemNodes {
+                            itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
+                        }
+                        self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                     }
+                } else {
+                    self.didScrollWithOffset?(-completeOffset, .immediate, nil)
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size
@@ -2865,8 +2898,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 springAnimation.isAdditive = true
                 self.layer.add(springAnimation, forKey: nil)
-                for itemNode in self.itemNodes {
-                    itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: .spring, duration: duration)
+
+                if !completeOffset.isZero {
+                    for itemNode in self.itemNodes {
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: .spring, duration: duration)
+                    }
+                    self.didScrollWithOffset?(-completeOffset, .animated(duration: duration, curve: .spring), nil)
                 }
             } else {
                 if let snapshotView = snapshotView {
@@ -2975,7 +3012,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         
                         switch scrollToItem.directionHint {
                             case .Up:
-                                offset = updatedLowerBound - (previousUpperBound ?? 0.0)
+                                if let previousUpperBound = previousUpperBound {
+                                    offset = updatedLowerBound - previousUpperBound
+                                }
                             case .Down:
                                 offset = updatedUpperBound - (previousLowerBound ?? self.visibleSize.height)
                         }
@@ -2993,6 +3032,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         headerNodesTransition = (.animated(duration: duration, curve: .spring), headerNodesTransition.1, headerNodesTransition.2 - offsetOrZero)
                     case let .Default(duration):
                         headerNodesTransition = (.animated(duration: duration ?? 0.3, curve: .easeInOut), true, headerNodesTransition.2 - offsetOrZero)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        headerNodesTransition = (.animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y)), headerNodesTransition.1, headerNodesTransition.2 - offsetOrZero)
                 }
                 for (_, headerNode) in self.itemHeaderNodes {
                     previousItemHeaderNodes.append(headerNode)
@@ -3001,7 +3042,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
                 
                 if let offset = offset, !offset.isZero {
-                    self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
+                    //self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
                     let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
                     for itemNode in temporaryPreviousNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)
@@ -3065,6 +3106,27 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             animation = springAnimation
                             reverseAnimation = reverseSpringAnimation
+                        case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                            animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
+                            animationDuration = duration
+                            let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            basicAnimation.duration = duration * UIView.animationDurationFactor()
+                            basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
+                            basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            basicAnimation.isRemovedOnCompletion = true
+                            basicAnimation.isAdditive = true
+
+                            let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            reverseBasicAnimation.duration = duration * UIView.animationDurationFactor()
+                            reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                            reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            reverseBasicAnimation.isRemovedOnCompletion = true
+                            reverseBasicAnimation.isAdditive = true
+
+                            animation = basicAnimation
+                            reverseAnimation = reverseBasicAnimation
                         case let .Default(duration):
                             if let duration = duration {
                                 animationCurve = .easeInOut
@@ -3122,11 +3184,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                     self.layer.add(animation, forKey: nil)
                     for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
                     for itemNode in temporaryPreviousNodes {
-                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
+                    self.didScrollWithOffset?(-offset, .animated(duration: animationDuration, curve: animationCurve), nil)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
                     }
@@ -3244,7 +3307,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         switch curve {
                             case .linear:
                                  headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
-                            case .spring:
+                            case .spring, .customSpring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
                             case let .custom(p1, p2, p3, p4):
                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))

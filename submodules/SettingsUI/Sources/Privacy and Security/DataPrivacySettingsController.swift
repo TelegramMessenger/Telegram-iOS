@@ -9,11 +9,11 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
-import OverlayStatusController
 import AccountContext
 import AlertUI
 import PresentationDataUtils
 import TelegramNotices
+import UndoUI
 
 private final class DataPrivacyControllerArguments {
     let account: Account
@@ -360,7 +360,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     info.insert(.shippingInfo)
                 }
                 
-                clearPaymentInfoDisposable.set((clearBotPaymentInfo(network: context.account.network, info: info)
+                clearPaymentInfoDisposable.set((context.engine.payments.clearBotPaymentInfo(info: info)
                     |> deliverOnMainQueue).start(completed: {
                         updateState { state in
                             var state = state
@@ -368,7 +368,19 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                             return state
                         }
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
+                        let text: String?
+                        if info.contains([.paymentInfo, .shippingInfo]) {
+                            text = presentationData.strings.Privacy_PaymentsClear_AllInfoCleared
+                        } else if info.contains(.paymentInfo) {
+                            text = presentationData.strings.Privacy_PaymentsClear_PaymentInfoCleared
+                        } else if info.contains(.shippingInfo) {
+                            text = presentationData.strings.Privacy_PaymentsClear_ShippingInfoCleared
+                        } else {
+                            text = nil
+                        }
+                        if let text = text {
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: text), elevatedLayout: false, action: { _ in return false }))
+                        }
                     }))
             }
             dismissAction()
@@ -422,7 +434,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_ContactsReset_ContactsDeleted), elevatedLayout: false, action: { _ in return false }))
                 }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -470,7 +482,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     if clear {
-                        clearPaymentInfoDisposable.set((clearCloudDraftsInteractively(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId)
+                        clearPaymentInfoDisposable.set((context.engine.messages.clearCloudDraftsInteractively()
                             |> deliverOnMainQueue).start(completed: {
                                 updateState { state in
                                     var state = state
@@ -478,7 +490,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                                     return state
                                 }
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_DeleteDrafts_DraftsDeleted), elevatedLayout: false, action: { _ in return false }))
                             }))
                     }
                     dismissAction()
@@ -530,7 +542,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(c, in: .window(.root))
     }
     
     return controller

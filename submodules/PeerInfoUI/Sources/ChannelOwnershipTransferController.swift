@@ -460,7 +460,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
             }
             |> then(.single(nil))
         } else if let peer = peer as? TelegramGroup {
-            signal = convertGroupToSupergroup(account: context.account, peerId: peer.id)
+            signal = context.engine.peers.convertGroupToSupergroup(peerId: peer.id)
             |> map(Optional.init)
             |> mapError { error -> ChannelOwnershipTransferError in
                 switch error {

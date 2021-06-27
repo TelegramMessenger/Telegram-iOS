@@ -8,6 +8,7 @@ import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ContextUI
+import AccountContext
 
 private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
     let searchBarHeight: CGFloat = 56.0
@@ -35,7 +36,7 @@ final class ChatMediaInputGifPaneTrendingState {
 }
 
 final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private let controllerInteraction: ChatControllerInteraction
@@ -70,8 +71,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private var isLoadingMore: Bool = false
     private var nextOffset: String?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
@@ -208,7 +209,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     func initializeIfNeeded() {
         if self.multiplexedNode == nil {
-            self.trendingPromise.set(paneGifSearchForQuery(account: account, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+            self.trendingPromise.set(paneGifSearchForQuery(context: self.context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
             |> map { items -> ChatMediaInputGifPaneTrendingState? in
                 if let items = items {
                     return ChatMediaInputGifPaneTrendingState(files: items.files, nextOffset: items.nextOffset)
@@ -217,7 +218,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 }
             })
             
-            let multiplexedNode = MultiplexedVideoNode(account: self.account, theme: self.theme, strings: self.strings)
+            let multiplexedNode = MultiplexedVideoNode(account: self.context.account, theme: self.theme, strings: self.strings)
             self.multiplexedNode = multiplexedNode
             if let layout = self.validLayout {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout.0)
@@ -235,9 +236,9 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             
             multiplexedNode.fileSelected = { [weak self] file, sourceNode, sourceRect in
                 if let (collection, result) = file.contextResult {
-                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect)
+                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, false)
                 } else {
-                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect)
+                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, false, false)
                 }
             }
             
@@ -289,7 +290,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         let filesSignal: Signal<(MultiplexedVideoNodeFiles, String?), NoError>
         switch self.mode {
         case .recent:
-            filesSignal = combineLatest(self.trendingPromise.get(), self.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)]))
+            filesSignal = combineLatest(self.trendingPromise.get(), self.context.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)]))
             |> map { trending, view -> (MultiplexedVideoNodeFiles, String?) in
                 var recentGifs: OrderedItemListView?
                 if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
@@ -311,7 +312,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             }
         case .trending:
             if let searchOffset = searchOffset {
-                filesSignal = paneGifSearchForQuery(account: self.account, query: "", offset: searchOffset, incompleteResults: true, delayRequest: false, updateActivity: nil)
+                filesSignal = paneGifSearchForQuery(context: self.context, query: "", offset: searchOffset, incompleteResults: true, delayRequest: false, updateActivity: nil)
                 |> map { result -> (MultiplexedVideoNodeFiles, String?) in
                     let canLoadMore: Bool
                     if let result = result {
@@ -328,7 +329,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 }
             }
         case let .emojiSearch(emoji):
-            filesSignal = paneGifSearchForQuery(account: self.account, query: emoji, offset: searchOffset, incompleteResults: true, staleCachedResults: searchOffset == nil, delayRequest: false, updateActivity: nil)
+            filesSignal = paneGifSearchForQuery(context: self.context, query: emoji, offset: searchOffset, incompleteResults: true, staleCachedResults: searchOffset == nil, delayRequest: false, updateActivity: nil)
             |> map { result -> (MultiplexedVideoNodeFiles, String?) in
                 let canLoadMore: Bool
                 if let result = result {

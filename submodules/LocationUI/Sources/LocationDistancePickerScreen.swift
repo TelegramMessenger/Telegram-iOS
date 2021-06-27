@@ -115,7 +115,7 @@ final class LocationDistancePickerScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -552,7 +552,12 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         let offset = self.contentContainerNode.frame.height
-        self.wrappingScrollNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        let position = self.wrappingScrollNode.position
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+        self.wrappingScrollNode.position = CGPoint(x: position.x, y: position.y + offset)
+        transition.animateView({
+            self.wrappingScrollNode.position = position
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {

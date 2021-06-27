@@ -93,25 +93,28 @@ public struct ChatEditMessageState: PostboxCoding, Equatable {
 
 public struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
     public var closedButtonKeyboardMessageId: MessageId?
+    public var dismissedButtonKeyboardMessageId: MessageId?
     public var processedSetupReplyMessageId: MessageId?
     public var closedPinnedMessageId: MessageId?
     public var closedPeerSpecificPackSetup: Bool = false
     public var dismissedAddContactPhoneNumber: String?
     
     public var isEmpty: Bool {
-        return self.closedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil && self.closedPeerSpecificPackSetup == false && self.dismissedAddContactPhoneNumber == nil
+        return self.closedButtonKeyboardMessageId == nil && self.dismissedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil && self.closedPeerSpecificPackSetup == false && self.dismissedAddContactPhoneNumber == nil
     }
     
     public init() {
         self.closedButtonKeyboardMessageId = nil
+        self.dismissedButtonKeyboardMessageId = nil
         self.processedSetupReplyMessageId = nil
         self.closedPinnedMessageId = nil
         self.closedPeerSpecificPackSetup = false
         self.dismissedAddContactPhoneNumber = nil
     }
     
-    public init(closedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool, dismissedAddContactPhoneNumber: String?) {
+    public init(closedButtonKeyboardMessageId: MessageId?, dismissedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool, dismissedAddContactPhoneNumber: String?) {
         self.closedButtonKeyboardMessageId = closedButtonKeyboardMessageId
+        self.dismissedButtonKeyboardMessageId = dismissedButtonKeyboardMessageId
         self.processedSetupReplyMessageId = processedSetupReplyMessageId
         self.closedPinnedMessageId = closedPinnedMessageId
         self.closedPeerSpecificPackSetup = closedPeerSpecificPackSetup
@@ -123,6 +126,12 @@ public struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
             self.closedButtonKeyboardMessageId = MessageId(peerId: PeerId(closedMessageIdPeerId), namespace: closedMessageIdNamespace, id: closedMessageIdId)
         } else {
             self.closedButtonKeyboardMessageId = nil
+        }
+
+        if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("dismissedbuttons.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("dismissedbuttons.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("dismissedbuttons.i") {
+            self.dismissedButtonKeyboardMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
+        } else {
+            self.dismissedButtonKeyboardMessageId = nil
         }
         
         if let processedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("pb.p"), let processedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("pb.n"), let processedMessageIdId = decoder.decodeOptionalInt32ForKey("pb.i") {
@@ -149,6 +158,16 @@ public struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
             encoder.encodeNil(forKey: "cb.p")
             encoder.encodeNil(forKey: "cb.n")
             encoder.encodeNil(forKey: "cb.i")
+        }
+
+        if let dismissedButtonKeyboardMessageId = self.dismissedButtonKeyboardMessageId {
+            encoder.encodeInt64(dismissedButtonKeyboardMessageId.peerId.toInt64(), forKey: "dismissedbuttons.p")
+            encoder.encodeInt32(dismissedButtonKeyboardMessageId.namespace, forKey: "dismissedbuttons.n")
+            encoder.encodeInt32(dismissedButtonKeyboardMessageId.id, forKey: "dismissedbuttons.i")
+        } else {
+            encoder.encodeNil(forKey: "dismissedbuttons.p")
+            encoder.encodeNil(forKey: "dismissedbuttons.n")
+            encoder.encodeNil(forKey: "dismissedbuttons.i")
         }
         
         if let processedSetupReplyMessageId = self.processedSetupReplyMessageId {

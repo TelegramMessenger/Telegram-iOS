@@ -17,7 +17,7 @@ public final class VoiceChatInfoContextItem: ContextMenuCustomItem {
         self.icon = icon
     }
     
-    public func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+    public func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
         return VoiceChatInfoContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
     }
 }
@@ -25,14 +25,14 @@ public final class VoiceChatInfoContextItem: ContextMenuCustomItem {
 private final class VoiceChatInfoContextItemNode: ASDisplayNode, ContextMenuCustomNode {
     private let item: VoiceChatInfoContextItem
     private let presentationData: PresentationData
-    private let getController: () -> ContextController?
+    private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
     
     private let backgroundNode: ASDisplayNode
     private let textNode: ImmediateTextNode
     private let iconNode: ASImageNode
     
-    init(presentationData: PresentationData, item: VoiceChatInfoContextItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    init(presentationData: PresentationData, item: VoiceChatInfoContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.item = item
         self.presentationData = presentationData
         self.getController = getController

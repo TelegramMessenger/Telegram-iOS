@@ -239,6 +239,15 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }))
             }
             
+            options.append(OpenInOption(identifier: "2gis", application: .other(title: "2GIS", identifier: 481627348, scheme: "dgis", store: nil), action: {
+                let coordinates = "\(lon),\(lat)"
+                if withDirections {
+                    return .openUrl(url: "dgis://2gis.ru/routeSearch/to/\(coordinates)/go")
+                } else {
+                    return .openUrl(url: "dgis://2gis.ru/geo/\(coordinates)")
+                }
+            }))
+            
             options.append(OpenInOption(identifier: "moovit", application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
                 if withDirections {
                     let destName: String

@@ -221,7 +221,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonNode)
@@ -233,7 +233,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
     
     func updatePresentationData(_ presentationData: ItemListPresentationData) {
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-        self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
     }
     
     func updateLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -384,7 +384,7 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     
     let peersSignal: Signal<[InactiveChannel]?, NoError> = .single(nil)
     |> then(
-        inactiveChannelList(network: context.account.network)
+        context.engine.peers.inactiveChannelList()
         |> map { peers -> [InactiveChannel]? in
             return peers.sorted(by: { lhs, rhs in
                 return lhs.lastActivityDate < rhs.lastActivityDate

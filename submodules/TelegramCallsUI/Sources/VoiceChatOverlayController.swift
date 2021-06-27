@@ -97,8 +97,14 @@ public final class VoiceChatOverlayController: ViewController {
         private var initialRightButtonPosition: CGPoint?
         
         func animateIn(from: CGRect) {
-            guard let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode else {
+            guard let controller = self.controller, let actionButton = controller.actionButton, let audioOutputNode = controller.audioOutputNode, let cameraNode = controller.cameraNode,  let rightButton = controller.leaveNode else {
                 return
+            }
+            let leftButton: CallControllerButtonItemNode
+            if audioOutputNode.alpha.isZero {
+                leftButton = cameraNode
+            } else {
+                leftButton = audioOutputNode
             }
             
             self.initialLeftButtonPosition = leftButton.position
@@ -162,20 +168,25 @@ public final class VoiceChatOverlayController: ViewController {
         
         private var animating = false
         private var dismissed = false
-        func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
-            guard let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode, let layout = self.validLayout else {
+        func animateOut(reclaim: Bool, targetPosition: CGPoint, completion: @escaping (Bool) -> Void) {
+            guard let controller = self.controller, let actionButton = controller.actionButton, let audioOutputNode = controller.audioOutputNode, let cameraNode = controller.cameraNode,  let rightButton = controller.leaveNode else {
                 return
+            }
+            let leftButton: CallControllerButtonItemNode
+            if audioOutputNode.alpha.isZero {
+                leftButton = cameraNode
+            } else {
+                leftButton = audioOutputNode
             }
             
             if reclaim {
                 self.dismissed = true
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height - layout.intrinsicInsets.bottom - 205.0 / 2.0 - 2.0)
                 if self.isSlidOffscreen {
                     self.isSlidOffscreen = false
                     self.isButtonHidden = true
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
-                    actionButton.position = CGPoint(x: targetPosition.x, y: 205.0 / 2.0)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: bottomAreaHeight / 2.0)
                     
                     leftButton.isHidden = false
                     rightButton.isHidden = false
@@ -191,7 +202,7 @@ public final class VoiceChatOverlayController: ViewController {
                     actionButton.layer.removeAllAnimations()
                     actionButton.layer.sublayerTransform = CATransform3DIdentity
                     actionButton.update(snap: false, animated: false)
-                    actionButton.position = CGPoint(x: targetPosition.x, y: 205.0 / 2.0)
+                    actionButton.position = CGPoint(x: targetPosition.x, y: bottomAreaHeight / 2.0)
                    
                     leftButton.isHidden = false
                     rightButton.isHidden = false
@@ -264,7 +275,14 @@ public final class VoiceChatOverlayController: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
-            if let actionButton = self.controller?.actionButton, let leftButton = self.controller?.audioOutputNode, let rightButton = self.controller?.leaveNode, !self.animating && !self.dismissed {
+            if let controller = self.controller, let actionButton = controller.actionButton, let audioOutputNode = controller.audioOutputNode, let cameraNode = controller.cameraNode, let rightButton = controller.leaveNode, !self.animating && !self.dismissed {
+                let leftButton: CallControllerButtonItemNode
+                if audioOutputNode.alpha.isZero {
+                    leftButton = cameraNode
+                } else {
+                    leftButton = audioOutputNode
+                }
+                
                 let convertedRect = actionButton.view.convert(actionButton.bounds, to: self.view)
                 let insets = layout.insets(options: [.input])
                 
@@ -302,6 +320,7 @@ public final class VoiceChatOverlayController: ViewController {
     }
     
     private weak var actionButton: VoiceChatActionButton?
+    private weak var cameraNode: CallControllerButtonItemNode?
     private weak var audioOutputNode: CallControllerButtonItemNode?
     private weak var leaveNode: CallControllerButtonItemNode?
     
@@ -315,9 +334,10 @@ public final class VoiceChatOverlayController: ViewController {
     private var currentParams: ([UIViewController], [UIViewController], VoiceChatActionButton.State)?
     fileprivate var initiallyHidden: Bool
     
-    init(actionButton: VoiceChatActionButton, audioOutputNode: CallControllerButtonItemNode, leaveNode: CallControllerButtonItemNode, navigationController: NavigationController?, initiallyHidden: Bool) {
+    init(actionButton: VoiceChatActionButton, audioOutputNode: CallControllerButtonItemNode, cameraNode: CallControllerButtonItemNode, leaveNode: CallControllerButtonItemNode, navigationController: NavigationController?, initiallyHidden: Bool) {
         self.actionButton = actionButton
         self.audioOutputNode = audioOutputNode
+        self.cameraNode = cameraNode
         self.leaveNode = leaveNode
         self.parentNavigationController = navigationController
         self.initiallyHidden = initiallyHidden
@@ -371,8 +391,8 @@ public final class VoiceChatOverlayController: ViewController {
         completion?()
     }
             
-    func animateOut(reclaim: Bool, completion: @escaping (Bool) -> Void) {
-        self.controllerNode.animateOut(reclaim: reclaim, completion: completion)
+    func animateOut(reclaim: Bool, targetPosition: CGPoint, completion: @escaping (Bool) -> Void) {
+        self.controllerNode.animateOut(reclaim: reclaim, targetPosition: targetPosition, completion: completion)
     }
     
     public func updateVisibility() {

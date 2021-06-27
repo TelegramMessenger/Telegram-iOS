@@ -228,7 +228,7 @@ private func synchronizeLocalizationUpdates(accountManager: AccountManager, post
             case .reset:
                 return accountManager.transaction { transaction -> Signal<Void, Void> in
                     let (primary, _) = getLocalization(transaction)
-                    return downloadAndApplyLocalization(accountManager: accountManager, postbox: postbox, network: network, languageCode: primary.code)
+                    return _internal_downloadAndApplyLocalization(accountManager: accountManager, postbox: postbox, network: network, languageCode: primary.code)
                     |> mapError { _ -> Void in
                         return Void()
                     }

@@ -48,11 +48,7 @@ public final class BotReceiptController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
-            if let strongSelf = self {
-                strongSelf.navigationOffset = offset
-            }
-        }, context: self.context, messageId: self.messageId, dismissAnimated: { [weak self] in
+        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, context: self.context, messageId: self.messageId, dismissAnimated: { [weak self] in
             self?.dismiss()
         })
         
@@ -79,7 +75,7 @@ public final class BotReceiptController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, additionalInsets: UIEdgeInsets())
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, additionalInsets: UIEdgeInsets())
     }
     
     @objc private func cancelPressed() {

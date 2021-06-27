@@ -242,6 +242,14 @@ public final class TextNodeLayout: NSObject {
             return 0.0
         }
     }
+
+    public var trailingLineIsRTL: Bool {
+        if let lastLine = self.lines.last {
+            return lastLine.isRTL
+        } else {
+            return false
+        }
+    }
     
     public func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {

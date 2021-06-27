@@ -395,7 +395,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
     
     let uploadInterface: Signal<UploadInterface, NoError>
     if useMultiplexedRequests {
-        uploadInterface = .single(.multiplexed(manager: network.multiplexedRequestManager, datacenterId: network.datacenterId, consumerId: arc4random64()))
+        uploadInterface = .single(.multiplexed(manager: network.multiplexedRequestManager, datacenterId: network.datacenterId, consumerId: Int64.random(in: Int64.min ... Int64.max)))
     } else {
         uploadInterface = network.upload(tag: tag)
         |> map { download -> UploadInterface in

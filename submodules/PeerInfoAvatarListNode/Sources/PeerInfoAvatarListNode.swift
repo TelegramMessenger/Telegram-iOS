@@ -78,12 +78,33 @@ private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     }
 }
 
+private struct CustomListItemResourceId: MediaResourceId {
+    public var uniqueId: String {
+        return "customNode"
+    }
+    
+    public var hashValue: Int {
+        return 0
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if to is CustomListItemResourceId {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public enum PeerInfoAvatarListItem: Equatable {
+    case custom(ASDisplayNode)
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     
     var id: WrappedMediaResourceId {
         switch self {
+        case .custom:
+            return WrappedMediaResourceId(CustomListItemResourceId())
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return WrappedMediaResourceId(representation.resource.id)
@@ -95,6 +116,8 @@ public enum PeerInfoAvatarListItem: Equatable {
     
     var videoRepresentations: [VideoRepresentationWithReference] {
         switch self {
+            case .custom:
+                return []
             case let .topImage(_, videoRepresentations, _):
                 return videoRepresentations
             case let .image(_, _, videoRepresentations, _):
@@ -330,6 +353,14 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let immediateThumbnailData: Data?
         var id: Int64
         switch item {
+        case let .custom(node):
+            id = 0
+            representations = []
+            videoRepresentations = []
+            immediateThumbnailData = nil
+            if !synchronous {
+                self.addSubnode(node)
+            }
         case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
@@ -401,6 +432,8 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     }
 }
 
+private let fadeWidth: CGFloat = 70.0
+
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
     public var peer: Peer?
@@ -411,8 +444,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let shadowNode: ASImageNode
     
     public let contentNode: ASDisplayNode
-    let leftHighlightNode: ASImageNode
-    let rightHighlightNode: ASImageNode
+    let leftHighlightNode: ASDisplayNode
+    let rightHighlightNode: ASDisplayNode
     var highlightedSide: Bool?
     public let stripContainerNode: ASDisplayNode
     public let highlightContainerNode: ASDisplayNode
@@ -533,11 +566,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         self.contentNode = ASDisplayNode()
         
-        self.leftHighlightNode = ASImageNode()
+        self.leftHighlightNode = ASDisplayNode()
         self.leftHighlightNode.displaysAsynchronously = false
-        self.leftHighlightNode.displayWithoutProcessing = true
-        self.leftHighlightNode.contentMode = .scaleToFill
-        self.leftHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
+        self.leftHighlightNode.backgroundColor = generateImage(CGSize(width: fadeWidth, height: 24.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
             let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
@@ -550,14 +581,12 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
             
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        })
+        }).flatMap { UIColor(patternImage: $0) }
         self.leftHighlightNode.alpha = 0.0
         
-        self.rightHighlightNode = ASImageNode()
+        self.rightHighlightNode = ASDisplayNode()
         self.rightHighlightNode.displaysAsynchronously = false
-        self.rightHighlightNode.displayWithoutProcessing = true
-        self.rightHighlightNode.contentMode = .scaleToFill
-        self.rightHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
+        self.rightHighlightNode.backgroundColor = generateImage(CGSize(width: fadeWidth, height: 24.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
             let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
@@ -570,7 +599,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
             
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: 0.0), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        })
+        }).flatMap { UIColor(patternImage: $0) }
         self.rightHighlightNode.alpha = 0.0
         
         self.stripContainerNode = ASDisplayNode()
@@ -925,15 +954,15 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     private var additionalEntryProgress: Signal<Float?, NoError>? = nil
-    public func update(size: CGSize, peer: Peer?, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, peer: Peer?, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let previousExpanded = self.isExpanded
         self.isExpanded = isExpanded
         if !isExpanded && previousExpanded {
             self.isCollapsing = true
         }
-        self.leftHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width * 1.0 / 5.0), height: size.height))
-        self.rightHighlightNode.frame = CGRect(origin: CGPoint(x: size.width - floor(size.width * 1.0 / 5.0), y: 0.0), size: CGSize(width: floor(size.width * 1.0 / 5.0), height: size.height))
+        self.leftHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: fadeWidth, height: size.height))
+        self.rightHighlightNode.frame = CGRect(origin: CGPoint(x: size.width - fadeWidth, y: 0.0), size: CGSize(width: fadeWidth, height: size.height))
         
         if let peer = peer, !self.initializedList {
             self.initializedList = true
@@ -981,6 +1010,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var items: [PeerInfoAvatarListItem] = []
+                if let customNode = customNode {
+                    items.append(.custom(customNode))
+                }
                 for entry in entries {
                     items.append(PeerInfoAvatarListItem(entry: entry))
                 }
@@ -1044,9 +1076,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
         let stripInset: CGFloat = 8.0
         let stripSpacing: CGFloat = 4.0
-        let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
+        let stripWidth: CGFloat = max(5.0, floorToScreenPixels((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
         let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
-        let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
+        let currentStripMidX = floorToScreenPixels(currentStripMinX + stripWidth / 2.0)
         let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
         let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
         for i in 0 ..< self.stripNodes.count {
@@ -1075,6 +1107,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
     }
     
+    public var updateCustomItemsOnlySynchronously = false
+    
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
         var validIds: [WrappedMediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
@@ -1089,6 +1123,10 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 if let current = self.itemNodes[self.items[i].id] {
                     itemNode = current
                     if update {
+                        var synchronous = synchronous && i == self.currentIndex
+                        if case .custom = self.items[i], self.updateCustomItemsOnlySynchronously {
+                            synchronous = true
+                        }
                         current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     }
                 } else if let peer = self.peer {
