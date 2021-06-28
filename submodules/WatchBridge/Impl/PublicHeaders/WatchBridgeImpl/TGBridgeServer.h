@@ -15,7 +15,7 @@
 - (SSignal *)watchAppInstalledSignal;
 - (SSignal *)runningRequestsSignal;
 
-- (void)setAuthorized:(bool)authorized userId:(int32_t)userId;
+- (void)setAuthorized:(bool)authorized userId:(int64_t)userId;
 - (void)setMicAccessAllowed:(bool)allowed;
 - (void)setStartupData:(NSDictionary *)data;
 - (void)pushContext;

@@ -280,13 +280,13 @@ final class SharedApplicationContext {
                             var peerId: PeerId?
                             if let fromId = payload["from_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             } else if let fromId = payload["chat_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             } else if let fromId = payload["channel_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             }
                             
                             if let msgId = payload["msg_id"] {
@@ -1697,8 +1697,8 @@ final class SharedApplicationContext {
             }
             
             if let startCallContacts = startCallContacts {
-                let startCall: (Int32) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), isVideo: startCallIsVideo)
+                let startCall: (Int64) -> Void = { userId in
+                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), isVideo: startCallIsVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -1729,7 +1729,7 @@ final class SharedApplicationContext {
                     var processed = false
                     if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                         let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                        if let userId = Int32(string) {
+                        if let userId = Int64(string) {
                             startCall(userId)
                             processed = true
                         }
@@ -1737,7 +1737,7 @@ final class SharedApplicationContext {
                     if !processed, let handle = contact.personHandle, let value = handle.value {
                         switch handle.type {
                             case .unknown:
-                                if let userId = Int32(value) {
+                                if let userId = Int64(value) {
                                     startCall(userId)
                                     processed = true
                                 }
@@ -1760,7 +1760,7 @@ final class SharedApplicationContext {
                                         return result
                                     } |> deliverOnMainQueue).start(next: { peerId in
                                         if let peerId = peerId {
-                                            startCall(peerId.id._internalGetInt32Value())
+                                            startCall(peerId.id._internalGetInt64Value())
                                         }
                                     })
                                     processed = true
@@ -1774,8 +1774,8 @@ final class SharedApplicationContext {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let userId = Int32(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), activateInput: true)
+                    if let userId = Int64(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), activateInput: true)
                     }
                 }
             }
@@ -2319,7 +2319,7 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
                 |> take(1)
                 |> map { _, accounts, _ -> AccountRecordId? in
                     for (_, account, _) in accounts {
-                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
+                        if Int(account.peerId.id._internalGetInt64Value()) == userId {
                             return account.id
                         }
                     }
@@ -2341,16 +2341,16 @@ private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
         var peerId: PeerId?
         if let fromId = payload["from_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["chat_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["channel_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["encryption_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         }
         return peerId
     }

@@ -374,7 +374,7 @@ public enum PasswordRecoveryError {
 }
 
 public func performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool) -> Signal<Void, PasswordRecoveryError> {
-    return account.network.request(Api.functions.auth.recoverPassword(code: code))
+    return account.network.request(Api.functions.auth.recoverPassword(flags: 0, code: code, newSettings: nil))
     |> mapError { error -> PasswordRecoveryError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded

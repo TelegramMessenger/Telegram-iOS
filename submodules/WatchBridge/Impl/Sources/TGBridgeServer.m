@@ -135,7 +135,7 @@
 
 #pragma mark -
 
-- (void)setAuthorized:(bool)authorized userId:(int32_t)userId
+- (void)setAuthorized:(bool)authorized userId:(int64_t)userId
 {
     _activeContext = [_activeContext updatedWithAuthorized:authorized peerId:userId];
 }

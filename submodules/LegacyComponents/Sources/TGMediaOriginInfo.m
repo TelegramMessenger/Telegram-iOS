@@ -272,7 +272,7 @@
     return info;
 }
 
-+ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int32_t)userId offset:(int32_t)offset
++ (instancetype)mediaOriginInfoWithFileReference:(NSData *)fileReference fileReferences:(NSDictionary *)fileReferences userId:(int64_t)userId offset:(int32_t)offset
 {
     TGMediaOriginInfo *info = [[TGMediaOriginInfo alloc] init];
     info->_type = TGMediaOriginTypeProfilePhoto;

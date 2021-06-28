@@ -3,7 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-func _internal_findChannelById(postbox: Postbox, network: Network, channelId: Int32) -> Signal<Peer?, NoError> {
+func _internal_findChannelById(postbox: Postbox, network: Network, channelId: Int64) -> Signal<Peer?, NoError> {
     return network.request(Api.functions.channels.getChannels(id: [.inputChannel(channelId: channelId, accessHash: 0)]))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in

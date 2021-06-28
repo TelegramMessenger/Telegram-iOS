@@ -40,7 +40,7 @@ NSString *const TGBridgeContextStartupDataVersion = @"version";
     return dictionary;
 }
 
-- (TGBridgeContext *)updatedWithAuthorized:(bool)authorized peerId:(int32_t)peerId
+- (TGBridgeContext *)updatedWithAuthorized:(bool)authorized peerId:(int64_t)peerId
 {
     TGBridgeContext *context = [[TGBridgeContext alloc] init];
     context->_authorized = authorized;

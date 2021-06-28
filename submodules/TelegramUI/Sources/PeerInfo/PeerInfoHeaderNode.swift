@@ -415,7 +415,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = Int64(peer.id.id._internalGetInt32Value())
+                    id = peer.id.id._internalGetInt64Value()
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
@@ -426,7 +426,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     if case let .cloud(imageId, _, _) = reference {
                         id = imageId
                     } else {
-                        id = Int64(peer.id.id._internalGetInt32Value())
+                        id = peer.id.id._internalGetInt64Value()
                     }
                 }
                 
@@ -710,7 +710,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = Int64(peer.id.id._internalGetInt32Value())
+                    id = peer.id.id._internalGetInt64Value()
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
@@ -721,7 +721,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     if case let .cloud(imageId, _, _) = reference {
                         id = imageId
                     } else {
-                        id = Int64(peer.id.id._internalGetInt32Value())
+                        id = peer.id.id._internalGetInt64Value()
                     }
             }
             

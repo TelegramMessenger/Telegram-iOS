@@ -66,7 +66,7 @@ typedef enum {
 
 @interface TGUser : NSObject <PSCoding>
 
-@property (nonatomic) int uid;
+@property (nonatomic) int64_t uid;
 @property (nonatomic, strong) NSString *phoneNumber;
 @property (nonatomic) int64_t phoneNumberHash;
 @property (nonatomic, strong) NSString *firstName;

@@ -403,6 +403,21 @@ private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
     return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
 }
 
+public func combineInt32Hash(_ acc: inout UInt32, with value: UInt32) {
+    acc = (acc &* 20261) &+ value
+}
+
+public func combineInt32Hash(_ acc: inout UInt32, with peerId: PeerId) {
+    let value = UInt64(bitPattern: peerId.id._internalGetInt64Value())
+    let highBits = value >> 32
+    let lowBits = value & 0xffffffff
+    var acc = acc
+    if highBits != 0 {
+        combineInt32Hash(&acc, with: UInt32(highBits))
+    }
+    combineInt32Hash(&acc, with: UInt32(lowBits))
+}
+
 private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
     var acc: UInt32 = 0
     
@@ -410,7 +425,7 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
     
     for message in sorted {
         if withChannelIds {
-            acc = (acc &* 20261) &+ UInt32(message.id.peerId.id._internalGetInt32Value())
+            combineInt32Hash(&acc, with: message.id.peerId)
         }
         
         acc = (acc &* 20261) &+ UInt32(message.id.id)
@@ -435,7 +450,7 @@ private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -
     for message in messages {
         if case let .Id(id) = message.id {
             if withChannelIds {
-                acc = (acc &* 20261) &+ UInt32(id.peerId.id._internalGetInt32Value())
+                combineInt32Hash(&acc, with: id.peerId)
             }
             acc = (acc &* 20261) &+ UInt32(id.id)
             var timestamp = message.timestamp

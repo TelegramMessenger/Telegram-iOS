@@ -260,7 +260,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
         
         let groupAndIndex = transaction.getPeerChatListIndex(peerId)
         
-        let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(777000)) && peerId == context.account.peerId
+        let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
         if let (group, index) = groupAndIndex {
             if archiveEnabled {
                 let isArchived = group == Namespaces.PeerGroup.archive

@@ -58,7 +58,7 @@ private final class GroupsInCommonContextImpl {
                 guard let inputUser = inputUser else {
                     return .single(([], 0))
                 }
-                return network.request(Api.functions.messages.getCommonChats(userId: inputUser, maxId: maxId?._internalGetInt32Value() ?? 0, limit: limit))
+                return network.request(Api.functions.messages.getCommonChats(userId: inputUser, maxId: maxId?._internalGetInt64Value() ?? 0, limit: limit))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in
                     return .single(nil)

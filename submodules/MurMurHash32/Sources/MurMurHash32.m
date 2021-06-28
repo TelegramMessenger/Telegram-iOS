@@ -28,7 +28,7 @@ static FORCE_INLINE uint32_t fmix ( uint32_t h )
     return h;
 }
 
-static void murMurHash32Impl(const void *key, int len, uint32_t seed, void *out)
+static void murMurHash32Impl(const void *key, uint32_t len, uint32_t seed, void *out)
 {
     const uint8_t * data = (const uint8_t*)key;
     const int nblocks = len / 4;

@@ -345,7 +345,7 @@ public func recoverTwoStepVerificationPassword(network: Network, code: String) -
             flags |= (1 << 0)
         }
 
-        return network.request(Api.functions.auth.recoverPassword(code: code), automaticFloodWait: false)
+        return network.request(Api.functions.auth.recoverPassword(flags: 0, code: code, newSettings: nil), automaticFloodWait: false)
             |> mapError { error -> RecoverTwoStepVerificationPasswordError in
                 if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
                     return .limitExceeded

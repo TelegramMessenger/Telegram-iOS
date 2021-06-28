@@ -39,7 +39,7 @@ private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<
     }
 }
 
-private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
+private func hashForCountAndIds(count: Int32, ids: [Int64]) -> Int32 {
     var acc: Int64 = 0
     
     acc = (acc &* 20261) &+ Int64(count)
@@ -56,7 +56,7 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
         let contactPeerIds = transaction.getContactPeerIds()
         let totalCount = transaction.getRemoteContactCount()
         let peerIds = Set(contactPeerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }))
-        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id._internalGetInt32Value() }).sorted())
+        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id._internalGetInt64Value() }).sorted())
     }
 
     let updatedPeers = initialContactPeerIdsHash
