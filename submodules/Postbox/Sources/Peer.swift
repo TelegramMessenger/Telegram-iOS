@@ -162,10 +162,16 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             self.id = Id(rawValue: Int64(bitPattern: idHighBits | idLowBits))
         }
 
-        assert(self.toInt64() == n)
+        assert(self._toInt64() == n)
     }
     
     public func toInt64() -> Int64 {
+        let result = self._toInt64()
+        assert(PeerId(result) == self)
+        return result
+    }
+
+    private func _toInt64() -> Int64 {
         let data = UInt64(bitPattern: self.id.rawValue)
 
         let idLowBits = data & 0xffffffff
@@ -190,8 +196,6 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
             result = Int64(bitPattern: data)
         }
-
-        assert(PeerId(result) == self)
 
         return result
     }

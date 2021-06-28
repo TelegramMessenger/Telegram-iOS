@@ -551,7 +551,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 
                 if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
-                    self.beginNewAuth(testingEnvironment: false)
+                    #if DEBUG
+                    let testingEnvironment = true
+                    #else
+                    let testingEnvironment = false
+                    #endif
+                    self.beginNewAuth(testingEnvironment: testingEnvironment)
                 }
             }))
         })
