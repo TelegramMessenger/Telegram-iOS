@@ -290,6 +290,8 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
+- (void)addExternalAudioData:(NSData * _Nonnull)data;
+
 @end
 
 #endif

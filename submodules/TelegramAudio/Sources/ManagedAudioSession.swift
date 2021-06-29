@@ -734,8 +734,10 @@ public final class ManagedAudioSession {
                    switch type {
                        case .voiceCall:
                            mode = .voiceChat
+                            options.insert(.mixWithOthers)
                        case .videoCall:
                            mode = .videoChat
+                            options.insert(.mixWithOthers)
                        default:
                            mode = .default
                    }
