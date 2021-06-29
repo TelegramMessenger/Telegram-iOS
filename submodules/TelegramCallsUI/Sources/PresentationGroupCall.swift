@@ -613,6 +613,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private var screencastFramesDisposable: Disposable?
+    private var screencastAudioDataDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
     init(
@@ -881,6 +882,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             screencastCapturer.injectPixelBuffer(screencastFrame.0, rotation: screencastFrame.1)
         })
+        self.screencastAudioDataDisposable = (screencastBufferServerContext.audioData
+        |> deliverOnMainQueue).start(next: { [weak self] data in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.genericCallContext?.addExternalAudioData(data: data)
+        })
         self.screencastStateDisposable = (screencastBufferServerContext.isActive
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] isActive in
@@ -941,6 +949,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.peerUpdatesSubscription?.dispose()
 
         self.screencastFramesDisposable?.dispose()
+        self.screencastAudioDataDisposable?.dispose()
         self.screencastStateDisposable?.dispose()
     }
     

@@ -1121,9 +1121,9 @@ private:
         }
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
-        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::H264);
 
         int minOutgoingVideoBitrateKbit = 500;
+        bool disableOutgoingAudioProcessing = true;
 
         tgcalls::GroupConfig config;
         config.need_log = false;
@@ -1195,6 +1195,7 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
+            .disableOutgoingAudioProcessing = disableOutgoingAudioProcessing,
             .videoContentType = _videoContentType,
             .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression,
@@ -1473,6 +1474,15 @@ private:
                 completion(remoteRenderer, nil);
             }
         });
+    }
+}
+
+- (void)addExternalAudioData:(NSData * _Nonnull)data {
+    if (_instance) {
+        std::vector<uint8_t> samples;
+        samples.resize(data.length);
+        [data getBytes:samples.data() length:data.length];
+        _instance->addExternalAudioSamples(std::move(samples));
     }
 }
 

@@ -4,6 +4,7 @@ import CoreVideo
 import TelegramVoip
 import SwiftSignalKit
 import BuildConfig
+import AudioToolbox
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
@@ -11,22 +12,11 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
 
 @available(iOS 10.0, *)
 @objc(BroadcastUploadSampleHandler) class BroadcastUploadSampleHandler: RPBroadcastSampleHandler {
-    /*private var ipcContext: IpcGroupCallBroadcastContext?
-    private var callContext: OngoingGroupCallContext?
-    private var videoCapturer: OngoingCallVideoCapturer?
-    private var requestDisposable: Disposable?
-    private var joinPayloadDisposable: Disposable?
-    private var joinResponsePayloadDisposable: Disposable?*/
-
     private var screencastBufferClientContext: IpcGroupCallBufferBroadcastContext?
     private var statusDisposable: Disposable?
+    private var audioConverter: CustomAudioConverter?
 
     deinit {
-        /*self.requestDisposable?.dispose()
-        self.joinPayloadDisposable?.dispose()
-        self.joinResponsePayloadDisposable?.dispose()
-        self.callContext?.stop()*/
-
         self.statusDisposable?.dispose()
     }
 
@@ -39,11 +29,6 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
             NSLocalizedDescriptionKey: "Finished"
         ])
         finishBroadcastWithError(error)
-
-        /*self.callContext?.stop()
-        self.callContext = nil
-
-        self.ipcContext = nil*/
     }
 
     private func finishWithNoBroadcast() {
@@ -87,56 +72,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
                 strongSelf.finishWithNoBroadcast()
             }
         })
-
-        /*let ipcContext = IpcGroupCallBroadcastContext(basePath: rootPath + "/broadcast-coordination")
-        self.ipcContext = ipcContext
-
-        self.requestDisposable = (ipcContext.request
-        |> timeout(3.0, queue: .mainQueue(), alternate: .single(.failed))
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] request in
-            guard let strongSelf = self else {
-                return
-            }
-            switch request {
-            case .request:
-                strongSelf.beginWithRequest()
-            case .failed:
-                strongSelf.finishWithGenericError()
-            }
-        })*/
     }
-
-    /*private func beginWithRequest() {
-        let videoCapturer = OngoingCallVideoCapturer(isCustom: true)
-        self.videoCapturer = videoCapturer
-
-        let callContext = OngoingGroupCallContext(video: videoCapturer, requestMediaChannelDescriptions: { _, _ in return EmptyDisposable }, audioStreamData: nil, rejoinNeeded: {
-        }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false)
-        self.callContext = callContext
-
-        self.joinPayloadDisposable = (callContext.joinPayload
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
-            guard let strongSelf = self, let ipcContext = strongSelf.ipcContext else {
-                return
-            }
-            ipcContext.setJoinPayload(joinPayload.0)
-
-            strongSelf.joinResponsePayloadDisposable = (ipcContext.joinResponsePayload
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { joinResponsePayload in
-                guard let strongSelf = self, let callContext = strongSelf.callContext, let ipcContext = strongSelf.ipcContext else {
-                    return
-                }
-
-                callContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
-                callContext.setJoinResponse(payload: joinResponsePayload)
-
-                ipcContext.beginActiveIndication()
-            })
-        })
-    }*/
 
     override public func broadcastPaused() {
     }
@@ -152,7 +88,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         case RPSampleBufferType.video:
             processVideoSampleBuffer(sampleBuffer: sampleBuffer)
         case RPSampleBufferType.audioApp:
-            break
+            processAudioSampleBuffer(sampleBuffer: sampleBuffer)
         case RPSampleBufferType.audioMic:
             break
         @unknown default:
@@ -173,25 +109,166 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         if let data = serializePixelBuffer(buffer: pixelBuffer) {
             self.screencastBufferClientContext?.setCurrentFrame(data: data, orientation: orientation)
         }
-
-        //self.videoCapturer?.injectSampleBuffer(sampleBuffer)
-        /*if CMSampleBufferGetNumSamples(sampleBuffer) != 1 {
-            return
-        }
-        if !CMSampleBufferIsValid(sampleBuffer) {
-            return
-        }
-        if !CMSampleBufferDataIsReady(sampleBuffer) {
-            return
-        }
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            return
-        }
-
-        let pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
-
-        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)*/
     }
+
+    private func processAudioSampleBuffer(sampleBuffer: CMSampleBuffer) {
+        guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) else {
+            return
+        }
+        guard let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+            return
+        }
+        /*guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else {
+            return
+        }*/
+
+        let format = CustomAudioConverter.Format(
+            numChannels: Int(asbd.pointee.mChannelsPerFrame),
+            sampleRate: Int(asbd.pointee.mSampleRate)
+        )
+        if self.audioConverter?.format != format {
+            self.audioConverter = CustomAudioConverter(asbd: asbd)
+        }
+        if let audioConverter = self.audioConverter {
+            if let data = audioConverter.convert(sampleBuffer: sampleBuffer) {
+                self.screencastBufferClientContext?.writeAudioData(data: data)
+            }
+        }
+    }
+}
+
+private final class CustomAudioConverter {
+    struct Format: Equatable {
+        let numChannels: Int
+        let sampleRate: Int
+    }
+
+    let format: Format
+
+    var currentInputDescription: UnsafePointer<AudioStreamBasicDescription>?
+    var currentBuffer: AudioBuffer?
+    var currentBufferOffset: UInt32 = 0
+
+    init(asbd: UnsafePointer<AudioStreamBasicDescription>) {
+        self.format = Format(
+            numChannels: Int(asbd.pointee.mChannelsPerFrame),
+            sampleRate: Int(asbd.pointee.mSampleRate)
+        )
+    }
+
+    func convert(sampleBuffer: CMSampleBuffer) -> Data? {
+        guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) else {
+            return nil
+        }
+        guard let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+            return nil
+        }
+
+        var bufferList = AudioBufferList()
+        var blockBuffer: CMBlockBuffer? = nil
+        CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+            sampleBuffer,
+            bufferListSizeNeededOut: nil,
+            bufferListOut: &bufferList,
+            bufferListSize: MemoryLayout<AudioBufferList>.size,
+            blockBufferAllocator: nil,
+            blockBufferMemoryAllocator: nil,
+            flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
+            blockBufferOut: &blockBuffer
+        )
+        let size = bufferList.mBuffers.mDataByteSize
+        guard size != 0, let mData = bufferList.mBuffers.mData else {
+            return nil
+        }
+
+        var outputDescription = AudioStreamBasicDescription(
+            mSampleRate: 48000.0,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: 2,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 2,
+            mChannelsPerFrame: 1,
+            mBitsPerChannel: 16,
+            mReserved: 0
+        )
+        var maybeAudioConverter: AudioConverterRef?
+        let _ = AudioConverterNew(asbd, &outputDescription, &maybeAudioConverter)
+        guard let audioConverter = maybeAudioConverter else {
+            return nil
+        }
+
+        self.currentBuffer = AudioBuffer(
+            mNumberChannels: asbd.pointee.mChannelsPerFrame,
+            mDataByteSize: UInt32(size),
+            mData: mData
+        )
+        self.currentBufferOffset = 0
+        self.currentInputDescription = asbd
+
+        var numPackets: UInt32?
+        let outputSize = 32768 * 2
+        var outputBuffer = Data(count: outputSize)
+        outputBuffer.withUnsafeMutableBytes { (outputBytes: UnsafeMutableRawBufferPointer) -> Void in
+            var outputBufferList = AudioBufferList()
+            outputBufferList.mNumberBuffers = 1
+            outputBufferList.mBuffers.mNumberChannels = outputDescription.mChannelsPerFrame
+            outputBufferList.mBuffers.mDataByteSize = UInt32(outputSize)
+            outputBufferList.mBuffers.mData = outputBytes.baseAddress!
+
+            var outputDataPacketSize = UInt32(outputSize) / outputDescription.mBytesPerPacket
+
+            let result = AudioConverterFillComplexBuffer(
+                audioConverter,
+                converterComplexInputDataProc,
+                Unmanaged.passUnretained(self).toOpaque(),
+                &outputDataPacketSize,
+                &outputBufferList,
+                nil
+            )
+            if result == noErr {
+                numPackets = outputDataPacketSize
+            }
+        }
+
+        AudioConverterDispose(audioConverter)
+
+        if let numPackets = numPackets {
+            outputBuffer.count = Int(numPackets * outputDescription.mBytesPerPacket)
+            return outputBuffer
+        } else {
+            return nil
+        }
+    }
+}
+
+private func converterComplexInputDataProc(inAudioConverter: AudioConverterRef, ioNumberDataPackets: UnsafeMutablePointer<UInt32>, ioData: UnsafeMutablePointer<AudioBufferList>, ioDataPacketDescription: UnsafeMutablePointer<UnsafeMutablePointer<AudioStreamPacketDescription>?>?, inUserData: UnsafeMutableRawPointer?) -> Int32 {
+    guard let inUserData = inUserData else {
+        ioNumberDataPackets.pointee = 0
+        return 0
+    }
+    let instance = Unmanaged<CustomAudioConverter>.fromOpaque(inUserData).takeUnretainedValue()
+    guard let currentBuffer = instance.currentBuffer else {
+        ioNumberDataPackets.pointee = 0
+        return 0
+    }
+    guard let currentInputDescription = instance.currentInputDescription else {
+        ioNumberDataPackets.pointee = 0
+        return 0
+    }
+
+    let numPacketsInBuffer = currentBuffer.mDataByteSize / currentInputDescription.pointee.mBytesPerPacket
+    let numPacketsAvailable = numPacketsInBuffer - instance.currentBufferOffset / currentInputDescription.pointee.mBytesPerPacket
+
+    let numPacketsToRead = min(ioNumberDataPackets.pointee, numPacketsAvailable)
+    ioNumberDataPackets.pointee = numPacketsToRead
+
+    ioData.pointee.mNumberBuffers = 1
+    ioData.pointee.mBuffers.mData = currentBuffer.mData?.advanced(by: Int(instance.currentBufferOffset))
+    ioData.pointee.mBuffers.mDataByteSize = currentBuffer.mDataByteSize - instance.currentBufferOffset
+    ioData.pointee.mBuffers.mNumberChannels = currentBuffer.mNumberChannels
+
+    instance.currentBufferOffset += numPacketsToRead * currentInputDescription.pointee.mBytesPerPacket
+
+    return 0
 }
