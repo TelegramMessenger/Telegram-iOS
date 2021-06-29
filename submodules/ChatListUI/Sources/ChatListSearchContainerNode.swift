@@ -980,7 +980,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         }
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    (strongSelf.navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                 }
             }
             peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in

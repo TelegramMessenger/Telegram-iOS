@@ -1531,6 +1531,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
+    private var shareStatusDisposable: MetaDisposable?
     
     private let editAvatarDisposable = MetaDisposable()
     private let updateAvatarDisposable = MetaDisposable()
@@ -2864,6 +2865,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.enqueueMediaMessageDisposable.dispose()
         self.supportPeerDisposable.dispose()
         self.tipsPeerDisposable.dispose()
+        self.shareStatusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -5695,19 +5697,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     let text: String
                     var savedMessages = false
                     if peers.count == 1, let peerId = peers.first?.id, peerId == strongSelf.context.account.peerId {
-                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
                         savedMessages = true
                     } else {
                         if peers.count == 1, let peer = peers.first {
                             let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
                         } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                             let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
                         } else if let peer = peers.first {
                             let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
                         } else {
                             text = ""
                         }
