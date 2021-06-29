@@ -1123,7 +1123,7 @@ private:
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
 
         int minOutgoingVideoBitrateKbit = 500;
-        bool disableOutgoingAudioProcessing = true;
+        bool disableOutgoingAudioProcessing = false;
 
         tgcalls::GroupConfig config;
         config.need_log = false;
