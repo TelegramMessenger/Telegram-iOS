@@ -142,7 +142,7 @@ private final class FdWriteConnection {
     private let buffer: UnsafeMutableRawPointer
 
     private var currentData: PendingData?
-    private var nextData: Data?
+    private var nextDataList: [Data] = []
 
     init(queue: Queue, fd: Int32) {
         assert(queue.isCurrent())
@@ -182,8 +182,8 @@ private final class FdWriteConnection {
                             if currentData.offset == currentData.data.count {
                                 strongSelf.currentData = nil
 
-                                if let nextData = strongSelf.nextData {
-                                    strongSelf.nextData = nil
+                                if !strongSelf.nextDataList.isEmpty {
+                                    let nextData = strongSelf.nextDataList.removeFirst()
                                     strongSelf.currentData = PendingData(data: nextData)
                                 } else {
                                     strongSelf.channel.suspend()
@@ -217,11 +217,17 @@ private final class FdWriteConnection {
         free(self.buffer)
     }
 
-    func replaceData(data: Data) {
+    func addData(data: Data) {
         if self.currentData == nil {
             self.currentData = PendingData(data: data)
         } else {
-            self.nextData = data
+            var totalBytes = 0
+            for data in self.nextDataList {
+                totalBytes += data.count
+            }
+            if totalBytes < 1 * 1024 * 1024 {
+                self.nextDataList.append(data)
+            }
         }
 
         if !self.isResumed {
@@ -274,11 +280,11 @@ private final class NamedPipeWriterImpl {
         }
     }
 
-    func replaceData(data: Data) {
+    func addData(data: Data) {
         guard let connection = self.connection else {
             return
         }
-        connection.replaceData(data: data)
+        connection.addData(data: data)
     }
 }
 
@@ -293,9 +299,9 @@ private final class NamedPipeWriter {
         })
     }
 
-    func replaceData(data: Data) {
+    func addData(data: Data) {
         self.impl.with { impl in
-            impl.replaceData(data: data)
+            impl.addData(data: data)
         }
     }
 }
@@ -363,7 +369,7 @@ private final class MappedFile {
 
 public final class IpcGroupCallBufferAppContext {
     private let basePath: String
-    private let server: NamedPipeReader
+    private var audioServer: NamedPipeReader?
 
     private let id: UInt32
 
@@ -378,6 +384,11 @@ public final class IpcGroupCallBufferAppContext {
         return self.framesPipe.signal()
     }
 
+    private let audioDataPipe = ValuePipe<Data>()
+    public var audioData: Signal<Data, NoError> {
+        return self.audioDataPipe.signal()
+    }
+
     private var framePollTimer: SwiftSignalKit.Timer?
     private var mappedFile: MappedFile?
 
@@ -389,12 +400,8 @@ public final class IpcGroupCallBufferAppContext {
 
         self.id = UInt32.random(in: 0 ..< UInt32.max)
 
-        let framesPipe = self.framesPipe
-        self.server = NamedPipeReader(path: broadcastAppSocketPath(basePath: basePath), didRead: { data in
-            //framesPipe.putNext(data)
-        })
-
         let dataPath = broadcastAppSocketPath(basePath: basePath) + "-data-\(self.id)"
+        let audioDataPath = broadcastAppSocketPath(basePath: basePath) + "-audio-\(self.id)"
 
         if let mappedFile = MappedFile(path: dataPath, createIfNotExists: true) {
             self.mappedFile = mappedFile
@@ -402,6 +409,11 @@ public final class IpcGroupCallBufferAppContext {
                 mappedFile.size = 10 * 1024 * 1024
             }
         }
+
+        let audioDataPipe = self.audioDataPipe
+        self.audioServer = NamedPipeReader(path: audioDataPath, didRead: { data in
+            audioDataPipe.putNext(data)
+        })
 
         let framePollTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
             guard let strongSelf = self, let mappedFile = strongSelf.mappedFile else {
@@ -515,6 +527,7 @@ public final class IpcGroupCallBufferBroadcastContext {
 
     private var mappedFile: MappedFile?
     private var currentId: UInt32?
+    private var audioClient: NamedPipeWriter?
 
     private var callActiveInfoTimer: SwiftSignalKit.Timer?
     private var keepaliveInfoTimer: SwiftSignalKit.Timer?
@@ -589,6 +602,7 @@ public final class IpcGroupCallBufferBroadcastContext {
             self.currentId = payloadDescription.id
 
             let dataPath = broadcastAppSocketPath(basePath: basePath) + "-data-\(payloadDescription.id)"
+            let audioDataPath = broadcastAppSocketPath(basePath: basePath) + "-audio-\(payloadDescription.id)"
 
             if let mappedFile = MappedFile(path: dataPath, createIfNotExists: false) {
                 self.mappedFile = mappedFile
@@ -596,6 +610,8 @@ public final class IpcGroupCallBufferBroadcastContext {
                     mappedFile.size = 10 * 1024 * 1024
                 }
             }
+
+            self.audioClient = NamedPipeWriter(path: audioDataPath)
 
             self.writeKeepaliveInfo()
 
@@ -608,8 +624,6 @@ public final class IpcGroupCallBufferBroadcastContext {
     }
 
     public func setCurrentFrame(data: Data, orientation: CGImagePropertyOrientation) {
-        //let _ = try? data.write(to: URL(fileURLWithPath: dataPath), options: [])
-
         if let mappedFile = self.mappedFile, mappedFile.size >= data.count {
             let _ = data.withUnsafeBytes { bytes in
                 var orientationValue = Int32(bitPattern: orientation.rawValue)
@@ -617,8 +631,10 @@ public final class IpcGroupCallBufferBroadcastContext {
                 memcpy(mappedFile.memory.advanced(by: 4), bytes.baseAddress!, data.count)
             }
         }
+    }
 
-        //self.client.replaceData(data: data)
+    public func writeAudioData(data: Data) {
+        self.audioClient?.addData(data: data)
     }
 
     private func writeKeepaliveInfo() {

@@ -645,6 +645,10 @@ public final class OngoingGroupCallContext {
                 }
             })
         }
+
+        func addExternalAudioData(data: Data) {
+            self.context.addExternalAudioData(data)
+        }
     }
     
     private let queue = Queue()
@@ -802,6 +806,12 @@ public final class OngoingGroupCallContext {
     public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.with { impl in
             impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
+        }
+    }
+
+    public func addExternalAudioData(data: Data) {
+        self.impl.with { impl in
+            impl.addExternalAudioData(data: data)
         }
     }
 }
