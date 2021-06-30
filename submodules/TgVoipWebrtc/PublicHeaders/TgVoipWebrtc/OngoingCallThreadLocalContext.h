@@ -105,6 +105,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 - (void)setVideoContentMode:(CALayerContentsGravity _Nonnull )mode;
 - (void)setForceMirrored:(bool)forceMirrored;
+- (void)setIsPaused:(bool)paused;
+- (void)renderToSize:(NSSize)size animated: (bool)animated;
 #endif
 @end
 

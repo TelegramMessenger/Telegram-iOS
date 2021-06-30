@@ -1110,8 +1110,8 @@ private:
         }
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
-        videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
-        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);
+        videoCodecPreferences.push_back(tgcalls::VideoCodecName::H264);
+        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);/
 
         int minOutgoingVideoBitrateKbit = 500;
 
