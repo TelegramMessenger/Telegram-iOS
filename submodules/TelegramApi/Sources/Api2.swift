@@ -153,7 +153,7 @@ public extension Api {
     }
     public enum ChatFull: TypeConstructorDescription {
         case chatFull(flags: Int32, id: Int64, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?)
-        case channelFull(flags: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?)
+        case channelFull(flags: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int64?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -181,7 +181,7 @@ public extension Api {
                     break
                 case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs):
                     if boxed {
-                        buffer.appendInt32(-1625164883)
+                        buffer.appendInt32(1517757976)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -208,7 +208,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 8) != 0 {stickerset!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(availableMinId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 14) != 0 {serializeInt32(linkedChatId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt64(linkedChatId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 15) != 0 {location!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt32(slowmodeSeconds!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 18) != 0 {serializeInt32(slowmodeNextSendDate!, buffer: buffer, boxed: false)}
@@ -349,8 +349,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 9) != 0 {_20 = reader.readInt32() }
             var _21: Int32?
             if Int(_1!) & Int(1 << 11) != 0 {_21 = reader.readInt32() }
-            var _22: Int32?
-            if Int(_1!) & Int(1 << 14) != 0 {_22 = reader.readInt32() }
+            var _22: Int64?
+            if Int(_1!) & Int(1 << 14) != 0 {_22 = reader.readInt64() }
             var _23: Api.ChannelLocation?
             if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
                 _23 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
@@ -4608,9 +4608,9 @@ public extension Api {
         case updateUserName(userId: Int64, firstName: String, lastName: String, username: String)
         case updateUserPhoto(userId: Int64, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
-        case updateEncryptedChatTyping(chatId: Int64)
+        case updateEncryptedChatTyping(chatId: Int32)
         case updateEncryption(chat: Api.EncryptedChat, date: Int32)
-        case updateEncryptedMessagesRead(chatId: Int64, maxDate: Int32, date: Int32)
+        case updateEncryptedMessagesRead(chatId: Int32, maxDate: Int32, date: Int32)
         case updateChatParticipantAdd(chatId: Int64, userId: Int64, inviterId: Int64, date: Int32, version: Int32)
         case updateChatParticipantDelete(chatId: Int64, userId: Int64, version: Int32)
         case updateDcOptions(dcOptions: [Api.DcOption])
@@ -4776,9 +4776,9 @@ public extension Api {
                     break
                 case .updateEncryptedChatTyping(let chatId):
                     if boxed {
-                        buffer.appendInt32(1677363374)
+                        buffer.appendInt32(386986326)
                     }
-                    serializeInt64(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
                     break
                 case .updateEncryption(let chat, let date):
                     if boxed {
@@ -4789,9 +4789,9 @@ public extension Api {
                     break
                 case .updateEncryptedMessagesRead(let chatId, let maxDate, let date):
                     if boxed {
-                        buffer.appendInt32(122695484)
+                        buffer.appendInt32(956179895)
                     }
-                    serializeInt64(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
                     serializeInt32(maxDate, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
@@ -5877,8 +5877,8 @@ public extension Api {
             }
         }
         public static func parse_updateEncryptedChatTyping(_ reader: BufferReader) -> Update? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateEncryptedChatTyping(chatId: _1!)
@@ -5904,8 +5904,8 @@ public extension Api {
             }
         }
         public static func parse_updateEncryptedMessagesRead(_ reader: BufferReader) -> Update? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Int32?

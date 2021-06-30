@@ -506,8 +506,9 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             if testingEnvironment {
                 seedAddressList = [
-                    1: ["149.154.175.10"],
-                    2: ["149.154.167.40"]
+                    1: ["149.154.175.217"],
+                    2: ["149.154.167.226"],
+                    3: ["149.154.175.118"]
                 ]
             } else {
                 seedAddressList = [

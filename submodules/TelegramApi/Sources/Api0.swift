@@ -12,7 +12,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1210199983] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[1509543498] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[-1625164883] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[1517757976] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-591909213] = { return Api.PollResults.parse_pollResults($0) }
     dict[-1070776313] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-462696732] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -199,9 +199,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1007549728] = { return Api.Update.parse_updateUserName($0) }
     dict[-232290676] = { return Api.Update.parse_updateUserPhoto($0) }
     dict[314359194] = { return Api.Update.parse_updateNewEncryptedMessage($0) }
-    dict[1677363374] = { return Api.Update.parse_updateEncryptedChatTyping($0) }
+    dict[386986326] = { return Api.Update.parse_updateEncryptedChatTyping($0) }
     dict[-1264392051] = { return Api.Update.parse_updateEncryption($0) }
-    dict[122695484] = { return Api.Update.parse_updateEncryptedMessagesRead($0) }
+    dict[956179895] = { return Api.Update.parse_updateEncryptedMessagesRead($0) }
     dict[1037718609] = { return Api.Update.parse_updateChatParticipantAdd($0) }
     dict[-483443337] = { return Api.Update.parse_updateChatParticipantDelete($0) }
     dict[-1906403213] = { return Api.Update.parse_updateDcOptions($0) }
@@ -933,7 +933,7 @@ public struct Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
