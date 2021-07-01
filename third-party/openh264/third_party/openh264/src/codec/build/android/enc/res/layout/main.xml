@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+	<LinearLayout
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:orientation="horizontal">
+	    <Button
+	        android:id="@+id/cfg"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="Load bitstreams" />
+	    <Button
+	        android:id="@+id/buttonSW"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="Test" />
+		</LinearLayout>
+</LinearLayout>

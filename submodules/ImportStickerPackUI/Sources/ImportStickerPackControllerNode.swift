@@ -69,8 +69,10 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let contentContainerNode: ASDisplayNode
     private let contentBackgroundNode: ASImageNode
     private let contentGridNode: GridNode
-    private let installActionButtonNode: ASButtonNode
-    private let installActionSeparatorNode: ASDisplayNode
+    private let createActionButtonNode: ASButtonNode
+    private let createActionSeparatorNode: ASDisplayNode
+    private let addToExistingActionButtonNode: ASButtonNode
+    private let addToExistingActionSeparatorNode: ASDisplayNode
     private let contentTitleNode: ImmediateTextNode
     private let contentSeparatorNode: ASDisplayNode
     
@@ -128,9 +130,13 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         
         self.contentGridNode = GridNode()
         
-        self.installActionButtonNode = HighlightTrackingButtonNode()
-        self.installActionButtonNode.displaysAsynchronously = false
-        self.installActionButtonNode.titleNode.displaysAsynchronously = false
+        self.createActionButtonNode = HighlightTrackingButtonNode()
+        self.createActionButtonNode.displaysAsynchronously = false
+        self.createActionButtonNode.titleNode.displaysAsynchronously = false
+        
+        self.addToExistingActionButtonNode = HighlightTrackingButtonNode()
+        self.addToExistingActionButtonNode.displaysAsynchronously = false
+        self.addToExistingActionButtonNode.titleNode.displaysAsynchronously = false
         
         self.contentTitleNode = ImmediateTextNode()
         self.contentTitleNode.displaysAsynchronously = false
@@ -140,9 +146,13 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
         
-        self.installActionSeparatorNode = ASDisplayNode()
-        self.installActionSeparatorNode.isLayerBacked = true
-        self.installActionSeparatorNode.displaysAsynchronously = false
+        self.createActionSeparatorNode = ASDisplayNode()
+        self.createActionSeparatorNode.isLayerBacked = true
+        self.createActionSeparatorNode.displaysAsynchronously = false
+        
+        self.addToExistingActionSeparatorNode = ASDisplayNode()
+        self.addToExistingActionSeparatorNode.isLayerBacked = true
+        self.addToExistingActionSeparatorNode.displaysAsynchronously = false
         
         self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
         self.radialStatus.alpha = 0.0
@@ -193,14 +203,17 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         
-        self.installActionButtonNode.addTarget(self, action: #selector(self.installActionButtonPressed), forControlEvents: .touchUpInside)
+        self.createActionButtonNode.addTarget(self, action: #selector(self.createActionButtonPressed), forControlEvents: .touchUpInside)
+        self.addToExistingActionButtonNode.addTarget(self, action: #selector(self.addToExistingActionButtonPressed), forControlEvents: .touchUpInside)
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
         
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.contentGridNode)
-        self.contentContainerNode.addSubnode(self.installActionSeparatorNode)
-        self.contentContainerNode.addSubnode(self.installActionButtonNode)
+        self.contentContainerNode.addSubnode(self.createActionSeparatorNode)
+        self.contentContainerNode.addSubnode(self.createActionButtonNode)
+        self.contentContainerNode.addSubnode(self.addToExistingActionSeparatorNode)
+        self.contentContainerNode.addSubnode(self.addToExistingActionButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentTitleNode)
         self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
         
@@ -211,7 +224,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.wrappingScrollNode.addSubnode(self.progressText)
         self.wrappingScrollNode.addSubnode(self.infoText)
         
-        self.installActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.createActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateNewStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.addToExistingActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_AddToExistingStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -283,6 +297,18 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.presentationData = presentationData
         
         let theme = presentationData.theme
+        let solidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedSolidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
         let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
@@ -305,12 +331,21 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
         self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
 
-        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
-        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
-
+        if self.addToExistingActionButtonNode.supernode != nil {
+            self.createActionButtonNode.setBackgroundImage(solidBackground, for: .normal)
+            self.createActionButtonNode.setBackgroundImage(highlightedSolidBackground, for: .highlighted)
+        } else {
+            self.createActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+            self.createActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        }
+        
+        self.addToExistingActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+        self.addToExistingActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        
         self.contentSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
-        self.installActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
-
+        self.createActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.addToExistingActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        
         self.cancelButtonNode.setTitle(presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
         
         self.contentTitleNode.linkHighlightColor = presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
@@ -329,6 +364,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         var insets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         let cleanInsets = layout.insets(options: [.statusBar])
+        
+        let hasAddToExistingButton = self.addToExistingActionButtonNode.supernode != nil
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
@@ -395,17 +432,20 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         let minimallyRevealedRowCount: CGFloat = 3.5
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
-        var bottomGridInset = buttonHeight
+        var bottomGridInset = hasAddToExistingButton ? 2.0 * buttonHeight : buttonHeight
         if let _ = self.progress {
             bottomGridInset += 210.0
         }
         let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight - bottomGridInset)
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        let installButtonOffset = buttonHeight
-        transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
-        transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        let createButtonOffset = hasAddToExistingButton ? 2.0 * buttonHeight : buttonHeight
+        transition.updateFrame(node: self.createActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - createButtonOffset), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        transition.updateFrame(node: self.createActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - createButtonOffset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
 
+        transition.updateFrame(node: self.addToExistingActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        transition.updateFrame(node: self.addToExistingActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         
         self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transaction?.deletions ?? [], insertItems: transaction?.insertions ?? [], updateItems: transaction?.updates ?? [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
@@ -463,9 +503,11 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             transition.updateAlpha(node: self.infoText, alpha: 1.0)
             transition.updateAlpha(node: self.radialCheck, alpha: 1.0)
             transition.updateAlpha(node: self.radialStatusBackground, alpha: 1.0)
-            transition.updateAlpha(node: self.installActionButtonNode, alpha: 0.0)
+            transition.updateAlpha(node: self.createActionButtonNode, alpha: 0.0)
             transition.updateAlpha(node: self.contentSeparatorNode, alpha: 0.0)
-            transition.updateAlpha(node: self.installActionSeparatorNode, alpha: 0.0)
+            transition.updateAlpha(node: self.createActionSeparatorNode, alpha: 0.0)
+            transition.updateAlpha(node: self.addToExistingActionButtonNode, alpha: 0.0)
+            transition.updateAlpha(node: self.addToExistingActionSeparatorNode, alpha: 0.0)
         }
         
         self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -660,7 +702,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         }))
     }
     
-    @objc func installActionButtonPressed() {
+    @objc private func createActionButtonPressed() {
         var proceedImpl: ((String, String?) -> Void)?
         let titleController = importStickerPackTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 128, apply: { [weak self] title in
             if let strongSelf = self, let title = title {
@@ -686,6 +728,10 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             strongSelf.present?(controller, nil)
         }
         self.present?(titleController, nil)
+    }
+    
+    @objc private func addToExistingActionButtonPressed() {
+        
     }
     
     func animateIn() {
@@ -770,7 +816,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             self.contentGridNode.layer.animateAlpha(from: self.contentGridNode.alpha, to: 1.0, duration: 0.2)
             
             let buttonTransition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-            buttonTransition.updateAlpha(node: self.installActionButtonNode, alpha: self.stickerPackReady ? 1.0 : 0.3)
+            buttonTransition.updateAlpha(node: self.createActionButtonNode, alpha: self.stickerPackReady ? 1.0 : 0.3)
+            buttonTransition.updateAlpha(node: self.addToExistingActionButtonNode, alpha: self.stickerPackReady ? 1.0 : 0.3)
             
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             
@@ -782,7 +829,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let result = self.installActionButtonNode.hitTest(self.installActionButtonNode.convert(point, from: self), with: event) {
+        if let result = self.createActionButtonNode.hitTest(self.createActionButtonNode.convert(point, from: self), with: event) {
             return result
         }
         if self.bounds.contains(point) {

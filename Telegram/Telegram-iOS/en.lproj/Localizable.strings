@@ -6504,6 +6504,9 @@ Sorry for the inconvenience.";
 "ImportStickerPack.StickerCount_many" = "%@ Stickers";
 "ImportStickerPack.StickerCount_0" = "%@ Stickers";
 "ImportStickerPack.CreateStickerSet" = "Create Sticker Set";
+"ImportStickerPack.CreateNewStickerSet" = "Create a New Sticker Set";
+"ImportStickerPack.AddToExistingStickerSet" = "Add to an Existing Sticker Set";
+"ImportStickerPack.ChooseStickerSet" = "Choose Sticker Set";
 "ImportStickerPack.RemoveFromImport" = "Remove From Import";
 "ImportStickerPack.ChooseName" = "Choose Name";
 "ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
@@ -6524,7 +6527,6 @@ Sorry for the inconvenience.";
 "Conversation.InputMenu" = "Menu";
 "Conversation.MessageDoesntExist" = "Message doesn't exist";
 
-"Settings.CheckPasswordTitle" = "Is %@ still your number?";
 "Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
 "Settings.KeepPassword" = "Yes, definitely";
 "Settings.TryEnterPassword" = "Not sure, let me try";

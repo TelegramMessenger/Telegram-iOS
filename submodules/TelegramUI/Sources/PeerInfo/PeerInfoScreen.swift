@@ -1531,6 +1531,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
+    private var shareStatusDisposable: MetaDisposable?
     
     private let editAvatarDisposable = MetaDisposable()
     private let updateAvatarDisposable = MetaDisposable()
@@ -2864,6 +2865,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.enqueueMediaMessageDisposable.dispose()
         self.supportPeerDisposable.dispose()
         self.tipsPeerDisposable.dispose()
+        self.shareStatusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -3694,7 +3696,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     items.append(.separator)
                                 }
                                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] _, f in
                                     f(.dismissWithoutContent)
                                     
@@ -3720,7 +3722,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     items.append(.separator)
                                 }
                                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] _, f in
                                     f(.dismissWithoutContent)
                                     
@@ -3735,7 +3737,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             items.append(.separator)
                         }
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
@@ -5639,7 +5641,83 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     func forwardMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
-            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
+            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, messageText in
+                guard let strongSelf = self, let strongController = peerSelectionController else {
+                    return
+                }
+                strongController.dismiss()
+                
+                for peer in peers {
+                    var result: [EnqueueMessage] = []
+                    if messageText.string.count > 0 {
+                        let inputText = convertMarkdownToAttributes(messageText)
+                        for text in breakChatInputText(trimChatInputText(inputText)) {
+                            if text.length != 0 {
+                                var attributes: [MessageAttribute] = []
+                                let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                if !entities.isEmpty {
+                                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                }
+                                result.append(.message(text: text.string, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                            }
+                        }
+                    }
+                    
+                    result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
+                        return .forward(source: messageId, grouping: .auto, attributes: [], correlationId: nil)
+                    })
+                    
+                    let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
+                    |> deliverOnMainQueue).start(next: { messageIds in
+                        if let strongSelf = self {
+                            let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                guard let id = id else {
+                                    return nil
+                                }
+                                return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                    if status != nil {
+                                        return .never()
+                                    } else {
+                                        return .single(true)
+                                    }
+                                }
+                                |> take(1)
+                            })
+                            if strongSelf.shareStatusDisposable == nil {
+                                strongSelf.shareStatusDisposable = MetaDisposable()
+                            }
+                            strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                            |> deliverOnMainQueue).start())
+                        }
+                    })
+                    
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let text: String
+                    var savedMessages = false
+                    if peers.count == 1, let peerId = peers.first?.id, peerId == strongSelf.context.account.peerId {
+                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                        savedMessages = true
+                    } else {
+                        if peers.count == 1, let peer = peers.first {
+                            let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                        } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                            let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                        } else if let peer = peers.first {
+                            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                        } else {
+                            text = ""
+                        }
+                    }
+
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                }
+            }
             peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
                 let peerId = peer.id
                 

@@ -874,11 +874,14 @@ public final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
+    public var multipleSelection = false
+    
     public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         self.contextAction = contextAction
+        self.multipleSelection = multipleSelection
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData

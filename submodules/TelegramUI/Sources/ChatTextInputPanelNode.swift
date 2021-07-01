@@ -1046,16 +1046,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState
         
+        var inputHasText = false
+        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
+            inputHasText = true
+        }
+        
         var hasMenuButton = false
         var menuButtonExpanded = false
         if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands && interfaceState.editMessageState == nil {
             hasMenuButton = true
             
-            var inputHasText = false
-            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
-                inputHasText = true
-            }
-
             if !inputHasText {
                 switch interfaceState.inputMode {
                 case .none, .inputButtons:
@@ -1501,12 +1501,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.slowmodePlaceholderNode = nil
             slowmodePlaceholderNode.removeFromSupernode()
         }
-        
-        var inputHasText = false
-        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
-            inputHasText = true
-        }
-        
+
         if (interfaceState.slowmodeState != nil && !isScheduledMessages && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
             self.textPlaceholderNode.isHidden = true
             self.slowmodePlaceholderNode?.isHidden = inputHasText
@@ -1552,13 +1547,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        var hasText = false
-        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
-            hasText = true
-            hideMicButton = true
-        }
-        
-        if self.extendedSearchLayout {
+        if inputHasText || self.extendedSearchLayout {
             hideMicButton = true
         }
         
@@ -1574,7 +1563,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.actionButtons.micButton.fadeDisabled = mediaInputDisabled
         
-        self.updateActionButtons(hasText: hasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
+        self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
         
         if let prevInputPanelNode = self.prevInputPanelNode {
             prevInputPanelNode.frame = CGRect(origin: .zero, size: prevInputPanelNode.frame.size)
