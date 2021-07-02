@@ -717,7 +717,7 @@
                                 request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + 2.0);
                             }
                         }
-                        else if (rpcError.errorCode == 400 || [rpcError.errorDescription isEqualToString:@"MSG_WAIT_TIMEOUT"])
+                        else if (rpcError.errorCode == 400 && [rpcError.errorDescription isEqualToString:@"MSG_WAIT_TIMEOUT"])
                         {
                             if (request.errorContext == nil) {
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
