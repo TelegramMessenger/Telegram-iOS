@@ -519,10 +519,10 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
                     switch server.connection {
                     case let .mtp(secret):
                         let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
-                        string = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
+                        string = "tg://proxy?server=\(server.host)&port=\(server.port)"
                         string += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                     case let .socks5(username, password):
-                        string = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
+                        string = "tg://socks?server=\(server.host)&port=\(server.port)"
                         if let username = username, let password = password {
                             string += "&user=\((username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                         }
