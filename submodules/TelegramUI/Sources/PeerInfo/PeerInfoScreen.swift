@@ -6161,8 +6161,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var canOpenAvatarByDragging = false
     
-    private let velocityKey: String = encodeText("`wfsujdbmWfmpdjuz", -1)
-    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling {
             return
@@ -6171,7 +6169,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if !self.state.isEditing {
             if self.canAddVelocity {
                 self.previousVelocityM1 = self.previousVelocity
-                if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
+                if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
                     self.previousVelocity = CGFloat(value)
                 }
             }
@@ -6983,14 +6981,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         self.headerNode.navigationTransition = nil
         self.screenNode.insertSubnode(self.headerNode, aboveSubnode: self.screenNode.scrollNode)
     }
-}
-
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
-    }
-    return result
 }
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
