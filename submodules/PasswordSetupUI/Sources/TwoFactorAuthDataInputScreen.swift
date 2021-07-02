@@ -475,7 +475,7 @@ public final class TwoFactorDataInputScreen: ViewController {
     }
 
     private func performRecovery(recovery: TwoFactorDataInputMode.Recovery, password: String, hint: String) {
-        /*let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
         self.present(statusController, in: .window(.root))
 
         let _ = (performPasswordRecovery(accountManager: self.sharedContext.accountManager, account: recovery.account, code: recovery.code, syncContacts: recovery.syncContacts, updatedPassword: password.isEmpty ? .none : .password(password: password, hint: hint, email: nil))
@@ -507,7 +507,7 @@ public final class TwoFactorDataInputScreen: ViewController {
             }
 
             strongSelf.dismiss()
-        })*/
+        })
     }
 }
 
@@ -1126,7 +1126,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .emailAddress, .updateEmailAddress:
+            case .emailAddress, .updateEmailAddress, .passwordRecovery:
                 let hasText = strongSelf.inputNodes.contains(where: { !$0.text.isEmpty })
                 strongSelf.buttonNode.isHidden = !hasText
                 strongSelf.skipActionTitleNode.isHidden = hasText
@@ -1148,7 +1148,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 strongSelf.buttonNode.isHidden = !hasText
                 strongSelf.skipActionTitleNode.isHidden = hasText
                 strongSelf.skipActionButtonNode.isHidden = hasText
-            case .password, .passwordRecovery:
+            case .password:
                 break
             }
             updateAnimations()

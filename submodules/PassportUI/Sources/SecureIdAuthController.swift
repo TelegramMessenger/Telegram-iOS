@@ -518,7 +518,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                         return
                     }
                     var completionImpl: (() -> Void)?
-                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: {
+                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: { _ in
                         completionImpl?()
                     })
                     completionImpl = { [weak controller] in

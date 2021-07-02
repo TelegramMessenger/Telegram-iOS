@@ -115,7 +115,7 @@ public enum ResetPasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-public func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
+public func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping (Bool) -> Void) -> ViewController {
     let statePromise = ValuePromise(ResetPasswordControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ResetPasswordControllerState())
     let updateState: ((ResetPasswordControllerState) -> ResetPasswordControllerState) -> Void = { f in
@@ -138,7 +138,20 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
         }
     }, openHelp: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryEmailResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
+            let _ = (requestTwoStepPasswordReset(network: context.account.network)
+            |> deliverOnMainQueue).start(next: { result in
+                switch result {
+                case .done, .waitingForReset:
+                    completion(false)
+                case .declined:
+                    break
+                case let .error(reason):
+                    break
+                }
+            })
+        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     var initialFocusImpl: (() -> Void)?
@@ -187,7 +200,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     }, completed: {
-                        completion()
+                        completion(true)
                     }))
                 }
             })
