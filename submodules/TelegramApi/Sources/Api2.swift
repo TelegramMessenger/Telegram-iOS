@@ -4690,6 +4690,7 @@ public extension Api {
         case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, actorId: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, invite: Api.ExportedChatInvite?, qts: Int32)
         case updateBotStopped(userId: Int32, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateGroupCallConnection(flags: Int32, params: Api.DataJSON)
+        case updateBotCommands(peer: Api.Peer, botId: Int32, commands: [Api.BotCommand])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5492,6 +5493,18 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     params.serialize(buffer, true)
                     break
+                case .updateBotCommands(let peer, let botId, let commands):
+                    if boxed {
+                        buffer.appendInt32(-813823885)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(botId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(commands.count))
+                    for item in commands {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -5681,6 +5694,8 @@ public extension Api {
                 return ("updateBotStopped", [("userId", userId), ("date", date), ("stopped", stopped), ("qts", qts)])
                 case .updateGroupCallConnection(let flags, let params):
                 return ("updateGroupCallConnection", [("flags", flags), ("params", params)])
+                case .updateBotCommands(let peer, let botId, let commands):
+                return ("updateBotCommands", [("peer", peer), ("botId", botId), ("commands", commands)])
     }
     }
     
@@ -7314,6 +7329,27 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateGroupCallConnection(flags: _1!, params: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotCommands(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.BotCommand]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotCommands(peer: _1!, botId: _2!, commands: _3!)
             }
             else {
                 return nil

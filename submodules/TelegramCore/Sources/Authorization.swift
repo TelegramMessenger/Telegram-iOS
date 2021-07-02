@@ -373,41 +373,7 @@ public enum PasswordRecoveryError {
     case generic
 }
 
-public func performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool) -> Signal<Void, PasswordRecoveryError> {
-    return account.network.request(Api.functions.auth.recoverPassword(code: code))
-    |> mapError { error -> PasswordRecoveryError in
-        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-            return .limitExceeded
-        } else if error.errorDescription.hasPrefix("PASSWORD_RECOVERY_EXPIRED") {
-            return .expired
-        } else {
-            return .invalidCode
-        }
-    }
-    |> mapToSignal { result -> Signal<Void, PasswordRecoveryError> in
-        return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-            switch result {
-            case let .authorization(_, _, user):
-                let user = TelegramUser(user: user)
-                let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
-                /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
-                 return peer
-                 })*/
-                initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
-                transaction.setState(state)
-                return accountManager.transaction { transaction -> Void in
-                    switchToAuthorizedAccount(transaction: transaction, account: account)
-                }
-            case .authorizationSignUpRequired:
-                return .complete()
-            }
-        }
-        |> switchToLatest
-        |> mapError { _ -> PasswordRecoveryError in }
-    }
-}
-
-/*public func checkPasswordRecoveryCode(network: Network, code: String) -> Signal<Never, PasswordRecoveryError> {
+public func checkPasswordRecoveryCode(network: Network, code: String) -> Signal<Never, PasswordRecoveryError> {
     return network.request(Api.functions.auth.checkRecoveryPassword(code: code), automaticFloodWait: false)
     |> mapError { error -> PasswordRecoveryError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -480,7 +446,7 @@ public func performPasswordRecovery(accountManager: AccountManager, account: Una
             |> mapError { _ -> PasswordRecoveryError in }
         }
     }
-}*/
+}
 
 public enum AccountResetError {
     case generic
