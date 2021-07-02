@@ -1410,22 +1410,37 @@ public final class AccountViewTracker {
                     let polled = self.polledChannel(peerId: peerId).start()
 
                     var addHole = false
-                    let historyIsValid: Signal<Bool, NoError>
+                    let pollingCompleted: Signal<Bool, NoError>
                     if let context = self.channelPollingContexts[peerId] {
                         if !context.isUpdatedValue {
                             addHole = true
                         }
-                        historyIsValid = context.isUpdated.get()
+                        pollingCompleted = context.isUpdated.get()
                     } else {
                         addHole = true
-                        historyIsValid = .single(true)
+                        pollingCompleted = .single(true)
                     }
+                    let isAutomaticallyTracked = Promise<Bool>(false)
                     if addHole {
-                        let _ = self.account?.postbox.transaction({ transaction -> Void in
+                        let _ = (self.account!.postbox.transaction { transaction -> Bool in
                             if transaction.getPeerChatListIndex(peerId) == nil {
                                 transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
+                                return false
+                            } else {
+                                return true
                             }
-                        }).start()
+                        }
+                        |> deliverOn(self.queue)).start(next: { isTracked in
+                            isAutomaticallyTracked.set(.single(isTracked))
+                        })
+                    }
+
+                    let historyIsValid = combineLatest(queue: self.queue,
+                        pollingCompleted,
+                        isAutomaticallyTracked.get()
+                    )
+                    |> map { lhs, rhs -> Bool in
+                        return lhs || rhs
                     }
 
                     let validHistory = historyIsValid

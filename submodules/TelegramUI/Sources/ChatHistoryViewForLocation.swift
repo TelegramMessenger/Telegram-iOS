@@ -93,15 +93,13 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
-
-                    if view.isLoading {
-                        preloaded = false
-                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-                    }
                     
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
+                        if view.isLoading {
+                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                        }
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
                         let canScrollToRead: Bool
@@ -155,6 +153,12 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                         } else if view.isAddedToChatList, let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
+                            if case .peer = chatLocation, !view.isAddedToChatList {
+                                if view.holeEarlier && view.entries.count <= 2 {
+                                    fadeIn = true
+                                    return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                                }
+                            }
                             if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
                                 fadeIn = true
                                 return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
@@ -181,11 +185,6 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
-
-                    if view.isLoading {
-                        preloaded = false
-                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-                    }
                     
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
