@@ -224,9 +224,21 @@ private final class CachedChannelParticipantsContext {
 private final class ChannelPollingContext {
     var subscribers = Bag<Void>()
     let disposable = MetaDisposable()
+    let isUpdated = Promise<Bool>(false)
+
+    private(set) var isUpdatedValue: Bool = false
+    private var isUpdatedDisposable: Disposable?
+
+    init(queue: Queue) {
+        self.isUpdatedDisposable = (self.isUpdated.get()
+        |> deliverOn(queue)).start(next: { [weak self] value in
+            self?.isUpdatedValue = value
+        })
+    }
     
     deinit {
         self.disposable.dispose()
+        self.isUpdatedDisposable?.dispose()
     }
 }
 
@@ -1302,13 +1314,27 @@ public final class AccountViewTracker {
                 if let current = self.channelPollingContexts[peerId] {
                     context = current
                 } else {
-                    context = ChannelPollingContext()
+                    context = ChannelPollingContext(queue: self.queue)
                     self.channelPollingContexts[peerId] = context
                 }
                 
                 if context.subscribers.isEmpty {
                     if let account = self.account {
-                        context.disposable.set(keepPollingChannel(postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start())
+                        let queue = self.queue
+                        context.disposable.set(keepPollingChannel(postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start(next: { [weak context] isValidForTimeout in
+                            queue.async {
+                                guard let context = context else {
+                                    return
+                                }
+                                context.isUpdated.set(
+                                    .single(true)
+                                    |> then(
+                                        .single(false)
+                                        |> delay(Double(isValidForTimeout), queue: queue)
+                                    )
+                                )
+                            }
+                        }))
                     }
                 }
                 
@@ -1378,34 +1404,54 @@ public final class AccountViewTracker {
             peerId = peerIdValue
         }
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            return Signal { subscriber in
+            return Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> { subscriber in
                 let combinedDisposable = MetaDisposable()
                 self.queue.async {
+                    let polled = self.polledChannel(peerId: peerId).start()
+
                     var addHole = false
+                    let historyIsValid: Signal<Bool, NoError>
                     if let context = self.channelPollingContexts[peerId] {
-                        if context.subscribers.isEmpty {
+                        if !context.isUpdatedValue {
                             addHole = true
                         }
+                        historyIsValid = context.isUpdated.get()
                     } else {
                         addHole = true
+                        historyIsValid = .single(true)
                     }
                     if addHole {
                         let _ = self.account?.postbox.transaction({ transaction -> Void in
                             if transaction.getPeerChatListIndex(peerId) == nil {
-                                if let message = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
-                                    //transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
-                                }
+                                transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                             }
                         }).start()
                     }
-                    let disposable = history.start(next: { next in
+
+                    let validHistory = historyIsValid
+                    |> distinctUntilChanged
+                    |> take(until: { next in
+                        if next {
+                            return SignalTakeAction(passthrough: true, complete: true)
+                        } else {
+                            return SignalTakeAction(passthrough: true, complete: false)
+                        }
+                    })
+                    |> mapToSignal { isValid -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                        if isValid {
+                            return history
+                        } else {
+                            let view = MessageHistoryView(tagMask: nil, namespaces: .all, entries: [], holeEarlier: true, holeLater: true, isLoading: true)
+                            return .single((view, .Initial, nil))
+                        }
+                    }
+
+                    let disposable = validHistory.start(next: { next in
                         subscriber.putNext(next)
-                    }, error: { error in
-                        subscriber.putError(error)
                     }, completed: {
                         subscriber.putCompletion()
                     })
-                    let polled = self.polledChannel(peerId: peerId).start()
+
                     combinedDisposable.set(ActionDisposable {
                         disposable.dispose()
                         polled.dispose()

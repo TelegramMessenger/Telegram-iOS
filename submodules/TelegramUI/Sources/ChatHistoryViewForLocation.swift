@@ -93,13 +93,15 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
+
+                    if view.isLoading {
+                        preloaded = false
+                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                    }
                     
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
-                        if view.isLoading {
-                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-                        }
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
                         let canScrollToRead: Bool
@@ -179,6 +181,11 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
+
+                    if view.isLoading {
+                        preloaded = false
+                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                    }
                     
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
