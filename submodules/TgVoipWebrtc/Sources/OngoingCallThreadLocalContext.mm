@@ -50,8 +50,26 @@
 
 @end
 
+@interface IsProcessingCustomSampleBufferFlag : NSObject
+
+@property (nonatomic) bool value;
+
+@end
+
+@implementation IsProcessingCustomSampleBufferFlag
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+    }
+    return self;
+}
+
+@end
+
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     std::shared_ptr<tgcalls::VideoCaptureInterface> _interface;
+    IsProcessingCustomSampleBufferFlag *_isProcessingCustomSampleBuffer;
 }
 
 @end
@@ -217,6 +235,7 @@
     self = [super init];
     if (self != nil) {
         _interface = interface;
+        _isProcessingCustomSampleBuffer = [[IsProcessingCustomSampleBufferFlag alloc] init];
         _croppingBuffer = std::make_shared<std::vector<uint8_t>>();
     }
     return self;
@@ -254,20 +273,6 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 #if TARGET_OS_IOS
-- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer {
-    if (!sampleBuffer) {
-        return;
-    }
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, sampleBuffer = CFRetain(sampleBuffer)]() {
-        auto capture = GetVideoCaptureAssumingSameThread(interface.get());
-        auto source = capture->source();
-        if (source) {
-            [CustomExternalCapturer passSampleBuffer:(CMSampleBufferRef)sampleBuffer toSource:source];
-        }
-        CFRelease(sampleBuffer);
-    });
-}
-
 - (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation {
     if (!pixelBuffer) {
         return;
@@ -289,13 +294,19 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
         break;
     }
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation]() {
+    if (_isProcessingCustomSampleBuffer.value) {
+        return;
+    }
+    _isProcessingCustomSampleBuffer.value = true;
+
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
         auto capture = GetVideoCaptureAssumingSameThread(interface.get());
         auto source = capture->source();
         if (source) {
             [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer rotation:videoRotation toSource:source croppingBuffer:*croppingBuffer];
         }
         CFRelease(pixelBuffer);
+        isProcessingCustomSampleBuffer.value = false;
     });
 }
 
@@ -1110,10 +1121,9 @@ private:
         }
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
-//        videoCodecPreferences.push_back(tgcalls::VideoCodecName::H264);
-        //videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP9);/
 
         int minOutgoingVideoBitrateKbit = 500;
+        bool disableOutgoingAudioProcessing = false;
 
         tgcalls::GroupConfig config;
         config.need_log = false;
@@ -1185,6 +1195,7 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
+            .disableOutgoingAudioProcessing = disableOutgoingAudioProcessing,
             .videoContentType = _videoContentType,
             .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression,
@@ -1463,6 +1474,15 @@ private:
                 completion(remoteRenderer, nil);
             }
         });
+    }
+}
+
+- (void)addExternalAudioData:(NSData * _Nonnull)data {
+    if (_instance) {
+        std::vector<uint8_t> samples;
+        samples.resize(data.length);
+        [data getBytes:samples.data() length:data.length];
+        _instance->addExternalAudioSamples(std::move(samples));
     }
 }
 
