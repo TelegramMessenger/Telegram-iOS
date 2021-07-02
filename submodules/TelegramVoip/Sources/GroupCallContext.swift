@@ -601,44 +601,15 @@ public final class OngoingGroupCallContext {
                             mainView?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
+                        },
+                        setIsPaused: { [weak mainView] paused in
+                            mainView?.setIsPaused(paused)
+                        },
+                        renderToSize: { [weak mainView] size, animated in
+                            mainView?.render(to: size, animated: animated)
                         }
                     )
-                    var cloneVideoView: OngoingCallContextPresentationCallVideoView?
-                    if let cloneView = cloneView {
-                        cloneVideoView = OngoingCallContextPresentationCallVideoView(
-                            view: cloneView,
-                            setOnFirstFrameReceived: { [weak cloneView] f in
-                                cloneView?.setOnFirstFrameReceived(f)
-                            },
-                            getOrientation: { [weak cloneView] in
-                                if let cloneView = cloneView {
-                                    return OngoingCallVideoOrientation(cloneView.orientation)
-                                } else {
-                                    return .rotation0
-                                }
-                            },
-                            getAspect: { [weak cloneView] in
-                                if let cloneView = cloneView {
-                                    return cloneView.aspect
-                                } else {
-                                    return 0.0
-                                }
-                            },
-                            setOnOrientationUpdated: { [weak cloneView] f in
-                                cloneView?.setOnOrientationUpdated { value, aspect in
-                                    f?(OngoingCallVideoOrientation(value), aspect)
-                                }
-                            }, setVideoContentMode: { [weak cloneView] mode in
-                                cloneView?.setVideoContentMode(mode)
-                            },
-                            setOnIsMirroredUpdated: { [weak cloneView] f in
-                                cloneView?.setOnIsMirroredUpdated { value in
-                                    f?(value)
-                                }
-                            }
-                        )
-                    }
-                    completion(mainVideoView, cloneVideoView)
+                    completion(mainVideoView, nil)
                     #endif
                 } else {
                     completion(nil, nil)
