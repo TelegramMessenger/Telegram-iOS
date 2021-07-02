@@ -1420,29 +1420,26 @@ public final class AccountViewTracker {
                         addHole = true
                         pollingCompleted = .single(true)
                     }
-                    let isAutomaticallyTracked = Promise<Bool>(false)
-                    if addHole {
-                        let _ = (self.account!.postbox.transaction { transaction -> Bool in
-                            if transaction.getPeerChatListIndex(peerId) == nil {
+                    let isAutomaticallyTracked = self.account!.postbox.transaction { transaction -> Bool in
+                        if transaction.getPeerChatListIndex(peerId) == nil {
+                            if addHole {
                                 transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
-                                return false
-                            } else {
-                                return true
                             }
+                            return false
+                        } else {
+                            return true
                         }
-                        |> deliverOn(self.queue)).start(next: { isTracked in
-                            isAutomaticallyTracked.set(.single(isTracked))
-                        })
                     }
 
                     let historyIsValid = combineLatest(queue: self.queue,
                         pollingCompleted,
-                        isAutomaticallyTracked.get()
+                        isAutomaticallyTracked
                     )
                     |> map { lhs, rhs -> Bool in
                         return lhs || rhs
                     }
 
+                    var loaded = false
                     let validHistory = historyIsValid
                     |> distinctUntilChanged
                     |> take(until: { next in
@@ -1454,6 +1451,8 @@ public final class AccountViewTracker {
                     })
                     |> mapToSignal { isValid -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
                         if isValid {
+                            assert(!loaded)
+                            loaded = true
                             return history
                         } else {
                             let view = MessageHistoryView(tagMask: nil, namespaces: .all, entries: [], holeEarlier: true, holeLater: true, isLoading: true)
