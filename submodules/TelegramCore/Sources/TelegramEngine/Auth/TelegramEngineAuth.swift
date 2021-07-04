@@ -1,6 +1,8 @@
 import SwiftSignalKit
 import Postbox
 import TelegramApi
+import MtProtoKit
+import SyncCore
 
 public extension TelegramEngineUnauthorized {
     final class Auth {
@@ -13,6 +15,22 @@ public extension TelegramEngineUnauthorized {
         public func exportAuthTransferToken(accountManager: AccountManager, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
             return _internal_exportAuthTransferToken(accountManager: accountManager, account: self.account, otherAccountUserIds: otherAccountUserIds, syncContacts: syncContacts)
         }
+
+        public func twoStepAuthData() -> Signal<TwoStepAuthData, MTRpcError> {
+            return _internal_twoStepAuthData(self.account.network)
+        }
+
+        public func updateTwoStepVerificationPassword(currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+            return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
+        }
+
+        public func performPasswordRecovery(accountManager: AccountManager, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
+            return _internal_performPasswordRecovery(accountManager: accountManager, account: self.account, code: code, syncContacts: syncContacts, updatedPassword: updatedPassword)
+        }
+
+        public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+            return _internal_resendTwoStepRecoveryEmail(network: self.account.network)
+        }
     }
 }
 
@@ -21,19 +39,120 @@ public enum DeleteAccountError {
 }
 
 public extension TelegramEngine {
-	final class Auth {
-		private let account: Account
+    final class Auth {
+        private let account: Account
 
-		init(account: Account) {
-			self.account = account
-		}
+        init(account: Account) {
+            self.account = account
+        }
 
-		public func deleteAccount() -> Signal<Never, DeleteAccountError> {
-		    return self.account.network.request(Api.functions.account.deleteAccount(reason: "GDPR"))
-		    |> mapError { _ -> DeleteAccountError in
-		        return .generic
-		    }
-		    |> ignoreValues
-		}
-	}
+        public func twoStepAuthData() -> Signal<TwoStepAuthData, MTRpcError> {
+            return _internal_twoStepAuthData(self.account.network)
+        }
+
+        public func updateTwoStepVerificationPassword(currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+            return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
+        }
+
+        public func deleteAccount() -> Signal<Never, DeleteAccountError> {
+            return self.account.network.request(Api.functions.account.deleteAccount(reason: "GDPR"))
+            |> mapError { _ -> DeleteAccountError in
+                return .generic
+            }
+            |> ignoreValues
+        }
+
+        public func updateTwoStepVerificationEmail(currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+            return _internal_updateTwoStepVerificationEmail(network: self.account.network, currentPassword: currentPassword, updatedEmail: updatedEmail)
+        }
+
+        public func confirmTwoStepRecoveryEmail(code: String) -> Signal<Never, ConfirmTwoStepRecoveryEmailError> {
+            return _internal_confirmTwoStepRecoveryEmail(network: self.account.network, code: code)
+        }
+
+        public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+        	return _internal_resendTwoStepRecoveryEmail(network: self.account.network)
+        }
+
+        public func cancelTwoStepRecoveryEmail() -> Signal<Never, CancelTwoStepRecoveryEmailError> {
+        	return _internal_cancelTwoStepRecoveryEmail(network: self.account.network)
+        }
+
+        public func twoStepVerificationConfiguration() -> Signal<TwoStepVerificationConfiguration, NoError> {
+            return _internal_twoStepVerificationConfiguration(account: self.account)
+        }
+
+        public func requestTwoStepVerifiationSettings(password: String) -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> {
+            return _internal_requestTwoStepVerifiationSettings(network: self.account.network, password: password)
+        }
+
+        public func requestTwoStepVerificationPasswordRecoveryCode() -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
+            return _internal_requestTwoStepVerificationPasswordRecoveryCode(network: self.account.network)
+        }
+
+        public func recoverTwoStepVerificationPassword(code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
+            return _internal_recoverTwoStepVerificationPassword(network: self.account.network, code: code)
+        }
+
+        public func cachedTwoStepPasswordToken() -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
+            return _internal_cachedTwoStepPasswordToken(postbox: self.account.postbox)
+        }
+
+        public func cacheTwoStepPasswordToken(token: TemporaryTwoStepPasswordToken?) -> Signal<Void, NoError> {
+            return _internal_cacheTwoStepPasswordToken(postbox: self.account.postbox, token: token)
+        }
+
+        public func requestTemporaryTwoStepPasswordToken(password: String, period: Int32, requiresBiometrics: Bool) -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> {
+            return _internal_requestTemporaryTwoStepPasswordToken(account: self.account, password: password, period: period, requiresBiometrics: requiresBiometrics)
+        }
+
+        public func requestTwoStepPasswordReset() -> Signal<RequestTwoStepPasswordResetResult, NoError> {
+            return _internal_requestTwoStepPasswordReset(network: self.account.network)
+        }
+
+        public func declineTwoStepPasswordReset() -> Signal<Never, NoError> {
+            return _internal_declineTwoStepPasswordReset(network: self.account.network)
+        }
+    }
+}
+
+public extension SomeTelegramEngine {
+    final class Auth {
+        private let engine: SomeTelegramEngine
+
+        init(engine: SomeTelegramEngine) {
+            self.engine = engine
+        }
+
+        public func twoStepAuthData() -> Signal<TwoStepAuthData, MTRpcError> {
+            switch self.engine {
+            case let .authorized(engine):
+                return engine.auth.twoStepAuthData()
+            case let .unauthorized(engine):
+                return engine.auth.twoStepAuthData()
+            }
+        }
+
+        public func updateTwoStepVerificationPassword(currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+            switch self.engine {
+            case let .authorized(engine):
+                return engine.auth.updateTwoStepVerificationPassword(currentPassword: currentPassword, updatedPassword: updatedPassword)
+            case let .unauthorized(engine):
+                return engine.auth.updateTwoStepVerificationPassword(currentPassword: currentPassword, updatedPassword: updatedPassword)
+            }
+        }
+
+        public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+            switch self.engine {
+            case let .authorized(engine):
+                return engine.auth.resendTwoStepRecoveryEmail()
+            case let .unauthorized(engine):
+                return engine.auth.resendTwoStepRecoveryEmail()
+            }
+        }
+    }
+
+    var auth: Auth {
+        return Auth(engine: self)
+    }
 }

@@ -2331,10 +2331,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            #if DEBUG
-                            //webpage = nil
-                            #endif
+
                             messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+
+                            #if DEBUG
+                            if text.string == "sleep" {
+                                messages.append(messages[0])
+                                messages.append(messages[0])
+                                messages.append(messages[0])
+                            }
+                            #endif
                         }
                     }
 

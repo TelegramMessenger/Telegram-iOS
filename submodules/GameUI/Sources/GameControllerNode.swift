@@ -147,7 +147,7 @@ final class GameControllerNode: ViewControllerTracingNode {
                 if eventName == "share_score" {
                     self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text, account in
                         if let strongSelf = self {
-                            let signals = peerIds.map { forwardGameWithScore(account: account, messageId: strongSelf.message.id, to: $0) }
+                            let signals = peerIds.map { TelegramEngine(account: account).messages.forwardGameWithScore(messageId: strongSelf.message.id, to: $0) }
                             return .single(.preparing)
                             |> then(
                                 combineLatest(signals)

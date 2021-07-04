@@ -9,7 +9,7 @@ public enum UpdateChannelSlowModeError {
     case tooManyChannels
 }
 
-public func updateChannelSlowModeInteractively(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {
+func _internal_updateChannelSlowModeInteractively(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }

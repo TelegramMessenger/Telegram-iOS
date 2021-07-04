@@ -140,7 +140,7 @@ private func twoStepVerificationResetControllerEntries(presentationData: Present
     return entries
 }
 
-func twoStepVerificationResetController(context: AccountContext, emailPattern: String, result: Promise<Bool>) -> ViewController {
+func twoStepVerificationResetController(context: AccountContext, emailPattern: String, result: Promise<Bool>, requestedRecoveryReset: @escaping () -> Void) -> ViewController {
     let initialState = TwoStepVerificationResetControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -168,7 +168,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
             }
         }
         if let code = code {
-            resetPasswordDisposable.set((recoverTwoStepVerificationPassword(network: context.account.network, code: code) |> deliverOnMainQueue).start(error: { error in
+            resetPasswordDisposable.set((context.engine.auth.recoverTwoStepVerificationPassword(code: code) |> deliverOnMainQueue).start(error: { error in
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
@@ -202,7 +202,20 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
         checkCode()
     }, openEmailInaccessible: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryEmailResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
+            let _ = (context.engine.auth.requestTwoStepPasswordReset()
+            |> deliverOnMainQueue).start(next: { result in
+                switch result {
+                case .done, .waitingForReset:
+                    requestedRecoveryReset()
+                case .declined:
+                    break
+                case let .error(reason):
+                    break
+                }
+            })
+        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue

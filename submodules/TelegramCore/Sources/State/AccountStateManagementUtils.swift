@@ -1676,48 +1676,48 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
     }
 }
 
-func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
-    let signal: Signal<Void, NoError> = postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) {
-            var channelStates: [PeerId: AccountStateChannelState] = [:]
-            if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
-                channelStates[peerId] = AccountStateChannelState(pts: channelState.pts)
-            }
-            let initialPeers: [PeerId: Peer] = [peerId: peer]
-            var peerChatInfos: [PeerId: PeerChatInfo] = [:]
-            let inclusion = transaction.getPeerChatListInclusion(peerId)
-            var hasValidInclusion = false
-            switch inclusion {
-                case .ifHasMessagesOrOneOf:
-                    hasValidInclusion = true
-                case .notIncluded:
-                    hasValidInclusion = false
-            }
-            if hasValidInclusion {
-                if let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
-                    peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
-                }
-            }
-            let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
-            return pollChannel(network: network, peer: peer, state: initialState)
-            |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
-                return resolveAssociatedMessages(network: network, state: finalState)
-                |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                    return resolveMissingPeerChatInfos(network: network, state: resultingState)
-                    |> map { resultingState, _ -> AccountFinalState in
-                        return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false, missingUpdatesFromChannels: Set(), discard: false)
-                    }
-                }
-                |> mapToSignal { finalState -> Signal<Void, NoError> in
-                    return stateManager.addReplayAsynchronouslyBuiltFinalState(finalState)
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete() |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue())
-                    }
-                }
-            }
-        } else {
+func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Int32, NoError> {
+    let signal: Signal<Int32, NoError> = postbox.transaction { transaction -> Signal<Int32, NoError> in
+        guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
             return .complete()
             |> delay(30.0, queue: Queue.concurrentDefaultQueue())
+        }
+
+        var channelStates: [PeerId: AccountStateChannelState] = [:]
+        if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
+            channelStates[peerId] = AccountStateChannelState(pts: channelState.pts)
+        }
+        let initialPeers: [PeerId: Peer] = [peerId: peer]
+        var peerChatInfos: [PeerId: PeerChatInfo] = [:]
+        let inclusion = transaction.getPeerChatListInclusion(peerId)
+        var hasValidInclusion = false
+        switch inclusion {
+            case .ifHasMessagesOrOneOf:
+                hasValidInclusion = true
+            case .notIncluded:
+                hasValidInclusion = false
+        }
+        if hasValidInclusion {
+            if let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
+                peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
+            }
+        }
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        return pollChannel(network: network, peer: peer, state: initialState)
+        |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
+            return resolveAssociatedMessages(network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                return resolveMissingPeerChatInfos(network: network, state: resultingState)
+                |> map { resultingState, _ -> AccountFinalState in
+                    return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false, missingUpdatesFromChannels: Set(), discard: false)
+                }
+            }
+            |> mapToSignal { finalState -> Signal<Int32, NoError> in
+                return stateManager.addReplayAsynchronouslyBuiltFinalState(finalState)
+                |> mapToSignal { _ -> Signal<Int32, NoError> in
+                    return .single(timeout ?? 30) |> then(.complete() |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue()))
+                }
+            }
         }
     }
     |> switchToLatest

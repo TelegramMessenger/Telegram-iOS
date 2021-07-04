@@ -332,7 +332,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                     if case let .change(current) = mode {
                         currentPassword = current
                     }
-                    updatePasswordDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .password(password: password, hint: hint, email: email)) |> deliverOnMainQueue).start(next: { update in
+                    updatePasswordDisposable.set((context.engine.auth.updateTwoStepVerificationPassword(currentPassword: currentPassword, updatedPassword: .password(password: password, hint: hint, email: email)) |> deliverOnMainQueue).start(next: { update in
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
@@ -357,7 +357,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
                 case let .setupEmail(password):
-                    updatePasswordDisposable.set((updateTwoStepVerificationEmail(network: context.account.network, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
+                    updatePasswordDisposable.set((context.engine.auth.updateTwoStepVerificationEmail(currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }

@@ -95,7 +95,7 @@ public func updateChannelOwnership(account: Account, accountStateManager: Accoun
                 let updatedParticipant = ChannelParticipant.creator(id: user.id, adminInfo: nil, rank: currentParticipant?.rank)
                 let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank)
                 
-                let checkPassword = twoStepAuthData(account.network)
+                let checkPassword = _internal_twoStepAuthData(account.network)
                 |> mapError { error -> ChannelOwnershipTransferError in
                     if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                         return .limitExceeded

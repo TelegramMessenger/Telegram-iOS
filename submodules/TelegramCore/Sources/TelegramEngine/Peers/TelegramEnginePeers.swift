@@ -92,7 +92,41 @@ public extension TelegramEngine {
         }
 
         public func setChatMessageAutoremoveTimeoutInteractively(peerId: PeerId, timeout: Int32?) -> Signal<Never, SetChatMessageAutoremoveTimeoutError> {
-            return _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
+            if peerId.namespace == Namespaces.Peer.SecretChat {
+                return _internal_setSecretChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
+                |> ignoreValues
+                    |> castError(SetChatMessageAutoremoveTimeoutError.self)
+            } else {
+                return _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
+            }
+        }
+
+        public func updateChannelSlowModeInteractively(peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {
+            return _internal_updateChannelSlowModeInteractively(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, timeout: timeout)
+        }
+
+        public func reportPeer(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_reportPeer(account: self.account, peerId: peerId)
+        }
+
+        public func reportPeer(peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+            return _internal_reportPeer(account: self.account, peerId: peerId, reason: reason, message: message)
+        }
+
+        public func reportPeerPhoto(peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+            return _internal_reportPeerPhoto(account: self.account, peerId: peerId, reason: reason, message: message)
+        }
+
+        public func reportPeerMessages(messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
+            return _internal_reportPeerMessages(account: account, messageIds: messageIds, reason: reason, message: message)
+        }
+
+        public func dismissPeerStatusOptions(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_dismissPeerStatusOptions(account: self.account, peerId: peerId)
+        }
+
+        public func reportRepliesMessage(messageId: MessageId, deleteMessage: Bool, deleteHistory: Bool, reportSpam: Bool) -> Signal<Never, NoError> {
+            return _internal_reportRepliesMessage(account: self.account, messageId: messageId, deleteMessage: deleteMessage, deleteHistory: deleteHistory, reportSpam: reportSpam)
         }
     }
 }

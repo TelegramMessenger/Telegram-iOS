@@ -12,7 +12,7 @@ public enum ConfirmTwoStepRecoveryEmailError {
     case generic
 }
 
-public func confirmTwoStepRecoveryEmail(network: Network, code: String) -> Signal<Never, ConfirmTwoStepRecoveryEmailError> {
+func _internal_confirmTwoStepRecoveryEmail(network: Network, code: String) -> Signal<Never, ConfirmTwoStepRecoveryEmailError> {
     return network.request(Api.functions.account.confirmPasswordEmail(code: code), automaticFloodWait: false)
     |> mapError { error -> ConfirmTwoStepRecoveryEmailError in
         if error.errorDescription == "EMAIL_INVALID" {
@@ -34,7 +34,7 @@ public enum ResendTwoStepRecoveryEmailError {
     case generic
 }
 
-public func resendTwoStepRecoveryEmail(network: Network) -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+func _internal_resendTwoStepRecoveryEmail(network: Network) -> Signal<Never, ResendTwoStepRecoveryEmailError> {
     return network.request(Api.functions.account.resendPasswordEmail(), automaticFloodWait: false)
     |> mapError { error -> ResendTwoStepRecoveryEmailError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -49,7 +49,7 @@ public enum CancelTwoStepRecoveryEmailError {
     case generic
 }
 
-public func cancelTwoStepRecoveryEmail(network: Network) -> Signal<Never, CancelTwoStepRecoveryEmailError> {
+func _internal_cancelTwoStepRecoveryEmail(network: Network) -> Signal<Never, CancelTwoStepRecoveryEmailError> {
     return network.request(Api.functions.account.cancelPasswordEmail(), automaticFloodWait: false)
     |> mapError { _ -> CancelTwoStepRecoveryEmailError in
         return .generic

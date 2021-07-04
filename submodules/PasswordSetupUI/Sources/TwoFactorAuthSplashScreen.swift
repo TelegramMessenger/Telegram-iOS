@@ -19,13 +19,13 @@ public enum TwoFactorAuthSplashMode {
 
 public final class TwoFactorAuthSplashScreen: ViewController {
     private let sharedContext: SharedAccountContext
-    private let network: Network
+    private let engine: SomeTelegramEngine
     private var presentationData: PresentationData
     private var mode: TwoFactorAuthSplashMode
     
-    public init(sharedContext: SharedAccountContext, network: Network, mode: TwoFactorAuthSplashMode) {
+    public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorAuthSplashMode) {
         self.sharedContext = sharedContext
-        self.network = network
+        self.engine = engine
         self.mode = mode
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
@@ -57,7 +57,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
             }
             switch strongSelf.mode {
             case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .password, stateUpdated: { _ in
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password, stateUpdated: { _ in
                 }))
             case .done:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {

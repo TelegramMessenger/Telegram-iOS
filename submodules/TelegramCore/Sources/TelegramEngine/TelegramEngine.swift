@@ -47,6 +47,18 @@ public final class TelegramEngine {
     public lazy var messages: Messages = {
         return Messages(account: self.account)
     }()
+
+    public lazy var privacy: Privacy = {
+        return Privacy(account: self.account)
+    }()
+
+    public lazy var calls: Calls = {
+        return Calls(account: self.account)
+    }()
+
+    public lazy var historyImport: HistoryImport = {
+        return HistoryImport(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {
@@ -63,4 +75,9 @@ public final class TelegramEngineUnauthorized {
     public lazy var localization: Localization = {
         return Localization(account: self.account)
     }()
+}
+
+public enum SomeTelegramEngine {
+    case unauthorized(TelegramEngineUnauthorized)
+    case authorized(TelegramEngine)
 }

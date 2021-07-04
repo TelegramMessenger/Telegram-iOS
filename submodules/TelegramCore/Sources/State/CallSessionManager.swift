@@ -563,7 +563,7 @@ private final class CallSessionManagerContext {
                                 |> timeout(5.0, queue: strongSelf.queue, alternate: .single(nil))
                                 |> deliverOnMainQueue).start(next: { debugLog in
                                     if let debugLog = debugLog {
-                                        let _ = saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
+                                        _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
                                     }
                                 })
                             }

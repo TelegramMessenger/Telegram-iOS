@@ -122,7 +122,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
         }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
-        self.challengeDisposable.set((twoStepAuthData(context.account.network)
+        self.challengeDisposable.set((context.engine.auth.twoStepAuthData()
         |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self {
                 let storedPassword = context.getStoredSecureIdPassword()
@@ -512,13 +512,13 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.recoveryDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: strongSelf.context.account.network)
+                strongSelf.recoveryDisposable.set((strongSelf.context.engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
                 |> deliverOnMainQueue).start(next: { emailPattern in
                     guard let strongSelf = self else {
                         return
                     }
                     var completionImpl: (() -> Void)?
-                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: {
+                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: { _ in
                         completionImpl?()
                     })
                     completionImpl = { [weak controller] in

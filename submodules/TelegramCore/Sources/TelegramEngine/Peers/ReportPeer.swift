@@ -6,7 +6,7 @@ import MtProtoKit
 
 import SyncCore
 
-public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramSecretChat {
@@ -110,7 +110,7 @@ private extension ReportReason {
     }
 }
 
-public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+func _internal_reportPeer(account: Account, peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.account.reportPeer(peer: inputPeer, reason: reason.apiReason, message: message))
@@ -126,7 +126,7 @@ public func reportPeer(account: Account, peerId: PeerId, reason: ReportReason, m
     } |> switchToLatest
 }
 
-public func reportPeerPhoto(account: Account, peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+func _internal_reportPeerPhoto(account: Account, peerId: PeerId, reason: ReportReason, message: String) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.account.reportProfilePhoto(peer: inputPeer, photoId: .inputPhotoEmpty, reason: reason.apiReason, message: message))
@@ -142,7 +142,7 @@ public func reportPeerPhoto(account: Account, peerId: PeerId, reason: ReportReas
     } |> switchToLatest
 }
 
-public func reportPeerMessages(account: Account, messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
+func _internal_reportPeerMessages(account: Account, messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let groupedIds = messagesIdsGroupedByPeerId(messageIds)
         let signals = groupedIds.values.compactMap { ids -> Signal<Void, NoError>? in
@@ -165,7 +165,7 @@ public func reportPeerMessages(account: Account, messageIds: [MessageId], reason
     } |> switchToLatest
 }
 
-public func dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
             if let current = current as? CachedUserData {
@@ -203,7 +203,7 @@ public func dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Signal
     } |> switchToLatest
 }
 
-public func reportRepliesMessage(account: Account, messageId: MessageId, deleteMessage: Bool, deleteHistory: Bool, reportSpam: Bool) -> Signal<Never, NoError> {
+func _internal_reportRepliesMessage(account: Account, messageId: MessageId, deleteMessage: Bool, deleteHistory: Bool, reportSpam: Bool) -> Signal<Never, NoError> {
     if messageId.namespace != Namespaces.Message.Cloud {
         return .complete()
     }

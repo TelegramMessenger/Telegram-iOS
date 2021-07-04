@@ -443,7 +443,7 @@ public class ShareRootControllerImpl {
                                         let fileExtension = (fileName as NSString).pathExtension
                                         
                                         var archivePathValue: String?
-                                        var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
+                                        var otherEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)] = []
                                         var mainFile: TempBoxFile?
                                         
                                         let appConfiguration = context.currentAppConfiguration.with({ $0 })
@@ -528,7 +528,7 @@ public class ShareRootControllerImpl {
                                                     } else {
                                                         let entryFileName = (entryPath as NSString).lastPathComponent
                                                         if !entryFileName.isEmpty {
-                                                            let mediaType: ChatHistoryImport.MediaType
+                                                            let mediaType: TelegramEngine.HistoryImport.MediaType
                                                             let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
                                                             if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
                                                                 mediaType = .photo
@@ -641,7 +641,7 @@ public class ShareRootControllerImpl {
                                             navigationController.viewControllers = [TempController(context: context)]
                                             strongSelf.mainWindow?.present(navigationController, on: .root)
                                             
-                                            let _ = (ChatHistoryImport.getInfo(account: context.account, header: mainFileHeader)
+                                            let _ = (context.engine.historyImport.getInfo(header: mainFileHeader)
                                             |> deliverOnMainQueue).start(next: { parseInfo in
                                                 switch parseInfo {
                                                 case let .group(groupTitle):
@@ -695,7 +695,7 @@ public class ShareRootControllerImpl {
                                                             strongSelf.mainWindow?.present(controller, on: .root)
                                                         } else {
                                                             controller.inProgress = true
-                                                            let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                            let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                             |> deliverOnMainQueue).start(next: { result in
                                                                 controller.inProgress = false
                                                                 
@@ -846,7 +846,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
-                                                        let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                        let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                         |> deliverOnMainQueue).start(next: { result in
                                                             controller?.inProgress = false
                                                             
@@ -921,7 +921,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
-                                                        let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                        let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                         |> deliverOnMainQueue).start(next: { result in
                                                             controller?.inProgress = false
                                                             
