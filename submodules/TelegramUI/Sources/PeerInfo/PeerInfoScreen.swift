@@ -2472,12 +2472,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
                                 var hasProgress = false
                                 if peer.firstName != firstName || peer.lastName != lastName {
-                                    updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)
+                                    updateNameSignal = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName)
                                     hasProgress = true
                                 }
                                 var updateBioSignal: Signal<Void, NoError> = .complete()
                                 if let bio = bio, bio != cachedData.about {
-                                    updateBioSignal = updateAbout(account: context.account, about: bio)
+                                    updateBioSignal = context.engine.accountData.updateAbout(about: bio)
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()
                                     }

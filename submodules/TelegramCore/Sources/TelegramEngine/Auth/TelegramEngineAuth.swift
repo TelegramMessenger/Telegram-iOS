@@ -113,6 +113,18 @@ public extension TelegramEngine {
         public func declineTwoStepPasswordReset() -> Signal<Never, NoError> {
             return _internal_declineTwoStepPasswordReset(network: self.account.network)
         }
+
+        public func requestCancelAccountResetData(hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+            return _internal_requestCancelAccountResetData(network: self.account.network, hash: hash)
+        }
+
+        public func requestNextCancelAccountResetOption(phoneNumber: String, phoneCodeHash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+            return _internal_requestNextCancelAccountResetOption(network: self.account.network, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash)
+        }
+
+        public func requestCancelAccountReset(phoneCodeHash: String, phoneCode: String) -> Signal<Never, CancelAccountResetError> {
+            return _internal_requestCancelAccountReset(network: self.account.network, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode)
+        }
     }
 }
 

@@ -37,7 +37,7 @@ public enum RequestChangeAccountPhoneNumberVerificationError {
     case generic
 }
 
-public func requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+func _internal_requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
     return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -64,7 +64,7 @@ public func requestChangeAccountPhoneNumberVerification(account: Account, phoneN
         }
 }
 
-public func requestNextChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String, phoneCodeHash: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+func _internal_requestNextChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String, phoneCodeHash: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
     return account.network.request(Api.functions.auth.resendCode(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -96,7 +96,7 @@ public enum ChangeAccountPhoneNumberError {
     case limitExceeded
 }
 
-public func requestChangeAccountPhoneNumber(account: Account, phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> Signal<Void, ChangeAccountPhoneNumberError> {
+func _internal_requestChangeAccountPhoneNumber(account: Account, phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> Signal<Void, ChangeAccountPhoneNumberError> {
     return account.network.request(Api.functions.account.changePhone(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode), automaticFloodWait: false)
         |> mapError { error -> ChangeAccountPhoneNumberError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {

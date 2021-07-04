@@ -185,7 +185,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             present(controller, nil)
-            let _ = (requestCancelAccountResetData(network: context.account.network, hash: hash)
+            let _ = (context.engine.auth.requestCancelAccountResetData(hash: hash)
             |> deliverOnMainQueue).start(next: { [weak controller] data in
                 controller?.dismiss()
                 present(confirmPhoneNumberCodeController(context: context, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

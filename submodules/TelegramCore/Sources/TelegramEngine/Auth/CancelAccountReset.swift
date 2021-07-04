@@ -18,7 +18,7 @@ public enum RequestCancelAccountResetDataError {
     case generic
 }
 
-public func requestCancelAccountResetData(network: Network, hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+func _internal_requestCancelAccountResetData(network: Network, hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
     return network.request(Api.functions.account.sendConfirmPhoneCode(hash: hash, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
     |> mapError { error -> RequestCancelAccountResetDataError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -39,7 +39,7 @@ public func requestCancelAccountResetData(network: Network, hash: String) -> Sig
     }
 }
 
-public func requestNextCancelAccountResetOption(network: Network, phoneNumber: String, phoneCodeHash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+func _internal_requestNextCancelAccountResetOption(network: Network, phoneNumber: String, phoneCodeHash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
     return network.request(Api.functions.auth.resendCode(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash), automaticFloodWait: false)
     |> mapError { error -> RequestCancelAccountResetDataError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -67,7 +67,7 @@ public enum CancelAccountResetError {
     case limitExceeded
 }
 
-public func requestCancelAccountReset(network: Network, phoneCodeHash: String, phoneCode: String) -> Signal<Never, CancelAccountResetError> {
+func _internal_requestCancelAccountReset(network: Network, phoneCodeHash: String, phoneCode: String) -> Signal<Never, CancelAccountResetError> {
     return network.request(Api.functions.account.confirmPhone(phoneCodeHash: phoneCodeHash, phoneCode: phoneCode))
     |> mapError { error -> CancelAccountResetError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {

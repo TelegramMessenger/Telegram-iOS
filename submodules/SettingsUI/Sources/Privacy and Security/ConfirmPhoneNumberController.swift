@@ -216,7 +216,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
             |> take(1)
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 return Signal { subscriber in
-                    return requestNextCancelAccountResetOption(network: context.account.network, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                    return context.engine.auth.requestNextCancelAccountResetOption(phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
                         currentDataPromise?.set(.single(next))
                     }, error: { error in
                         
@@ -242,7 +242,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
             }
         }
         if let code = code {
-            confirmPhoneDisposable.set((requestCancelAccountReset(network: context.account.network, phoneCodeHash: codeData.hash, phoneCode: code)
+            confirmPhoneDisposable.set((context.engine.auth.requestCancelAccountReset(phoneCodeHash: codeData.hash, phoneCode: code)
             |> deliverOnMainQueue).start(error: { error in
                 updateState { state in
                     var state = state

@@ -6,7 +6,7 @@ import MtProtoKit
 
 import SyncCore
 
-public func updateAccountPeerName(account: Account, firstName: String, lastName: String) -> Signal<Void, NoError> {
+func _internal_updateAccountPeerName(account: Account, firstName: String, lastName: String) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.account.updateProfile(flags: (1 << 0) | (1 << 1), firstName: firstName, lastName: lastName, about: nil))
         |> map { result -> Api.User? in
             return result
@@ -30,7 +30,7 @@ public enum UpdateAboutError {
 }
 
 
-public func updateAbout(account: Account, about: String?) -> Signal<Void, UpdateAboutError> {
+func _internal_updateAbout(account: Account, about: String?) -> Signal<Void, UpdateAboutError> {
     return account.network.request(Api.functions.account.updateProfile(flags: about == nil ? 0 : (1 << 2), firstName: nil, lastName: nil, about: about))
         |> mapError { _ -> UpdateAboutError in
             return .generic

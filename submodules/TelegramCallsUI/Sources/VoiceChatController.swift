@@ -1545,7 +1545,7 @@ public final class VoiceChatController: ViewController {
                                 let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_EditBioTitle, text: presentationData.strings.VoiceChat_EditBioText, placeholder: presentationData.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, value: entry.about, maxLength: maxBioLength, apply: { bio in
                                     if let strongSelf = self, let bio = bio {
                                         if peer.id.namespace == Namespaces.Peer.CloudUser {
-                                            let _ = (updateAbout(account: strongSelf.context.account, about: bio)
+                                            let _ = (strongSelf.context.engine.accountData.updateAbout(about: bio)
                                             |> `catch` { _ -> Signal<Void, NoError> in
                                                 return .complete()
                                             }).start()
@@ -1575,7 +1575,7 @@ public final class VoiceChatController: ViewController {
                                 Queue.mainQueue().after(0.1) {
                                     let controller = voiceChatUserNameController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: presentationData.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: presentationData.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: presentationData.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { firstAndLastName in
                                         if let strongSelf = self, let (firstName, lastName) = firstAndLastName {
-                                            let _ = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName).start()
+                                            let _ = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName).start()
                                             
                                             strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
                                         }
