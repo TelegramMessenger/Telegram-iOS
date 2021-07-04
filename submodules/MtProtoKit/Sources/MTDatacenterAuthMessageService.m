@@ -504,7 +504,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
         }
         [bignumContext assignBinTo:bignumKeyAesEncrypted value:keyAesEncrypted];
         int compareResult = [bignumContext compare:rsaModule with:bignumKeyAesEncrypted];
-        if (compareResult < 0) {
+        if (compareResult <= 0) {
             continue;
         }
 
