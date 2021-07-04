@@ -542,7 +542,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }
     
     let updateHasTwoStepAuth: () -> Void = {
-        let signal = twoStepVerificationConfiguration(account: context.account)
+        let signal = context.engine.auth.twoStepVerificationConfiguration()
         |> map { value -> TwoStepVerificationAccessConfiguration? in
             return TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
         }
@@ -735,7 +735,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             case let .notSet(pendingEmail):
                 //intro = pendingEmail == nil
                 if pendingEmail == nil {
-                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, network: context.account.network, mode: .intro)
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro)
                     pushControllerImpl?(controller, true)
                     return
                 } else {

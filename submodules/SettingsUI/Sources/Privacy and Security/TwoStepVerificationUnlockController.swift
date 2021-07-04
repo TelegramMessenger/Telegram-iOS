@@ -316,7 +316,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             } else {
                 dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil))
                 |> then(remoteDataPromise.get()))
-                remoteDataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                remoteDataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                 |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil)) })
             }
         case let .manage(password, email, pendingEmail, hasSecureValues):
@@ -355,7 +355,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                     return state
                 }
                 if let code = code {
-                    setupDisposable.set((confirmTwoStepRecoveryEmail(network: context.account.network, code: code)
+                    setupDisposable.set((context.engine.auth.confirmTwoStepRecoveryEmail(code: code)
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { state in
                             var state = state
@@ -404,7 +404,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: password, emailSet: true, pendingEmail: nil, hasSecureValues: false)))
                                     } else {
                                         dataPromise.set(.single(.access(configuration: nil))
-                                            |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: pendingEmail.password)) }))
+                                        |> then(context.engine.auth.twoStepVerificationConfiguration() |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: pendingEmail.password)) }))
                                     }
                                 case let .manage(manage):
                                     dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: true, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
@@ -441,9 +441,9 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         }
         
         if let password = password, !password.isEmpty, !wasChecking {
-            checkDisposable.set((requestTwoStepVerifiationSettings(network: context.account.network, password: password)
+            checkDisposable.set((context.engine.auth.requestTwoStepVerifiationSettings(password: password)
             |> mapToSignal { settings -> Signal<(TwoStepVerificationSettings, TwoStepVerificationPendingEmail?), AuthorizationPasswordVerificationError> in
-                return twoStepVerificationConfiguration(account: context.account)
+                return context.engine.auth.twoStepVerificationConfiguration()
                 |> mapError { _ -> AuthorizationPasswordVerificationError in
                 }
                 |> map { configuration in
@@ -500,7 +500,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         state.checking = true
                                         return state
                                     }
-                                    setupResultDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: context.account.network)
+                                    setupResultDisposable.set((context.engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
                                     |> deliverOnMainQueue).start(next: { emailPattern in
                                         updateState { state in
                                             var state = state
@@ -514,7 +514,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         })
                                         completionImpl = { [weak controller] result in
                                             if !result {
-                                                dataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                                                dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                                                 |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                                                 })
                                                 controller?.view.endEditing(true)
@@ -541,11 +541,11 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     if let pendingResetTimestamp = pendingResetTimestamp {
                                         let remainingSeconds = pendingResetTimestamp - Int32(Date().timeIntervalSince1970)
                                         if remainingSeconds <= 0 {
-                                            let _ = (requestTwoStepPasswordReset(network: context.account.network)
+                                            let _ = (context.engine.auth.requestTwoStepPasswordReset()
                                             |> deliverOnMainQueue).start(next: { result in
                                                 switch result {
                                                 case .done, .waitingForReset:
-                                                    dataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                                                    dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                                                     |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                                                     })
                                                 case .declined:
@@ -557,11 +557,11 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         }
                                     } else {
                                         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
-                                            let _ = (requestTwoStepPasswordReset(network: context.account.network)
+                                            let _ = (context.engine.auth.requestTwoStepPasswordReset()
                                             |> deliverOnMainQueue).start(next: { result in
                                                 switch result {
                                                 case .done, .waitingForReset:
-                                                    dataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                                                    dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                                                     |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                                                     })
                                                 case .declined:
@@ -603,7 +603,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_EnabledSuccess, false)), nil)
                                             } else {
                                                 dataPromise.set(.single(.access(configuration: nil))
-                                                |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
+                                                |> then(context.engine.auth.twoStepVerificationConfiguration() |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                             }
                                     }
                                     if shouldDismiss {
@@ -635,7 +635,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_PasswordChangeSuccess, false)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
-                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
+                                    |> then(context.engine.auth.twoStepVerificationConfiguration() |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
                         }
                         if shouldDismiss {
@@ -677,7 +677,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                 case let .manage(password, _, _, _):
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
-                                    return updateTwoStepVerificationPassword(network: context.account.network, currentPassword: password, updatedPassword: .none)
+                                    return context.engine.auth.updateTwoStepVerificationPassword(currentPassword: password, updatedPassword: .none)
                                         |> mapToSignal { _ -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
                                             return .complete()
                                         }
@@ -730,7 +730,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
                             } else {
                                 dataPromise.set(.single(.access(configuration: nil))
-                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
+                                |> then(context.engine.auth.twoStepVerificationConfiguration() |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                             }
                     }
                     if shouldDismiss {
@@ -746,7 +746,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             state.checking = true
             return state
         }
-        setupDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: nil, updatedPassword: .none)
+        setupDisposable.set((context.engine.auth.updateTwoStepVerificationPassword(currentPassword: nil, updatedPassword: .none)
         |> deliverOnMainQueue).start(next: { _ in
             updateState { state in
                 var state = state
@@ -817,7 +817,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     dataPromise.set(.single(data))
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
-                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
+                                    |> then(context.engine.auth.twoStepVerificationConfiguration() |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
                         }
                         if shouldDismiss {
@@ -830,22 +830,22 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
     }, declinePasswordReset: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_CancelResetTitle, text: presentationData.strings.TwoStepAuth_CancelResetText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-            let _ = (declineTwoStepPasswordReset(network: context.account.network)
+            let _ = (context.engine.auth.declineTwoStepPasswordReset()
             |> deliverOnMainQueue).start(completed: {
-                dataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                 |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                 })
             })
         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
         })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, resetPassword: {
-        let _ = (requestTwoStepPasswordReset(network: context.account.network)
+        let _ = (context.engine.auth.requestTwoStepPasswordReset()
         |> deliverOnMainQueue).start(next: { result in
             switch result {
             case .done:
                 dismissImpl?()
             case .waitingForReset:
-                dataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                 |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                 })
             case .declined:

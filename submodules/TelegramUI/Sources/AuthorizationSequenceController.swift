@@ -597,7 +597,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controller?.inProgress = false
 
-                    let setupController = TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.account.network, mode: .passwordRecovery(TwoFactorDataInputMode.Recovery(code: code, syncContacts: syncContacts, account: strongSelf.account)), stateUpdated: { _ in
+                    let setupController = TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: strongSelf.account)), mode: .passwordRecovery(TwoFactorDataInputMode.Recovery(code: code, syncContacts: syncContacts, account: strongSelf.account)), stateUpdated: { _ in
                         guard let _ = self else {
                             return
                         }

@@ -389,8 +389,8 @@ public func checkPasswordRecoveryCode(network: Network, code: String) -> Signal<
     }
 }
 
-public func performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
-    return twoStepAuthData(account.network)
+func _internal_performPasswordRecovery(accountManager: AccountManager, account: UnauthorizedAccount, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
+    return _internal_twoStepAuthData(account.network)
     |> mapError { _ -> PasswordRecoveryError in
         return .generic
     }

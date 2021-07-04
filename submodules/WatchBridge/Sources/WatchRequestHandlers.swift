@@ -843,7 +843,7 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
                         if let args = subscription as? TGBridgePeerUpdateNotificationSettingsSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
                             signal = togglePeerMuted(account: context.account, peerId: peerId)
                         } else if let args = subscription as? TGBridgePeerUpdateBlockStatusSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                            signal = requestUpdatePeerIsBlocked(account: context.account, peerId: peerId, isBlocked: args.blocked)
+                            signal = context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peerId, isBlocked: args.blocked)
                         }
                         
                         if let signal = signal {

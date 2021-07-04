@@ -373,7 +373,7 @@ public struct TwoStepAuthData {
     public let pendingResetTimestamp: Int32?
 }
 
-public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
+func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
@@ -664,7 +664,7 @@ func securePasswordKDF(password: String, derivation: TwoStepSecurePasswordDeriva
 }
 
 func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
-    return twoStepAuthData(account.network)
+    return _internal_twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
         guard let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "INTERNAL_NO_PASSWORD"))

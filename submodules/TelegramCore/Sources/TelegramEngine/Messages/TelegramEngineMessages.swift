@@ -85,5 +85,14 @@ public extension TelegramEngine {
         public func requestEditLiveLocation(messageId: MessageId, stop: Bool, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?, proximityNotificationRadius: Int32?) -> Signal<Void, NoError> {
             return _internal_requestEditLiveLocation(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, messageId: messageId, stop: stop, coordinate: coordinate, heading: heading, proximityNotificationRadius: proximityNotificationRadius)
         }
+
+        public func addSecretChatMessageScreenshot(peerId: PeerId) -> Signal<Never, NoError> {
+            return _internal_addSecretChatMessageScreenshot(account: self.account, peerId: peerId)
+            |> ignoreValues
+        }
+
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId)
+        }
     }
 }

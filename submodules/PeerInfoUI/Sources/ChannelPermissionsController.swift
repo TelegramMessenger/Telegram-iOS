@@ -779,7 +779,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 let state = stateValue.with { $0 }
                 if let modifiedSlowmodeTimeout = state.modifiedSlowmodeTimeout {
-                    updateDefaultRightsDisposable.set(updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: view.peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
+                    updateDefaultRightsDisposable.set(context.engine.peers.updateChannelSlowModeInteractively(peerId: view.peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
                 }
             } else if let _ = view.peers[view.peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
                 updateState { state in
@@ -815,7 +815,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                     }
                 }
                 |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    return updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
+                    return context.engine.peers.updateChannelSlowModeInteractively(peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
                     |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
                         return .complete()
                     }

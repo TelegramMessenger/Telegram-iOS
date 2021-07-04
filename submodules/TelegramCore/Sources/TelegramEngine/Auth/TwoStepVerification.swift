@@ -11,7 +11,7 @@ public enum TwoStepVerificationConfiguration {
     case set(hint: String, hasRecoveryEmail: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool, pendingResetTimestamp: Int32?)
 }
 
-public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStepVerificationConfiguration, NoError> {
+func _internal_twoStepVerificationConfiguration(account: Account) -> Signal<TwoStepVerificationConfiguration, NoError> {
     return account.network.request(Api.functions.account.getPassword())
     |> retryRequest
     |> map { result -> TwoStepVerificationConfiguration in
@@ -37,8 +37,8 @@ public struct TwoStepVerificationSettings {
     public let secureSecret: TwoStepVerificationSecureSecret?
 }
 
-public func requestTwoStepVerifiationSettings(network: Network, password: String) -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> {
-    return twoStepAuthData(network)
+func _internal_requestTwoStepVerifiationSettings(network: Network, password: String) -> Signal<TwoStepVerificationSettings, AuthorizationPasswordVerificationError> {
+    return _internal_twoStepAuthData(network)
     |> mapError { error -> AuthorizationPasswordVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -111,14 +111,14 @@ public enum UpdatedTwoStepVerificationPassword {
     case password(password: String, hint: String, email: String?)
 }
 
-public func updateTwoStepVerificationPassword(network: Network, currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
-    return twoStepAuthData(network)
+func _internal_updateTwoStepVerificationPassword(network: Network, currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+    return _internal_twoStepAuthData(network)
     |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
         return .generic
     }
     |> mapToSignal { authData -> Signal<TwoStepVerificationSecureSecret?, UpdateTwoStepVerificationPasswordError> in
         if let _ = authData.currentPasswordDerivation {
-            return requestTwoStepVerifiationSettings(network: network, password: currentPassword ?? "")
+            return _internal_requestTwoStepVerifiationSettings(network: network, password: currentPassword ?? "")
             |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
                 return .generic
             }
@@ -130,7 +130,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
         }
     }
     |> mapToSignal { secureSecret -> Signal<(TwoStepAuthData, TwoStepVerificationSecureSecret?), UpdateTwoStepVerificationPasswordError> in
-        return twoStepAuthData(network)
+        return _internal_twoStepAuthData(network)
         |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
             return .generic
         }
@@ -205,7 +205,7 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                                 codeLength = value
                             }
                         }
-                        return twoStepAuthData(network)
+                        return _internal_twoStepAuthData(network)
                         |> map { result -> UpdateTwoStepVerificationPasswordResult in
                             return .password(password: password, pendingEmail: result.unconfirmedEmailPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: codeLength) }))
                         }
@@ -233,7 +233,7 @@ enum UpdateTwoStepVerificationSecureSecretError {
 }
 
 func updateTwoStepVerificationSecureSecret(network: Network, password: String, secret: Data) -> Signal<UpdateTwoStepVerificationSecureSecretResult, UpdateTwoStepVerificationSecureSecretError> {
-    return twoStepAuthData(network)
+    return _internal_twoStepAuthData(network)
     |> mapError { _ -> UpdateTwoStepVerificationSecureSecretError in
         return .generic
     }
@@ -263,8 +263,8 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, s
     }
 }
 
-public func updateTwoStepVerificationEmail(network: Network, currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
-    return twoStepAuthData(network)
+func _internal_updateTwoStepVerificationEmail(network: Network, currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+    return _internal_twoStepAuthData(network)
     |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
         return .generic
     }
@@ -286,7 +286,7 @@ public func updateTwoStepVerificationEmail(network: Network, currentPassword: St
         }
         |> `catch` { error -> Signal<UpdateTwoStepVerificationPasswordResult, MTRpcError> in
             if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED") {
-                return twoStepAuthData(network)
+                return _internal_twoStepAuthData(network)
                 |> map { result -> UpdateTwoStepVerificationPasswordResult in
                     var codeLength: Int32?
                     if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED_") {
@@ -314,7 +314,7 @@ public enum RequestTwoStepVerificationPasswordRecoveryCodeError {
     case generic
 }
 
-public func requestTwoStepVerificationPasswordRecoveryCode(network: Network) -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
+func _internal_requestTwoStepVerificationPasswordRecoveryCode(network: Network) -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
     return network.request(Api.functions.auth.requestPasswordRecovery(), automaticFloodWait: false)
         |> mapError { _ -> RequestTwoStepVerificationPasswordRecoveryCodeError in
             return .generic
@@ -334,8 +334,8 @@ public enum RecoverTwoStepVerificationPasswordError {
     case invalidCode
 }
 
-public func recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-    return twoStepAuthData(network)
+func _internal_recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
+    return _internal_twoStepAuthData(network)
     |> mapError { _ -> RecoverTwoStepVerificationPasswordError in
         return .generic
     }
@@ -363,7 +363,7 @@ public func recoverTwoStepVerificationPassword(network: Network, code: String) -
     }
 }
 
-public func cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
+func _internal_cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
     return postbox.transaction { transaction -> TemporaryTwoStepPasswordToken? in
         let key = ValueBoxKey(length: 1)
         key.setUInt8(0, value: 0)
@@ -371,7 +371,7 @@ public func cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoS
     }
 }
 
-public func cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoStepPasswordToken?) -> Signal<Void, NoError> {
+func _internal_cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoStepPasswordToken?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let key = ValueBoxKey(length: 1)
         key.setUInt8(0, value: 0)
@@ -383,8 +383,8 @@ public func cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoStepP
     }
 }
 
-public func requestTemporaryTwoStepPasswordToken(account: Account, password: String, period: Int32, requiresBiometrics: Bool) -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> {
-    return twoStepAuthData(account.network)
+func _internal_requestTemporaryTwoStepPasswordToken(account: Account, password: String, period: Int32, requiresBiometrics: Bool) -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> {
+    return _internal_twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<TemporaryTwoStepPasswordToken, MTRpcError> in
         guard let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData else {
             return .fail(MTRpcError(errorCode: 400, errorDescription: "NO_PASSWORD"))
@@ -426,7 +426,7 @@ public enum RequestTwoStepPasswordResetResult {
     case error(reason: ErrorReason)
 }
 
-public func requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
+func _internal_requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
     return network.request(Api.functions.account.resetPassword(), automaticFloodWait: false)
     |> map { _ -> RequestTwoStepPasswordResetResult in
         return .done
@@ -456,7 +456,7 @@ public func requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoSt
     }
 }
 
-public func declineTwoStepPasswordReset(network: Network) -> Signal<Never, NoError> {
+func _internal_declineTwoStepPasswordReset(network: Network) -> Signal<Never, NoError> {
     return network.request(Api.functions.account.declinePasswordReset())
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)

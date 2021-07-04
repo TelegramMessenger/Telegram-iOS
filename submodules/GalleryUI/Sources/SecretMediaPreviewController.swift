@@ -351,7 +351,7 @@ public final class SecretMediaPreviewController: ViewController {
                     if strongSelf.messageId.peerId.namespace == Namespaces.Peer.CloudUser {
                         let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
                     } else if strongSelf.messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                        let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId).start()
+                        let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: strongSelf.messageId.peerId).start()
                     }
                 }
             })

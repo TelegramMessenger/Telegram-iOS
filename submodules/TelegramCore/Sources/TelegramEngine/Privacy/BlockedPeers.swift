@@ -41,7 +41,7 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
         }
 }
 
-public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
+func _internal_requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let signal: Signal<Api.Bool, MTRpcError>

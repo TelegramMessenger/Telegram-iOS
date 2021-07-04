@@ -4,7 +4,7 @@ import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
 
-public func rateCall(account: Account, callId: CallId, starsCount: Int32, comment: String = "", userInitiated: Bool) -> Signal<Void, NoError> {
+func _internal_rateCall(account: Account, callId: CallId, starsCount: Int32, comment: String = "", userInitiated: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     if userInitiated {
         flags |= (1 << 0)
@@ -14,7 +14,7 @@ public func rateCall(account: Account, callId: CallId, starsCount: Int32, commen
     |> map { _ in }
 }
 
-public func saveCallDebugLog(network: Network, callId: CallId, log: String) -> Signal<Void, NoError> {
+func _internal_saveCallDebugLog(network: Network, callId: CallId, log: String) -> Signal<Void, NoError> {
     if log.count > 1024 * 16 {
         return .complete()
     }

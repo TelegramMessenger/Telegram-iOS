@@ -168,7 +168,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
             }
         }
         if let code = code {
-            resetPasswordDisposable.set((recoverTwoStepVerificationPassword(network: context.account.network, code: code) |> deliverOnMainQueue).start(error: { error in
+            resetPasswordDisposable.set((context.engine.auth.recoverTwoStepVerificationPassword(code: code) |> deliverOnMainQueue).start(error: { error in
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
@@ -204,7 +204,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryEmailResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
-            let _ = (requestTwoStepPasswordReset(network: context.account.network)
+            let _ = (context.engine.auth.requestTwoStepPasswordReset()
             |> deliverOnMainQueue).start(next: { result in
                 switch result {
                 case .done, .waitingForReset:

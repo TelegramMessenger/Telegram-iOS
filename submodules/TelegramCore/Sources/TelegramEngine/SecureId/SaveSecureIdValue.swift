@@ -276,7 +276,7 @@ public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) 
 }
 
 public func dropSecureId(network: Network, currentPassword: String) -> Signal<Void, AuthorizationPasswordVerificationError> {
-    return twoStepAuthData(network)
+    return _internal_twoStepAuthData(network)
     |> mapError { _ -> AuthorizationPasswordVerificationError in
         return .generic
     }
