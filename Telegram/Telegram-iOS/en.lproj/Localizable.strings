@@ -6549,3 +6549,4 @@ Sorry for the inconvenience.";
 "TwoStepAuth.CancelResetTitle" = "Cancel Reset";
 "TwoStepAuth.ResetAction" = "Reset Password";
 "TwoStepAuth.CancelResetText" = "Cancel the password resetting process? If you proceed, the expired part of the 7-day delay will be lost.";
+"TwoStepAuth.RecoveryEmailResetNoAccess" = "No access";

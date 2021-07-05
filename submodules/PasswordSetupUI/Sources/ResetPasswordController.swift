@@ -179,7 +179,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         state.checking = true
                         return state
                     }
-                    saveDisposable.set((context.engine.auth.recoverTwoStepVerificationPassword(code: state.code)
+                    saveDisposable.set((context.engine.auth.performPasswordRecovery(code: state.code, updatedPassword: .none)
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { state in
                             var state = state
@@ -190,7 +190,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         switch error {
                             case .invalidCode:
                                 text = presentationData.strings.TwoStepAuth_RecoveryCodeInvalid
-                            case .codeExpired:
+                            case .expired:
                                 text = presentationData.strings.TwoStepAuth_RecoveryCodeExpired
                             case .limitExceeded:
                                 text = presentationData.strings.TwoStepAuth_FloodError

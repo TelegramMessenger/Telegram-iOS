@@ -686,7 +686,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -754,7 +754,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -810,7 +810,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                             controller.dismiss()
                                         }
                                         switch update {
-                                            case .noPassword, .awaitingEmailConfirmation:
+                                            case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                 break
                                             case .passwordSet:
                                                 var updatedToken = token

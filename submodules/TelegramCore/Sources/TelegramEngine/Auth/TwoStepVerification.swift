@@ -312,19 +312,26 @@ func _internal_updateTwoStepVerificationEmail(network: Network, currentPassword:
 
 public enum RequestTwoStepVerificationPasswordRecoveryCodeError {
     case generic
+    case limitExceeded
 }
 
 func _internal_requestTwoStepVerificationPasswordRecoveryCode(network: Network) -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
     return network.request(Api.functions.auth.requestPasswordRecovery(), automaticFloodWait: false)
-        |> mapError { _ -> RequestTwoStepVerificationPasswordRecoveryCodeError in
+    |> mapError { error -> RequestTwoStepVerificationPasswordRecoveryCodeError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .limitExceeded
+        } else if error.errorDescription.hasPrefix("PASSWORD_RECOVERY_NA") {
+            return .generic
+        } else {
             return .generic
         }
-        |> map { result -> String in
-            switch result {
-                case let .passwordRecovery(emailPattern):
-                    return emailPattern
-            }
+    }
+    |> map { result -> String in
+        switch result {
+            case let .passwordRecovery(emailPattern):
+                return emailPattern
         }
+    }
 }
 
 public enum RecoverTwoStepVerificationPasswordError {
@@ -332,35 +339,6 @@ public enum RecoverTwoStepVerificationPasswordError {
     case codeExpired
     case limitExceeded
     case invalidCode
-}
-
-func _internal_recoverTwoStepVerificationPassword(network: Network, code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-    return _internal_twoStepAuthData(network)
-    |> mapError { _ -> RecoverTwoStepVerificationPasswordError in
-        return .generic
-    }
-    |> mapToSignal { authData -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
-        var flags: Int32 = (1 << 1)
-        if authData.currentPasswordDerivation != nil {
-            flags |= (1 << 0)
-        }
-
-        return network.request(Api.functions.auth.recoverPassword(flags: 0, code: code, newSettings: nil), automaticFloodWait: false)
-            |> mapError { error -> RecoverTwoStepVerificationPasswordError in
-                if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
-                    return .limitExceeded
-                } else if error.errorDescription == "PASSWORD_RECOVERY_EXPIRED" {
-                    return .codeExpired
-                } else if error.errorDescription == "CODE_INVALID" {
-                    return .invalidCode
-                } else {
-                    return .generic
-                }
-            }
-            |> mapToSignal { _ -> Signal<Void, RecoverTwoStepVerificationPasswordError> in
-                return .complete()
-            }
-    }
 }
 
 func _internal_cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryTwoStepPasswordToken?, NoError> {

@@ -24,8 +24,16 @@ public extension TelegramEngineUnauthorized {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
         }
 
-        public func performPasswordRecovery(accountManager: AccountManager, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
-            return _internal_performPasswordRecovery(accountManager: accountManager, account: self.account, code: code, syncContacts: syncContacts, updatedPassword: updatedPassword)
+        public func requestTwoStepVerificationPasswordRecoveryCode() -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
+            return _internal_requestTwoStepVerificationPasswordRecoveryCode(network: self.account.network)
+        }
+
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            return _internal_checkPasswordRecoveryCode(network: self.account.network, code: code)
+        }
+
+        public func performPasswordRecovery(code: String, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<RecoveredAccountData, PasswordRecoveryError> {
+            return _internal_performPasswordRecovery(network: self.account.network, code: code, updatedPassword: updatedPassword)
         }
 
         public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
@@ -90,8 +98,8 @@ public extension TelegramEngine {
             return _internal_requestTwoStepVerificationPasswordRecoveryCode(network: self.account.network)
         }
 
-        public func recoverTwoStepVerificationPassword(code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-            return _internal_recoverTwoStepVerificationPassword(network: self.account.network, code: code)
+        public func performPasswordRecovery(code: String, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<RecoveredAccountData, PasswordRecoveryError> {
+            return _internal_performPasswordRecovery(network: self.account.network, code: code, updatedPassword: updatedPassword)
         }
 
         public func cachedTwoStepPasswordToken() -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
@@ -104,6 +112,10 @@ public extension TelegramEngine {
 
         public func requestTemporaryTwoStepPasswordToken(password: String, period: Int32, requiresBiometrics: Bool) -> Signal<TemporaryTwoStepPasswordToken, AuthorizationPasswordVerificationError> {
             return _internal_requestTemporaryTwoStepPasswordToken(account: self.account, password: password, period: period, requiresBiometrics: requiresBiometrics)
+        }
+
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            return _internal_checkPasswordRecoveryCode(network: self.account.network, code: code)
         }
 
         public func requestTwoStepPasswordReset() -> Signal<RequestTwoStepPasswordResetResult, NoError> {
@@ -154,12 +166,21 @@ public extension SomeTelegramEngine {
             }
         }
 
-        public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+        public func requestTwoStepVerificationPasswordRecoveryCode() -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
             switch self.engine {
             case let .authorized(engine):
-                return engine.auth.resendTwoStepRecoveryEmail()
+                return engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
             case let .unauthorized(engine):
-                return engine.auth.resendTwoStepRecoveryEmail()
+                return engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
+            }
+        }
+
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            switch self.engine {
+            case let .authorized(engine):
+                return engine.auth.checkPasswordRecoveryCode(code: code)
+            case let .unauthorized(engine):
+                return engine.auth.checkPasswordRecoveryCode(code: code)
             }
         }
     }

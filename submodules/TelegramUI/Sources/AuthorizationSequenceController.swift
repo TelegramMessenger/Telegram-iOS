@@ -486,26 +486,26 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         controller.forgot = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
                 strongController.inProgress = true
-                strongSelf.actionDisposable.set((requestPasswordRecovery(account: strongSelf.account)
-                |> deliverOnMainQueue).start(next: { option in
+                strongSelf.actionDisposable.set((TelegramEngineUnauthorized(account: strongSelf.account).auth.requestTwoStepVerificationPasswordRecoveryCode()
+                |> deliverOnMainQueue).start(next: { pattern in
                     if let strongSelf = self, let strongController = controller {
                         strongController.inProgress = false
-                        switch option {
-                            case let .email(pattern):
-                                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
-                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts)))
-                                    }
-                                }).start()
-                            case .none:
-                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                strongController.didForgotWithNoRecovery = true
-                        }
+
+                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                            if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
+                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts)))
+                            }
+                        }).start()
                     }
                 }, error: { error in
-                    if let strongController = controller {
-                        strongController.inProgress = false
+                    guard let strongController = controller else {
+                        return
                     }
+
+                    strongController.inProgress = false
+
+                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongController.didForgotWithNoRecovery = true
                 }))
             }
         }
@@ -542,82 +542,21 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func passwordRecoveryController(emailPattern: String, syncContacts: Bool) -> AuthorizationSequencePasswordRecoveryController {
-        var currentController: AuthorizationSequencePasswordRecoveryController?
+    private func passwordRecoveryController(emailPattern: String, syncContacts: Bool) -> TwoFactorDataInputScreen {
+        var currentController: TwoFactorDataInputScreen?
         for c in self.viewControllers {
-            if let c = c as? AuthorizationSequencePasswordRecoveryController {
+            if let c = c as? TwoFactorDataInputScreen {
                 currentController = c
                 break
             }
         }
-        let controller: AuthorizationSequencePasswordRecoveryController
+        let controller: TwoFactorDataInputScreen
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordRecoveryController(strings: self.presentationData.strings, theme: self.presentationData.theme, back: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let countryCode = defaultCountryCode()
-                
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
-            })
-            controller.recoverWithCode = { [weak self, weak controller] code in
-                guard let strongSelf = self else {
-                    return
-                }
-
-                controller?.inProgress = true
-
-                strongSelf.actionDisposable.set((checkPasswordRecoveryCode(network: strongSelf.account.network, code: code)
-                |> deliverOnMainQueue).start(error: { error in
-                    guard let strongSelf = self, let controller = controller else {
-                        return
-                    }
-                    controller.inProgress = false
-
-                    let text: String
-                    switch error {
-                    case .limitExceeded:
-                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
-                    case .invalidCode:
-                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                    case .expired:
-                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
-                    case .generic:
-                        text = strongSelf.presentationData.strings.Login_UnknownError
-                    }
-
-                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                }, completed: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    controller?.inProgress = false
-
-                    let setupController = TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: strongSelf.account)), mode: .passwordRecovery(TwoFactorDataInputMode.Recovery(code: code, syncContacts: syncContacts, account: strongSelf.account)), stateUpdated: { _ in
-                        guard let _ = self else {
-                            return
-                        }
-                    })
-                    strongSelf.setViewControllers(strongSelf.viewControllers + [setupController], animated: true)
-                }))
-            }
-            controller.noAccess = { [weak self, weak controller] in
-                if let strongSelf = self, let controller = controller {
-                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    let account = strongSelf.account
-                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                        if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
-                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts)))
-                        }
-                    }).start()
-                }
-            }
+            controller = TwoFactorDataInputScreen(sharedContext: self.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: self.account)), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .notAuthorized(syncContacts: syncContacts)), stateUpdated: { _ in
+            }, presentation: .default)
         }
-        controller.updateData(emailPattern: emailPattern)
         return controller
     }
     
