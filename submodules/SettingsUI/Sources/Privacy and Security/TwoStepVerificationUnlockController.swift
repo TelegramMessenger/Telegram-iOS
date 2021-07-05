@@ -529,26 +529,6 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                             }
                                         }
                                         
-                                        /*var completionImpl: ((Bool) -> Void)?
-                                        let controller = resetPasswordController(context: context, emailPattern: emailPattern, completion: { result in
-                                            completionImpl?(result)
-                                        })
-                                        completionImpl = { [weak controller] result in
-                                            if !result {
-                                                dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
-                                                |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
-                                                })
-                                                controller?.view.endEditing(true)
-                                                controller?.dismiss()
-                                            } else {
-                                                dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
-                                                controller?.view.endEditing(true)
-                                                controller?.dismiss()
-
-                                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
-                                            }
-                                        }*/
                                         pushControllerImpl?(controller)
                                     }, error: { _ in
                                         updateState { state in
