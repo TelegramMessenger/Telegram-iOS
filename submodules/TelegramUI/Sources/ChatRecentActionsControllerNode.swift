@@ -905,13 +905,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .groupBotStart:
                         break
-                    case let .channelMessage(peerId, messageId):
+                    case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: timecode)))
                         }
                    case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: messageId, highlight: true, timecode: nil)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

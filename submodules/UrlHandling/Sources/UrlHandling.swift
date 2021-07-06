@@ -16,7 +16,7 @@ private let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
-    case channelMessage(Int32)
+    case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
 }
@@ -24,7 +24,7 @@ public enum ParsedInternalPeerUrlParameter {
 public enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case peerId(PeerId)
-    case privateMessage(messageId: MessageId, threadId: Int32?)
+    case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
     case stickerPack(String)
     case join(String)
     case localization(String)
@@ -281,37 +281,44 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int32(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
+                        var timecode: Double?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
                                     if queryItem.name == "thread" {
                                         if let intValue = Int32(value) {
                                             threadId = intValue
-                                            break
+                                        }
+                                    } else if queryItem.name == "t" {
+                                        if let doubleValue = Double(value) {
+                                            timecode = doubleValue
                                         }
                                     }
                                 }
                             }
                         }
-                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId)
+                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId, timecode: timecode)
                     } else {
                         return nil
                     }
                 } else if let value = Int32(pathComponents[1]) {
                     var threadId: Int32?
                     var commentId: Int32?
+                    var timecode: Double?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "thread" {
                                     if let intValue = Int32(value) {
                                         threadId = intValue
-                                        break
                                     }
                                 } else if queryItem.name == "comment" {
                                     if let intValue = Int32(value) {
                                         commentId = intValue
-                                        break
+                                    }
+                                } else if queryItem.name == "t" {
+                                    if let doubleValue = Double(value) {
+                                        timecode = doubleValue
                                     }
                                 }
                             }
@@ -322,7 +329,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else if let commentId = commentId {
                         return .peerName(peerName, .replyThread(value, commentId))
                     } else {
-                        return .peerName(peerName, .channelMessage(value))
+                        return .peerName(peerName, .channelMessage(value, timecode))
                     }
                 } else {
                     return nil
@@ -357,8 +364,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.botStart(peerId: peer.id, payload: payload))
                             case let .groupBotStart(payload):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload))
-                            case let .channelMessage(id):
-                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
+                            case let .channelMessage(id, timecode):
+                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
                                 return fetchChannelReplyThreadMessage(account: context.account, messageId: replyThreadMessageId, atMessageId: nil)
@@ -368,7 +375,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> map { result -> ResolvedUrl? in
                                     guard let result = result else {
-                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
+                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId, timecode: nil)
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
@@ -397,7 +404,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     return .single(.inaccessiblePeer)
                 }
             }
-        case let .privateMessage(messageId, threadId):
+        case let .privateMessage(messageId, threadId, timecode):
             return context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(messageId.peerId)
             }
@@ -420,12 +427,12 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             }
                             |> map { result -> ResolvedUrl? in
                                 guard let result = result else {
-                                    return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId)
+                                    return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId, timecode: timecode)
                                 }
                                 return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
-                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil)))
+                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true, timecode: timecode), peekData: nil)))
                         }
                     } else {
                         return .single(.inaccessiblePeer)
