@@ -639,7 +639,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
-                        if let status = status, status.duration >= 60.0 * 20.0 {
+                        if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
                                 timestamp = status.timestamp
