@@ -49,6 +49,8 @@ public final class TwoFactorDataInputScreen: ViewController {
     private let mode: TwoFactorDataInputMode
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate) -> Void
     private let actionDisposable = MetaDisposable()
+
+    public var passwordRecoveryFailed: (() -> Void)?
     
     public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorDataInputMode, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
         self.sharedContext = sharedContext
@@ -516,7 +518,12 @@ public final class TwoFactorDataInputScreen: ViewController {
                         })
                     })]), in: .window(.root))
                 case .unauthorized:
-                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.passwordRecoveryFailed?()
+                    })]), in: .window(.root))
                 }
             default:
                 break
@@ -959,9 +966,9 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         self.scrollNode.canCancelAllTouchesInViews = true
         
         switch mode {
-        case .password, .passwordRecovery, .passwordRecoveryEmail, .emailAddress, .updateEmailAddress:
+        case .password, .passwordRecovery, .emailAddress, .updateEmailAddress:
             self.monkeyNode = ManagedMonkeyAnimationNode()
-        case .emailConfirmation:
+        case .emailConfirmation, .passwordRecoveryEmail:
             if let path = getAppBundle().path(forResource: "TwoFactorSetupMail", ofType: "tgs") {
                 let animatedStickerNode = AnimatedStickerNode()
                 animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
@@ -1268,7 +1275,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .password:
+            case .password, .passwordRecovery:
                 if strongSelf.inputNodes[1].isFocused {
                     let maxWidth = strongSelf.inputNodes[1].bounds.width
                     
@@ -1363,7 +1370,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .password:
+            case .password, .passwordRecovery:
                 textHidden = !textHidden
                 for node in strongSelf.inputNodes {
                     node.updateTextHidden(textHidden)

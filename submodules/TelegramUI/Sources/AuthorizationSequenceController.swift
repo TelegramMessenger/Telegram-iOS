@@ -557,6 +557,17 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             controller = TwoFactorDataInputScreen(sharedContext: self.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: self.account)), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .notAuthorized(syncContacts: syncContacts)), stateUpdated: { _ in
             }, presentation: .default)
         }
+        controller.passwordRecoveryFailed = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+
+            let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts)))
+                }
+            }).start()
+        }
         return controller
     }
     
@@ -773,7 +784,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset, syncContacts: syncContacts))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                case let .passwordRecovery(_, _, _, emailPattern, syncContacts):
+                case let .passwordRecovery(hint, _, _, emailPattern, syncContacts):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
