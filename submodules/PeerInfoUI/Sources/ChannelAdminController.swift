@@ -889,7 +889,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                 return
             }
             
-            transferOwnershipDisposable.set((checkOwnershipTranfserAvailability(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, memberId: adminId) |> deliverOnMainQueue).start(error: { error in
+            transferOwnershipDisposable.set((context.engine.peers.checkOwnershipTranfserAvailability(memberId: adminId) |> deliverOnMainQueue).start(error: { error in
                 let controller = channelOwnershipTransferController(context: context, peer: peer, member: member, initialError: error, present: { c, a in
                     presentControllerImpl?(c, a)
                 }, completion: { upgradedPeerId in

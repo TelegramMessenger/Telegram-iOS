@@ -258,7 +258,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             }
             
             endEditingImpl?()
-            actionsDisposable.add((createChannel(account: context.account, title: title, description: description.isEmpty ? nil : description)
+            actionsDisposable.add((context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
             |> deliverOnMainQueue
             |> afterDisposed {
                 Queue.mainQueue().async {

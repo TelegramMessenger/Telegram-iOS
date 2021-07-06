@@ -138,6 +138,7 @@ public enum SetupTwoStepVerificationStateUpdate {
     case noPassword
     case awaitingEmailConfirmation(password: String, pattern: String, codeLength: Int32?)
     case passwordSet(password: String?, hasRecoveryEmail: Bool, hasSecureValues: Bool)
+    case pendingPasswordReset
 }
 
 final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {

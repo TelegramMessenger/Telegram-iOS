@@ -1104,7 +1104,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         switch subject {
                             case let .create(peer, _, share, shareViaException, _):
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
-                                    addContactDisposable.set((addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
+                                    addContactDisposable.set((context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
@@ -1138,7 +1138,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 switch subject {
                                     case let .create(peer, _, share, shareViaException, _):
                                         if share, let peer = peer {
-                                            return addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
+                                            return context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                             |> mapToSignal { _ -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                                 return .complete()
                                             }
@@ -1153,7 +1153,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                         break
                                 }
                                 
-                                return importContact(account: context.account, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers[0].value)
+                                return context.engine.contacts.importContact(firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers[0].value)
                                 |> castError(AddContactError.self)
                                 |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                     if let peerId = peerId {

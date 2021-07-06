@@ -778,7 +778,7 @@ public class ShareRootControllerImpl {
                                                             resolvedGroupTitle = "Group"
                                                         }
                                                         let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                                                            var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
+                                                            var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
                                                                 return .single(nil)
@@ -1022,7 +1022,7 @@ public class ShareRootControllerImpl {
                                                             resolvedGroupTitle = "Group"
                                                         }
                                                         let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                                                            var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
+                                                            var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
                                                                 return .single(nil)

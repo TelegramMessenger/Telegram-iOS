@@ -415,11 +415,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
     private var screencastCapturer: OngoingCallVideoCapturer?
 
-    //private var screencastIpcContext: IpcGroupCallAppContext?
-
     private var ssrcMapping: [UInt32: PeerId] = [:]
-    
-    private var requestedSsrcs = Set<UInt32>()
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
     private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
@@ -887,7 +883,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.genericCallContext?.addExternalAudioData(data: data)
+            strongSelf.screencastCallContext?.addExternalAudioData(data: data)
         })
         self.screencastStateDisposable = (screencastBufferServerContext.isActive
         |> distinctUntilChanged
@@ -1140,7 +1136,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         let rawAdminIds: Signal<Set<PeerId>, NoError>
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             rawAdminIds = Signal { subscriber in
-                let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: accountContext.engine, postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
                     var peerIds = Set<PeerId>()
                     for item in list.list {
                         if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
@@ -1429,7 +1425,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let peerId = strongSelf.peerId
                 if strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel {
                     peerAdminIds = Signal { subscriber in
-                        let (disposable, _) = strongSelf.accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.accountContext.account.postbox, network: strongSelf.accountContext.account.network, accountPeerId: strongSelf.accountContext.account.peerId, peerId: peerId, updated: { list in
+                        let (disposable, _) = strongSelf.accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.accountContext.engine, postbox: strongSelf.accountContext.account.postbox, network: strongSelf.accountContext.account.network, accountPeerId: strongSelf.accountContext.account.peerId, peerId: peerId, updated: { list in
                             var peerIds = Set<PeerId>()
                             for item in list.list {
                                 if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
@@ -1674,7 +1670,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let rawAdminIds: Signal<Set<PeerId>, NoError>
                 if peerId.namespace == Namespaces.Peer.CloudChannel {
                     rawAdminIds = Signal { subscriber in
-                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: accountContext.engine, postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
                             var peerIds = Set<PeerId>()
                             for item in list.list {
                                 if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
@@ -2049,6 +2045,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         audioSsrc: audioSsrc,
                         videoDescription: nil
                     ))
+                }
+
+                if let screencastSsrc = participant.presentationDescription?.audioSsrc {
+                    if remainingSsrcs.contains(screencastSsrc) {
+                        remainingSsrcs.remove(screencastSsrc)
+
+                        result.append(OngoingGroupCallContext.MediaChannelDescription(
+                            kind: .audio,
+                            audioSsrc: screencastSsrc,
+                            videoDescription: nil
+                        ))
+                    }
                 }
             }
         }

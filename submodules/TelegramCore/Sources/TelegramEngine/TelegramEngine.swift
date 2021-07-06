@@ -59,6 +59,10 @@ public final class TelegramEngine {
     public lazy var historyImport: HistoryImport = {
         return HistoryImport(account: self.account)
     }()
+
+    public lazy var contacts: Contacts = {
+        return Contacts(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {

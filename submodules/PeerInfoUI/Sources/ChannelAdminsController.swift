@@ -665,7 +665,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     |> deliverOnMainQueue).start(next: { peerId in
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             var didReportLoadCompleted = false
-            let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId) { membersState in
+            let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?) = context.peerChannelMemberCategoriesContextsManager.admins(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId) { membersState in
                 if case .loading = membersState.loadingState, membersState.list.isEmpty {
                     adminsPromise.set(.single(nil))
                 } else {

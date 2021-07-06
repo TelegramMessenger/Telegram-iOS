@@ -233,7 +233,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .commands([]) })
             }
             
-            let commands = peerCommands(account: context.account, id: peer.id)
+            let commands = context.engine.peers.peerCommands(id: peer.id)
             |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredCommands = commands.commands.filter { command in
                     if command.command.text.hasPrefix(normalizedQuery) {

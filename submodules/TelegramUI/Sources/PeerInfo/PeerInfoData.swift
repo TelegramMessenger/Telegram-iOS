@@ -695,7 +695,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                             return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
                             |> map(Optional.init)
                         } else {
-                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
                             |> map(Optional.init)
                         }
                     } else {

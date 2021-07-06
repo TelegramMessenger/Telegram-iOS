@@ -423,28 +423,31 @@ static NSData *encryptRSALegacy(id<EncryptionProvider> encryptionProvider, NSDat
     return encryptedData;
 }
 
+static NSData *reversedBytes(NSData *data) {
+    NSMutableData *result = [[NSMutableData alloc] initWithLength:data.length];
+    for (NSUInteger i = 0; i < result.length; i++) {
+        ((uint8_t *)result.mutableBytes)[i] = ((uint8_t *)data.bytes)[result.length - i - 1];
+    }
+    return result;
+}
+
 static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider, NSData *pqInnerData, NSString *publicKey) {
     NSMutableData *dataWithPadding = [[NSMutableData alloc] init];
     [dataWithPadding appendData:pqInnerData];
-    if (dataWithPadding.length > 176) {
+    if (dataWithPadding.length > 192) {
         return nil;
     }
-    if (dataWithPadding.length != 176) {
+    if (dataWithPadding.length != 192) {
         int originalLength = (int)dataWithPadding.length;
-        int numPaddingBytes = 176 - originalLength;
-        [dataWithPadding setLength:176];
+        int numPaddingBytes = 192 - originalLength;
+        [dataWithPadding setLength:192];
         int randomResult = SecRandomCopyBytes(kSecRandomDefault, numPaddingBytes, ((uint8_t *)dataWithPadding.mutableBytes) + originalLength);
         if (randomResult != errSecSuccess) {
             return nil;
         }
     }
 
-    NSMutableData *dataWithHash = [[NSMutableData alloc] init];
-    [dataWithHash appendData:dataWithPadding];
-    [dataWithHash appendData:MTSha256(dataWithPadding)];
-    if (dataWithHash.length != 208) {
-        return nil;
-    }
+    NSData *dataWithPaddingReversed = reversedBytes(dataWithPadding);
 
     while (true) {
         int randomResult = 0;
@@ -454,33 +457,36 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
             return nil;
         }
 
-        NSMutableData *tempIv = [[NSMutableData alloc] initWithLength:16];
-        randomResult = SecRandomCopyBytes(kSecRandomDefault, tempIv.length, tempIv.mutableBytes);
-        if (randomResult != errSecSuccess) {
+        NSMutableData *tempKeyAndDataWithPadding = [[NSMutableData alloc] init];
+        [tempKeyAndDataWithPadding appendData:tempKey];
+        [tempKeyAndDataWithPadding appendData:dataWithPadding];
+
+        NSMutableData *dataWithHash = [[NSMutableData alloc] init];
+        [dataWithHash appendData:dataWithPaddingReversed];
+        [dataWithHash appendData:MTSha256(tempKeyAndDataWithPadding)];
+        if (dataWithHash.length != 224) {
             return nil;
         }
 
-        NSData *aesEncrypted = aesCbcEncrypt(dataWithHash, tempKey, tempIv);
+        NSMutableData *zeroIv = [[NSMutableData alloc] initWithLength:32];
+        memset(zeroIv.mutableBytes, 0, zeroIv.length);
+
+        NSData *aesEncrypted = MTAesEncrypt(dataWithHash, tempKey, zeroIv);
         if (aesEncrypted == nil) {
             return nil;
         }
-
-        NSMutableData *tempIvPlusAesEncrypted = [[NSMutableData alloc] init];
-        [tempIvPlusAesEncrypted appendData:tempIv];
-        [tempIvPlusAesEncrypted appendData:aesEncrypted];
-        NSData *shaTempIvPlusAesEncrypted = MTSha256(tempIvPlusAesEncrypted);
+        NSData *shaAesEncrypted = MTSha256(aesEncrypted);
 
         NSMutableData *tempKeyXor = [[NSMutableData alloc] initWithLength:tempKey.length];
-        if (tempKeyXor.length != shaTempIvPlusAesEncrypted.length) {
+        if (tempKeyXor.length != shaAesEncrypted.length) {
             return nil;
         }
         for (NSUInteger i = 0; i < tempKey.length; i++) {
-            ((uint8_t *)tempKeyXor.mutableBytes)[i] = ((uint8_t *)tempKey.bytes)[i] ^ ((uint8_t *)shaTempIvPlusAesEncrypted.bytes)[i];
+            ((uint8_t *)tempKeyXor.mutableBytes)[i] = ((uint8_t *)tempKey.bytes)[i] ^ ((uint8_t *)shaAesEncrypted.bytes)[i];
         }
 
         NSMutableData *keyAesEncrypted = [[NSMutableData alloc] init];
         [keyAesEncrypted appendData:tempKeyXor];
-        [keyAesEncrypted appendData:tempIv];
         [keyAesEncrypted appendData:aesEncrypted];
         if (keyAesEncrypted.length != 256) {
             return nil;

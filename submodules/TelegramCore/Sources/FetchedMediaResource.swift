@@ -461,7 +461,7 @@ final class MediaReferenceRevalidationContext {
     
     func peerAvatars(postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<[TelegramPeerPhoto], RevalidateMediaReferenceError> {
         return self.genericItem(key: .peerAvatars(peer: peer), background: background, request: { next, error in
-            return (requestPeerPhotos(postbox: postbox, network: network, peerId: peer.id)
+            return (_internal_requestPeerPhotos(postbox: postbox, network: network, peerId: peer.id)
             |> mapError { _ -> RevalidateMediaReferenceError in
                 return .generic
             }).start(next: { value in

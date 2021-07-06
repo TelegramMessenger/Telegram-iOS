@@ -293,6 +293,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
     
     var replaceControllerImpl: ((ViewController, Bool) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -507,28 +508,28 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                             state.checking = false
                                             return state
                                         }
-                                        
-                                        var completionImpl: ((Bool) -> Void)?
-                                        let controller = resetPasswordController(context: context, emailPattern: emailPattern, completion: { result in
-                                            completionImpl?(result)
+
+                                        var stateUpdated: ((SetupTwoStepVerificationStateUpdate) -> Void)?
+                                        let controller = TwoFactorDataInputScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .authorized), stateUpdated: { state in
+                                            stateUpdated?(state)
                                         })
-                                        completionImpl = { [weak controller] result in
-                                            if !result {
+                                        stateUpdated = { [weak controller] state in
+                                            controller?.view.endEditing(true)
+                                            controller?.dismiss()
+                                            
+                                            switch state {
+                                            case .noPassword, .awaitingEmailConfirmation, .passwordSet:
+                                                controller?.dismiss()
+
+                                                dismissImpl?()
+                                            case .pendingPasswordReset:
                                                 dataPromise.set(context.engine.auth.twoStepVerificationConfiguration()
                                                 |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil))
                                                 })
-                                                controller?.view.endEditing(true)
-                                                controller?.dismiss()
-                                            } else {
-                                                dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
-                                                controller?.view.endEditing(true)
-                                                controller?.dismiss()
-
-                                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
                                             }
                                         }
-                                        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        
+                                        pushControllerImpl?(controller)
                                     }, error: { _ in
                                         updateState { state in
                                             var state = state
@@ -592,6 +593,8 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                             case .notSet:
                                 let controller = SetupTwoStepVerificationController(context: context, initialState: .createPassword, stateUpdated: { update, shouldDismiss, controller in
                                     switch update {
+                                        case .pendingPasswordReset:
+                                            break
                                         case .noPassword:
                                             dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
                                         case let .awaitingEmailConfirmation(password, pattern, codeLength):
@@ -623,6 +626,8 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                 case let .manage(password, hasRecovery, pendingEmail, hasSecureValues):
                     let controller = SetupTwoStepVerificationController(context: context, initialState: .updatePassword(current: password, hasRecoveryEmail: hasRecovery, hasSecureValues: hasSecureValues), stateUpdated: { update, shouldDismiss, controller in
                         switch update {
+                            case .pendingPasswordReset:
+                                break
                             case .noPassword:
                                 dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
                             case .awaitingEmailConfirmation:
@@ -712,10 +717,10 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             case .access:
                 break
             case let .manage(password, emailSet, _, hasSecureValues):
-                //let controller = TwoFactorDataInputScreen(context: context, mode: .updateEmailAddress(password: password))
-                
                 let controller = SetupTwoStepVerificationController(context: context, initialState: .addEmail(hadRecoveryEmail: emailSet, hasSecureValues: hasSecureValues, password: password), stateUpdated: { update, shouldDismiss, controller in
                     switch update {
+                        case .pendingPasswordReset:
+                            break
                         case .noPassword:
                             assertionFailure()
                             break
@@ -803,6 +808,8 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                     }
                     let controller = SetupTwoStepVerificationController(context: context, initialState: .confirmEmail(password: password, hasSecureValues: hasSecureValues, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), stateUpdated: { update, shouldDismiss, controller in
                         switch update {
+                            case .pendingPasswordReset:
+                                break
                             case .noPassword:
                                 assertionFailure()
                                 break
@@ -940,6 +947,9 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

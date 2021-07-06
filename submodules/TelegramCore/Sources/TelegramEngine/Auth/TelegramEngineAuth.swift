@@ -24,8 +24,16 @@ public extension TelegramEngineUnauthorized {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
         }
 
-        public func performPasswordRecovery(accountManager: AccountManager, code: String, syncContacts: Bool, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<Void, PasswordRecoveryError> {
-            return _internal_performPasswordRecovery(accountManager: accountManager, account: self.account, code: code, syncContacts: syncContacts, updatedPassword: updatedPassword)
+        public func requestTwoStepVerificationPasswordRecoveryCode() -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
+            return _internal_requestTwoStepVerificationPasswordRecoveryCode(network: self.account.network)
+        }
+
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            return _internal_checkPasswordRecoveryCode(network: self.account.network, code: code)
+        }
+
+        public func performPasswordRecovery(code: String, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<RecoveredAccountData, PasswordRecoveryError> {
+            return _internal_performPasswordRecovery(network: self.account.network, code: code, updatedPassword: updatedPassword)
         }
 
         public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
@@ -90,8 +98,8 @@ public extension TelegramEngine {
             return _internal_requestTwoStepVerificationPasswordRecoveryCode(network: self.account.network)
         }
 
-        public func recoverTwoStepVerificationPassword(code: String) -> Signal<Void, RecoverTwoStepVerificationPasswordError> {
-            return _internal_recoverTwoStepVerificationPassword(network: self.account.network, code: code)
+        public func performPasswordRecovery(code: String, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<RecoveredAccountData, PasswordRecoveryError> {
+            return _internal_performPasswordRecovery(network: self.account.network, code: code, updatedPassword: updatedPassword)
         }
 
         public func cachedTwoStepPasswordToken() -> Signal<TemporaryTwoStepPasswordToken?, NoError> {
@@ -106,12 +114,28 @@ public extension TelegramEngine {
             return _internal_requestTemporaryTwoStepPasswordToken(account: self.account, password: password, period: period, requiresBiometrics: requiresBiometrics)
         }
 
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            return _internal_checkPasswordRecoveryCode(network: self.account.network, code: code)
+        }
+
         public func requestTwoStepPasswordReset() -> Signal<RequestTwoStepPasswordResetResult, NoError> {
             return _internal_requestTwoStepPasswordReset(network: self.account.network)
         }
 
         public func declineTwoStepPasswordReset() -> Signal<Never, NoError> {
             return _internal_declineTwoStepPasswordReset(network: self.account.network)
+        }
+
+        public func requestCancelAccountResetData(hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+            return _internal_requestCancelAccountResetData(network: self.account.network, hash: hash)
+        }
+
+        public func requestNextCancelAccountResetOption(phoneNumber: String, phoneCodeHash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
+            return _internal_requestNextCancelAccountResetOption(network: self.account.network, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash)
+        }
+
+        public func requestCancelAccountReset(phoneCodeHash: String, phoneCode: String) -> Signal<Never, CancelAccountResetError> {
+            return _internal_requestCancelAccountReset(network: self.account.network, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode)
         }
     }
 }
@@ -142,12 +166,21 @@ public extension SomeTelegramEngine {
             }
         }
 
-        public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
+        public func requestTwoStepVerificationPasswordRecoveryCode() -> Signal<String, RequestTwoStepVerificationPasswordRecoveryCodeError> {
             switch self.engine {
             case let .authorized(engine):
-                return engine.auth.resendTwoStepRecoveryEmail()
+                return engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
             case let .unauthorized(engine):
-                return engine.auth.resendTwoStepRecoveryEmail()
+                return engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
+            }
+        }
+
+        public func checkPasswordRecoveryCode(code: String) -> Signal<Never, PasswordRecoveryError> {
+            switch self.engine {
+            case let .authorized(engine):
+                return engine.auth.checkPasswordRecoveryCode(code: code)
+            case let .unauthorized(engine):
+                return engine.auth.checkPasswordRecoveryCode(code: code)
             }
         }
     }

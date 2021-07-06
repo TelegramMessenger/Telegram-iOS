@@ -138,7 +138,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
             self.audioConverter = CustomAudioConverter(asbd: asbd)
         }
         if let audioConverter = self.audioConverter {
-            if let data = audioConverter.convert(sampleBuffer: sampleBuffer) {
+            if let data = audioConverter.convert(sampleBuffer: sampleBuffer), !data.isEmpty {
                 self.screencastBufferClientContext?.writeAudioData(data: data)
             }
         }

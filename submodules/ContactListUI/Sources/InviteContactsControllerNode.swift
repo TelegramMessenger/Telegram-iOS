@@ -365,7 +365,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     return DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                 })))
             }
-            return deviceContactsImportedByCount(postbox: context.account.postbox, contacts: mappedContacts)
+            return context.engine.contacts.deviceContactsImportedByCount(contacts: mappedContacts)
             |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)]? in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]

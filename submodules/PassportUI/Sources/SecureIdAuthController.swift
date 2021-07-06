@@ -558,7 +558,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 return
             }
             switch update {
-                case .noPassword:
+                case .noPassword, .pendingPasswordReset:
                     strongSelf.updateState(animated: false, { state in
                         var state = state
                         if let verificationState = state.verificationState, case .noChallenge = verificationState {

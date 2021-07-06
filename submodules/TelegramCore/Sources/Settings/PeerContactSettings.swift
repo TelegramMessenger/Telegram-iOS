@@ -65,5 +65,5 @@ public func unarchiveAutomaticallyArchivedPeer(account: Account, peerId: PeerId)
     }
     |> deliverOnMainQueue).start()
     
-    let _ = updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: nil).start()
+    let _ = _internal_updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: nil).start()
 }

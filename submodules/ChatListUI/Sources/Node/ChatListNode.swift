@@ -688,7 +688,7 @@ public final class ChatListNode: ListView {
                 return
             }
             strongSelf.setCurrentRemovingPeerId(peerId)
-            let _ = (togglePeerMuted(account: context.account, peerId: peerId)
+            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state

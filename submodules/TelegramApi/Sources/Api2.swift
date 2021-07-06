@@ -14974,13 +14974,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipantVideo: TypeConstructorDescription {
-        case groupCallParticipantVideo(flags: Int32, endpoint: String, sourceGroups: [Api.GroupCallParticipantVideoSourceGroup])
+        case groupCallParticipantVideo(flags: Int32, endpoint: String, sourceGroups: [Api.GroupCallParticipantVideoSourceGroup], audioSource: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups, let audioSource):
                     if boxed {
-                        buffer.appendInt32(2028213859)
+                        buffer.appendInt32(1735736008)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(endpoint, buffer: buffer, boxed: false)
@@ -14989,14 +14989,15 @@ public extension Api {
                     for item in sourceGroups {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(audioSource!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
-                return ("groupCallParticipantVideo", [("flags", flags), ("endpoint", endpoint), ("sourceGroups", sourceGroups)])
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups, let audioSource):
+                return ("groupCallParticipantVideo", [("flags", flags), ("endpoint", endpoint), ("sourceGroups", sourceGroups), ("audioSource", audioSource)])
     }
     }
     
@@ -15009,11 +15010,14 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipantVideoSourceGroup.self)
             }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!, audioSource: _4)
             }
             else {
                 return nil

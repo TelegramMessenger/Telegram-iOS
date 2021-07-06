@@ -855,6 +855,7 @@ public final class GroupCallParticipantsContext {
 
             public var endpointId: String
             public var ssrcGroups: [SsrcGroup]
+            public var audioSsrc: UInt32?
             public var isPaused: Bool
         }
         
@@ -1526,6 +1527,9 @@ public final class GroupCallParticipantsContext {
         for participant in self.stateValue.state.participants {
             if let ssrc = participant.ssrc {
                 existingSsrcs.insert(ssrc)
+            }
+            if let presentationDescription = participant.presentationDescription, let presentationAudioSsrc = presentationDescription.audioSsrc {
+                existingSsrcs.insert(presentationAudioSsrc)
             }
         }
         
@@ -2488,7 +2492,7 @@ extension GroupCallParticipantsContext.Participant {
 private extension GroupCallParticipantsContext.Participant.VideoDescription {
     init(_ apiVideo: Api.GroupCallParticipantVideo) {
         switch apiVideo {
-        case let .groupCallParticipantVideo(flags, endpoint, sourceGroups):
+        case let .groupCallParticipantVideo(flags, endpoint, sourceGroups, audioSource):
             var parsedSsrcGroups: [SsrcGroup] = []
             for group in sourceGroups {
                 switch group {
@@ -2497,7 +2501,7 @@ private extension GroupCallParticipantsContext.Participant.VideoDescription {
                 }
             }
             let isPaused = (flags & (1 << 0)) != 0
-            self.init(endpointId: endpoint, ssrcGroups: parsedSsrcGroups, isPaused: isPaused)
+            self.init(endpointId: endpoint, ssrcGroups: parsedSsrcGroups, audioSsrc: audioSource.flatMap(UInt32.init(bitPattern:)), isPaused: isPaused)
         }
     }
 }
