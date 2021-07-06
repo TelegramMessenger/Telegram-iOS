@@ -506,11 +506,11 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     actionsDisposable.add(updateAutoArchiveDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
-    privacySettingsPromise.set(.single(initialSettings) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
+    privacySettingsPromise.set(.single(initialSettings) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
         
     let blockedPeersContext = blockedPeersContext ?? BlockedPeersContext(account: context.account)
-    let activeSessionsContext = activeSessionsContext ?? ActiveSessionsContext(account: context.account)
-    let webSessionsContext = webSessionsContext ?? WebSessionsContext(account: context.account)
+    let activeSessionsContext = activeSessionsContext ?? context.engine.privacy.activeSessions()
+    let webSessionsContext = webSessionsContext ?? context.engine.privacy.webSessions()
     
     let blockedPeersState = Promise<BlockedPeersContextState>()
     blockedPeersState.set(blockedPeersContext.state)
@@ -779,7 +779,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             return .complete()
         }
         
-        updateAutoArchiveDisposable.set((updateAccountAutoArchiveChats(account: context.account, value: archiveValue)
+        updateAutoArchiveDisposable.set((context.engine.privacy.updateAccountAutoArchiveChats(value: archiveValue)
         |> mapToSignal { _ -> Signal<Void, NoError> in }
         |> then(applyTimeout)
         |> deliverOnMainQueue).start(completed: {
@@ -817,7 +817,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                             }
                             return .complete()
                         }
-                    updateAccountTimeoutDisposable.set((updateAccountRemovalTimeout(account: context.account, timeout: timeout)
+                        updateAccountTimeoutDisposable.set((context.engine.privacy.updateAccountRemovalTimeout(timeout: timeout)
                         |> then(applyTimeout)
                         |> deliverOnMainQueue).start(completed: {
                             updateState { state in

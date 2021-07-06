@@ -1038,14 +1038,14 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     type = .phoneNumber
             }
             
-            let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
+            let updateSettingsSignal = context.engine.privacy.updateSelectiveAccountPrivacySettings(type: type, settings: settings)
             var updateCallP2PSettingsSignal: Signal<Void, NoError> = Signal.complete()
             if let callP2PSettings = callP2PSettings {
-                updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
+                updateCallP2PSettingsSignal = context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .voiceCallsP2P, settings: callP2PSettings)
             }
             var updatePhoneDiscoverySignal: Signal<Void, NoError> = Signal.complete()
             if let phoneDiscoveryEnabled = phoneDiscoveryEnabled {
-                updatePhoneDiscoverySignal = updatePhoneNumberDiscovery(account: context.account, value: phoneDiscoveryEnabled)
+                updatePhoneDiscoverySignal = context.engine.privacy.updatePhoneNumberDiscovery(value: phoneDiscoveryEnabled)
             }
             
             let _ = (combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal, updatePhoneDiscoverySignal)

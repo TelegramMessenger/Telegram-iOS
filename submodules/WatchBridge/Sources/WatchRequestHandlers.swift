@@ -841,7 +841,7 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
                         var signal: Signal<Void, NoError>?
                         
                         if let args = subscription as? TGBridgePeerUpdateNotificationSettingsSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                            signal = togglePeerMuted(account: context.account, peerId: peerId)
+                            signal = context.engine.peers.togglePeerMuted(peerId: peerId)
                         } else if let args = subscription as? TGBridgePeerUpdateBlockStatusSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
                             signal = context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peerId, isBlocked: args.blocked)
                         }

@@ -1136,7 +1136,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         let rawAdminIds: Signal<Set<PeerId>, NoError>
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             rawAdminIds = Signal { subscriber in
-                let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: accountContext.engine, postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
                     var peerIds = Set<PeerId>()
                     for item in list.list {
                         if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
@@ -1425,7 +1425,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let peerId = strongSelf.peerId
                 if strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel {
                     peerAdminIds = Signal { subscriber in
-                        let (disposable, _) = strongSelf.accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.accountContext.account.postbox, network: strongSelf.accountContext.account.network, accountPeerId: strongSelf.accountContext.account.peerId, peerId: peerId, updated: { list in
+                        let (disposable, _) = strongSelf.accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.accountContext.engine, postbox: strongSelf.accountContext.account.postbox, network: strongSelf.accountContext.account.network, accountPeerId: strongSelf.accountContext.account.peerId, peerId: peerId, updated: { list in
                             var peerIds = Set<PeerId>()
                             for item in list.list {
                                 if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {
@@ -1670,7 +1670,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let rawAdminIds: Signal<Set<PeerId>, NoError>
                 if peerId.namespace == Namespaces.Peer.CloudChannel {
                     rawAdminIds = Signal { subscriber in
-                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
+                        let (disposable, _) = accountContext.peerChannelMemberCategoriesContextsManager.admins(engine: accountContext.engine, postbox: accountContext.account.postbox, network: accountContext.account.network, accountPeerId: accountContext.account.peerId, peerId: peerId, updated: { list in
                             var peerIds = Set<PeerId>()
                             for item in list.list {
                                 if let adminInfo = item.participant.adminInfo, adminInfo.rights.rights.contains(.canManageCalls) {

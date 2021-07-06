@@ -1187,7 +1187,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         } |> distinctUntilChanged(isEqual: { $0 == $1 })
         |> mapToSignal { messageId -> Signal<Void, NoError> in
             if let messageId = messageId {
-                return getMessagesLoadIfNecessary([messageId], postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId) |> map { _ -> Void in return Void() }
+                return context.engine.messages.getMessagesLoadIfNecessary([messageId]) |> map { _ -> Void in return Void() }
             } else {
                 return .complete()
             }

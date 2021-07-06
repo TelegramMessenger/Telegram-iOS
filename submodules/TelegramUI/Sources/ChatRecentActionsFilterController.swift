@@ -449,7 +449,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     adminsPromise.set(.single(nil))
     
-    let (membersDisposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id) { membersState in
+    let (membersDisposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id) { membersState in
         if case .loading = membersState.loadingState, membersState.list.isEmpty {
             adminsPromise.set(.single(nil))
         } else {

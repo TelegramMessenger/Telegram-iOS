@@ -341,7 +341,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
     case .channelPost(let messageId), .groupMessage(let messageId):
-        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
+        message = context.engine.messages.fetchChannelReplyThreadMessage(messageId: messageId, atMessageId: atMessageId)
     }
     
     return message

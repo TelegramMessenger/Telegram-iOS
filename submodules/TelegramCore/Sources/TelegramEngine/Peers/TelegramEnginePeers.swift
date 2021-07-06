@@ -128,5 +128,108 @@ public extension TelegramEngine {
         public func reportRepliesMessage(messageId: MessageId, deleteMessage: Bool, deleteHistory: Bool, reportSpam: Bool) -> Signal<Never, NoError> {
             return _internal_reportRepliesMessage(account: self.account, messageId: messageId, deleteMessage: deleteMessage, deleteHistory: deleteHistory, reportSpam: reportSpam)
         }
+
+        public func togglePeerMuted(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_togglePeerMuted(account: self.account, peerId: peerId)
+        }
+
+        public func updatePeerMuteSetting(peerId: PeerId, muteInterval: Int32?) -> Signal<Void, NoError> {
+            return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, muteInterval: muteInterval)
+        }
+
+        public func updatePeerDisplayPreviewsSetting(peerId: PeerId, displayPreviews: PeerNotificationDisplayPreviews) -> Signal<Void, NoError> {
+            return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, displayPreviews: displayPreviews)
+        }
+
+        public func updatePeerNotificationSoundInteractive(peerId: PeerId, sound: PeerMessageSound) -> Signal<Void, NoError> {
+            return _internal_updatePeerNotificationSoundInteractive(account: self.account, peerId: peerId, sound: sound)
+        }
+
+        public func removeCustomNotificationSettings(peerIds: [PeerId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    TelegramCore.updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peerId, sound: .default)
+                    TelegramCore.updatePeerMuteSetting(transaction: transaction, peerId: peerId, muteInterval: nil)
+                    TelegramCore.updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peerId, displayPreviews: .default)
+                }
+            }
+            |> ignoreValues
+        }
+
+        public func channelAdminEventLog(peerId: PeerId) -> ChannelAdminEventLogContext {
+            return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+
+        public func updateChannelMemberBannedRights(peerId: PeerId, memberId: PeerId, rights: TelegramChatBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> {
+            return _internal_updateChannelMemberBannedRights(account: self.account, peerId: peerId, memberId: memberId, rights: rights)
+        }
+
+        public func updateDefaultChannelMemberBannedRights(peerId: PeerId, rights: TelegramChatBannedRights) -> Signal<Never, NoError> {
+            return _internal_updateDefaultChannelMemberBannedRights(account: self.account, peerId: peerId, rights: rights)
+        }
+
+        public func createChannel(title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
+            return _internal_createChannel(account: self.account, title: title, description: description)
+        }
+
+        public func createSupergroup(title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+            return _internal_createSupergroup(account: self.account, title: title, description: description, location: location, isForHistoryImport: isForHistoryImport)
+        }
+
+        public func deleteChannel(peerId: PeerId) -> Signal<Void, DeleteChannelError> {
+            return _internal_deleteChannel(account: self.account, peerId: peerId)
+        }
+
+        public func updateChannelHistoryAvailabilitySettingsInteractively(peerId: PeerId, historyAvailableForNewMembers: Bool) -> Signal<Void, ChannelHistoryAvailabilityError> {
+            return _internal_updateChannelHistoryAvailabilitySettingsInteractively(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, historyAvailableForNewMembers: historyAvailableForNewMembers)
+        }
+
+        public func channelMembers(peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
+            return _internal_channelMembers(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId, category: category, offset: offset, limit: limit, hash: hash)
+        }
+
+        public func checkOwnershipTranfserAvailability(memberId: PeerId) -> Signal<Never, ChannelOwnershipTransferError> {
+            return _internal_checkOwnershipTranfserAvailability(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, memberId: memberId)
+        }
+
+        public func updateChannelOwnership(channelId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> {
+            return _internal_updateChannelOwnership(account: self.account, accountStateManager: self.account.stateManager, channelId: channelId, memberId: memberId, password: password)
+        }
+
+        public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
+            return _internal_searchGroupMembers(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId, query: query)
+        }
+
+        public func toggleShouldChannelMessagesSignatures(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, enabled: enabled)
+        }
+
+        public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
+            return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+
+        public func updateGroupSpecificStickerset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificStickersetError> {
+            return _internal_updateGroupSpecificStickerset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
+        }
+
+        public func joinChannel(peerId: PeerId, hash: String?) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
+            return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash)
+        }
+
+        public func removePeerMember(peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
+            return _internal_removePeerMember(account: self.account, peerId: peerId, memberId: memberId)
+        }
+
+        public func availableGroupsForChannelDiscussion() -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
+            return _internal_availableGroupsForChannelDiscussion(postbox: self.account.postbox, network: self.account.network)
+        }
+
+        public func updateGroupDiscussionForChannel(channelId: PeerId?, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
+            return _internal_updateGroupDiscussionForChannel(network: self.account.network, postbox: self.account.postbox, channelId: channelId, groupId: groupId)
+        }
+
+        public func peerCommands(id: PeerId) -> Signal<PeerCommands, NoError> {
+            return _internal_peerCommands(account: self.account, id: id)
+        }
     }
 }

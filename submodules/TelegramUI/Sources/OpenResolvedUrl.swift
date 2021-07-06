@@ -78,7 +78,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         })
                     }
                 } else {
-                    let _ = (requestStartBotInGroup(account: context.account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                    let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in
                         if let navigationController = navigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
@@ -438,8 +438,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 case .devices:
                     if let navigationController = navigationController {
                         let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
-                            let activeSessionsContext = ActiveSessionsContext(account: context.account)
-                            let webSessionsContext = WebSessionsContext(account: context.account)
+                            let activeSessionsContext = context.engine.privacy.activeSessions()
+                            let webSessionsContext = context.engine.privacy.webSessions()
                             let otherSessionCount = activeSessionsContext.state
                             |> map { state -> Int in
                                 return state.sessions.filter({ !$0.isCurrent }).count
