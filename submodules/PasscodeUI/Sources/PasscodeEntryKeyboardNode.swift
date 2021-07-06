@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 private let regularTitleFont = Font.regular(36.0)
 private let regularSubtitleFont: UIFont = {
@@ -35,8 +36,9 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
         context.clip()
         
         context.setAlpha(0.8)
-        context.draw(background.foregroundImage.cgImage!, in: relativeFrame)
-        
+        if let foregroundImage = background.foregroundImage {
+            context.draw(foregroundImage.cgImage!, in: relativeFrame)
+        }
         if highlighted {
             context.setFillColor(UIColor(white: 1.0, alpha: 0.65).cgColor)
             context.fillEllipse(in: bounds)
@@ -98,6 +100,7 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
 }
 
 final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
+    private var presentationData: PresentationData
     private var background: PasscodeBackground
     let title: String
     private let subtitle: String
@@ -106,14 +109,23 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     private var regularImage: UIImage?
     private var highlightedImage: UIImage?
     
+    private var blurredBackgroundNode: NavigationBackgroundNode?
     private let backgroundNode: ASImageNode
     
     var action: (() -> Void)?
     
-    init(background: PasscodeBackground, title: String, subtitle: String) {
+    init(presentationData: PresentationData, background: PasscodeBackground, title: String, subtitle: String) {
+        self.presentationData = presentationData
         self.background = background
         self.title = title
         self.subtitle = subtitle
+        
+        if background is CustomPasscodeBackground {
+            let blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
+            
+            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
+            self.blurredBackgroundNode = blurredBackgroundNode
+        }
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -122,6 +134,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         
         super.init()
         
+        if let blurredBackgroundNode = self.blurredBackgroundNode {
+            self.addSubnode(blurredBackgroundNode)
+        }
         self.addSubnode(self.backgroundNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -146,7 +161,8 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    func updateBackground(_ background: PasscodeBackground) {
+    func updateBackground(_ presentationData: PresentationData, _ background: PasscodeBackground) {
+        self.presentationData = presentationData
         self.background = background
         self.updateGraphics()
     }
@@ -175,6 +191,10 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     override func layout() {
         super.layout()
         
+        if let blurredBackgroundNode = self.blurredBackgroundNode {
+            blurredBackgroundNode.frame = self.bounds
+            blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: .immediate)
+        }
         self.backgroundNode.frame = self.bounds
     }
     
@@ -199,22 +219,23 @@ private let buttonsData = [
 ]
 
 final class PasscodeEntryKeyboardNode: ASDisplayNode {
+    private var presentationData: PresentationData?
     private var background: PasscodeBackground?
     
     var charactedEntered: ((String) -> Void)?
     
     private func updateButtons() {
-        guard let background = self.background else {
+        guard let presentationData = self.presentationData, let background = self.background else {
             return
         }
         
         if let subnodes = self.subnodes, !subnodes.isEmpty {
             for case let button as PasscodeEntryButtonNode in subnodes {
-                button.updateBackground(background)
+                button.updateBackground(presentationData, background)
             }
         } else {
             for (title, subtitle) in buttonsData {
-                let buttonNode = PasscodeEntryButtonNode(background: background, title: title, subtitle: subtitle)
+                let buttonNode = PasscodeEntryButtonNode(presentationData: presentationData, background: background, title: title, subtitle: subtitle)
                 buttonNode.action = { [weak self] in
                     self?.charactedEntered?(title)
                 }
@@ -223,7 +244,8 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         }
     }
     
-    func updateBackground(_ background: PasscodeBackground) {
+    func updateBackground(_ presentationData: PresentationData, _ background: PasscodeBackground) {
+        self.presentationData = presentationData
         self.background = background
         self.updateButtons()
     }

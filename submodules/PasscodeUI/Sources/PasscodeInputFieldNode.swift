@@ -24,20 +24,23 @@ private func generateDotImage(color: UIColor, filled: Bool) -> UIImage? {
     })
 }
 
-private func generateFieldBackgroundImage(backgroundImage: UIImage, backgroundSize: CGSize, frame: CGRect) -> UIImage? {
+private func generateFieldBackgroundImage(backgroundImage: UIImage?, backgroundSize: CGSize?, frame: CGRect) -> UIImage? {
     return generateImage(frame.size, contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - backgroundSize.height + frame.size.height
-            , width: backgroundSize.width, height: backgroundSize.height)
         
         let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), cornerRadius: 6.0)
         context.addPath(path.cgPath)
         context.clip()
         
-        context.draw(backgroundImage.cgImage!, in: relativeFrame)
-        
+        if let backgroundImage = backgroundImage, let backgroundSize = backgroundSize {
+            let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - backgroundSize.height + frame.size.height
+                , width: backgroundSize.width, height: backgroundSize.height)
+            context.draw(backgroundImage.cgImage!, in: relativeFrame)
+        } else {
+            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 1.0).cgColor)
+            context.fill(bounds)
+        }
         context.setBlendMode(.clear)
         context.setFillColor(UIColor.clear.cgColor)
     
@@ -129,7 +132,7 @@ private class PasscodeEntryDotNode: ASImageNode {
 }
 
 public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
-    private var background: (UIImage, CGSize)?
+    private var background: PasscodeBackground?
     private var color: UIColor
     private var accentColor: UIColor
     private var fieldType: PasscodeEntryFieldType
@@ -207,8 +210,8 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func updateBackground(_ image: UIImage, size: CGSize) {
-        self.background = (image, size)
+    func updateBackground(_ background: PasscodeBackground) {
+        self.background = background
         if let (size, topOffset) = self.validLayout {
             let _ = self.updateLayout(size: size, topOffset: topOffset, transition: .immediate)
         }
@@ -276,14 +279,15 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func delete() {
+    func delete() -> Bool {
         var text = self.textFieldNode.textField.text ?? ""
         guard !text.isEmpty else {
-            return
+            return false
         }
         text = String(text[text.startIndex ..< text.index(text.endIndex, offsetBy: -1)])
         self.textFieldNode.textField.text = text
         self.updateDots(count: text.count, animated: true)
+        return true
     }
     
     func updateDots(count: Int, animated: Bool) {
@@ -346,9 +350,8 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         let fieldFrame = CGRect(x: inset, y: origin.y, width: size.width - inset * 2.0, height: fieldHeight)
         transition.updateFrame(node: self.borderNode, frame: fieldFrame)
         transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: 13.0, dy: 0.0))
-        if let (backgroundImage, backgroundSize) = self.background {
-            self.borderNode.image = generateFieldBackgroundImage(backgroundImage: backgroundImage, backgroundSize: backgroundSize, frame: fieldFrame)
-        }
+        
+        self.borderNode.image = generateFieldBackgroundImage(backgroundImage: self.background?.foregroundImage, backgroundSize: self.background?.size, frame: fieldFrame)
         
         return fieldFrame
     }

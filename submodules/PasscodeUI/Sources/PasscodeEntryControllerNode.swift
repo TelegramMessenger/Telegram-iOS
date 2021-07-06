@@ -12,6 +12,7 @@ import LocalAuth
 import AppBundle
 import PasscodeInputFieldNode
 import MonotonicTime
+import GradientBackground
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
@@ -19,6 +20,7 @@ private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
     private let accountManager: AccountManager
+    private var presentationData: PresentationData
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var wallpaper: TelegramWallpaper
@@ -27,11 +29,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let arguments: PasscodeEntryControllerPresentationArguments
     private var background: PasscodeBackground?
     
-    private let statusBar: StatusBar
-    
     private let modalPresentation: Bool
     
-    private let backgroundNode: ASImageNode
+    private var backgroundCustomNode: ASDisplayNode?
+    private let backgroundDimNode: ASDisplayNode
+    private let backgroundImageNode: ASImageNode
     private let iconNode: PasscodeLockIconNode
     private let titleNode: PasscodeEntryLabelNode
     private let inputFieldNode: PasscodeInputFieldNode
@@ -52,20 +54,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(accountManager: AccountManager, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar, modalPresentation: Bool) {
+    init(accountManager: AccountManager, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
         self.accountManager = accountManager
+        self.presentationData = presentationData
         self.theme = theme
         self.strings = strings
         self.wallpaper = wallpaper
         self.passcodeType = passcodeType
         self.biometricsType = biometricsType
         self.arguments = arguments
-        self.statusBar = statusBar
         self.modalPresentation = modalPresentation
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.contentMode = .scaleToFill
+        self.backgroundImageNode = ASImageNode()
+        self.backgroundImageNode.contentMode = .scaleToFill
 
+        self.backgroundDimNode = ASDisplayNode()
+        self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
+        self.backgroundDimNode.isHidden = true
+        
         self.iconNode = PasscodeLockIconNode()
         self.titleNode = PasscodeEntryLabelNode()
         self.inputFieldNode = PasscodeInputFieldNode(color: .white, accentColor: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
@@ -86,7 +92,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.iconNode.unlockedColor = theme.rootController.navigationBar.primaryTextColor
         
         self.keyboardNode.charactedEntered = { [weak self] character in
-            self?.inputFieldNode.append(character)
+            if let strongSelf = self {
+                strongSelf.inputFieldNode.append(character)
+                if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
+                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring))
+                }
+            }
         }
         self.inputFieldNode.complete = { [weak self] passcode in
             guard let strongSelf = self else {
@@ -111,7 +122,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
         
-        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.backgroundImageNode)
+        self.addSubnode(self.backgroundDimNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.inputFieldNode)
@@ -146,7 +158,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     @objc private func deletePressed() {
         self.hapticFeedback.tap()
-        self.inputFieldNode.delete()
+        let result = self.inputFieldNode.delete()
+        if result, let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+            gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), backwards: true)
+        }
     }
     
     @objc private func biometricsPressed() {
@@ -158,6 +173,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.wallpaper = presentationData.chatWallpaper
@@ -173,26 +189,42 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             return
         }
         
-        var size = validLayout.size
+        let size = validLayout.size
         if let background = self.background, background.size == size {
             return
         }
         
         switch self.wallpaper {
+            case let .gradient(_, colors, _):
+                self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) })
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                    if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
+                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) })
+                    } else {
+                        self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                    }
                 }
             default:
                 self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
         }
         
         if let background = self.background {
-            self.backgroundNode.image = background.backgroundImage
-            self.keyboardNode.updateBackground(background)
-            self.inputFieldNode.updateBackground(background.foregroundImage, size: background.size)
+            self.backgroundCustomNode?.removeFromSupernode()
+            self.backgroundCustomNode = nil
+            
+            if let backgroundImage = background.backgroundImage {
+                self.backgroundImageNode.image = backgroundImage
+                self.backgroundDimNode.isHidden = true
+            } else if let customBackgroundNode = background.makeBackgroundNode() {
+                self.backgroundCustomNode = customBackgroundNode
+                self.insertSubnode(customBackgroundNode, aboveSubnode: self.backgroundImageNode)
+                self.backgroundDimNode.isHidden = false
+            }
+            self.keyboardNode.updateBackground(self.presentationData, background)
+            self.inputFieldNode.updateBackground(background)
         }
     }
     
@@ -263,7 +295,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                     self.effectView.alpha = 1.0
                 }
             })
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+                gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true)
+            }
         }
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
     }
@@ -277,14 +314,16 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.effectView.alpha = 1.0
             }
         })
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+            gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring))
+            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)
             self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
         }
-        
-        self.statusBar.layer.removeAnimation(forKey: "opacity")
-        self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         self.subtitleNode.isHidden = true
         self.inputFieldNode.isHidden = true
@@ -303,6 +342,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             
             self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             
+            if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring))
+            }
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()
             var biometricDelay = 0.3
@@ -323,7 +365,6 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func animateOut(down: Bool = false, completion: @escaping () -> Void = {}) {
-        self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: down ? self.bounds.size.height : -self.bounds.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
             completion()
         })
@@ -340,6 +381,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.iconNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
         
         self.hapticFeedback.error()
+        
+        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+            gradientNode.animateEvent(transition: .animated(duration: 1.5, curve: .spring), extendAnimation: true, backwards: true)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -348,7 +393,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.updateBackground()
             
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
-        transition.updateFrame(node: self.backgroundNode, frame: bounds)
+        transition.updateFrame(node: self.backgroundImageNode, frame: bounds)
+        transition.updateFrame(node: self.backgroundDimNode, frame: bounds)
+        if let backgroundCustomNode = self.backgroundCustomNode {
+            transition.updateFrame(node: backgroundCustomNode, frame: bounds)
+            if let gradientBackgroundNode = backgroundCustomNode as? GradientBackgroundNode {
+                gradientBackgroundNode.updateLayout(size: bounds.size, transition: transition)
+            }
+        }
         transition.updateFrame(view: self.effectView, frame: bounds)
         
         switch self.passcodeType {
