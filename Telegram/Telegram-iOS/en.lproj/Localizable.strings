@@ -6532,7 +6532,7 @@ Sorry for the inconvenience.";
 "Settings.TryEnterPassword" = "Not sure, let me try";
 
 "TwoFactorSetup.PasswordRecovery.Title" = "Create New Password";
-"TwoFactorSetup.PasswordRecovery.Text" = "You have successfully reset your password.\nPlease enter a new password to continue";
+"TwoFactorSetup.PasswordRecovery.Text" = "Your password has been reset.\nPlease enter a new password to continue";
 "TwoFactorSetup.PasswordRecovery.PlaceholderPassword" = "New Password";
 "TwoFactorSetup.PasswordRecovery.PlaceholderConfirmPassword" = "Re-enter New Password";
 "TwoFactorSetup.PasswordRecovery.Action" = "Continue";
@@ -6549,4 +6549,8 @@ Sorry for the inconvenience.";
 "TwoStepAuth.CancelResetTitle" = "Cancel Reset";
 "TwoStepAuth.ResetAction" = "Reset Password";
 "TwoStepAuth.CancelResetText" = "Cancel the password resetting process? If you proceed, the expired part of the 7-day delay will be lost.";
-"TwoStepAuth.RecoveryEmailResetNoAccess" = "No access";
+"TwoStepAuth.RecoveryEmailResetNoAccess" = "Lost access to your Email?";
+
+"TwoFactorSetup.ResetDone.Title" = "New Password Set!";
+"TwoFactorSetup.ResetDone.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.ResetDone.Action" = "Continue";

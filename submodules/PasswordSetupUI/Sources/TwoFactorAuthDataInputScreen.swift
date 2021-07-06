@@ -1519,7 +1519,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         
         let buttonWidth = contentAreaSize.width - buttonSideInset * 2.0
         
-        let maxButtonY = min(areaHeight - buttonSpacing, layout.size.height - buttonBottomInset) - buttonHeight
+        let maxButtonY = min(areaHeight - buttonSpacing, layout.size.height - buttonBottomInset) - buttonHeight * 2.0
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, maxButtonY)), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
@@ -1537,7 +1537,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         let changeEmailActionButtonFrame: CGRect
         let resendCodeActionFrame: CGRect
         let resendCodeActionButtonFrame: CGRect
-        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - 24.0 {
+        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - buttonFrame.minX * 2.0 {
             changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
             changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX + floor((changeEmailActionButtonFrame.width - changeEmailActionSize.width) / 2.0), y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
             resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.maxY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))

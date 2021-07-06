@@ -142,9 +142,9 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
                 self.animationNode.visibility = true
             }
         case .recoveryDone:
-            title = self.presentationData.strings.TwoFactorSetup_Done_Title
-            text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)
-            buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
+            title = self.presentationData.strings.TwoFactorSetup_ResetDone_Title
+            text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_ResetDone_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.TwoFactorSetup_ResetDone_Action
 
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
