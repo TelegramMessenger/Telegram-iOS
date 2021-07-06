@@ -4670,7 +4670,7 @@ public extension Api {
         case updateTheme(theme: Api.Theme)
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
         case updateLoginToken
-        case updateMessagePollVote(pollId: Int64, userId: Int64, options: [Buffer])
+        case updateMessagePollVote(pollId: Int64, userId: Int64, options: [Buffer], qts: Int32)
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
@@ -5300,9 +5300,9 @@ public extension Api {
                     }
                     
                     break
-                case .updateMessagePollVote(let pollId, let userId, let options):
+                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
                     if boxed {
-                        buffer.appendInt32(1421152257)
+                        buffer.appendInt32(274961865)
                     }
                     serializeInt64(pollId, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
@@ -5311,6 +5311,7 @@ public extension Api {
                     for item in options {
                         serializeBytes(item, buffer: buffer, boxed: false)
                     }
+                    serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateDialogFilter(let flags, let id, let filter):
                     if boxed {
@@ -5653,8 +5654,8 @@ public extension Api {
                 return ("updateGeoLiveViewed", [("peer", peer), ("msgId", msgId)])
                 case .updateLoginToken:
                 return ("updateLoginToken", [])
-                case .updateMessagePollVote(let pollId, let userId, let options):
-                return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options)])
+                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
+                return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options), ("qts", qts)])
                 case .updateDialogFilter(let flags, let id, let filter):
                 return ("updateDialogFilter", [("flags", flags), ("id", id), ("filter", filter)])
                 case .updateDialogFilterOrder(let order):
@@ -6927,11 +6928,14 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
             }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!, qts: _4!)
             }
             else {
                 return nil
