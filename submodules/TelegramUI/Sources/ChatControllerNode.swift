@@ -2336,9 +2336,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
                             #if DEBUG
                             if text.string == "sleep" {
-                                messages.append(messages[0])
-                                messages.append(messages[0])
-                                messages.append(messages[0])
+                                messages.removeAll()
+
+                                for i in 0 ..< 5 {
+                                    messages.append(.message(text: "sleep\(i)", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                                }
                             }
                             #endif
                         }
