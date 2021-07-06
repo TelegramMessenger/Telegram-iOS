@@ -6532,7 +6532,7 @@ Sorry for the inconvenience.";
 "Settings.TryEnterPassword" = "Not sure, let me try";
 
 "TwoFactorSetup.PasswordRecovery.Title" = "Create New Password";
-"TwoFactorSetup.PasswordRecovery.Text" = "Your password has been reset.\nPlease enter a new password to continue";
+"TwoFactorSetup.PasswordRecovery.Text" = "You can now set a new password that will be used to log into your account.";
 "TwoFactorSetup.PasswordRecovery.PlaceholderPassword" = "New Password";
 "TwoFactorSetup.PasswordRecovery.PlaceholderConfirmPassword" = "Re-enter New Password";
 "TwoFactorSetup.PasswordRecovery.Action" = "Continue";
