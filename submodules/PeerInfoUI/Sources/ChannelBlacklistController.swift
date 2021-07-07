@@ -391,7 +391,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                     let signal = context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: nil)
                     |> ignoreValues
                     |> then(
-                        context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: peerId, memberId: memberId)
+                        context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: peerId, memberId: memberId)
                         |> map { _ -> Void in
                             return Void()
                         }

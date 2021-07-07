@@ -744,7 +744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
-                                let _ = removeRecentPeer(account: strongSelf.context.account, peerId: peer.id).start()
+                                let _ = strongSelf.context.engine.peers.removeRecentPeer(peerId: peer.id).start()
                             }
                         })
                     ]),

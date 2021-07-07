@@ -16,7 +16,7 @@ private func cachedRecentPeersEntryId() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 101, key: CachedRecentPeers.cacheKey())
 }
 
-public func recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
+func _internal_recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     return account.postbox.combinedView(keys: [key])
     |> mapToSignal { views -> Signal<RecentPeers, NoError> in
@@ -41,14 +41,14 @@ public func recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
     }
 }
 
-public func getRecentPeers(transaction: Transaction) -> [PeerId] {
+public func _internal_getRecentPeers(transaction: Transaction) -> [PeerId] {
     guard let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers else {
         return []
     }
     return entry.ids
 }
 
-public func managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     let peersEnabled = postbox.combinedView(keys: [key])
     |> map { views -> Bool in
@@ -96,7 +96,7 @@ public func managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, n
     }
 }
 
-public func removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         guard let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers else {
             return .complete()
@@ -121,7 +121,7 @@ public func removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, N
     } |> switchToLatest
 }
 
-public func updateRecentPeersEnabled(postbox: Postbox, network: Network, enabled: Bool) -> Signal<Void, NoError> {
+func _internal_updateRecentPeersEnabled(postbox: Postbox, network: Network, enabled: Bool) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var currentValue = true
         if let entry = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId()) as? CachedRecentPeers {
@@ -149,7 +149,7 @@ public func updateRecentPeersEnabled(postbox: Postbox, network: Network, enabled
     } |> switchToLatest
 }
 
-public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func _internal_managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let remotePeers = network.request(Api.functions.contacts.getTopPeers(flags: 1 << 2, offset: 0, limit: 16, hash: 0))
         |> retryRequest
         |> map { result -> ([Peer], [PeerId: PeerPresence], [(PeerId, Double)])? in
@@ -207,7 +207,7 @@ public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, ac
     return updatedRemotePeers
 }
 
-public func addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         var maxRating = 1.0
         for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots) {
@@ -219,7 +219,7 @@ public func addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Signal
     }
 }
 
-public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double)], NoError> {
+func _internal_recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double)], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)])
         |> take(1)
         |> mapToSignal { view -> Signal<[(Peer, Double)], NoError> in
@@ -238,7 +238,7 @@ public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double)],
     }
 }
 
-public func removeRecentlyUsedInlineBot(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_removeRecentlyUsedInlineBot(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, itemId: RecentPeerItemId(peerId).rawValue)
         

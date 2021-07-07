@@ -1357,7 +1357,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
                     } else {
                         selectionController.displayProgress = true
-                        let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
+                        let _ = (context.engine.peers.addChannelMembers(peerId: peerId, memberIds: filteredPeerIds)
                         |> deliverOnMainQueue).start(error: { [weak selectionController] _ in
                             guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                 return

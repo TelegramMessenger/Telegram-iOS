@@ -65,7 +65,7 @@ func _internal_addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
                 return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, isAdmin: .boolTrue))
                 |> `catch` { error -> Signal<Api.Bool, AddGroupAdminError> in
                     if error.errorDescription == "USER_NOT_PARTICIPANT" {
-                        return addGroupMember(account: account, peerId: peerId, memberId: adminId)
+                        return _internal_addGroupMember(account: account, peerId: peerId, memberId: adminId)
                         |> mapError { error -> AddGroupAdminError in
                             return .addMemberError(error)
                         }
@@ -188,7 +188,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], UpdateChannelAdminRightsError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
-                            return addChannelMember(account: account, peerId: peerId, memberId: adminId)
+                            return _internal_addChannelMember(account: account, peerId: peerId, memberId: adminId)
                             |> map { _ -> [Api.Updates] in
                                 return []
                             }

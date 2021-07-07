@@ -147,5 +147,9 @@ public extension TelegramEngine {
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId)
         }
+
+        public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
+            return _internal_exportMessageLink(account: self.account, peerId: peerId, messageId: messageId, isThread: isThread)
+        }
     }
 }

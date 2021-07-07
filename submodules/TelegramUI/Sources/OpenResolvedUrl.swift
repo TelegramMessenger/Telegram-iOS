@@ -67,12 +67,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let _ = (addGroupMember(account: context.account, peerId: peerId, memberId: botPeerId)
+                        let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })
                     } else {
-                        let _ = (addChannelMember(account: context.account, peerId: peerId, memberId: botPeerId)
+                        let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })

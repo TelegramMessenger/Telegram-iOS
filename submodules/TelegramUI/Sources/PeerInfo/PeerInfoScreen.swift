@@ -7209,14 +7209,14 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             if case let .peer(selectedPeer, _, _) = memberPeer {
                 let memberId = selectedPeer.id
                 if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberId)
                     |> map { _ -> Void in
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
                 } else {
-                    return addGroupMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
                     |> deliverOnMainQueue
                     |> `catch` { error -> Signal<Void, NoError> in
                         switch error {
@@ -7264,7 +7264,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                                 guard let upgradedPeerId = upgradedPeerId else {
                                     return .single(nil)
                                 }
-                                return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: upgradedPeerId, memberId: memberId)
+                                return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: upgradedPeerId, memberId: memberId)
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()
                                 }
@@ -7300,11 +7300,11 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             |> castError(AddChannelMemberError.self)
             |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
                 if memberIds.count == 1 {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberIds[0])
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
                     |> map { _ -> Void in
                     }
                 } else {
-                    return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
+                    return context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
                     }
                 }
             }
