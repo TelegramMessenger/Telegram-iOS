@@ -363,7 +363,7 @@ static NSData *reversedBytes(NSData *data) {
 static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider, NSData *pqInnerData, NSString *publicKey) {
     NSMutableData *dataWithPadding = [[NSMutableData alloc] init];
     [dataWithPadding appendData:pqInnerData];
-    if (dataWithPadding.length > 192) {
+    if (dataWithPadding.length > 144) {
         return nil;
     }
     if (dataWithPadding.length != 192) {
