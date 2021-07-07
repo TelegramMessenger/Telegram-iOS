@@ -323,7 +323,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     
     let actionsDisposable = DisposableSet()
     
-    let resultsContext = PollResultsContext(account: context.account, messageId: messageId, poll: poll)
+    let resultsContext = context.engine.messages.pollResults(messageId: messageId, poll: poll)
     
     let arguments = PollResultsControllerArguments(context: context,
     collapseOption: { optionId in

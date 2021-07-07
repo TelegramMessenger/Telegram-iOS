@@ -80,7 +80,7 @@ public enum AddChannelMemberError {
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
-    return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
+    return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
     |> mapError { error -> AddChannelMemberError in
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in

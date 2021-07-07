@@ -743,7 +743,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            let _ = (recentlySearchedPeers(postbox: context.account.postbox)
+            let _ = (context.engine.peers.recentlySearchedPeers()
             |> take(1)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {

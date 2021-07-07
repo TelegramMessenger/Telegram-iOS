@@ -187,7 +187,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             self.isGlobalSearch = false
         }
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: source,  subject: .message(id: initialMessageId, highlight: true), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: source,  subject: .message(id: initialMessageId, highlight: true, timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
         
         super.init()
         
@@ -263,7 +263,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         self.contentNode.addSubnode(self.historyNode)
         self.contentNode.addSubnode(self.controlsNode)
         
-        self.historyNode.beganInteractiveDragging = { [weak self] in
+        self.historyNode.beganInteractiveDragging = { [weak self] _ in
             self?.controlsNode.collapse()
         }
         
@@ -528,7 +528,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: .message(id: messageId, highlight: true), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
+        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: .message(id: messageId, highlight: true, timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in
@@ -628,7 +628,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 }
             }
             
-            self.historyNode.beganInteractiveDragging = { [weak self] in
+            self.historyNode.beganInteractiveDragging = { [weak self] _ in
                 self?.controlsNode.collapse()
             }
             

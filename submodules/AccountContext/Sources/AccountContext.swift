@@ -171,7 +171,7 @@ public enum ResolvedUrl {
     case inaccessiblePeer
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
-    case channelMessage(peerId: PeerId, messageId: MessageId)
+    case channelMessage(peerId: PeerId, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)

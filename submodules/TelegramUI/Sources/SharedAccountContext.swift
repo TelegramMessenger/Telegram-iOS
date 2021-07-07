@@ -872,7 +872,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         guard let token = token else {
                             return .complete()
                         }
-                        return unregisterNotificationToken(account: account, token: token, type: .aps(encrypt: false), otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
+                        return TelegramEngine(account: account).accountData.unregisterNotificationToken(token: token, type: .aps(encrypt: false), otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -880,7 +880,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         guard let token = token else {
                             return .complete()
                         }
-                        return unregisterNotificationToken(account: account, token: token, type: .voip, otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
+                        return TelegramEngine(account: account).accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
                     }
                 } else {
                     appliedAps = self.apsNotificationToken
@@ -895,7 +895,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         } else {
                             encrypt = false
                         }
-                        return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        return TelegramEngine(account: account).accountData.registerNotificationToken(token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -903,7 +903,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         guard let token = token else {
                             return .complete()
                         }
-                        return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        return TelegramEngine(account: account).accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                 }
                 

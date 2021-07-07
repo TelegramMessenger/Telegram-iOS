@@ -839,7 +839,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if canBan {
                 actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuBan, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.banDisposables.set((fetchChannelParticipant(account: strongSelf.context.account, peerId: strongSelf.peer.id, participantId: author.id)
+                        strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
                         |> deliverOnMainQueue).start(next: { participant in
                             if let strongSelf = self {
                                 strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -905,13 +905,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .groupBotStart:
                         break
-                    case let .channelMessage(peerId, messageId):
+                    case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: timecode)))
                         }
                    case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: messageId, highlight: true, timecode: nil)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

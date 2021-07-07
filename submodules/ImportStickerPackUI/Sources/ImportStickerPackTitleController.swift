@@ -204,6 +204,14 @@ private class TextField: UITextField, UIScrollViewDelegate {
     }
 }
 
+private let validIdentifierSet: CharacterSet = {
+    var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
+    set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
+    set.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+    set.insert("_")
+    return set
+}()
+
 private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
@@ -260,7 +268,6 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         self.textInputNode.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
         self.textInputNode.clipsToBounds = true
         self.textInputNode.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: theme.actionSheet.secondaryTextColor)
-//        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = keyboardType
         self.textInputNode.autocapitalizationType = .sentences
@@ -358,6 +365,39 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
             self.complete?()
             return false
         }
+        
+        if self.textInputNode.keyboardType == .asciiCapable {
+            var cleanString = string.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "_")
+            
+            let filtered = cleanString.unicodeScalars.filter { validIdentifierSet.contains($0) }
+            let filteredString = String(String.UnicodeScalarView(filtered))
+            
+            if cleanString != filteredString {
+                cleanString = filteredString
+                
+                self.textInputNode.layer.addShakeAnimation()
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.error()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                    let _ = hapticFeedback
+                })
+            }
+            
+            if cleanString != string {
+                var text = textField.text ?? ""
+                text.replaceSubrange(text.index(text.startIndex, offsetBy: range.lowerBound) ..< text.index(text.startIndex, offsetBy: range.upperBound), with: cleanString)
+                textField.text = text
+                if let startPosition = textField.position(from: textField.beginningOfDocument, offset: range.lowerBound + cleanString.count) {
+                    let selectionRange = textField.textRange(from: startPosition, to: startPosition)
+                    DispatchQueue.main.async {
+                        textField.selectedTextRange = selectionRange
+                    }
+                }
+                self.textFieldDidUpdateText(text)
+                return false
+            }
+        }
+        
         self.textFieldDidUpdateText(updatedText)
         return true
     }

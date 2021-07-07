@@ -692,7 +692,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: messageId, highlight: true), purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: messageId, highlight: true, timecode: nil), purposefulAction: {
                                 if deactivateOnAction {
                                     self?.deactivateSearch(animated: false)
                                 }
@@ -862,7 +862,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else {
                 var subject: ChatControllerSubject?
                 if case let .search(messageId) = source, let id = messageId {
-                    subject = .message(id: id, highlight: false)
+                    subject = .message(id: id, highlight: false, timecode: nil)
                 }
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
@@ -2004,11 +2004,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         |> delay(0.8, queue: Queue.mainQueue())
                         let progressDisposable = progressSignal.start()
                         
-                        let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
-                            for peerId in peerIds {
-                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
-                            }
-                        }
+                        let signal: Signal<Never, NoError> = strongSelf.context.engine.peers.removePeerChats(peerIds: Array(peerIds))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 progressDisposable.dispose()
@@ -2693,7 +2689,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if let channel = chatPeer as? TelegramChannel {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
                 }
-                let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
+                let _ = strongSelf.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }

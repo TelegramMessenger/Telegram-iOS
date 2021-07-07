@@ -910,7 +910,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             
                             strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount, highlight: false), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                         } else {
-                            if let subject = subject, case let .message(messageId, highlight) = subject {
+                            if let subject = subject, case let .message(messageId, highlight, _) = subject {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
@@ -1088,7 +1088,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         })
         
-        if let subject = subject, case let .message(messageId, highlight) = subject {
+        if let subject = subject, case let .message(messageId, highlight, _) = subject {
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: 0)
@@ -1193,7 +1193,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }).start()
         
-        self.beganInteractiveDragging = { [weak self] in
+        self.beganInteractiveDragging = { [weak self] _ in
             self?.isInteractivelyScrollingValue = true
             self?.isInteractivelyScrollingPromise.set(true)
             self?.beganDragging?()
@@ -2001,7 +2001,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             } else if self.interactiveReadActionDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
                     if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                        self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.context.account.postbox, stateManager: self.context.account.stateManager, peerId: peerId)
+                        self.interactiveReadActionDisposable = self.context.engine.messages.installInteractiveReadMessagesAction(peerId: peerId)
                     }
                 }
             }

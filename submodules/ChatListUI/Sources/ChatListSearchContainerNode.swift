@@ -191,7 +191,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (clearRecentlySearchedPeers(postbox: strongSelf.context.account.postbox)
+                    let _ = (strongSelf.context.engine.peers.clearRecentlySearchedPeers()
                     |> deliverOnMainQueue).start()
                 })
             ]), ActionSheetItemGroup(items: [

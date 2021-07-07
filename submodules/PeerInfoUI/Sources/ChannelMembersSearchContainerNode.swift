@@ -437,7 +437,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if case .searchAdmins = mode {
-                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: nil, rank: nil)
+                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: memberId, adminRights: nil, rank: nil)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -465,7 +465,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     if case .searchAdmins = mode {
-                        return removeGroupAdmin(account: context.account, peerId: peerId, adminId: memberId)
+                        return context.engine.peers.removeGroupAdmin(peerId: peerId, adminId: memberId)
                         |> `catch` { _ -> Signal<Void, NoError> in
                             return .complete()
                         }
@@ -1279,10 +1279,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
             }
         })
         
-        self.emptyQueryListNode.beganInteractiveDragging = { [weak self] in
+        self.emptyQueryListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

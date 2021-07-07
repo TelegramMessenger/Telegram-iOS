@@ -535,11 +535,11 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
                 }
             })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
-        self.recentListNode.beganInteractiveDragging = { [weak self] in
+        self.recentListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

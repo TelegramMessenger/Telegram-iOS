@@ -378,8 +378,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
-        return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
+    public func updateMemberAdminRights(engine: TelegramEngine, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
+        return engine.peers.updateChannelAdminRights(peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
         |> map(Optional.init)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in

@@ -1738,7 +1738,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             let currentPeerId = strongSelf.peerId
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
                                 var viewControllers = navigationController.viewControllers
                                 var indexesToRemove = Set<Int>()
                                 var keptCurrentChatController = false
@@ -1884,7 +1884,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             c.dismiss(completion: {
                                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     let currentPeerId = strongSelf.peerId
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
                                         var viewControllers = navigationController.viewControllers
                                         var indexesToRemove = Set<Int>()
                                         var keptCurrentChatController = false
@@ -2775,7 +2775,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 if copyUsername, let username = user.username, !username.isEmpty {
                     actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Settings_CopyUsername, accessibilityLabel: strongSelf.presentationData.strings.Settings_CopyUsername), action: { [weak self] in
-                        UIPasteboard.general.string = username
+                        UIPasteboard.general.string = "@\(username)"
                         
                         if let strongSelf = self {
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -4294,7 +4294,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 
                                 strongSelf.activeActionDisposable.set(strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start())
                                 if deleteChat {
-                                    let _ = removePeerChat(account: strongSelf.context.account, peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
+                                    let _ = strongSelf.context.engine.peers.removePeerChat(peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
                                     (strongSelf.controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
                                 } else if reportSpam {
                                     let _ = strongSelf.context.engine.peers.reportPeer(peerId: strongSelf.peerId, reason: .spam, message: "").start()
@@ -6239,8 +6239,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var canOpenAvatarByDragging = false
     
-    private let velocityKey: String = encodeText("`wfsujdbmWfmpdjuz", -1)
-    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling {
             return
@@ -6249,7 +6247,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if !self.state.isEditing {
             if self.canAddVelocity {
                 self.previousVelocityM1 = self.previousVelocity
-                if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
+                if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
                     self.previousVelocity = CGFloat(value)
                 }
             }
@@ -7061,14 +7059,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         self.headerNode.navigationTransition = nil
         self.screenNode.insertSubnode(self.headerNode, aboveSubnode: self.screenNode.scrollNode)
     }
-}
-
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
-    }
-    return result
 }
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {

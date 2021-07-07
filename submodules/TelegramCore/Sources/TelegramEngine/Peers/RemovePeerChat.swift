@@ -4,13 +4,13 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
+func _internal_removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
-        removePeerChat(account: account, transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
+        _internal_removePeerChat(account: account, transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
     }
 }
 
-public func terminateSecretChat(transaction: Transaction, peerId: PeerId, requestRemoteHistoryRemoval: Bool) {
+func _internal_terminateSecretChat(transaction: Transaction, peerId: PeerId, requestRemoteHistoryRemoval: Bool) {
     if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
         let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: false, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval), state: state).withUpdatedEmbeddedState(.terminated)
         if updatedState != state {
@@ -24,7 +24,7 @@ public func terminateSecretChat(transaction: Transaction, peerId: PeerId, reques
     }
 }
 
-public func removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
+func _internal_removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
     if let _ = transaction.getPeerChatInterfaceState(peerId) {
         transaction.updatePeerChatInterfaceState(peerId, update: { current in
             if let current = current {

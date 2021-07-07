@@ -231,5 +231,61 @@ public extension TelegramEngine {
         public func peerCommands(id: PeerId) -> Signal<PeerCommands, NoError> {
             return _internal_peerCommands(account: self.account, id: id)
         }
+
+        public func addGroupAdmin(peerId: PeerId, adminId: PeerId) -> Signal<Void, AddGroupAdminError> {
+            return _internal_addGroupAdmin(account: self.account, peerId: peerId, adminId: adminId)
+        }
+
+        public func removeGroupAdmin(peerId: PeerId, adminId: PeerId) -> Signal<Void, RemoveGroupAdminError> {
+            return _internal_removeGroupAdmin(account: self.account, peerId: peerId, adminId: adminId)
+        }
+
+        public func fetchChannelParticipant(peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
+            return _internal_fetchChannelParticipant(account: self.account, peerId: peerId, participantId: participantId)
+        }
+
+        public func updateChannelAdminRights(peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights?, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
+            return _internal_updateChannelAdminRights(account: self.account, peerId: peerId, adminId: adminId, rights: rights, rank: rank)
+        }
+
+        public func peerSpecificStickerPack(peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
+            return _internal_peerSpecificStickerPack(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+
+        public func addRecentlySearchedPeer(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_addRecentlySearchedPeer(postbox: self.account.postbox, peerId: peerId)
+        }
+
+        public func removeRecentlySearchedPeer(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_removeRecentlySearchedPeer(postbox: self.account.postbox, peerId: peerId)
+        }
+
+        public func clearRecentlySearchedPeers() -> Signal<Void, NoError> {
+            return _internal_clearRecentlySearchedPeers(postbox: self.account.postbox)
+        }
+
+        public func recentlySearchedPeers() -> Signal<[RecentlySearchedPeer], NoError> {
+            return _internal_recentlySearchedPeers(postbox: self.account.postbox)
+        }
+
+        public func removePeerChat(peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
+            return _internal_removePeerChat(account: self.account, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
+        }
+
+        public func removePeerChats(peerIds: [PeerId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_removePeerChat(account: self.account, transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
+                }
+            }
+            |> ignoreValues
+        }
+
+        public func terminateSecretChat(peerId: PeerId, requestRemoteHistoryRemoval: Bool) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_terminateSecretChat(transaction: transaction, peerId: peerId, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval)
+            }
+            |> ignoreValues
+        }
     }
 }

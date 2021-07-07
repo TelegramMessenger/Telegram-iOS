@@ -10,7 +10,7 @@ public enum NotificationTokenType {
     case voip
 }
 
-public func unregisterNotificationToken(account: Account, token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {
+func _internal_unregisterNotificationToken(account: Account, token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {
     let mappedType: Int32
     switch type {
         case .aps:
@@ -23,7 +23,7 @@ public func unregisterNotificationToken(account: Account, token: Data, type: Not
     |> ignoreValues
 }
 
-public func registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
+func _internal_registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
     return masterNotificationsKey(account: account, ignoreDisabled: false)
     |> mapToSignal { masterKey -> Signal<Never, NoError> in
         let mappedType: Int32

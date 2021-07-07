@@ -1,19 +1,40 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import ImageBlur
 import FastBlur
+import GradientBackground
 
 protocol PasscodeBackground {
     var size: CGSize { get }
-    var backgroundImage: UIImage { get }
-    var foregroundImage: UIImage { get }
+    var backgroundImage: UIImage? { get }
+    var foregroundImage: UIImage? { get }
+    
+    func makeBackgroundNode() -> ASDisplayNode?
+}
+
+final class CustomPasscodeBackground: PasscodeBackground {
+    private let colors: [UIColor]
+    
+    public private(set) var size: CGSize
+    public private(set) var backgroundImage: UIImage? = nil
+    public private(set) var foregroundImage: UIImage? = nil
+    
+    init(size: CGSize, colors: [UIColor]) {
+        self.size = size
+        self.colors = colors
+    }
+    
+    func makeBackgroundNode() -> ASDisplayNode? {
+        return createGradientBackgroundNode(colors: self.colors)
+    }
 }
 
 final class GradientPasscodeBackground: PasscodeBackground {
     public private(set) var size: CGSize
-    public private(set) var backgroundImage: UIImage
-    public private(set) var foregroundImage: UIImage
+    public private(set) var backgroundImage: UIImage?
+    public private(set) var foregroundImage: UIImage?
     
     init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor) {
         self.size = size
@@ -35,12 +56,16 @@ final class GradientPasscodeBackground: PasscodeBackground {
             context.fill(bounds)
         })!
     }
+    
+    func makeBackgroundNode() -> ASDisplayNode? {
+        return nil
+    }
 }
 
 final class ImageBasedPasscodeBackground: PasscodeBackground {
     public private(set) var size: CGSize
-    public private(set) var backgroundImage: UIImage
-    public private(set) var foregroundImage: UIImage
+    public private(set) var backgroundImage: UIImage?
+    public private(set) var foregroundImage: UIImage?
     
     init(image: UIImage, size: CGSize) {
         self.size = size
@@ -81,5 +106,9 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
             context.fill(bounds)
         }
         self.backgroundImage = backgroundContext.generateImage()!
+    }
+
+    func makeBackgroundNode() -> ASDisplayNode? {
+        return nil
     }
 }

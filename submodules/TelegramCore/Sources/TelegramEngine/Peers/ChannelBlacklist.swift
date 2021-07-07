@@ -6,7 +6,7 @@ import MtProtoKit
 import SyncCore
 
 func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChatBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> {
-    return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
+    return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
             if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputPeer = apiInputPeer(memberPeer) {

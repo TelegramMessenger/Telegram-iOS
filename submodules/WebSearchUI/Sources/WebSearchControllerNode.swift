@@ -284,7 +284,7 @@ class WebSearchControllerNode: ASDisplayNode {
             }
         })
         
-        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
+        self.recentQueriesNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         

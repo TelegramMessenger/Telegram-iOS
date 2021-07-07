@@ -347,7 +347,7 @@ open class ItemListControllerNode: ASDisplayNode {
             self?.contentOffsetChanged?(offset, inVoiceOver)
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.beganInteractiveDragging?()
             }

@@ -1407,8 +1407,8 @@
     if (_searchController == nil)
         return;
     
-    UIView *backArrow = [self _findBackArrow:self.navigationBar];
-    UIView *backButton = [self _findBackButton:self.navigationBar parentView:self.navigationBar];
+    UIView *backArrow = nil;
+    UIView *backButton = nil;
     
     if ([viewController isKindOfClass:[TGPhotoEditorController class]])
     {
@@ -1440,48 +1440,11 @@
         _searchSnapshotView = nil;
         _searchController.view.hidden = false;
         
-        UIView *backArrow = [self _findBackArrow:self.navigationBar];
-        UIView *backButton = [self _findBackButton:self.navigationBar parentView:self.navigationBar];
+        UIView *backArrow = nil;
+        UIView *backButton = nil;
         backArrow.alpha = 1.0f;
         backButton.alpha = 1.0f;
     }
-}
-
-- (UIView *)_findBackArrow:(UIView *)view
-{
-    Class backArrowClass = NSClassFromString(TGEncodeText(@"`VJObwjhbujpoCbsCbdlJoejdbupsWjfx", -1));
-    
-    if ([view isKindOfClass:backArrowClass])
-        return view;
-    
-    for (UIView *subview in view.subviews)
-    {
-        UIView *result = [self _findBackArrow:subview];
-        if (result != nil)
-            return result;
-    }
-    
-    return nil;
-}
-
-- (UIView *)_findBackButton:(UIView *)view parentView:(UIView *)parentView
-{
-    Class backButtonClass = NSClassFromString(TGEncodeText(@"VJObwjhbujpoJufnCvuupoWjfx", -1));
-    
-    if ([view isKindOfClass:backButtonClass])
-    {
-        if (view.center.x < parentView.frame.size.width / 2.0f)
-            return view;
-    }
-    
-    for (UIView *subview in view.subviews)
-    {
-        UIView *result = [self _findBackButton:subview parentView:parentView];
-        if (result != nil)
-            return result;
-    }
-    
-    return nil;
 }
 
 #pragma mark -

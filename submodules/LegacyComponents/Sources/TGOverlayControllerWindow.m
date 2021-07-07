@@ -68,28 +68,7 @@
 }
 
 - (BOOL)shouldAutorotate
-{
-    static NSArray *nonRotateableWindowClasses = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        NSMutableArray *array = [[NSMutableArray alloc] init];
-        Class alertClass = NSClassFromString(TGEncodeText(@"`VJBmfsuPwfsmbzXjoepx", -1));
-        if (alertClass != nil)
-            [array addObject:alertClass];
-        
-        nonRotateableWindowClasses = array;
-    });
-    
-    for (UIWindow *window in [[LegacyComponentsGlobals provider] applicationWindows].reverseObjectEnumerator)
-    {
-        for (Class classInfo in nonRotateableWindowClasses)
-        {
-            if ([window isKindOfClass:classInfo])
-                return false;
-        }
-    }
-    
+{    
     UIViewController *rootController = [[LegacyComponentsGlobals provider] applicationWindows].firstObject.rootViewController;
     
     if (rootController.presentedViewController != nil)

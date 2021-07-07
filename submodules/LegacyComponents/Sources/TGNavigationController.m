@@ -352,40 +352,6 @@
     }
 }
 
-- (void)setShowCallStatusBar:(bool)showCallStatusBar
-{
-    if (_showCallStatusBar == showCallStatusBar)
-        return;
-    
-    _showCallStatusBar = showCallStatusBar;
-    
-    int screenHeight = (int)TGScreenSize().height;
-    CGFloat statusBarHeight = (screenHeight == 812 || screenHeight == 896) ? 0.0f : 20.0f;
-    
-    _currentAdditionalStatusBarHeight = _showCallStatusBar ? statusBarHeight : 0.0f;
-    [(TGNavigationBar *)self.navigationBar setVerticalOffset:_currentAdditionalStatusBarHeight];
-    
-    [UIView animateWithDuration:0.25 animations:^
-    {
-        static SEL selector = NULL;
-        static void (*impl)(id, SEL) = NULL;
-        
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^
-        {
-            selector = NSSelectorFromString(TGEncodeText(@"`vqebufCbstGpsDvssfouJoufsgbdfPsjfoubujpo", -1));
-            Method method = class_getInstanceMethod([UINavigationController class], selector);
-            impl = (void (*)(id, SEL))method_getImplementation(method);
-        });
-        
-        if (impl != NULL)
-            impl(self, selector);
-
-        [self updateStatusBarOnControllers];
-    }];
-}
-
-
 - (void)setupStatusBarOnControllers:(NSArray *)controllers
 {
     if ([[self navigationBar] isKindOfClass:[TGNavigationBar class]])
@@ -416,11 +382,6 @@
                 TGViewController *viewController = (TGViewController *)maybeController;
                 [viewController setAdditionalStatusBarHeight:_currentAdditionalStatusBarHeight];
                 [viewController setNeedsStatusBarAppearanceUpdate];
-                
-                if ([viewController.presentedViewController isKindOfClass:[TGNavigationController class]] && viewController.presentedViewController.modalPresentationStyle != UIModalPresentationPopover)
-                {
-                    [(TGNavigationController *)viewController.presentedViewController setShowCallStatusBar:_showCallStatusBar];
-                }
             }
             else if ([maybeController isKindOfClass:[UITabBarController class]] && [maybeController conformsToProtocol:@protocol(TGNavigationControllerTabsController)])
             {
@@ -438,54 +399,9 @@
     }
 }
 
-static UIView *findDimmingView(UIView *view)
-{
-    static NSString *encodedString = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        encodedString = TGEncodeText(@"VJEjnnjohWjfx", -1);
-    });
-    
-    if ([NSStringFromClass(view.class) isEqualToString:encodedString])
-        return view;
-    
-    for (UIView *subview in view.subviews)
-    {
-        UIView *result = findDimmingView(subview);
-        if (result != nil)
-            return result;
-    }
-    
-    return nil;
-}
-
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
-    
-    if (self.modalPresentationStyle == UIModalPresentationFormSheet)
-    {
-        UIView *dimmingView = findDimmingView(self.view.window);
-        bool tapSetup = false;
-        if (_dimmingTapRecognizer != nil)
-        {
-            for (UIGestureRecognizer *recognizer in dimmingView.gestureRecognizers)
-            {
-                if (recognizer == _dimmingTapRecognizer)
-                {
-                    tapSetup = true;
-                    break;
-                }
-            }
-        }
-        
-        if (!tapSetup)
-        {
-            _dimmingTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dimmingViewTapped:)];
-            [dimmingView addGestureRecognizer:_dimmingTapRecognizer];
-        }
-    }
 }
 
 - (void)dimmingViewTapped:(UITapGestureRecognizer *)recognizer
@@ -931,74 +847,16 @@ TGNavigationController *findNavigationController()
 
 - (void)updateInteractiveTransition:(CGFloat)percentComplete
 {
-    TGNavigationController *navigationController = findNavigationController();
-    if (navigationController != nil)
-    {
-        if (!navigationController.disableInteractiveKeyboardTransition && [TGHacks applicationKeyboardWindow] != nil && ![TGHacks applicationKeyboardWindow].hidden)
-        {
-            CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:navigationController.interfaceOrientation];
-            CGFloat keyboardOffset = MAX(0.0f, percentComplete * screenSize.width);
-            
-            UIView *keyboardView = [TGHacks applicationKeyboardView];
-            CGRect keyboardViewFrame = keyboardView.frame;
-            keyboardViewFrame.origin.x = keyboardOffset;
-            
-            keyboardView.frame = keyboardViewFrame;
-        }
-    }
-    
     [super updateInteractiveTransition:percentComplete];
 }
 
 - (void)finishInteractiveTransition
 {
-    CGFloat value = self.percentComplete;
-    UIView *keyboardView = [TGHacks applicationKeyboardView];
-    CGRect keyboardViewFrame = keyboardView.frame;
-    
     [super finishInteractiveTransition];
-    
-    TGNavigationController *navigationController = findNavigationController();
-    if (navigationController != nil)
-    {
-        if (!navigationController.disableInteractiveKeyboardTransition)
-        {
-            keyboardView.frame = keyboardViewFrame;
-            
-            CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:navigationController.interfaceOrientation];
-            CGFloat keyboardOffset = 1.0f * screenSize.width;
-            
-            keyboardViewFrame.origin.x = keyboardOffset;
-            NSTimeInterval duration = (1.0 - value) * [navigationController myNominalTransitionAnimationDuration];
-            [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionCurveLinear animations:^
-             {
-                 keyboardView.frame = keyboardViewFrame;
-             } completion:nil];
-        }
-    }
 }
 
 - (void)cancelInteractiveTransition
 {
-    CGFloat value = self.percentComplete;
-    
-    TGNavigationController *navigationController = findNavigationController();
-    if (navigationController != nil)
-    {
-        if (!navigationController.disableInteractiveKeyboardTransition && [TGHacks applicationKeyboardWindow] != nil && ![TGHacks applicationKeyboardWindow].hidden)
-        {
-            UIView *keyboardView = [TGHacks applicationKeyboardView];
-            CGRect keyboardViewFrame = keyboardView.frame;
-            keyboardViewFrame.origin.x = 0.0f;
-            
-            NSTimeInterval duration = value * [navigationController myNominalTransitionAnimationDuration];
-            [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionCurveLinear animations:^
-             {
-                 keyboardView.frame = keyboardViewFrame;
-             } completion:nil];
-        }
-    }
-    
     [super cancelInteractiveTransition];
 }
 

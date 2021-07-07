@@ -10,7 +10,7 @@ public enum RemoveGroupAdminError {
     case generic
 }
 
-public func removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, RemoveGroupAdminError> {
+func _internal_removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, RemoveGroupAdminError> {
     return account.postbox.transaction { transaction -> Signal<Void, RemoveGroupAdminError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let group = peer as? TelegramGroup {
@@ -58,7 +58,7 @@ public enum AddGroupAdminError {
     case adminsTooMuch
 }
 
-public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, AddGroupAdminError> {
+func _internal_addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Void, AddGroupAdminError> {
     return account.postbox.transaction { transaction -> Signal<Void, AddGroupAdminError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
             if let group = peer as? TelegramGroup {
@@ -127,7 +127,7 @@ public enum UpdateChannelAdminRightsError {
     case adminsTooMuch
 }
 
-public func fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
+func _internal_fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ChannelParticipant?, NoError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(participantId), let inputPeer = apiInputPeer(adminPeer) {
             if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
@@ -150,8 +150,8 @@ public func fetchChannelParticipant(account: Account, peerId: PeerId, participan
     } |> switchToLatest
 }
 
-public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights?, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
-    return fetchChannelParticipant(account: account, peerId: peerId, participantId: adminId)
+func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights?, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
+    return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: adminId)
     |> mapError { error -> UpdateChannelAdminRightsError in
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
