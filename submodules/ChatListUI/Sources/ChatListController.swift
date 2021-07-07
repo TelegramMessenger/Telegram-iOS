@@ -744,7 +744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
-                                let _ = removeRecentPeer(account: strongSelf.context.account, peerId: peer.id).start()
+                                let _ = strongSelf.context.engine.peers.removeRecentPeer(peerId: peer.id).start()
                             }
                         })
                     ]),
@@ -2004,11 +2004,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         |> delay(0.8, queue: Queue.mainQueue())
                         let progressDisposable = progressSignal.start()
                         
-                        let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
-                            for peerId in peerIds {
-                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
-                            }
-                        }
+                        let signal: Signal<Never, NoError> = strongSelf.context.engine.peers.removePeerChats(peerIds: Array(peerIds))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 progressDisposable.dispose()
@@ -2693,7 +2689,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if let channel = chatPeer as? TelegramChannel {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
                 }
-                let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
+                let _ = strongSelf.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }

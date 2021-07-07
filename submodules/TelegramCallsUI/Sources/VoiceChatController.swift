@@ -1286,7 +1286,7 @@ public final class VoiceChatController: ViewController {
                                     if let groupPeer = groupPeer as? TelegramChannel {
                                         let selfController = strongSelf.controller
                                         let inviteDisposable = strongSelf.inviteDisposable
-                                        var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(account: strongSelf.context.account, peerId: groupPeer.id, memberIds: [peer.id])
+                                        var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(engine: strongSelf.context.engine, peerId: groupPeer.id, memberIds: [peer.id])
                                         var cancelImpl: (() -> Void)?
                                         let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
                                             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
@@ -1358,7 +1358,7 @@ public final class VoiceChatController: ViewController {
                                     } else if let groupPeer = groupPeer as? TelegramGroup {
                                         let selfController = strongSelf.controller
                                         let inviteDisposable = strongSelf.inviteDisposable
-                                        var inviteSignal = addGroupMember(account: strongSelf.context.account, peerId: groupPeer.id, memberId: peer.id)
+                                        var inviteSignal = strongSelf.context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: peer.id)
                                         var cancelImpl: (() -> Void)?
                                         let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
                                             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {

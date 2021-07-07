@@ -333,7 +333,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             self?.searchQuery.set(text)
         }
         
-        let hasRecentPeers = recentPeers(account: context.account)
+        let hasRecentPeers = context.engine.peers.recentPeers()
         |> map { value -> Bool in
             switch value {
             case let .peers(peers):

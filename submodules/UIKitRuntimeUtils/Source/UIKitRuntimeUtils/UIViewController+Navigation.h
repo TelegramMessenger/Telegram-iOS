@@ -34,7 +34,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 
 @end
 
-void applyKeyboardAutocorrection();
+void applyKeyboardAutocorrection(UITextView * _Nonnull textView);
 
 @interface AboveStatusBarWindow : UIWindow
 

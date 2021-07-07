@@ -150,7 +150,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let peersDisposable = DisposableSet()
         
-        let recent: Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId : PeerPresence]), NoError> = recentPeers(account: context.account)
+        let recent: Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId : PeerPresence]), NoError> = context.engine.peers.recentPeers()
         |> filter { value -> Bool in
             switch value {
                 case .disabled:
@@ -224,7 +224,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             }
         }))
         if case .actionSheet = mode {
-            peersDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
+            peersDisposable.add(context.engine.peers.managedUpdatedRecentPeers().start())
         }
         self.disposable.set(peersDisposable)
     }

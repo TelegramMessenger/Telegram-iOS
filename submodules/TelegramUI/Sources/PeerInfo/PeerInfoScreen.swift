@@ -4294,7 +4294,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 
                                 strongSelf.activeActionDisposable.set(strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start())
                                 if deleteChat {
-                                    let _ = removePeerChat(account: strongSelf.context.account, peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
+                                    let _ = strongSelf.context.engine.peers.removePeerChat(peerId: strongSelf.peerId, reportChatSpam: reportSpam).start()
                                     (strongSelf.controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
                                 } else if reportSpam {
                                     let _ = strongSelf.context.engine.peers.reportPeer(peerId: strongSelf.peerId, reason: .spam, message: "").start()
@@ -6239,8 +6239,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var canOpenAvatarByDragging = false
     
-    private let velocityKey: String = encodeText("`wfsujdbmWfmpdjuz", -1)
-    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling {
             return
@@ -6249,7 +6247,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if !self.state.isEditing {
             if self.canAddVelocity {
                 self.previousVelocityM1 = self.previousVelocity
-                if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
+                if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
                     self.previousVelocity = CGFloat(value)
                 }
             }
@@ -7063,14 +7061,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     }
 }
 
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
-    }
-    return result
-}
-
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
@@ -7219,14 +7209,14 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             if case let .peer(selectedPeer, _, _) = memberPeer {
                 let memberId = selectedPeer.id
                 if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberId)
                     |> map { _ -> Void in
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
                 } else {
-                    return addGroupMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
                     |> deliverOnMainQueue
                     |> `catch` { error -> Signal<Void, NoError> in
                         switch error {
@@ -7274,7 +7264,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                                 guard let upgradedPeerId = upgradedPeerId else {
                                     return .single(nil)
                                 }
-                                return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: upgradedPeerId, memberId: memberId)
+                                return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: upgradedPeerId, memberId: memberId)
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()
                                 }
@@ -7310,11 +7300,11 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             |> castError(AddChannelMemberError.self)
             |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
                 if memberIds.count == 1 {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberIds[0])
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
                     |> map { _ -> Void in
                     }
                 } else {
-                    return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
+                    return context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
                     }
                 }
             }

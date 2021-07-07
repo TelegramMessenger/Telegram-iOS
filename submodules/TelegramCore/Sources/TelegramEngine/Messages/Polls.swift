@@ -10,7 +10,7 @@ public enum RequestMessageSelectPollOptionError {
     case generic
 }
 
-public func requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+func _internal_requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> castError(RequestMessageSelectPollOptionError.self)
@@ -80,7 +80,7 @@ public func requestMessageSelectPollOption(account: Account, messageId: MessageI
     }
 }
 
-public func requestClosePoll(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Void, NoError> {
+func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> (TelegramMediaPoll, Api.InputPeer)? in
         guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
             return nil
@@ -419,7 +419,7 @@ public final class PollResultsContext {
         }
     }
     
-    public init(account: Account, messageId: MessageId, poll: TelegramMediaPoll) {
+    init(account: Account, messageId: MessageId, poll: TelegramMediaPoll) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return PollResultsContextImpl(queue: queue, account: account, messageId: messageId, poll: poll)

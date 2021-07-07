@@ -848,7 +848,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     }
     
     private func clearRecentSearch() {
-        let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox) |> deliverOnMainQueue).start()
+        let _ = (self.context.engine.peers.clearRecentlySearchedPeers() |> deliverOnMainQueue).start()
     }
     
     override func scrollToTop() {

@@ -14,7 +14,7 @@ public enum AddGroupMemberError {
     case tooManyChannels
 }
 
-public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
+func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
     return account.postbox.transaction { transaction -> Signal<Void, AddGroupMemberError> in
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
@@ -79,8 +79,8 @@ public enum AddChannelMemberError {
     case tooMuchBots
 }
 
-public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
-    return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
+func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
+    return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
     |> mapError { error -> AddChannelMemberError in
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
@@ -180,7 +180,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
     }
 }
 
-public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
+func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
     let signal = account.postbox.transaction { transaction -> Signal<Void, AddChannelMemberError> in
         var memberPeerIds: [PeerId:Peer] = [:]
         var inputUsers: [Api.InputUser] = []

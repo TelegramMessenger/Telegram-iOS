@@ -4,19 +4,19 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func addRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_addRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem(rating: 0.0)), removeTailIfCountExceeds: 20)
     }
 }
 
-public func removeRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+func _internal_removeRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     }
 }
 
-public func clearRecentlySearchedPeers(postbox: Postbox) -> Signal<Void, NoError> {
+func _internal_clearRecentlySearchedPeers(postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, items: [])
     }
@@ -34,7 +34,7 @@ public struct RecentlySearchedPeer: Equatable {
     public let subpeerSummary: RecentlySearchedPeerSubpeerSummary?
 }
 
-public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearchedPeer], NoError> {
+func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearchedPeer], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlySearchedPeerIds)])
     |> mapToSignal { view -> Signal<[RecentlySearchedPeer], NoError> in
         var peerIds: [PeerId] = []

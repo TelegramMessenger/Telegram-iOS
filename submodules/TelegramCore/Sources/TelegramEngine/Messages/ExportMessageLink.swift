@@ -3,7 +3,7 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-public func exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
+func _internal_exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
     return account.postbox.transaction { transaction -> (Peer, MessageId)? in
         var peer: Peer? = transaction.getPeer(messageId.peerId)
         if let peer = peer {

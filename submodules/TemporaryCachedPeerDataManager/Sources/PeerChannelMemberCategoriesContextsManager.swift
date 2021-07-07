@@ -378,8 +378,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
-        return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
+    public func updateMemberAdminRights(engine: TelegramEngine, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights?, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
+        return engine.peers.updateChannelAdminRights(peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
         |> map(Optional.init)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
@@ -435,8 +435,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         |> ignoreValues
     }
     
-    public func addMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Never, AddChannelMemberError> {
-        return addChannelMember(account: account, peerId: peerId, memberId: memberId)
+    public func addMember(engine: TelegramEngine, peerId: PeerId, memberId: PeerId) -> Signal<Never, AddChannelMemberError> {
+        return engine.peers.addChannelMember(peerId: peerId, memberId: memberId)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let strongSelf = self {
@@ -453,9 +453,9 @@ public final class PeerChannelMemberCategoriesContextsManager {
         |> ignoreValues
     }
     
-    public func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
+    public func addMembers(engine: TelegramEngine, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
         let signals: [Signal<(ChannelParticipant?, RenderedChannelParticipant)?, AddChannelMemberError>] = memberIds.map({ memberId in
-            return addChannelMember(account: account, peerId: peerId, memberId: memberId)
+            return engine.peers.addChannelMember(peerId: peerId, memberId: memberId)
             |> map(Optional.init)
             |> `catch` { error -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, AddChannelMemberError> in
                 return .fail(error)

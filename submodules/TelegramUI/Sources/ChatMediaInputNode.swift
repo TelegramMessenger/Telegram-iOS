@@ -772,7 +772,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 
                 return false
             })
-            peerSpecificPack = combineLatest(peerSpecificStickerPack(postbox: context.account.postbox, network: context.account.network, peerId: peerId), context.account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
+            peerSpecificPack = combineLatest(context.engine.peers.peerSpecificStickerPack(peerId: peerId), context.account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
             |> map { packData, peersView, dismissedPeerSpecificPack -> (PeerSpecificPackData?, CanInstallPeerSpecificPack) in
                 if let peer = peersView.peers[peerId] {
                     var canInstall: CanInstallPeerSpecificPack = .none
