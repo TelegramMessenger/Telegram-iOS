@@ -2331,10 +2331,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            #if DEBUG
-                            //webpage = nil
-                            #endif
+
                             messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+
+                            #if DEBUG
+                            if text.string == "sleep" {
+                                messages.removeAll()
+
+                                for i in 0 ..< 5 {
+                                    messages.append(.message(text: "sleep\(i)", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                                }
+                            }
+                            #endif
                         }
                     }
 

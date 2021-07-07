@@ -107,19 +107,19 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                         } else {
                             switch subject {
                                 case let .peer(peerId):
-                                    let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
                                     })
                                 case let .messages(messageIds):
-                                    let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
                                     })
                                 case let .profilePhoto(peerId, photoId):
-                                    let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
@@ -233,19 +233,19 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     } else {
                         switch subject {
                             case let .peer(peerId):
-                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)
                                 })
                             case let .messages(messageIds):
-                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)
                                 })
                             case let .profilePhoto(peerId, photoId):
-                                let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)

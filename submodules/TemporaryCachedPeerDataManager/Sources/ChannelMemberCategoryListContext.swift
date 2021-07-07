@@ -111,6 +111,7 @@ private extension CachedChannelAdminRank {
 }
 
 private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategoryListContext {
+    private let engine: TelegramEngine
     private let postbox: Postbox
     private let network: Network
     private let accountPeerId: PeerId
@@ -147,7 +148,8 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     
     private var headUpdateTimer: SwiftSignalKit.Timer?
     
-    init(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMemberListCategory) {
+    init(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMemberListCategory) {
+        self.engine = engine
         self.postbox = postbox
         self.network = network
         self.accountPeerId = accountPeerId
@@ -230,7 +232,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             case let .banned(query):
                 requestCategory = .banned(query.flatMap(ChannelMembersCategoryFilter.search) ?? .all)
         }
-        return channelMembers(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: requestCategory, offset: offset, limit: count, hash: hash) |> map { members in
+        return self.engine.peers.channelMembers(peerId: self.peerId, category: requestCategory, offset: offset, limit: count, hash: hash) |> map { members in
             switch requestCategory {
                 case .admins:
                     if let query = adminQuery {
@@ -590,9 +592,9 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
         }
     }
     
-    init(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, categories: [ChannelMemberListCategory]) {
+    init(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, categories: [ChannelMemberListCategory]) {
         self.contexts = categories.map { category in
-            return ChannelMemberSingleCategoryListContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, category: category)
+            return ChannelMemberSingleCategoryListContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, category: category)
         }
     }
     
@@ -698,6 +700,7 @@ private final class PeerChannelMemberContextWithSubscribers {
 }
 
 final class PeerChannelMemberCategoriesContext {
+    private let engine: TelegramEngine
     private let postbox: Postbox
     private let network: Network
     private let accountPeerId: PeerId
@@ -706,7 +709,8 @@ final class PeerChannelMemberCategoriesContext {
     
     private var contexts: [PeerChannelMemberContextKey: PeerChannelMemberContextWithSubscribers] = [:]
     
-    init(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, becameEmpty: @escaping (Bool) -> Void) {
+    init(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, becameEmpty: @escaping (Bool) -> Void) {
+        self.engine = engine
         self.postbox = postbox
         self.network = network
         self.accountPeerId = accountPeerId
@@ -755,13 +759,13 @@ final class PeerChannelMemberCategoriesContext {
                     default:
                         mappedCategory = .recent
                 }
-                context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: mappedCategory)
+                context = ChannelMemberSingleCategoryListContext(engine: self.engine, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: mappedCategory)
             case let .restrictedAndBanned(query):
-                context = ChannelMemberMultiCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, categories: [.restricted(query), .banned(query)])
+                context = ChannelMemberMultiCategoryListContext(engine: self.engine, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, categories: [.restricted(query), .banned(query)])
             case let .restricted(query):
-                context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .restricted(query))
+                context = ChannelMemberSingleCategoryListContext(engine: self.engine, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .restricted(query))
             case let .banned(query):
-                context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .banned(query))
+                context = ChannelMemberSingleCategoryListContext(engine: self.engine, postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .banned(query))
         }
         let contextWithSubscribers = PeerChannelMemberContextWithSubscribers(context: context, emptyTimeout: emptyTimeout, becameEmpty: { [weak self] in
             assert(Queue.mainQueue().isCurrent())

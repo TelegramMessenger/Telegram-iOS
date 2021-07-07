@@ -455,7 +455,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
         
         let signal: Signal<PeerId?, ChannelOwnershipTransferError>
         if let peer = peer as? TelegramChannel {
-            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                 return .complete()
             }
             |> then(.single(nil))
@@ -475,7 +475,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
                 guard let upgradedPeerId = upgradedPeerId else {
                     return .fail(.generic)
                 }
-                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                     return .complete()
                 }
                 |> then(.single(upgradedPeerId))

@@ -2448,7 +2448,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
+                                let _ = strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.peerId, isBlocked: true).start()
                             })
                         }
                     }))

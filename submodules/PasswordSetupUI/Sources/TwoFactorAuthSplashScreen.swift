@@ -15,17 +15,18 @@ import TelegramCore
 public enum TwoFactorAuthSplashMode {
     case intro
     case done
+    case recoveryDone(recoveredAccountData: RecoveredAccountData, syncContacts: Bool)
 }
 
 public final class TwoFactorAuthSplashScreen: ViewController {
     private let sharedContext: SharedAccountContext
-    private let network: Network
+    private let engine: SomeTelegramEngine
     private var presentationData: PresentationData
     private var mode: TwoFactorAuthSplashMode
     
-    public init(sharedContext: SharedAccountContext, network: Network, mode: TwoFactorAuthSplashMode) {
+    public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorAuthSplashMode, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
         self.sharedContext = sharedContext
-        self.network = network
+        self.engine = engine
         self.mode = mode
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
@@ -34,9 +35,10 @@ public final class TwoFactorAuthSplashScreen: ViewController {
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
+
+        self.navigationPresentation = presentation
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
@@ -57,13 +59,23 @@ public final class TwoFactorAuthSplashScreen: ViewController {
             }
             switch strongSelf.mode {
             case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .password, stateUpdated: { _ in
-                }))
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password, stateUpdated: { _ in
+                }, presentation: strongSelf.navigationPresentation))
             case .done:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return
                 }
                 navigationController.filterController(strongSelf, animated: true)
+            case let .recoveryDone(recoveredAccountData, syncContacts):
+                guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                    return
+                }
+                switch strongSelf.engine {
+                case let .unauthorized(engine):
+                    let _ = loginWithRecoveredAccountData(accountManager: strongSelf.sharedContext.accountManager, account: engine.account, recoveredAccountData: recoveredAccountData, syncContacts: syncContacts).start()
+                case .authorized:
+                    navigationController.filterController(strongSelf, animated: true)
+                }
             }
         })
         
@@ -124,6 +136,16 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)
             buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
             
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+        case .recoveryDone:
+            title = self.presentationData.strings.TwoFactorSetup_ResetDone_Title
+            text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_ResetDone_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.TwoFactorSetup_ResetDone_Action
+
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)

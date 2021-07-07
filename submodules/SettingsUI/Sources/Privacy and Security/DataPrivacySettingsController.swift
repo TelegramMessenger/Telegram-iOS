@@ -426,7 +426,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     })
                 }).start()
                 
-                actionsDisposable.add((deleteAllContacts(account: context.account)
+                actionsDisposable.add((context.engine.contacts.deleteAllContacts()
                 |> deliverOnMainQueue).start(completed: {
                     updateState { state in
                         var state = state

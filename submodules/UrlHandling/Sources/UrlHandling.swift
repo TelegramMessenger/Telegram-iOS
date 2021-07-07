@@ -368,7 +368,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return fetchChannelReplyThreadMessage(account: context.account, messageId: replyThreadMessageId, atMessageId: nil)
+                                return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                     return .single(nil)
@@ -420,7 +420,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     if let foundPeer = foundPeer {
                         if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return fetchChannelReplyThreadMessage(account: context.account, messageId: replyThreadMessageId, atMessageId: nil)
+                            return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)

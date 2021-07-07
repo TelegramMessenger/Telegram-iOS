@@ -123,7 +123,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.chatFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: self.presentationData.largeEmoji, chatBubbleCorners: self.presentationData.chatBubbleCorners))
         
-        self.eventLogContext = ChannelAdminEventLogContext(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peer.id)
+        self.eventLogContext = self.context.engine.peers.channelAdminEventLog(peerId: self.peer.id)
         
         super.init()
         
@@ -140,7 +140,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
-        let (adminsDisposable, _) = self.context.peerChannelMemberCategoriesContextsManager.admins(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: context.account.peerId, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
+        let (adminsDisposable, _) = self.context.peerChannelMemberCategoriesContextsManager.admins(engine: self.context.engine, postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: context.account.peerId, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
             self?.adminsState = state
         })
         self.adminsDisposable = adminsDisposable

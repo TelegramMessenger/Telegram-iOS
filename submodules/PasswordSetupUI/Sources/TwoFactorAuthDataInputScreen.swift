@@ -14,18 +14,27 @@ import AnimatedStickerNode
 
 public enum TwoFactorDataInputMode {
     public struct Recovery {
-        public var code: String
-        public var syncContacts: Bool
-        public var account: UnauthorizedAccount
+        public enum Mode {
+            case notAuthorized(syncContacts: Bool)
+            case authorized
+        }
 
-        public init(code: String, syncContacts: Bool, account: UnauthorizedAccount) {
+        public var code: String
+        public var mode: Mode
+
+        public init(code: String, mode: Mode) {
             self.code = code
-            self.syncContacts = syncContacts
-            self.account = account
+            self.mode = mode
         }
     }
 
+    public enum PasswordRecoveryEmailMode {
+        case notAuthorized(syncContacts: Bool)
+        case authorized
+    }
+
     case password
+    case passwordRecoveryEmail(emailPattern: String, mode: PasswordRecoveryEmailMode)
     case passwordRecovery(Recovery)
     case emailAddress(password: String, hint: String)
     case updateEmailAddress(password: String)
@@ -35,14 +44,17 @@ public enum TwoFactorDataInputMode {
 
 public final class TwoFactorDataInputScreen: ViewController {
     private let sharedContext: SharedAccountContext
-    private let network: Network
+    private let engine: SomeTelegramEngine
     private var presentationData: PresentationData
     private let mode: TwoFactorDataInputMode
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate) -> Void
+    private let actionDisposable = MetaDisposable()
+
+    public var passwordRecoveryFailed: (() -> Void)?
     
-    public init(sharedContext: SharedAccountContext, network: Network, mode: TwoFactorDataInputMode, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void) {
+    public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorDataInputMode, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
         self.sharedContext = sharedContext
-        self.network = network
+        self.engine = engine
         self.mode = mode
         self.stateUpdated = stateUpdated
         
@@ -54,7 +66,7 @@ public final class TwoFactorDataInputScreen: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationPresentation = .modalInLargeLayout
+        self.navigationPresentation = presentation
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
@@ -63,6 +75,10 @@ public final class TwoFactorDataInputScreen: ViewController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        self.actionDisposable.dispose()
     }
     
     @objc private func backPressed() {
@@ -101,8 +117,57 @@ public final class TwoFactorDataInputScreen: ViewController {
                     }
                     return true
                 }
-                controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .passwordHint(recovery: nil, password: values[0]), stateUpdated: strongSelf.stateUpdated))
+                controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .passwordHint(recovery: nil, password: values[0]), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                 navigationController.setViewControllers(controllers, animated: true)
+            case let .passwordRecoveryEmail(_, mode):
+                guard let text = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !text.isEmpty else {
+                    return
+                }
+                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
+                strongSelf.present(statusController, in: .window(.root))
+
+                strongSelf.actionDisposable.set((strongSelf.engine.auth.checkPasswordRecoveryCode(code: text)
+                |> deliverOnMainQueue).start(error: { [weak statusController] error in
+                    statusController?.dismiss()
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let text: String
+                    switch error {
+                    case .limitExceeded:
+                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
+                    case .invalidCode:
+                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                    case .expired:
+                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
+                    case .generic:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
+                    }
+
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }, completed: { [weak statusController] in
+                    statusController?.dismiss()
+
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let mappedMode: TwoFactorDataInputMode.Recovery.Mode
+                    switch mode {
+                    case .authorized:
+                        mappedMode = .authorized
+                    case let .notAuthorized(syncContacts):
+                        mappedMode = .notAuthorized(syncContacts: syncContacts)
+                    }
+
+                    let setupController = TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .passwordRecovery(TwoFactorDataInputMode.Recovery(code: text, mode: mappedMode)), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation)
+
+                    guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                        return
+                    }
+                    navigationController.replaceController(strongSelf, with: setupController, animated: true)
+                }))
             case let .passwordRecovery(recovery):
                 let values = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText
                 if values.count != 2 {
@@ -120,17 +185,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return
                 }
-                var controllers = navigationController.viewControllers.filter { controller in
-                    if controller is TwoFactorAuthSplashScreen {
-                        return false
-                    }
-                    if controller is TwoFactorDataInputScreen && controller !== strongSelf {
-                        return false
-                    }
-                    return true
-                }
-                controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .passwordHint(recovery: recovery, password: values[0]), stateUpdated: strongSelf.stateUpdated))
-                navigationController.setViewControllers(controllers, animated: true)
+                navigationController.replaceController(strongSelf, with: TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .passwordHint(recovery: recovery, password: values[0]), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation), animated: true)
             case let .emailAddress(password, hint):
                 guard let text = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !text.isEmpty else {
                     return
@@ -138,7 +193,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                 strongSelf.present(statusController, in: .window(.root))
                 
-                let _ = (updateTwoStepVerificationPassword(network: strongSelf.network, currentPassword: "", updatedPassword: .password(password: password, hint: hint, email: text))
+                let _ = (strongSelf.engine.auth.updateTwoStepVerificationPassword(currentPassword: "", updatedPassword: .password(password: password, hint: hint, email: text))
                 |> deliverOnMainQueue).start(next: { [weak statusController] result in
                     statusController?.dismiss()
                     
@@ -163,7 +218,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .emailConfirmation(passwordAndHint: (password, hint), emailPattern: text, codeLength: pendingEmail.codeLength.flatMap(Int.init)), stateUpdated: strongSelf.stateUpdated))
+                            controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailConfirmation(passwordAndHint: (password, hint), emailPattern: text, codeLength: pendingEmail.codeLength.flatMap(Int.init)), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                             navigationController.setViewControllers(controllers, animated: true)
                         } else {
                             guard let navigationController = strongSelf.navigationController as? NavigationController else {
@@ -178,7 +233,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .done))
+                            controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .done))
                             navigationController.setViewControllers(controllers, animated: true)
                         }
                     }
@@ -205,120 +260,130 @@ public final class TwoFactorDataInputScreen: ViewController {
                 }
                 let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                 strongSelf.present(statusController, in: .window(.root))
-                
-                let _ = (updateTwoStepVerificationEmail(network: strongSelf.network, currentPassword: password, updatedEmail: text)
-                |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                    statusController?.dismiss()
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    switch result {
-                    case .none:
-                        break
-                    case let .password(_, pendingEmail):
-                        if let pendingEmail = pendingEmail {
-                            guard let navigationController = strongSelf.navigationController as? NavigationController else {
-                                return
-                            }
-                            var controllers = navigationController.viewControllers.filter { controller in
-                                if controller is TwoFactorAuthSplashScreen {
-                                    return false
-                                }
-                                if controller is TwoFactorDataInputScreen {
-                                    return false
-                                }
-                                return true
-                            }
-                            controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .emailConfirmation(passwordAndHint: (password, ""), emailPattern: text, codeLength: pendingEmail.codeLength.flatMap(Int.init)), stateUpdated: strongSelf.stateUpdated))
-                            navigationController.setViewControllers(controllers, animated: true)
-                        } else {
-                            guard let navigationController = strongSelf.navigationController as? NavigationController else {
-                                return
-                            }
-                            var controllers = navigationController.viewControllers.filter { controller in
-                                if controller is TwoFactorAuthSplashScreen {
-                                    return false
-                                }
-                                if controller is TwoFactorDataInputScreen {
-                                    return false
-                                }
-                                return true
-                            }
-                            controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .done))
-                            navigationController.setViewControllers(controllers, animated: true)
+
+                switch strongSelf.engine {
+                case let .authorized(engine):
+                    let _ = (engine.auth.updateTwoStepVerificationEmail(currentPassword: password, updatedEmail: text)
+                    |> deliverOnMainQueue).start(next: { [weak statusController] result in
+                        statusController?.dismiss()
+
+                        guard let strongSelf = self else {
+                            return
                         }
-                    }
-                }, error: { [weak statusController] error in
-                    statusController?.dismiss()
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    let presentationData = strongSelf.presentationData
-                    let alertText: String
-                    switch error {
-                    case .generic:
-                        alertText = presentationData.strings.Login_UnknownError
-                    case .invalidEmail:
-                        alertText = presentationData.strings.TwoStepAuth_EmailInvalid
-                    }
-                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                })
+
+                        switch result {
+                        case .none:
+                            break
+                        case let .password(_, pendingEmail):
+                            if let pendingEmail = pendingEmail {
+                                guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                                    return
+                                }
+                                var controllers = navigationController.viewControllers.filter { controller in
+                                    if controller is TwoFactorAuthSplashScreen {
+                                        return false
+                                    }
+                                    if controller is TwoFactorDataInputScreen {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailConfirmation(passwordAndHint: (password, ""), emailPattern: text, codeLength: pendingEmail.codeLength.flatMap(Int.init)), stateUpdated: strongSelf.stateUpdated))
+                                navigationController.setViewControllers(controllers, animated: true)
+                            } else {
+                                guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                                    return
+                                }
+                                var controllers = navigationController.viewControllers.filter { controller in
+                                    if controller is TwoFactorAuthSplashScreen {
+                                        return false
+                                    }
+                                    if controller is TwoFactorDataInputScreen {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .done))
+                                navigationController.setViewControllers(controllers, animated: true)
+                            }
+                        }
+                    }, error: { [weak statusController] error in
+                        statusController?.dismiss()
+
+                        guard let strongSelf = self else {
+                            return
+                        }
+
+                        let presentationData = strongSelf.presentationData
+                        let alertText: String
+                        switch error {
+                        case .generic:
+                            alertText = presentationData.strings.Login_UnknownError
+                        case .invalidEmail:
+                            alertText = presentationData.strings.TwoStepAuth_EmailInvalid
+                        }
+                        strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    })
+                case .unauthorized:
+                    break
+                }
             case .emailConfirmation:
                 guard let text = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !text.isEmpty else {
                     return
                 }
                 let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                 strongSelf.present(statusController, in: .window(.root))
-                
-                let _ = (confirmTwoStepRecoveryEmail(network: strongSelf.network, code: text)
-                |> deliverOnMainQueue).start(error: { [weak statusController] error in
-                    statusController?.dismiss()
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    let presentationData = strongSelf.presentationData
-                    let text: String
-                    switch error {
-                    case .invalidEmail:
-                        text = presentationData.strings.TwoStepAuth_EmailInvalid
-                    case .invalidCode:
-                        text = presentationData.strings.Login_InvalidCodeError
-                    case .expired:
-                        text = presentationData.strings.TwoStepAuth_EmailCodeExpired
-                    case .flood:
-                        text = presentationData.strings.TwoStepAuth_FloodError
-                    case .generic:
-                        text = presentationData.strings.Login_UnknownError
-                    }
-                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                }, completed: { [weak statusController] in
-                    statusController?.dismiss()
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    guard let navigationController = strongSelf.navigationController as? NavigationController else {
-                        return
-                    }
-                    var controllers = navigationController.viewControllers.filter { controller in
-                        if controller is TwoFactorAuthSplashScreen {
-                            return false
+
+                switch strongSelf.engine {
+                case let .authorized(engine):
+                    let _ = (engine.auth.confirmTwoStepRecoveryEmail(code: text)
+                    |> deliverOnMainQueue).start(error: { [weak statusController] error in
+                        statusController?.dismiss()
+
+                        guard let strongSelf = self else {
+                            return
                         }
-                        if controller is TwoFactorDataInputScreen {
-                            return false
+
+                        let presentationData = strongSelf.presentationData
+                        let text: String
+                        switch error {
+                        case .invalidEmail:
+                            text = presentationData.strings.TwoStepAuth_EmailInvalid
+                        case .invalidCode:
+                            text = presentationData.strings.Login_InvalidCodeError
+                        case .expired:
+                            text = presentationData.strings.TwoStepAuth_EmailCodeExpired
+                        case .flood:
+                            text = presentationData.strings.TwoStepAuth_FloodError
+                        case .generic:
+                            text = presentationData.strings.Login_UnknownError
                         }
-                        return true
-                    }
-                    controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .done))
-                    navigationController.setViewControllers(controllers, animated: true)
-                })
+                        strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }, completed: { [weak statusController] in
+                        statusController?.dismiss()
+
+                        guard let strongSelf = self else {
+                            return
+                        }
+
+                        guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                            return
+                        }
+                        var controllers = navigationController.viewControllers.filter { controller in
+                            if controller is TwoFactorAuthSplashScreen {
+                                return false
+                            }
+                            if controller is TwoFactorDataInputScreen {
+                                return false
+                            }
+                            return true
+                        }
+                        controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .done))
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
+                case .unauthorized:
+                    break
+                }
             case let .passwordHint(recovery, password):
                 guard let value = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !value.isEmpty else {
                     return
@@ -327,7 +392,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 if let recovery = recovery {
                     strongSelf.performRecovery(recovery: recovery, password: password, hint: value)
                 } else {
-                    strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .emailAddress(password: password, hint: value), stateUpdated: strongSelf.stateUpdated))
+                    strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailAddress(password: password, hint: value), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                 }
             }
         }, skipAction: { [weak self] in
@@ -344,7 +409,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                         let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                         strongSelf.present(statusController, in: .window(.root))
                         
-                        let _ = (updateTwoStepVerificationPassword(network: strongSelf.network, currentPassword: "", updatedPassword: .password(password: password, hint: hint, email: nil))
+                        let _ = (strongSelf.engine.auth.updateTwoStepVerificationPassword(currentPassword: "", updatedPassword: .password(password: password, hint: hint, email: nil))
                         |> deliverOnMainQueue).start(next: { [weak statusController] result in
                             statusController?.dismiss()
                             
@@ -368,7 +433,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                     }
                                     return true
                                 }
-                                controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .done))
+                                controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .done))
                                 navigationController.setViewControllers(controllers, animated: true)
                             }
                         }, error: { [weak statusController] error in
@@ -395,7 +460,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 if let recovery = recovery {
                     strongSelf.performRecovery(recovery: recovery, password: password, hint: "")
                 } else {
-                    strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .emailAddress(password: password, hint: ""), stateUpdated: strongSelf.stateUpdated))
+                    strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailAddress(password: password, hint: ""), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                 }
             case let .passwordRecovery(recovery):
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.TwoFactorSetup_PasswordRecovery_SkipAlertTitle, text: strongSelf.presentationData.strings.TwoFactorSetup_PasswordRecovery_SkipAlertText, actions: [
@@ -429,9 +494,36 @@ public final class TwoFactorDataInputScreen: ViewController {
                         }
                         return true
                     }
-                    controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, network: strongSelf.network, mode: .emailAddress(password: password, hint: hint), stateUpdated: strongSelf.stateUpdated))
+                    controllers.append(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailAddress(password: password, hint: hint), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                     navigationController.setViewControllers(controllers, animated: true)
                 } else {
+                }
+            case .passwordRecoveryEmail:
+                switch strongSelf.engine {
+                case let .authorized(engine):
+                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryEmailResetText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
+                        let _ = (engine.auth.requestTwoStepPasswordReset()
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            switch result {
+                            case .done, .waitingForReset:
+                                strongSelf.stateUpdated(.pendingPasswordReset)
+                            case .declined:
+                                break
+                            case let .error(reason):
+                                break
+                            }
+                        })
+                    })]), in: .window(.root))
+                case .unauthorized:
+                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.passwordRecoveryFailed?()
+                    })]), in: .window(.root))
                 }
             default:
                 break
@@ -440,29 +532,57 @@ public final class TwoFactorDataInputScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            
-            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
-            strongSelf.present(statusController, in: .window(.root))
-            
-            let _ = (resendTwoStepRecoveryEmail(network: strongSelf.network)
-            |> deliverOnMainQueue).start(error: { [weak statusController] error in
-                statusController?.dismiss()
-                
-                guard let strongSelf = self else {
+            switch strongSelf.mode {
+            case .passwordRecoveryEmail:
+                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
+                strongSelf.present(statusController, in: .window(.root))
+
+                let _ = (strongSelf.engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
+                |> deliverOnMainQueue).start(error: { [weak statusController] error in
+                    statusController?.dismiss()
+
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let text: String
+                    switch error {
+                    case .limitExceeded:
+                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                    case .generic:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
+                    }
+                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }, completed: { [weak statusController] in
+                    statusController?.dismiss()
+                })
+            default:
+                guard case let .authorized(engine) = strongSelf.engine else {
                     return
                 }
-                
-                let text: String
-                switch error {
-                case .flood:
-                    text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
-                case .generic:
-                    text = strongSelf.presentationData.strings.Login_UnknownError
-                }
-                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }, completed: { [weak statusController] in
-                statusController?.dismiss()
-            })
+                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
+                strongSelf.present(statusController, in: .window(.root))
+
+                let _ = (engine.auth.resendTwoStepRecoveryEmail()
+                |> deliverOnMainQueue).start(error: { [weak statusController] error in
+                    statusController?.dismiss()
+
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    let text: String
+                    switch error {
+                    case .flood:
+                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                    case .generic:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
+                    }
+                    strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }, completed: { [weak statusController] in
+                    statusController?.dismiss()
+                })
+            }
         })
         
         self.displayNodeDidLoad()
@@ -475,39 +595,93 @@ public final class TwoFactorDataInputScreen: ViewController {
     }
 
     private func performRecovery(recovery: TwoFactorDataInputMode.Recovery, password: String, hint: String) {
-        /*let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
         self.present(statusController, in: .window(.root))
 
-        let _ = (performPasswordRecovery(accountManager: self.sharedContext.accountManager, account: recovery.account, code: recovery.code, syncContacts: recovery.syncContacts, updatedPassword: password.isEmpty ? .none : .password(password: password, hint: hint, email: nil))
-        |> deliverOnMainQueue).start(error: { [weak self, weak statusController] error in
-            statusController?.dismiss()
-
-            guard let strongSelf = self else {
-                return
+        switch self.engine {
+        case let .unauthorized(engine):
+            var syncContacts = false
+            switch recovery.mode {
+            case let .notAuthorized(syncContactsValue):
+                syncContacts = syncContactsValue
+            case .authorized:
+                break
             }
+            let _ = (engine.auth.performPasswordRecovery(code: recovery.code, updatedPassword: password.isEmpty ? .none : .password(password: password, hint: hint, email: nil))
+            |> deliverOnMainQueue).start(next: { [weak self, weak statusController] recoveredAccountData in
+                statusController?.dismiss()
 
-            let text: String
-            switch error {
-            case .limitExceeded:
-                text = strongSelf.presentationData.strings.LoginPassword_FloodError
-            case .invalidCode:
-                text = strongSelf.presentationData.strings.Login_InvalidCodeError
-            case .expired:
-                text = strongSelf.presentationData.strings.Login_CodeExpiredError
-            case .generic:
-                text = strongSelf.presentationData.strings.Login_UnknownError
-            }
+                guard let strongSelf = self else {
+                    return
+                }
 
-            strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, completed: { [weak self, weak statusController] in
-            statusController?.dismiss()
+                if password.isEmpty {
+                    strongSelf.stateUpdated(.noPassword)
+                } else {
+                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
+                }
 
-            guard let strongSelf = self else {
-                return
-            }
+                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts)), animated: true)
+            }, error: { [weak self, weak statusController] error in
+                statusController?.dismiss()
 
-            strongSelf.dismiss()
-        })*/
+                guard let strongSelf = self else {
+                    return
+                }
+
+                let text: String
+                switch error {
+                case .limitExceeded:
+                    text = strongSelf.presentationData.strings.LoginPassword_FloodError
+                case .invalidCode:
+                    text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                case .expired:
+                    text = strongSelf.presentationData.strings.Login_CodeExpiredError
+                case .generic:
+                    text = strongSelf.presentationData.strings.Login_UnknownError
+                }
+
+                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, completed: { [weak self, weak statusController] in
+                statusController?.dismiss()
+            })
+        case let .authorized(engine):
+            let _ = (engine.auth.performPasswordRecovery(code: recovery.code, updatedPassword: password.isEmpty ? .none : .password(password: password, hint: hint, email: nil))
+            |> deliverOnMainQueue).start(error: { [weak self, weak statusController] error in
+                statusController?.dismiss()
+
+                guard let strongSelf = self else {
+                    return
+                }
+
+                let text: String
+                switch error {
+                case .limitExceeded:
+                    text = strongSelf.presentationData.strings.LoginPassword_FloodError
+                case .invalidCode:
+                    text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                case .expired:
+                    text = strongSelf.presentationData.strings.Login_CodeExpiredError
+                case .generic:
+                    text = strongSelf.presentationData.strings.Login_UnknownError
+                }
+
+                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, completed: { [weak self, weak statusController] in
+                statusController?.dismiss()
+
+                guard let strongSelf = self else {
+                    return
+                }
+
+                if password.isEmpty {
+                    strongSelf.stateUpdated(.noPassword)
+                } else {
+                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
+                }
+                strongSelf.dismiss()
+            })
+        }
     }
 }
 
@@ -794,7 +968,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         switch mode {
         case .password, .passwordRecovery, .emailAddress, .updateEmailAddress:
             self.monkeyNode = ManagedMonkeyAnimationNode()
-        case .emailConfirmation:
+        case .emailConfirmation, .passwordRecoveryEmail:
             if let path = getAppBundle().path(forResource: "TwoFactorSetupMail", ofType: "tgs") {
                 let animatedStickerNode = AnimatedStickerNode()
                 animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
@@ -896,6 +1070,33 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                     toggleTextHidden?(node)
                 }),
             ]
+        case let .passwordRecoveryEmail(emailPattern, _):
+            title = presentationData.strings.TwoFactorSetup_EmailVerification_Title
+            let (rawText, ranges) = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
+
+            let string = NSMutableAttributedString()
+            string.append(NSAttributedString(string: rawText, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+            for (_, range) in ranges {
+                string.addAttribute(.font, value: Font.semibold(16.0), range: range)
+            }
+
+            text = string
+
+            buttonText = presentationData.strings.TwoFactorSetup_EmailVerification_Action
+            skipActionText = ""
+            changeEmailActionText = presentationData.strings.TwoStepAuth_RecoveryEmailResetNoAccess
+            resendCodeActionText = presentationData.strings.TwoFactorSetup_EmailVerification_ResendAction
+            inputNodes = [
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .code, placeholder: presentationData.strings.TwoFactorSetup_EmailVerification_Placeholder, focusUpdated: { node, focused in
+                    focusUpdated?(node, focused)
+                }, next: { node in
+                    next?(node)
+                }, updated: { node in
+                    updated?(node)
+                }, toggleTextHidden: { node in
+                    toggleTextHidden?(node)
+                }),
+            ]
         case let .emailConfirmation(_, emailPattern, _):
             title = presentationData.strings.TwoFactorSetup_EmailVerification_Title
             let (rawText, ranges) = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
@@ -971,7 +1172,6 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         self.changeEmailActionTitleNode.displaysAsynchronously = false
         self.changeEmailActionTitleNode.attributedText = NSAttributedString(string: changeEmailActionText, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemAccentColor)
         self.changeEmailActionButtonNode = HighlightTrackingButtonNode()
-        self.changeEmailActionButtonNode.isHidden = changeEmailActionText.isEmpty
         self.changeEmailActionButtonNode.isHidden = changeEmailActionText.isEmpty
         
         self.resendCodeActionTitleNode = ImmediateTextNode()
@@ -1075,7 +1275,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .password:
+            case .password, .passwordRecovery:
                 if strongSelf.inputNodes[1].isFocused {
                     let maxWidth = strongSelf.inputNodes[1].bounds.width
                     
@@ -1116,7 +1316,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 break
             }
         }
-        focusUpdated = { [weak self] node, _ in
+        focusUpdated = { node, _ in
             DispatchQueue.main.async {
                 updateAnimations()
             }
@@ -1126,7 +1326,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .emailAddress, .updateEmailAddress:
+            case .emailAddress, .updateEmailAddress, .passwordRecovery:
                 let hasText = strongSelf.inputNodes.contains(where: { !$0.text.isEmpty })
                 strongSelf.buttonNode.isHidden = !hasText
                 strongSelf.skipActionTitleNode.isHidden = hasText
@@ -1143,12 +1343,24 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 if let codeLength = codeLength, text.count == codeLength {
                     action()
                 }
+            case .passwordRecoveryEmail:
+                let text = strongSelf.inputNodes[0].text
+                let hasText = !text.isEmpty
+                strongSelf.buttonNode.isHidden = !hasText
+                strongSelf.changeEmailActionTitleNode.isHidden = hasText
+                strongSelf.changeEmailActionButtonNode.isHidden = hasText
+                strongSelf.resendCodeActionTitleNode.isHidden = hasText
+                strongSelf.resendCodeActionButtonNode.isHidden = hasText
+
+                if text.count == 6 {
+                    action()
+                }
             case .passwordHint:
                 let hasText = strongSelf.inputNodes.contains(where: { !$0.text.isEmpty })
                 strongSelf.buttonNode.isHidden = !hasText
                 strongSelf.skipActionTitleNode.isHidden = hasText
                 strongSelf.skipActionButtonNode.isHidden = hasText
-            case .password, .passwordRecovery:
+            case .password:
                 break
             }
             updateAnimations()
@@ -1158,7 +1370,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .password:
+            case .password, .passwordRecovery:
                 textHidden = !textHidden
                 for node in strongSelf.inputNodes {
                     node.updateTextHidden(textHidden)
@@ -1307,7 +1519,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         
         let buttonWidth = contentAreaSize.width - buttonSideInset * 2.0
         
-        let maxButtonY = min(areaHeight - buttonSpacing, layout.size.height - buttonBottomInset) - buttonHeight
+        let maxButtonY = min(areaHeight - buttonSpacing, layout.size.height - buttonBottomInset) - buttonHeight * 2.0
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, maxButtonY)), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
@@ -1325,7 +1537,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         let changeEmailActionButtonFrame: CGRect
         let resendCodeActionFrame: CGRect
         let resendCodeActionButtonFrame: CGRect
-        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - 24.0 {
+        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - buttonFrame.minX * 2.0 {
             changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
             changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX + floor((changeEmailActionButtonFrame.width - changeEmailActionSize.width) / 2.0), y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
             resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.maxY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))

@@ -85,5 +85,42 @@ public extension TelegramEngine {
         public func requestEditLiveLocation(messageId: MessageId, stop: Bool, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?, proximityNotificationRadius: Int32?) -> Signal<Void, NoError> {
             return _internal_requestEditLiveLocation(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, messageId: messageId, stop: stop, coordinate: coordinate, heading: heading, proximityNotificationRadius: proximityNotificationRadius)
         }
+
+        public func addSecretChatMessageScreenshot(peerId: PeerId) -> Signal<Never, NoError> {
+            return _internal_addSecretChatMessageScreenshot(account: self.account, peerId: peerId)
+            |> ignoreValues
+        }
+
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId)
+        }
+
+        public func requestUpdatePinnedMessage(peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
+            return _internal_requestUpdatePinnedMessage(account: self.account, peerId: peerId, update: update)
+        }
+
+        public func requestUnpinAllMessages(peerId: PeerId) -> Signal<Never, UpdatePinnedMessageError> {
+            return _internal_requestUnpinAllMessages(account: self.account, peerId: peerId)
+        }
+
+        public func fetchChannelReplyThreadMessage(messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
+            return _internal_fetchChannelReplyThreadMessage(account: self.account, messageId: messageId, atMessageId: atMessageId)
+        }
+
+        public func requestStartBot(botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
+            return _internal_requestStartBot(account: self.account, botPeerId: botPeerId, payload: payload)
+        }
+
+        public func requestStartBotInGroup(botPeerId: PeerId, groupPeerId: PeerId, payload: String?) -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> {
+            return _internal_requestStartBotInGroup(account: self.account, botPeerId: botPeerId, groupPeerId: groupPeerId, payload: payload)
+        }
+
+        public func markAllChatsAsRead() -> Signal<Void, NoError> {
+            return _internal_markAllChatsAsRead(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager)
+        }
+
+        public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
+            return _internal_getMessagesLoadIfNecessary(messageIds, postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, strategy: strategy)
+        }
     }
 }

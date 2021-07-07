@@ -47,7 +47,6 @@ import RaiseToListen
 import UrlHandling
 import ReactionSelectionNode
 import AvatarNode
-import MessageReactionListUI
 import AppBundle
 import LocalizedPeerData
 import PhoneNumberFormat
@@ -2525,29 +2524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: nil).start()
             }
-        }, openMessageReactions: { [weak self] messageId in
-            guard let strongSelf = self else {
-                return
-            }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                return transaction.getMessage(messageId)
-            }
-            |> deliverOnMainQueue).start(next: { message in
-                guard let strongSelf = self, let message = message else {
-                    return
-                }
-                var initialReactions: [MessageReaction] = []
-                for attribute in message.attributes {
-                    if let attribute = attribute as? ReactionsMessageAttribute {
-                        initialReactions = attribute.reactions
-                    }
-                }
-                
-                if !initialReactions.isEmpty {
-                    strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(MessageReactionListController(context: strongSelf.context, messageId: message.id, initialReactions: initialReactions), in: .window(.root))
-                }
-            })
+        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -2972,7 +2949,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
                                 |> map(Optional.init)
                             } else {
-                                return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                                return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
                                 |> map(Optional.init)
                             }
                         } else {
@@ -3131,8 +3108,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.peerView = peerView
                         if wasGroupChannel != isGroupChannel {
                             if let isGroupChannel = isGroupChannel, isGroupChannel {
-                                let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
-                                let (adminsDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let (adminsDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
                                 let disposable = DisposableSet()
                                 disposable.add(recentDisposable)
                                 disposable.add(adminsDisposable)
@@ -5101,7 +5078,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
                         dismissAction()
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } }, completion: { _ in
-                            let _ = (reportPeerMessages(account: strongSelf.context.account, messageIds: Array(messageIds), reason: reportReason, message: message)
+                            let _ = (strongSelf.context.engine.peers.reportPeerMessages(messageIds: Array(messageIds), reason: reportReason, message: message)
                             |> deliverOnMainQueue).start(completed: { [weak self] in
                                 if let strongSelf = self, let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
                                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
@@ -5166,12 +5143,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
+                        let _ = strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start()
                         let context = strongSelf.context
                         let _ = (context.account.postbox.transaction { transasction -> Void in
                             context.engine.messages.deleteAllMessagesWithForwardAuthor(transaction: transasction, peerId: message.id.peerId, forwardAuthorId: peer.id, namespace: Namespaces.Message.Cloud)
                         }).start()
-                        let _ = reportRepliesMessage(account: strongSelf.context.account, messageId: message.id, deleteMessage: true, deleteHistory: true, reportSpam: reportSpam).start()
+                        let _ = strongSelf.context.engine.peers.reportRepliesMessage(messageId: message.id, deleteMessage: true, deleteHistory: true, reportSpam: reportSpam).start()
                     })
                 ] as [ActionSheetItem])
                 
@@ -5547,7 +5524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, togglePeerNotifications: { [weak self] in
             if let strongSelf = self {
                 let peerId = strongSelf.chatLocation.peerId
-                let _ = togglePeerMuted(account: strongSelf.context.account, peerId: peerId).start()
+                let _ = strongSelf.context.engine.peers.togglePeerMuted(peerId: peerId).start()
             }
         }, sendContextResult: { [weak self] results, result, node, rect in
             guard let strongSelf = self else {
@@ -5871,7 +5848,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let peer = peer as? TelegramSecretChat {
                     let controller = ChatSecretAutoremoveTimerActionSheetController(context: strongSelf.context, currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
                         if let strongSelf = self {
-                            let _ = setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.context.account, peerId: peer.id, timeout: value == 0 ? nil : value).start()
+                            let _ = strongSelf.context.engine.peers.setChatMessageAutoremoveTimeoutInteractively(peerId: peer.id, timeout: value == 0 ? nil : value).start()
                         }
                     })
                     strongSelf.present(controller, in: .window(.root))
@@ -5950,7 +5927,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     disposable = MetaDisposable()
                                     strongSelf.unpinMessageDisposable = disposable
                                 }
-                                disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: currentPeerId, update: .pin(id: messageId, silent: !notify, forThisPeerOnlyIfPossible: forThisPeerOnlyIfPossible)).start(completed: {
+                                disposable.set(strongSelf.context.engine.messages.requestUpdatePinnedMessage(peerId: currentPeerId, update: .pin(id: messageId, silent: !notify, forThisPeerOnlyIfPossible: forThisPeerOnlyIfPossible)).start(completed: {
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -6119,7 +6096,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         action: { action in
                                             switch action {
                                             case .commit:
-                                                disposable.set((requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
+                                                disposable.set((strongSelf.context.engine.messages.requestUpdatePinnedMessage(peerId: peer.id, update: .clear(id: id))
                                                 |> deliverOnMainQueue).start(error: { _ in
                                                     guard let strongSelf = self else {
                                                         return
@@ -6169,7 +6146,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 }
                                                 switch action {
                                                 case .commit:
-                                                    let _ = (requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
+                                                    let _ = (strongSelf.context.engine.messages.requestUpdatePinnedMessage(peerId: peer.id, update: .clear(id: id))
                                                     |> deliverOnMainQueue).start(completed: {
                                                         Queue.mainQueue().after(1.0, {
                                                             guard let strongSelf = self else {
@@ -6189,7 +6166,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         in: .current
                                     )
                                 } else {
-                                    disposable.set((requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
+                                    disposable.set((strongSelf.context.engine.messages.requestUpdatePinnedMessage(peerId: peer.id, update: .clear(id: id))
                                     |> deliverOnMainQueue).start())
                                 }
                             }
@@ -6567,7 +6544,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.reportIrrelvantGeoDisposable = (TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peerId, reason: .irrelevantLocation, message: "")
+                strongSelf.reportIrrelvantGeoDisposable = (strongSelf.context.engine.peers.reportPeer(peerId: peerId, reason: .irrelevantLocation, message: "")
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.reportIrrelvantGeoNoticePromise.set(.single(true))
@@ -7167,7 +7144,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat, self.screenCaptureManager == nil {
                 self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
                     if let strongSelf = self, strongSelf.canReadHistoryValue, strongSelf.traceVisibility() {
-                        let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: peerId).start()
+                        let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: peerId).start()
                         return true
                     } else {
                         return false
@@ -11372,7 +11349,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
             restartBot = true
         }
-        self.editMessageDisposable.set((requestUpdatePeerIsBlocked(account: self.context.account, peerId: peerId, isBlocked: false)
+        self.editMessageDisposable.set((self.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peerId, isBlocked: false)
         |> afterDisposed({ [weak self] in
             Queue.mainQueue().async {
                 unblockingPeer.set(false)
@@ -11442,7 +11419,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
+                    let _ = strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start()
                     if let _ = chatPeer as? TelegramSecretChat {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction in
                             terminateSecretChat(transaction: transaction, peerId: chatPeer.id, requestRemoteHistoryRemoval: true)
@@ -11452,7 +11429,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: reportSpam).start()
                         strongSelf.effectiveNavigationController?.filterController(strongSelf, animated: true)
                     } else if reportSpam {
-                        let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam, message: "").start()
+                        let _ = strongSelf.context.engine.peers.reportPeer(peerId: peer.id, reason: .spam, message: "").start()
                     }
                 })
             ] as [ActionSheetItem])
@@ -11522,7 +11499,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = (acceptAndShareContact(account: strongSelf.context.account, peerId: peer.id)
+                let _ = (strongSelf.context.engine.contacts.acceptAndShareContact(peerId: peer.id)
                 |> deliverOnMainQueue).start(error: { _ in
                     guard let strongSelf = self else {
                         return
@@ -11572,7 +11549,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             dismissPeerId = peerId
         }
-        self.editMessageDisposable.set((dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
+        self.editMessageDisposable.set((self.context.engine.peers.dismissPeerStatusOptions(peerId: dismissPeerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }
@@ -11588,7 +11565,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let _ = removePeerChat(account: self.context.account, peerId: peerId, reportChatSpam: reportChatSpam).start()
         self.effectiveNavigationController?.popToRoot(animated: true)
         
-        let _ = requestUpdatePeerIsBlocked(account: self.context.account, peerId: peerId, isBlocked: true).start()
+        let _ = self.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peerId, isBlocked: true).start()
     }
     
     private func startBot(_ payload: String?) {
@@ -11598,7 +11575,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let startingBot = self.startingBot
         startingBot.set(true)
-        self.editMessageDisposable.set((requestStartBot(account: self.context.account, botPeerId: peerId, payload: payload) |> deliverOnMainQueue |> afterDisposed({
+        self.editMessageDisposable.set((self.context.engine.messages.requestStartBot(botPeerId: peerId, payload: payload) |> deliverOnMainQueue |> afterDisposed({
             startingBot.set(false)
         })).start(completed: { [weak self] in
             if let strongSelf = self {
@@ -11894,7 +11871,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                             if actions.contains(1) {
-                                let _ = removePeerMember(account: strongSelf.context.account, peerId: peerId, memberId: author.id).start()
+                                let _ = strongSelf.context.engine.peers.removePeerMember(peerId: peerId, memberId: author.id).start()
                             }
                         }
                     }))
@@ -12571,7 +12548,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     switch action {
                     case .commit:
-                        let _ = (requestUnpinAllMessages(account: strongSelf.context.account, peerId: strongSelf.chatLocation.peerId)
+                        let _ = (strongSelf.context.engine.messages.requestUnpinAllMessages(peerId: strongSelf.chatLocation.peerId)
                         |> deliverOnMainQueue).start(error: { _ in
                         }, completed: {
                             guard let strongSelf = self else {

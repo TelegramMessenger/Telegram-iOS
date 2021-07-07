@@ -281,6 +281,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2146218476] = { return Api.Update.parse_updateChannelParticipant($0) }
     dict[133777546] = { return Api.Update.parse_updateBotStopped($0) }
     dict[192428418] = { return Api.Update.parse_updateGroupCallConnection($0) }
+    dict[-813823885] = { return Api.Update.parse_updateBotCommands($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-592373577] = { return Api.GroupCallParticipantVideoSourceGroup.parse_groupCallParticipantVideoSourceGroup($0) }
@@ -557,6 +558,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
+    dict[-478701471] = { return Api.account.ResetPasswordResult.parse_resetPasswordFailedWait($0) }
+    dict[-370148227] = { return Api.account.ResetPasswordResult.parse_resetPasswordRequestedWait($0) }
+    dict[-383330754] = { return Api.account.ResetPasswordResult.parse_resetPasswordOk($0) }
     dict[856375399] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
@@ -580,7 +584,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-1392895362] = { return Api.InputMessage.parse_inputMessageCallbackQuery($0) }
-    dict[2028213859] = { return Api.GroupCallParticipantVideo.parse_groupCallParticipantVideo($0) }
+    dict[1735736008] = { return Api.GroupCallParticipantVideo.parse_groupCallParticipantVideo($0) }
     dict[-58224696] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-275956116] = { return Api.messages.AffectedFoundMessages.parse_affectedFoundMessages($0) }
@@ -795,7 +799,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1908627474] = { return Api.SecureValueType.parse_secureValueTypeEmail($0) }
     dict[-732254058] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoUnknown($0) }
     dict[982592842] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow($0) }
-    dict[-1390001672] = { return Api.account.Password.parse_password($0) }
+    dict[408623183] = { return Api.account.Password.parse_password($0) }
     dict[-2000710887] = { return Api.InputBotInlineResult.parse_inputBotInlineResult($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
@@ -1312,6 +1316,8 @@ public struct Api {
             case let _1 as Api.MessageRange:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.StickerSetInstallResult:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.ResetPasswordResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Config:
                 _1.serialize(buffer, boxed)
