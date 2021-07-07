@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSignalKit
 import Postbox
 import SyncCore
@@ -121,6 +122,30 @@ public extension TelegramEngine {
 
         public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
             return _internal_getMessagesLoadIfNecessary(messageIds, postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, strategy: strategy)
+        }
+
+        public func markMessageContentAsConsumedInteractively(messageId: MessageId) -> Signal<Void, NoError> {
+            return _internal_markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: messageId)
+        }
+
+        public func installInteractiveReadMessagesAction(peerId: PeerId) -> Disposable {
+            return _internal_installInteractiveReadMessagesAction(postbox: self.account.postbox, stateManager: self.account.stateManager, peerId: peerId)
+        }
+
+        public func requestMessageSelectPollOption(messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+            return _internal_requestMessageSelectPollOption(account: self.account, messageId: messageId, opaqueIdentifiers: opaqueIdentifiers)
+        }
+
+        public func requestClosePoll(messageId: MessageId) -> Signal<Void, NoError> {
+            return _internal_requestClosePoll(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, messageId: messageId)
+        }
+
+        public func pollResults(messageId: MessageId, poll: TelegramMediaPoll) -> PollResultsContext {
+            return PollResultsContext(account: self.account, messageId: messageId, poll: poll)
+        }
+
+        public func earliestUnseenPersonalMentionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId)
         }
     }
 }

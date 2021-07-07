@@ -77,7 +77,7 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
         return .fail(.invalidPassword)
     }
     
-    return combineLatest(fetchChannelParticipant(account: account, peerId: channelId, participantId: account.peerId), fetchChannelParticipant(account: account, peerId: channelId, participantId: memberId))
+    return combineLatest(_internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: account.peerId), _internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: memberId))
     |> mapError { error -> ChannelOwnershipTransferError in
         return .generic
     }

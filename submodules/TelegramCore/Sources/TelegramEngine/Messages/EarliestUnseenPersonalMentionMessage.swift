@@ -10,7 +10,7 @@ public enum EarliestUnseenPersonalMentionMessageResult: Equatable {
     case result(MessageId?)
 }
 
-public func earliestUnseenPersonalMentionMessage(account: Account, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+func _internal_earliestUnseenPersonalMentionMessage(account: Account, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
     return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tagMask: .unseenPersonalMessage, additionalData: [.peerChatState(peerId)])
     |> mapToSignal { view -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         if view.0.isLoading {

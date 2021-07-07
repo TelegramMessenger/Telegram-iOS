@@ -450,7 +450,7 @@ public final class SecretMediaPreviewController: ViewController {
                     self?.didSetReady = true
                 }
                 self._ready.set(ready |> map { true })
-                self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: message.id).start())
+                self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double)?
                 var videoDuration: Int32?

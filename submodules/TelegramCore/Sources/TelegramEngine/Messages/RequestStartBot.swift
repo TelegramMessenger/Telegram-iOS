@@ -55,7 +55,7 @@ func _internal_requestStartBotInGroup(account: Account, botPeerId: PeerId, group
             |> mapToSignal { result -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> in
                 account.stateManager.addUpdates(result)
                 if groupPeerId.namespace == Namespaces.Peer.CloudChannel {
-                    return fetchChannelParticipant(account: account, peerId: groupPeerId, participantId: botPeerId)
+                    return _internal_fetchChannelParticipant(account: account, peerId: groupPeerId, participantId: botPeerId)
                     |> mapError { _ -> RequestStartBotInGroupError in return .generic
                     }
                     |> mapToSignal { participant -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> in

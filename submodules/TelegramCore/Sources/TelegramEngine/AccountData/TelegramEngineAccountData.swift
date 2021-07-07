@@ -1,4 +1,7 @@
+import Foundation
 import SwiftSignalKit
+import Postbox
+import SyncCore
 
 public extension TelegramEngine {
     final class AccountData {
@@ -34,6 +37,14 @@ public extension TelegramEngine {
 
         public func updateAbout(about: String?) -> Signal<Void, UpdateAboutError> {
             return _internal_updateAbout(account: self.account, about: about)
+        }
+
+        public func unregisterNotificationToken(token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {
+            return _internal_unregisterNotificationToken(account: self.account, token: token, type: type, otherAccountUserIds: otherAccountUserIds)
+        }
+
+        public func registerNotificationToken(token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
+            return _internal_registerNotificationToken(account: self.account, token: token, type: type, sandbox: sandbox, otherAccountUserIds: otherAccountUserIds, excludeMutedChats: excludeMutedChats)
         }
     }
 }

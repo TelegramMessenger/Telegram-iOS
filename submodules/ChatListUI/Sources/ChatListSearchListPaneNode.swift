@@ -1213,7 +1213,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, peerSelected: { [weak self] peer, _ in
             interaction.dismissInput()
             interaction.openPeer(peer, false)
-            let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
+            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
@@ -1407,7 +1407,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         |> distinctUntilChanged
         
         let previousRecentlySearchedPeerOrder = Atomic<[PeerId]>(value: [])
-        let fixedRecentlySearchedPeers = recentlySearchedPeers(postbox: context.account.postbox)
+        let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
         |> map { peers -> [RecentlySearchedPeer] in
             var result: [RecentlySearchedPeer] = []
             let _ = previousRecentlySearchedPeerOrder.modify { current in
@@ -1479,7 +1479,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let firstTime = previousEntries == nil
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, peerSelected: { peer in
                     interaction.openPeer(peer, true)
-                    let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
+                    let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
                     self?.recentListNode.clearHighlightAnimated(true)
                 }, disabledPeerSelected: { peer in
                     interaction.openDisabledPeer(peer)
@@ -1492,7 +1492,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, clearRecentlySearchedPeers: {
                     interaction.clearRecentSearch()
                 }, deletePeer: { peerId in
-                    let _ = removeRecentlySearchedPeer(postbox: context.account.postbox, peerId: peerId).start()
+                    let _ = context.engine.peers.removeRecentlySearchedPeer(peerId: peerId).start()
                 })
                 strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
             }

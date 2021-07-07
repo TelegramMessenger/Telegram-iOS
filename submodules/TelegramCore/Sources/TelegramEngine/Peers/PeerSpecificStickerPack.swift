@@ -17,7 +17,7 @@ public struct PeerSpecificStickerPackData {
     public let canSetup: Bool
 }
 
-public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
+func _internal_peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
         let signal: Signal<(WrappedStickerPackCollectionInfo, Bool), NoError> = postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
         |> map { view -> (WrappedStickerPackCollectionInfo, Bool) in
