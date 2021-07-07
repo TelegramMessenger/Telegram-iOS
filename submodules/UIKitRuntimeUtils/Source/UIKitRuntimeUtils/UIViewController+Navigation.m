@@ -317,7 +317,14 @@ static NSString *TGEncodeText(NSString *string, int key)
 }
 
 void applyKeyboardAutocorrection(UITextView * _Nonnull textView) {
+    NSRange rangeCopy = textView.selectedRange;
+    NSRange fakeRange = rangeCopy;
+    if (fakeRange.location != 0) {
+        fakeRange.location--;
+    }
     [textView unmarkText];
+    [textView setSelectedRange:fakeRange];
+    [textView setSelectedRange:rangeCopy];
 }
 
 @interface AboveStatusBarWindowController : UIViewController
