@@ -640,7 +640,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             strongSelf.layoutEmptyResultsPlaceholder(transition: listTransition)
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }

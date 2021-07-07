@@ -1267,7 +1267,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             }
         })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

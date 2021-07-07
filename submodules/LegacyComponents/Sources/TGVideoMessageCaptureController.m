@@ -91,6 +91,8 @@ typedef enum
     TGVideoCameraGLView *_previewView;
     TGVideoMessageRingView *_ringView;
     
+    UIPinchGestureRecognizer *_pinchGestureRecognizer;
+    
     UIView *_separatorView;
     
     UIImageView *_placeholderView;
@@ -344,7 +346,6 @@ typedef enum
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
-//    controlsFrame.size.width = _wrapperView.frame.size.width;
     
     _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;
@@ -417,10 +418,41 @@ typedef enum
         [self.view addSubview:_switchButton];
     }
     
+    _pinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
+    _pinchGestureRecognizer.delegate = self;
+    [self.view addGestureRecognizer:_pinchGestureRecognizer];
+    
     void (^voidBlock)(void) = ^{};
     _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithUpButtonPressedBlock:voidBlock upButtonReleasedBlock:voidBlock downButtonPressedBlock:voidBlock downButtonReleasedBlock:voidBlock];
     
     [self configureCamera];
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer == _pinchGestureRecognizer)
+        return _capturePipeline.isZoomAvailable;
+    
+    return true;
+}
+
+- (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer
+{
+    switch (gestureRecognizer.state)
+    {
+        case UIGestureRecognizerStateChanged:
+        {
+            CGFloat delta = (gestureRecognizer.scale - 1.0f) / 1.5f;
+            CGFloat value = MAX(0.0f, MIN(1.0f, _capturePipeline.zoomLevel + delta));
+            
+            [_capturePipeline setZoomLevel:value];
+            
+            gestureRecognizer.scale = 1.0f;
+        }
+            break;
+        default:
+            break;
+    }
 }
 
 - (TGVideoMessageTransitionType)_transitionType

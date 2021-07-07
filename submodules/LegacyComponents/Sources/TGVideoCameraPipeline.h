@@ -15,6 +15,9 @@
 
 @property (nonatomic, copy) void (^micLevel)(CGFloat);
 
+@property (nonatomic, readonly) bool isZoomAvailable;
+@property (nonatomic, assign) CGFloat zoomLevel;
+
 - (instancetype)initWithDelegate:(id<TGVideoCameraPipelineDelegate>)delegate position:(AVCaptureDevicePosition)position callbackQueue:(dispatch_queue_t)queue liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
 
 - (void)startRunning;

@@ -965,7 +965,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let resolvedMessage = .single(nil)
             |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
-                if case let .channelMessage(_, messageId) = resolvedUrl {
+                if case let .channelMessage(_, messageId, _) = resolvedUrl {
                     return context.engine.messages.downloadMessage(messageId: messageId)
                 } else {
                     return .single(nil)
@@ -1518,11 +1518,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         })
                         
-        self.recentListNode.beganInteractiveDragging = {
+        self.recentListNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
         }
         
-        self.listNode.beganInteractiveDragging = {
+        self.listNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
         }
         

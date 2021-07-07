@@ -184,7 +184,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {

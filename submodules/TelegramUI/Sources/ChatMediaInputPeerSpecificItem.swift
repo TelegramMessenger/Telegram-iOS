@@ -15,6 +15,7 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let collectionId: ItemCollectionId
     let peer: Peer
+    let expanded: Bool
     let selectedItem: () -> Void
     let theme: PresentationTheme
     
@@ -22,12 +23,13 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
         return true
     }
     
-    init(context: AccountContext, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, peer: Peer, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(context: AccountContext, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, peer: Peer, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
         self.context = context
         self.inputNodeInteraction = inputNodeInteraction
         self.collectionId = collectionId
         self.peer = peer
         self.selectedItem = selected
+        self.expanded = expanded
         self.theme = theme
     }
     

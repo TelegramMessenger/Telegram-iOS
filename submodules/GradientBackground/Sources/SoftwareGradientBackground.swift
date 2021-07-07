@@ -219,16 +219,6 @@ public final class GradientBackgroundNode: ASDisplayNode {
     }
 
     private var validLayout: CGSize?
-
-    private struct PhaseTransitionKey: Hashable {
-        var width: Int
-        var height: Int
-        var fromPhase: Int
-        var toPhase: Int
-        var numberOfFrames: Int
-        var curve: ContainedViewLayoutTransitionCurve
-    }
-
     private let cloneNodes = SparseBag<Weak<CloneNode>>()
 
     private let useSharedAnimationPhase: Bool
@@ -259,7 +249,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
     deinit {
     }
 
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
         let sizeUpdated = self.validLayout != size
         self.validLayout = size
 
@@ -273,7 +263,20 @@ public final class GradientBackgroundNode: ASDisplayNode {
                 self.invalidated = false
 
                 var steps: [[CGPoint]] = []
-                if extendAnimation {
+                if backwards {
+                    let phaseCount = extendAnimation ? 4 : 1
+                    self.phase = (self.phase + phaseCount) % 8
+                    self.validPhase = self.phase
+                    
+                    var stepPhase = self.phase - phaseCount
+                    if stepPhase < 0 {
+                        stepPhase = 7
+                    }
+                    for _ in 0 ... phaseCount {
+                        steps.append(gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: stepPhase)))
+                        stepPhase = (stepPhase + 1) % 8
+                    }
+                } else if extendAnimation {
                     let phaseCount = 4
                     var stepPhase = (self.phase + phaseCount) % 8
                     for _ in 0 ... phaseCount {
@@ -332,13 +335,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     let animation = CAKeyframeAnimation(keyPath: "contents")
                     animation.values = images.map { $0.cgImage! }
                     animation.duration = duration * UIView.animationDurationFactor()
-                    if extendAnimation {
+                    if backwards || extendAnimation {
                         animation.calculationMode = .discrete
                     } else {
                         animation.calculationMode = .linear
                     }
                     animation.isRemovedOnCompletion = true
-                    if extendAnimation {
+                    if extendAnimation && !backwards {
                         animation.fillMode = .backwards
                         animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
                     }
@@ -347,19 +350,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     self.contentView.layer.add(animation, forKey: "contents")
 
                     if !self.cloneNodes.isEmpty {
-                        let animation = CAKeyframeAnimation(keyPath: "contents")
-                        animation.values = dimmedImages.map { $0.cgImage! }
-                        animation.duration = duration * UIView.animationDurationFactor()
-                        if extendAnimation {
-                            animation.calculationMode = .discrete
-                        } else {
-                            animation.calculationMode = .linear
-                        }
-                        animation.isRemovedOnCompletion = true
-                        if extendAnimation {
-                            animation.fillMode = .backwards
-                            animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
-                        }
+                        let cloneAnimation = CAKeyframeAnimation(keyPath: "contents")
+                        cloneAnimation.values = dimmedImages.map { $0.cgImage! }
+                        cloneAnimation.duration = animation.duration
+                        cloneAnimation.calculationMode = animation.calculationMode
+                        cloneAnimation.isRemovedOnCompletion = animation.isRemovedOnCompletion
+                        cloneAnimation.fillMode = animation.fillMode
+                        cloneAnimation.beginTime = animation.beginTime
 
                         self._dimmedImage = dimmedImages.last
 
@@ -367,7 +364,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
                             if let value = cloneNode.value {
                                 value.image = dimmedImages.last
                                 value.layer.removeAnimation(forKey: "contents")
-                                value.layer.add(animation, forKey: "contents")
+                                value.layer.add(cloneAnimation, forKey: "contents")
                             }
                         }
                     }
@@ -422,12 +419,12 @@ public final class GradientBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
         guard case let .animated(duration, _) = transition, duration > 0.001 else {
             return
         }
 
-        if extendAnimation {
+        if extendAnimation || backwards {
             self.invalidated = true
         } else {
             if self.phase == 0 {
@@ -440,7 +437,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
             GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation)
+            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards)
         }
     }
 }

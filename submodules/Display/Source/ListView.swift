@@ -286,7 +286,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
-    public final var beganInteractiveDragging: () -> Void = { }
+    public final var beganInteractiveDragging: (CGPoint) -> Void = { _ in }
     public final var endedInteractiveDragging: () -> Void = { }
     public final var didEndScrolling: (() -> Void)?
     
@@ -683,7 +683,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.scrolledToItem = nil
         
-        self.beganInteractiveDragging()
+        self.beganInteractiveDragging(self.touchesPosition)
         
         for itemNode in self.itemNodes {
             if !itemNode.isLayerBacked {
@@ -4039,7 +4039,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.updateOverlayHighlight(transition: transition)
     }
     
-    private func itemIndexAtPoint(_ point: CGPoint) -> Int? {
+    public func itemIndexAtPoint(_ point: CGPoint) -> Int? {
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index
@@ -4052,6 +4052,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for itemNode in self.itemNodes {
             if itemNode.index == index {
                 return itemNode
+            }
+        }
+        return nil
+    }
+    
+    public func indexOf(itemNode: ListViewItemNode) -> Int? {
+        for listItemNode in self.itemNodes {
+            if itemNode === listItemNode {
+                return listItemNode.index
             }
         }
         return nil

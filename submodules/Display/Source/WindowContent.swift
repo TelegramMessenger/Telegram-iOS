@@ -237,7 +237,7 @@ public class Window1 {
     
     private var deviceMetrics: DeviceMetrics
     
-    private let statusBarHost: StatusBarHost?
+    public let statusBarHost: StatusBarHost?
     private let keyboardManager: KeyboardManager?
     private let keyboardViewManager: KeyboardViewManager?
     private var statusBarChangeObserver: AnyObject?
