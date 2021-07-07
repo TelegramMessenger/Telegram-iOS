@@ -224,7 +224,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
             }
         }))
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.interaction.dismissInput()
         }
     }

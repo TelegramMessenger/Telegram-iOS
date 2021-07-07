@@ -263,7 +263,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         self.contentNode.addSubnode(self.historyNode)
         self.contentNode.addSubnode(self.controlsNode)
         
-        self.historyNode.beganInteractiveDragging = { [weak self] in
+        self.historyNode.beganInteractiveDragging = { [weak self] _ in
             self?.controlsNode.collapse()
         }
         
@@ -628,7 +628,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 }
             }
             
-            self.historyNode.beganInteractiveDragging = { [weak self] in
+            self.historyNode.beganInteractiveDragging = { [weak self] _ in
                 self?.controlsNode.collapse()
             }
             

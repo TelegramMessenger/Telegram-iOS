@@ -1279,10 +1279,10 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
             }
         })
         
-        self.emptyQueryListNode.beganInteractiveDragging = { [weak self] in
+        self.emptyQueryListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

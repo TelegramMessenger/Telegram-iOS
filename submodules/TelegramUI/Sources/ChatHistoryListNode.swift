@@ -1193,7 +1193,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }).start()
         
-        self.beganInteractiveDragging = { [weak self] in
+        self.beganInteractiveDragging = { [weak self] _ in
             self?.isInteractivelyScrollingValue = true
             self?.isInteractivelyScrollingPromise.set(true)
             self?.beganDragging?()

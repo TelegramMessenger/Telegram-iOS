@@ -1518,11 +1518,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         })
                         
-        self.recentListNode.beganInteractiveDragging = {
+        self.recentListNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
         }
         
-        self.listNode.beganInteractiveDragging = {
+        self.listNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
         }
         

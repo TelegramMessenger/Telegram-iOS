@@ -654,7 +654,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             }
         })
         
-        self.recentListNode.beganInteractiveDragging = { [weak self] in
+        self.recentListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
