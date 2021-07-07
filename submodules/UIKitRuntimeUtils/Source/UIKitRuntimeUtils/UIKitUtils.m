@@ -84,37 +84,9 @@ CGFloat springAnimationValueAtImpl(CABasicAnimation * _Nonnull animation, CGFloa
 
 @interface CustomBlurEffect : UIBlurEffect
 
-/*@property (nonatomic) double blurRadius;
-@property (nonatomic) double colorBurnTintAlpha;
-@property (nonatomic) double colorBurnTintLevel;
-@property (nonatomic, retain) UIColor *colorTint;
-@property (nonatomic) double colorTintAlpha;
-@property (nonatomic) bool darkenWithSourceOver;
-@property (nonatomic) double darkeningTintAlpha;
-@property (nonatomic) double darkeningTintHue;
-@property (nonatomic) double darkeningTintSaturation;
-@property (nonatomic) double grayscaleTintAlpha;
-@property (nonatomic) double grayscaleTintLevel;
-@property (nonatomic) bool lightenGrayscaleWithSourceOver;
-@property (nonatomic) double saturationDeltaFactor;
-@property (nonatomic) double scale;
-@property (nonatomic) double zoom;*/
-
 + (id)effectWithStyle:(long long)arg1;
 
 @end
-
-static NSString *encodeText(NSString *string, int key) {
-    NSMutableString *result = [[NSMutableString alloc] init];
-    
-    for (int i = 0; i < (int)[string length]; i++) {
-        unichar c = [string characterAtIndex:i];
-        c += key;
-        [result appendString:[NSString stringWithCharacters:&c length:1]];
-    }
-    
-    return result;
-}
 
 static void setField(CustomBlurEffect *object, NSString *name, double value) {
     SEL selector = NSSelectorFromString(name);
@@ -145,7 +117,7 @@ static void setNilField(CustomBlurEffect *object, NSString *name) {
     [inv invoke];
 }
 
-static void setBoolField(CustomBlurEffect *object, NSString *name, BOOL value) {
+static void setBoolField(NSObject *object, NSString *name, BOOL value) {
     SEL selector = NSSelectorFromString(name);
     NSMethodSignature *signature = [[object class] instanceMethodSignatureForSelector:selector];
     if (signature == nil) {
@@ -170,18 +142,17 @@ UIBlurEffect *makeCustomZoomBlurEffectImpl(bool isLight) {
         NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
         CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
         
-        setField(result, encodeText(@"tfuCmvsSbejvt;", -1), 10.0);
-        //setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
-        setNilField(result, encodeText(@"tfuDpmpsUjou;", -1));
-        setField(result, encodeText(@"tfuDpmpsUjouBmqib;", -1), 0.0);
-        setField(result, encodeText(@"tfuEbslfojohUjouBmqib;", -1), 0.0);
-        setField(result, encodeText(@"tfuHsbztdbmfUjouBmqib;", -1), 0.0);
-        setField(result, encodeText(@"tfuTbuvsbujpoEfmubGbdups;", -1), 1.0);
+        setField(result, [@[@"set", @"BlurRadius", @":"] componentsJoinedByString:@""], 10.0);
+        setNilField(result, [@[@"set", @"Color", @"Tint", @":"] componentsJoinedByString:@""]);
+        setField(result, [@[@"set", @"Color", @"Tint", @"Alpha", @":"] componentsJoinedByString:@""], 0.0);
+        setField(result, [@[@"set", @"Darkening", @"Tint", @"Alpha", @":"] componentsJoinedByString:@""], 0.0);
+        setField(result, [@[@"set", @"Grayscale", @"Tint", @"Alpha", @":"] componentsJoinedByString:@""], 0.0);
+        setField(result, [@[@"set", @"Saturation", @"Delta", @"Factor", @":"] componentsJoinedByString:@""], 1.0);
         
         if ([UIScreen mainScreen].scale > 2.5f) {
-            setField(result, encodeText(@"setScale:", 0), 0.3);
+            setField(result, @"setScale:", 0.3);
         } else {
-            setField(result, encodeText(@"setScale:", 0), 0.5);
+            setField(result, @"setScale:", 0.5);
         }
         
         return result;
@@ -191,7 +162,9 @@ UIBlurEffect *makeCustomZoomBlurEffectImpl(bool isLight) {
 }
 
 void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer) {
-    if (@available(iOS 11.0, *)) {
-        setBoolField(layer, encodeText(@"tfuDpoujovpvtDpsofst;", -1), true);
+    if (@available(iOS 13.0, *)) {
+        layer.cornerCurve = kCACornerCurveContinuous;
+    } else {
+        setBoolField(layer, [@[@"set", @"Continuous", @"Corners", @":"] componentsJoinedByString:@""], true);
     }
 }

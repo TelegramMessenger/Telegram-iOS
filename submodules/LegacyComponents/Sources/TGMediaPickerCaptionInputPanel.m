@@ -252,7 +252,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     }
         
     if (_inputField.internalTextView.isFirstResponder)
-        [TGHacks applyCurrentKeyboardAutocorrectionVariant];
+        [TGHacks applyCurrentKeyboardAutocorrectionVariant:_inputField.internalTextView];
     
     NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:_inputField.text == nil ? [[NSAttributedString alloc] initWithString:@""] : _inputField.attributedText];
     NSMutableString *usualString = [text.string mutableCopy];

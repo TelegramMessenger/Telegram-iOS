@@ -45,24 +45,35 @@ private let handleVoipNotifications = false
 
 private var testIsLaunched = false
 
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
+private func isKeyboardWindow(window: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: window))
+    if #available(iOS 9.0, *) {
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("RemoteKeyboardWindow") {
+            return true
+        }
+    } else {
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("TextEffectsWindow") {
+            return true
+        }
     }
-    return result
+    return false
 }
 
-private let keyboardViewClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuIptuWjfx", -1))!
-private let keyboardViewContainerClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuDpoubjofsWjfx", -1))!
-
-private let keyboardWindowClass: AnyClass? = {
-    if #available(iOS 9.0, *) {
-        return NSClassFromString(encodeText("VJSfnpufLfzcpbseXjoepx", -1))
-    } else {
-        return NSClassFromString(encodeText("VJUfyuFggfdutXjoepx", -1))
+private func isKeyboardView(view: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: view))
+    if typeName.hasPrefix("UI") && typeName.hasSuffix("InputSetHostView") {
+        return true
     }
-}()
+    return false
+}
+
+private func isKeyboardViewContainer(view: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: view))
+    if typeName.hasPrefix("UI") && typeName.hasSuffix("InputSetContainerView") {
+        return true
+    }
+    return false
+}
 
 private class ApplicationStatusBarHost: StatusBarHost {
     private let application = UIApplication.shared
@@ -96,12 +107,8 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var keyboardWindow: UIWindow? {
-        guard let keyboardWindowClass = keyboardWindowClass else {
-            return nil
-        }
-        
         for window in UIApplication.shared.windows {
-            if window.isKind(of: keyboardWindowClass) {
+            if isKeyboardWindow(window: window) {
                 return window
             }
         }
@@ -109,14 +116,14 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var keyboardView: UIView? {
-        guard let keyboardWindow = self.keyboardWindow, let keyboardViewContainerClass = keyboardViewContainerClass, let keyboardViewClass = keyboardViewClass else {
+        guard let keyboardWindow = self.keyboardWindow else {
             return nil
         }
         
         for view in keyboardWindow.subviews {
-            if view.isKind(of: keyboardViewContainerClass) {
+            if isKeyboardViewContainer(view: view) {
                 for subview in view.subviews {
-                    if subview.isKind(of: keyboardViewClass) {
+                    if isKeyboardView(view: subview) {
                         return subview
                     }
                 }

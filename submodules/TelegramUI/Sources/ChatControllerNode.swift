@@ -2276,8 +2276,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-            if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
-                Keyboard.applyAutocorrection()
+            if let textInputNode = textInputPanelNode.textInputNode, textInputNode.isFirstResponder() {
+                Keyboard.applyAutocorrection(textView: textInputNode.textView)
             }
             
             var effectivePresentationInterfaceState = self.chatPresentationInterfaceState
