@@ -4603,9 +4603,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }))
                         
-                        if case let .message(_, _, timecode) = strongSelf.subject, let timecode = timecode, initial {
+                        if case let .message(_, _, maybeTimecode) = strongSelf.subject, let timecode = maybeTimecode, initial {
                             Queue.mainQueue().after(0.2) {
-                                strongSelf.controllerInteraction?.openMessage(message, .timecode(timecode))
+                                let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(timecode))
                             }
                         }
                     }
@@ -10686,8 +10686,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
                         completion?()
                         
-                        if case let .id(_, timecode) = messageLocation, let timecode = timecode {
-                            self.controllerInteraction?.openMessage(message, .timecode(timecode))
+                        if case let .id(_, maybeTimecode) = messageLocation, let timecode = maybeTimecode {
+                            let _ = self.controllerInteraction?.openMessage(message, .timecode(timecode))
                         }
                     } else if case let .index(index) = messageLocation, index.id.id == 0, index.timestamp > 0, case .scheduledMessages = self.presentationInterfaceState.subject {
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
