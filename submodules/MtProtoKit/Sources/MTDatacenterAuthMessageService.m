@@ -24,17 +24,15 @@
 @interface MTDatacenterAuthPublicKey : NSObject
 
 @property (nonatomic, strong, readonly) NSString *publicKey;
-@property (nonatomic, readonly) bool usesModernPaddingScheme;
 
 @end
 
 @implementation MTDatacenterAuthPublicKey
 
-- (instancetype)initWithPublicKey:(NSString *)publicKey usesModernPaddingScheme:(bool)usesModernPaddingScheme {
+- (instancetype)initWithPublicKey:(NSString *)publicKey {
     self = [super init];
     if (self != nil) {
         _publicKey = publicKey;
-        _usesModernPaddingScheme = usesModernPaddingScheme;
     }
     return self;
 }
@@ -51,98 +49,29 @@ static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys() {
     dispatch_once(&onceToken, ^{
         serverPublicKeys = @[
             [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAxq7aeLAqJR20tkQQMfRn+ocfrtMlJsQ2Uksfs7Xcoo77jAid0bRt\n"
-             "ksiVmT2HEIJUlRxfABoPBV8wY9zRTUMaMA654pUX41mhyVN+XoerGxFvrs9dF1Ru\n"
-             "vCHbI02dM2ppPvyytvvMoefRoL5BTcpAihFgm5xCaakgsJ/tH5oVl74CdhQw8J5L\n"
-             "xI/K++KJBUyZ26Uba1632cOiq05JBUW0Z2vWIOk4BLysk7+U9z+SxynKiZR3/xdi\n"
-             "XvFKk01R3BHV+GUKM2RYazpS/P8v7eyKhAbKxOdRcFpHLlVwfjyM1VlDQrEZxsMp\n"
-             "NTLYXb6Sce1Uov0YtNx5wEowlREH1WOTlwIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAsQZnSWVZNfClk29RcDTJQ76n8zZaiTGuUsi8sUhW8AS4PSbPKDm+\n"
-             "DyJgdHDWdIF3HBzl7DHeFrILuqTs0vfS7Pa2NW8nUBwiaYQmPtwEa4n7bTmBVGsB\n"
-             "1700/tz8wQWOLUlL2nMv+BPlDhxq4kmJCyJfgrIrHlX8sGPcPA4Y6Rwo0MSqYn3s\n"
-             "g1Pu5gOKlaT9HKmE6wn5Sut6IiBjWozrRQ6n5h2RXNtO7O2qCDqjgB2vBxhV7B+z\n"
-             "hRbLbCmW0tYMDsvPpX5M8fsO05svN+lKtCAuz1leFns8piZpptpSCFn7bWxiA9/f\n"
-             "x5x17D7pfah3Sy2pA+NDXyzSlGcKdaUmwQIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAwVACPi9w23mF3tBkdZz+zwrzKOaaQdr01vAbU4E1pvkfj4sqDsm6\n"
-             "lyDONS789sVoD/xCS9Y0hkkC3gtL1tSfTlgCMOOul9lcixlEKzwKENj1Yz/s7daS\n"
-             "an9tqw3bfUV/nqgbhGX81v/+7RFAEd+RwFnK7a+XYl9sluzHRyVVaTTveB2GazTw\n"
-             "Efzk2DWgkBluml8OREmvfraX3bkHZJTKX4EQSjBbbdJ2ZXIsRrYOXfaA+xayEGB+\n"
-             "8hdlLmAjbCVfaigxX0CDqWeR1yFL9kwd9P0NsZRPsmoqVwMbMu7mStFai6aIhc3n\n"
-             "Slv8kg9qv1m6XHVQY3PnEw+QQtqSIXklHwIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAwqjFW0pi4reKGbkc9pK83Eunwj/k0G8ZTioMMPbZmW99GivMibwa\n"
-             "xDM9RDWabEMyUtGoQC2ZcDeLWRK3W8jMP6dnEKAlvLkDLfC4fXYHzFO5KHEqF06i\n"
-             "qAqBdmI1iBGdQv/OQCBcbXIWCGDY2AsiqLhlGQfPOI7/vvKc188rTriocgUtoTUc\n"
-             "/n/sIUzkgwTqRyvWYynWARWzQg0I9olLBBC2q5RQJJlnYXZwyTL3y9tdb7zOHkks\n"
-             "WV9IMQmZmyZh/N7sMbGWQpt4NMchGpPGeJ2e5gHBjDnlIf2p1yZOYeUYrdbwcS0t\n"
-             "UiggS4UeE8TzIuXFQxw7fzEIlmhIaq3FnwIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAruw2yP/BCcsJliRoW5eBVBVle9dtjJw+OYED160Wybum9SXtBBLX\n"
-             "riwt4rROd9csv0t0OHCaTmRqBcQ0J8fxhN6/cpR1GWgOZRUAiQxoMnlt0R93LCX/\n"
-             "j1dnVa/gVbCjdSxpbrfY2g2L4frzjJvdl84Kd9ORYjDEAyFnEA7dD556OptgLQQ2\n"
-             "e2iVNq8NZLYTzLp5YpOdO1doK+ttrltggTCy5SrKeLoCPPbOgGsdxJxyz5KKcZnS\n"
-             "Lj16yE5HvJQn0CNpRdENvRUXe6tBP78O39oJ8BTHp9oIjd6XWXAsp2CvK45Ol8wF\n"
-             "XGF710w9lwCGNbmNxNYhtIkdqfsEcwR5JwIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAvfLHfYH2r9R70w8prHblWt/nDkh+XkgpflqQVcnAfSuTtO05lNPs\n"
-             "pQmL8Y2XjVT4t8cT6xAkdgfmmvnvRPOOKPi0OfJXoRVylFzAQG/j83u5K3kRLbae\n"
-             "7fLccVhKZhY46lvsueI1hQdLgNV9n1cQ3TDS2pQOCtovG4eDl9wacrXOJTG2990V\n"
-             "jgnIKNA0UMoP+KF03qzryqIt3oTvZq03DyWdGK+AZjgBLaDKSnC6qD2cFY81UryR\n"
-             "WOab8zKkWAnhw2kFpcqhI0jdV5QaSCExvnsjVaX0Y1N0870931/5Jb9ICe4nweZ9\n"
-             "kSDF/gip3kWLG0o8XQpChDfyvsqB9OLV/wIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAs/ditzm+mPND6xkhzwFIz6J/968CtkcSE/7Z2qAJiXbmZ3UDJPGr\n"
-             "zqTDHkO30R8VeRM/Kz2f4nR05GIFiITl4bEjvpy7xqRDspJcCFIOcyXm8abVDhF+\n"
-             "th6knSU0yLtNKuQVP6voMrnt9MV1X92LGZQLgdHZbPQz0Z5qIpaKhdyA8DEvWWvS\n"
-             "Uwwc+yi1/gGaybwlzZwqXYoPOhwMebzKUk0xW14htcJrRrq+PXXQbRzTMynseCoP\n"
-             "Ioke0dtCodbA3qQxQovE16q9zz4Otv2k4j63cz53J+mhkVWAeWxVGI0lltJmWtEY\n"
-             "K6er8VqqWot3nqmWMXogrgRLggv/NbbooQIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAvmpxVY7ld/8DAjz6F6q05shjg8/4p6047bn6/m8yPy1RBsvIyvuD\n"
-             "uGnP/RzPEhzXQ9UJ5Ynmh2XJZgHoE9xbnfxL5BXHplJhMtADXKM9bWB11PU1Eioc\n"
-             "3+AXBB8QiNFBn2XI5UkO5hPhbb9mJpjA9Uhw8EdfqJP8QetVsI/xrCEbwEXe0xvi\n"
-             "fRLJbY08/Gp66KpQvy7g8w7VB8wlgePexW3pT13Ap6vuC+mQuJPyiHvSxjEKHgqe\n"
-             "Pji9NP3tJUFQjcECqcm0yV7/2d0t/pbCm+ZH1sadZspQCEPPrtbkQBlvHb4OLiIW\n"
-             "PGHKSMeRFvp3IWcmdJqXahxLCUS1Eh6MAQIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
-             "MIIBCgKCAQEAr4v4wxMDXIaMOh8bayF/NyoYdpcysn5EbjTIOZC0RkgzsRj3SGlu\n"
-             "52QSz+ysO41dQAjpFLgxPVJoOlxXokaOq827IfW0bGCm0doT5hxtedu9UCQKbE8j\n"
-             "lDOk+kWMXHPZFJKWRgKgTu9hcB3y3Vk+JFfLpq3d5ZB48B4bcwrRQnzkx5GhWOFX\n"
-             "x73ZgjO93eoQ2b/lDyXxK4B4IS+hZhjzezPZTI5upTRbs5ljlApsddsHrKk6jJNj\n"
-             "8Ygs/ps8e6ct82jLXbnndC9s8HjEvDvBPH9IPjv5JUlmHMBFZ5vFQIfbpo0u0+1P\n"
-             "n6bkEi5o7/ifoyVv2pAZTRwppTz0EuXD8QIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:false],
-            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
              "MIIBCgKCAQEAyMEdY1aR+sCR3ZSJrtztKTKqigvO/vBfqACJLZtS7QMgCGXJ6XIR\n"
              "yy7mx66W0/sOFa7/1mAZtEoIokDP3ShoqF4fVNb6XeqgQfaUHd8wJpDWHcR2OFwv\n"
              "plUUI1PLTktZ9uW2WE23b+ixNwJjJGwBDJPQEQFBE+vfmH0JP503wr5INS1poWg/\n"
              "j25sIWeYPHYeOrFp/eXaqhISP6G+q2IeTaWTXpwZj4LzXq5YOpk4bYEQ6mvRq7D1\n"
              "aHWfYmlEGepfaYR8Q0YqvvhYtMte3ITnuSJs171+GDqpdKcSwHnd6FudwGO4pcCO\n"
              "j4WcDuXc2CTHgH8gFTNhp/Y8/SpDOhvn9QIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----" usesModernPaddingScheme:true]
+             "-----END RSA PUBLIC KEY-----"],
+            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
+             "MIIBCgKCAQEA6LszBcC1LGzyr992NzE0ieY+BSaOW622Aa9Bd4ZHLl+TuFQ4lo4g\n"
+             "5nKaMBwK/BIb9xUfg0Q29/2mgIR6Zr9krM7HjuIcCzFvDtr+L0GQjae9H0pRB2OO\n"
+             "62cECs5HKhT5DZ98K33vmWiLowc621dQuwKWSQKjWf50XYFw42h21P2KXUGyp2y/\n"
+             "+aEyZ+uVgLLQbRA1dEjSDZ2iGRy12Mk5gpYc397aYp438fsJoHIgJ2lgMv5h7WY9\n"
+             "t6N/byY9Nw9p21Og3AoXSL2q/2IJ1WRUhebgAdGVMlV1fkuOQoEzR7EdpqtQD9Cs\n"
+             "5+bfo3Nhmcyvk5ftB0WkJ9z6bNZ7yxrP8wIDAQAB\n"
+             "-----END RSA PUBLIC KEY-----"]
         ];
     });
     return serverPublicKeys;
 }
 
-static MTDatacenterAuthPublicKey *selectPublicKey(id<EncryptionProvider> encryptionProvider, NSArray<NSNumber *> *fingerprints, NSArray<MTDatacenterAuthPublicKey *> *publicKeys, bool onlyModernPadding) {
+static MTDatacenterAuthPublicKey *selectPublicKey(id<EncryptionProvider> encryptionProvider, NSArray<NSNumber *> *fingerprints, NSArray<MTDatacenterAuthPublicKey *> *publicKeys) {
     for (NSNumber *nFingerprint in fingerprints) {
         for (MTDatacenterAuthPublicKey *key in publicKeys) {
-            if (onlyModernPadding) {
-                if (!key.usesModernPaddingScheme) {
-                    continue;
-                }
-            }
             uint64_t keyFingerprint = [key fingerprintWithEncryptionProvider:encryptionProvider];
             
             if ([nFingerprint unsignedLongLongValue] == keyFingerprint) {
@@ -208,7 +137,7 @@ typedef enum {
     for (NSDictionary *dict in list) {
         NSString *key = dict[@"key"];
         if ([key isKindOfClass:[NSString class]]) {
-            [cdnKeys addObject:[[MTDatacenterAuthPublicKey alloc] initWithPublicKey:key usesModernPaddingScheme:false]];
+            [cdnKeys addObject:[[MTDatacenterAuthPublicKey alloc] initWithPublicKey:key]];
         }
     }
     return cdnKeys;
@@ -538,10 +467,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
         
         if ([_nonce isEqualToData:resPqMessage.nonce])
         {
-            MTDatacenterAuthPublicKey *publicKey = selectPublicKey(_encryptionProvider, resPqMessage.serverPublicKeyFingerprints, _publicKeys, true);
-            if (publicKey == nil) {
-                publicKey = selectPublicKey(mtProto.context.encryptionProvider, resPqMessage.serverPublicKeyFingerprints, _publicKeys, false);
-            }
+            MTDatacenterAuthPublicKey *publicKey = selectPublicKey(_encryptionProvider, resPqMessage.serverPublicKeyFingerprints, _publicKeys);
             
             if (publicKey == nil && mtProto.cdn && resPqMessage.serverPublicKeyFingerprints.count == 1 && _publicKeys.count == 1) {
                 publicKey = _publicKeys[0];
@@ -618,11 +544,8 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     
                     NSData *innerDataBytes = innerDataBuffer.data;
                     NSData *encryptedData = nil;
-                    if (publicKey.usesModernPaddingScheme) {
-                        encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-                    } else {
-                        encryptedData = encryptRSALegacy(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-                    }
+
+                    encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
 
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p encryptedData length %d]", self, (int)encryptedData.length);
@@ -642,11 +565,8 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     NSData *innerDataBytes = innerDataBuffer.data;
 
                     NSData *encryptedData = nil;
-                    if (publicKey.usesModernPaddingScheme) {
-                        encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-                    } else {
-                        encryptedData = encryptRSALegacy(_encryptionProvider, innerDataBytes, publicKey.publicKey);
-                    }
+
+                    encryptedData = encryptRSAModernPadding(_encryptionProvider, innerDataBytes, publicKey.publicKey);
                     
                     _dhEncryptedData = encryptedData;
                 }
