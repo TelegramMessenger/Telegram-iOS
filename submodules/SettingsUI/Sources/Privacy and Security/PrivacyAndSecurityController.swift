@@ -734,11 +734,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 break
             case let .notSet(pendingEmail):
                 if pendingEmail == nil {
-                    /*#if DEBUG
-                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .recoveryDone(recoveredAccountData: nil, syncContacts: false, isPasswordSet: false))
-                    #else*/
                     let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro)
-                    //#endif
 
                     pushControllerImpl?(controller, true)
                     return
