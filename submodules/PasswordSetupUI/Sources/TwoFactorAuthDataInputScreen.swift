@@ -513,7 +513,19 @@ public final class TwoFactorDataInputScreen: ViewController {
                             case .declined:
                                 break
                             case let .error(reason):
-                                break
+                                let text: String
+                                switch reason {
+                                case let .limitExceeded(retryAtTimestamp):
+                                    if let retryAtTimestamp = retryAtTimestamp {
+                                        let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                        text = strongSelf.presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: strongSelf.presentationData.strings, value: remainingSeconds)).0
+                                    } else {
+                                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                                    }
+                                case .generic:
+                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                }
+                                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         })
                     })]), in: .window(.root))
