@@ -113,6 +113,7 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: ASImageNode
     
     var action: (() -> Void)?
+    var cancelAction: (() -> Void)?
     
     init(presentationData: PresentationData, background: PasscodeBackground, title: String, subtitle: String) {
         self.presentationData = presentationData
@@ -146,9 +147,14 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         }
         
         self.addTarget(self, action: #selector(self.nop), forControlEvents: .touchUpInside)
+        self.addTarget(self, action: #selector(self.cancel), forControlEvents: .touchUpOutside)
     }
     
     @objc private func nop() {
+    }
+    
+    @objc private func cancel() {
+        self.cancelAction?()
     }
     
     override var frame: CGRect {
@@ -223,6 +229,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
     private var background: PasscodeBackground?
     
     var charactedEntered: ((String) -> Void)?
+    var backspace: (() -> Void)?
     
     private func updateButtons() {
         guard let presentationData = self.presentationData, let background = self.background else {
@@ -238,6 +245,9 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                 let buttonNode = PasscodeEntryButtonNode(presentationData: presentationData, background: background, title: title, subtitle: subtitle)
                 buttonNode.action = { [weak self] in
                     self?.charactedEntered?(title)
+                }
+                buttonNode.cancelAction = { [weak self] in
+                    self?.backspace?()
                 }
                 self.addSubnode(buttonNode)
             }

@@ -99,6 +99,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 }
             }
         }
+        self.keyboardNode.backspace = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.inputFieldNode.delete()
+                if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
+                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), backwards: true)
+                }
+            }
+        }
         self.inputFieldNode.complete = { [weak self] passcode in
             guard let strongSelf = self else {
                 return

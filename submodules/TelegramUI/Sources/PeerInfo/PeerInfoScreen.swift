@@ -529,6 +529,7 @@ private enum PeerInfoSettingsSection {
     case username
     case addAccount
     case logout
+    case rememberPassword
 }
 
 private final class PeerInfoInteraction {
@@ -708,7 +709,14 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 interaction.openSettings(.phoneNumber)
             }))
         } else if settings.suggestPasswordConfirmation {
-            
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPasswordTitle, text: .markdown(presentationData.strings.Settings_CheckPasswordText), linkAction: { _ in
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPassword, action: {
+                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
+                interaction.openSettings(.phoneNumber)
+            }))
         }
         
         if !settings.accountsAndPeers.isEmpty {
@@ -5445,6 +5453,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: accounts.count + 1 < maximumNumberOfAccounts, phoneNumber: phoneNumber))
                     }
                 }
+            case .rememberPassword:
+                break
         }
     }
     
