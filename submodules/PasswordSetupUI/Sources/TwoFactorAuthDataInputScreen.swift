@@ -621,7 +621,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
                 }
 
-                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts)), animated: true)
+                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts, isPasswordSet: !password.isEmpty)), animated: true)
             }, error: { [weak self, weak statusController] error in
                 statusController?.dismiss()
 
