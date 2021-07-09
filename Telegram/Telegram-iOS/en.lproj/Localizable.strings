@@ -6567,7 +6567,7 @@ Sorry for the inconvenience.";
 "TwoFactorRemember.Placeholder" = "Password";
 "TwoFactorRemember.Forgot" = "Forgot Password?";
 "TwoFactorRemember.CheckPassword" = "Check Password";
-"TwoFactorRemember.WrongPassword" = "You entered a wrong password.";
+"TwoFactorRemember.WrongPassword" = "This password is incorrect.";
 "TwoFactorRemember.Done.Title" = "Perfect!";
 "TwoFactorRemember.Done.Text" = "You still remember your password.";
 "TwoFactorRemember.Done.Action" = "Back to Settings";
