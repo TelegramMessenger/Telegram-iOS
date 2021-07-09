@@ -16,6 +16,7 @@ public enum TwoFactorAuthSplashMode {
     case intro
     case done
     case recoveryDone(recoveredAccountData: RecoveredAccountData?, syncContacts: Bool, isPasswordSet: Bool)
+    case remember
 }
 
 public final class TwoFactorAuthSplashScreen: ViewController {
@@ -42,7 +43,18 @@ public final class TwoFactorAuthSplashScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        let hasBackButton: Bool
+        switch mode {
+            case .done, .remember:
+                hasBackButton = false
+            default:
+                hasBackButton = true
+        }
+        if hasBackButton {
+            self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        } else {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: ASDisplayNode())
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -61,7 +73,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
             case .intro:
                 strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password, stateUpdated: { _ in
                 }, presentation: strongSelf.navigationPresentation))
-            case .done:
+            case .done, .remember:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return
                 }
@@ -166,6 +178,16 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
 
             if let path = getAppBundle().path(forResource: isPasswordSet ? "TwoFactorSetupDone" : "TwoFactorRemovePasswordDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: isPasswordSet ? .loop : .once, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+        case .remember:
+            title = self.presentationData.strings.TwoFactorRemember_Done_Title
+            texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_Done_Text, font: textFont, textColor: textColor)]
+            buttonText = self.presentationData.strings.TwoFactorRemember_Done_Action
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupRememberSuccess", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }

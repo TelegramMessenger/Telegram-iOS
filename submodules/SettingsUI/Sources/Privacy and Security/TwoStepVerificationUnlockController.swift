@@ -253,21 +253,21 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
     return entries
 }
 
-enum TwoStepVerificationUnlockSettingsControllerMode {
+public enum TwoStepVerificationUnlockSettingsControllerMode {
     case access(intro: Bool, data: Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>?)
     case manage(password: String, email: String, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-struct TwoStepVerificationPendingEmailState: Equatable {
+public struct TwoStepVerificationPendingEmailState: Equatable {
     let password: String?
     let email: TwoStepVerificationPendingEmail
 }
 
-enum TwoStepVerificationAccessConfiguration: Equatable {
+public enum TwoStepVerificationAccessConfiguration: Equatable {
     case notSet(pendingEmail: TwoStepVerificationPendingEmailState?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool, pendingResetTimestamp: Int32?)
     
-    init(configuration: TwoStepVerificationConfiguration, password: String?) {
+    public init(configuration: TwoStepVerificationConfiguration, password: String?) {
         switch configuration {
             case let .notSet(pendingEmail):
                 self = .notSet(pendingEmail: pendingEmail.flatMap({ TwoStepVerificationPendingEmailState(password: password, email: $0) }))
@@ -277,12 +277,12 @@ enum TwoStepVerificationAccessConfiguration: Equatable {
     }
 }
 
-enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
+public enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
     case access(configuration: TwoStepVerificationAccessConfiguration?)
     case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
+public func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
     let initialState = TwoStepVerificationUnlockSettingsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

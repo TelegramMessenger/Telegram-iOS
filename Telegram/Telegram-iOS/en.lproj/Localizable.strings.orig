@@ -6559,7 +6559,9 @@ Sorry for the inconvenience.";
 "TwoFactorSetup.ResetDone.TitleNoPassword" = "Password Removed";
 "TwoFactorSetup.ResetDone.TextNoPassword" = "You can always set a new password in\n\n\nSettings>Privacy & Security>Two-Step Verification";
 
+<<<<<<< HEAD
 "TwoFactorSetup.ResetFloodWait" = "You recently requested a password reset that was cancelled. Please wait %@ before making a new request.";
+=======
 "TwoFactorSetup.ResetFloodWait" = "You have recently requested a password reset that was canceled. Please wait for %@ before making a new request.";
 
 "TwoFactorRemember.Title" = "Enter Your Password";
@@ -6571,3 +6573,4 @@ Sorry for the inconvenience.";
 "TwoFactorRemember.Done.Title" = "Perfect!";
 "TwoFactorRemember.Done.Text" = "You still remember your password.";
 "TwoFactorRemember.Done.Action" = "Back to Settings";
+>>>>>>> 8b1f00400332644b4c65ec7b6b1b6fb8ac9b7f21
