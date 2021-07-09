@@ -147,14 +147,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         }
         
         self.addTarget(self, action: #selector(self.nop), forControlEvents: .touchUpInside)
-        self.addTarget(self, action: #selector(self.cancel), forControlEvents: .touchUpOutside)
     }
     
     @objc private func nop() {
-    }
-    
-    @objc private func cancel() {
-        self.cancelAction?()
     }
     
     override var frame: CGRect {
@@ -208,6 +203,20 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         super.touchesBegan(touches, with: event)
         
         self.action?()
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        
+        if let touchPosition = touches.first?.location(in: self.view), !self.view.bounds.contains(touchPosition) {
+            self.cancelAction?()
+        }
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.cancelAction?()
     }
 }
 
