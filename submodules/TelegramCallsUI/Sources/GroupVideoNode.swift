@@ -33,6 +33,8 @@ final class GroupVideoNode: ASDisplayNode {
     
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
+
+    private var isEnabled: Bool = false
         
     private var validLayout: (CGSize, LayoutMode)?
     
@@ -107,7 +109,10 @@ final class GroupVideoNode: ASDisplayNode {
     }
 
     func updateIsEnabled(_ isEnabled: Bool) {
+        self.isEnabled = isEnabled
+
         self.videoView.updateIsEnabled(isEnabled)
+        self.backdropVideoView?.updateIsEnabled(isEnabled)
     }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
@@ -298,11 +303,11 @@ final class GroupVideoNode: ASDisplayNode {
             rotatedVideoFrame.size.width = ceil(rotatedVideoFrame.size.width)
             rotatedVideoFrame.size.height = ceil(rotatedVideoFrame.size.height)
 
-            let isEnabled = !topFrame.contains(rotatedVideoFrame)
+            let isBlurEnabled = !topFrame.contains(rotatedVideoFrame)
             
             let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
-            if isEnabled {
-                self.backdropVideoView?.updateIsEnabled(true)
+            if isBlurEnabled {
+                self.backdropVideoView?.updateIsEnabled(self.isEnabled)
                 self.backdropVideoView?.view.isHidden = false
                 self.backdropEffectView?.isHidden = false
             }
@@ -310,7 +315,7 @@ final class GroupVideoNode: ASDisplayNode {
                 guard let strongSelf = self, value else {
                     return
                 }
-                if !isEnabled {
+                if !isBlurEnabled {
                     strongSelf.backdropVideoView?.updateIsEnabled(false)
                     strongSelf.backdropVideoView?.view.isHidden = true
                     strongSelf.backdropEffectView?.isHidden = false
