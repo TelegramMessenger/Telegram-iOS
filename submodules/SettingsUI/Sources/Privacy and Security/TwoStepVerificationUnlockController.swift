@@ -552,7 +552,19 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 case .declined:
                                                     break
                                                 case let .error(reason):
-                                                    break
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                                 }
                                             })
                                         }
@@ -568,7 +580,19 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 case .declined:
                                                     break
                                                 case let .error(reason):
-                                                    break
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                                 }
                                             })
                                         })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -858,7 +882,20 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             case .declined:
                 break
             case let .error(reason):
-                break
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                switch reason {
+                case let .limitExceeded(retryAtTimestamp):
+                    if let retryAtTimestamp = retryAtTimestamp {
+                        let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                        text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                    } else {
+                        text = presentationData.strings.TwoStepAuth_FloodError
+                    }
+                case .generic:
+                    text = presentationData.strings.Login_UnknownError
+                }
+                presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         })
     })

@@ -395,7 +395,7 @@ func _internal_requestTemporaryTwoStepPasswordToken(account: Account, password: 
 public enum RequestTwoStepPasswordResetResult {
     public enum ErrorReason {
         case generic
-        case limitExceeded
+        case limitExceeded(retryAtTimestamp: Int32?)
     }
 
     case done
@@ -406,12 +406,19 @@ public enum RequestTwoStepPasswordResetResult {
 
 func _internal_requestTwoStepPasswordReset(network: Network) -> Signal<RequestTwoStepPasswordResetResult, NoError> {
     return network.request(Api.functions.account.resetPassword(), automaticFloodWait: false)
-    |> map { _ -> RequestTwoStepPasswordResetResult in
-        return .done
+    |> map { result -> RequestTwoStepPasswordResetResult in
+        switch result {
+        case let .resetPasswordFailedWait(retryDate):
+            return .error(reason: .limitExceeded(retryAtTimestamp: retryDate))
+        case .resetPasswordOk:
+            return .done
+        case let .resetPasswordRequestedWait(untilDate):
+            return .waitingForReset(resetAtTimestamp: untilDate)
+        }
     }
     |> `catch` { error -> Signal<RequestTwoStepPasswordResetResult, NoError> in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-            return .single(.error(reason: .limitExceeded))
+            return .single(.error(reason: .limitExceeded(retryAtTimestamp: nil)))
         } else if error.errorDescription.hasPrefix("RESET_WAIT_") {
             if let remainingSeconds = Int32(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "RESET_WAIT_".count)...]) {
                 let timestamp = Int32(network.globalTime)

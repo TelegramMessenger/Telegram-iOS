@@ -513,7 +513,19 @@ public final class TwoFactorDataInputScreen: ViewController {
                             case .declined:
                                 break
                             case let .error(reason):
-                                break
+                                let text: String
+                                switch reason {
+                                case let .limitExceeded(retryAtTimestamp):
+                                    if let retryAtTimestamp = retryAtTimestamp {
+                                        let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                        text = strongSelf.presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: strongSelf.presentationData.strings, value: remainingSeconds)).0
+                                    } else {
+                                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                                    }
+                                case .generic:
+                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                }
+                                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         })
                     })]), in: .window(.root))
@@ -621,7 +633,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
                 }
 
-                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts)), animated: true)
+                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts, isPasswordSet: !password.isEmpty)), animated: true)
             }, error: { [weak self, weak statusController] error in
                 statusController?.dismiss()
 

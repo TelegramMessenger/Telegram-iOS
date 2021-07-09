@@ -1,7 +1,7 @@
 public extension Api {
     public enum GroupCall: TypeConstructorDescription {
         case groupCallDiscarded(id: Int64, accessHash: Int64, duration: Int32)
-        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, title: String?, streamDcId: Int32?, recordStartDate: Int32?, scheduleDate: Int32?, version: Int32)
+        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, title: String?, streamDcId: Int32?, recordStartDate: Int32?, scheduleDate: Int32?, unmutedVideoCount: Int32?, unmutedVideoLimit: Int32, version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13,9 +13,9 @@ public extension Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeInt32(duration, buffer: buffer, boxed: false)
                     break
-                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let version):
+                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let unmutedVideoCount, let unmutedVideoLimit, let version):
                     if boxed {
-                        buffer.appendInt32(1698544301)
+                        buffer.appendInt32(-711498484)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -25,6 +25,8 @@ public extension Api {
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(streamDcId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 5) != 0 {serializeInt32(recordStartDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(unmutedVideoCount!, buffer: buffer, boxed: false)}
+                    serializeInt32(unmutedVideoLimit, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
@@ -34,8 +36,8 @@ public extension Api {
         switch self {
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                 return ("groupCallDiscarded", [("id", id), ("accessHash", accessHash), ("duration", duration)])
-                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let version):
-                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("title", title), ("streamDcId", streamDcId), ("recordStartDate", recordStartDate), ("scheduleDate", scheduleDate), ("version", version)])
+                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let unmutedVideoCount, let unmutedVideoLimit, let version):
+                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("title", title), ("streamDcId", streamDcId), ("recordStartDate", recordStartDate), ("scheduleDate", scheduleDate), ("unmutedVideoCount", unmutedVideoCount), ("unmutedVideoLimit", unmutedVideoLimit), ("version", version)])
     }
     }
     
@@ -74,7 +76,11 @@ public extension Api {
             var _8: Int32?
             if Int(_1!) & Int(1 << 7) != 0 {_8 = reader.readInt32() }
             var _9: Int32?
-            _9 = reader.readInt32()
+            if Int(_1!) & Int(1 << 10) != 0 {_9 = reader.readInt32() }
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: Int32?
+            _11 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -83,9 +89,11 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
-            let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, version: _9!)
+            let _c9 = (Int(_1!) & Int(1 << 10) == 0) || _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, unmutedVideoCount: _9, unmutedVideoLimit: _10!, version: _11!)
             }
             else {
                 return nil

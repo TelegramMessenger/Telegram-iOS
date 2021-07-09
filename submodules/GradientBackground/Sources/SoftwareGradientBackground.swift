@@ -264,13 +264,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
                 var steps: [[CGPoint]] = []
                 if backwards {
-                    let phaseCount = extendAnimation ? 4 : 1
+                    let phaseCount = extendAnimation ? 6 : 1
                     self.phase = (self.phase + phaseCount) % 8
                     self.validPhase = self.phase
                     
                     var stepPhase = self.phase - phaseCount
                     if stepPhase < 0 {
-                        stepPhase = 7
+                        stepPhase = 8 + stepPhase
                     }
                     for _ in 0 ... phaseCount {
                         steps.append(gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: stepPhase)))

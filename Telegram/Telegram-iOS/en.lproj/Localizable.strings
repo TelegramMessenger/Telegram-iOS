@@ -6555,3 +6555,8 @@ Sorry for the inconvenience.";
 "TwoFactorSetup.ResetDone.Title" = "New Password Set!";
 "TwoFactorSetup.ResetDone.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
 "TwoFactorSetup.ResetDone.Action" = "Continue";
+
+"TwoFactorSetup.ResetDone.TitleNoPassword" = "Password Removed";
+"TwoFactorSetup.ResetDone.TextNoPassword" = "You can always set a new password in\n\n\nSettings>Privacy & Security>Two-Step Verification";
+
+"TwoFactorSetup.ResetFloodWait" = "You have recently requested a password reset that was canceled. Please wait for %@ before making a new request.";

@@ -99,8 +99,12 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
-        self.application.setStatusBarStyle(style, animated: animated)
+        if self.shouldChangeStatusBarStyle?(style) ?? true {
+            self.application.setStatusBarStyle(style, animated: animated)
+        }
     }
+    
+    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
     
     func setStatusBarHidden(_ value: Bool, animated: Bool) {
         self.application.setStatusBarHidden(value, with: animated ? .fade : .none)

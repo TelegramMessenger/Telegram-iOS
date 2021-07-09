@@ -3023,7 +3023,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         })
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _):
+                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let isVideoEnabled = (flags & (1 << 9)) != 0

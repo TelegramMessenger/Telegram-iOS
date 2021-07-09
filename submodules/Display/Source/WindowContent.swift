@@ -776,12 +776,11 @@ public class Window1 {
                         self?.inCallNavigate?()
                     }
                 }
+                self.hostView.containerView.insertSubview(rootController.view, at: 0)
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.displayNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                     rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
                 }
-                
-                self.hostView.containerView.insertSubview(rootController.view, at: 0)
             }
             
             self.hostView.eventView.setNeedsLayout()
