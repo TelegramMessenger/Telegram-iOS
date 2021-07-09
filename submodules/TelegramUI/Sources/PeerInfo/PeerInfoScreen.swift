@@ -60,6 +60,7 @@ import HashtagSearchUI
 import ActionSheetPeerItem
 import TelegramCallsUI
 import PeerInfoAvatarListNode
+import PasswordSetupUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -715,7 +716,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
-                interaction.openSettings(.phoneNumber)
+                interaction.openSettings(.rememberPassword)
             }))
         }
         
@@ -2939,14 +2940,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             var currentVideoCallsAvailable: Bool?
                         
             if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
-                previousCallsPrivate = previousCachedData.callsPrivate ?? false
+                previousCallsPrivate = previousCachedData.callsPrivate
                 currentCallsPrivate = cachedData.callsPrivate
                 
-                previousVideoCallsAvailable = previousCachedData.videoCallsAvailable ?? true
+                previousVideoCallsAvailable = previousCachedData.videoCallsAvailable
                 currentVideoCallsAvailable = cachedData.videoCallsAvailable
             }
             
             if let previousSuggestPhoneNumberConfirmation = previousData?.globalSettings?.suggestPhoneNumberConfirmation, previousSuggestPhoneNumberConfirmation != data.globalSettings?.suggestPhoneNumberConfirmation {
+                infoUpdated = true
+            }
+            if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
                 infoUpdated = true
             }
             if previousCallsPrivate != currentCallsPrivate || previousVideoCallsAvailable != currentVideoCallsAvailable {
@@ -5454,7 +5458,16 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             case .rememberPassword:
-                break
+                let context = self.context
+                let controller = TwoFactorDataInputScreen(sharedContext: self.context.sharedContext, engine: .authorized(self.context.engine), mode: .rememberPassword, stateUpdated: { _ in
+                }, presentation: .modalInLargeLayout)
+                controller.twoStepAuthSettingsController = { configuration in
+                    return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
+                }
+                controller.passwordRemembered = {
+                    let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
+                }
+                self.controller?.push(controller)
         }
     }
     
@@ -6661,11 +6674,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?) in
                 let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
                 let phoneNumberWarning = suggestions.contains(.validatePhoneNumber)
+                let passwordWarning = suggestions.contains(.validatePassword)
                 var otherAccountsBadge: String?
                 if accountTabBarAvatarBadge > 0 {
                     otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
-                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning ? "!" : otherAccountsBadge)
+                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning || passwordWarning ? "!" : otherAccountsBadge)
             }
             
             self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).start(next: { [weak self] title, image, selectedImage, badgeValue in

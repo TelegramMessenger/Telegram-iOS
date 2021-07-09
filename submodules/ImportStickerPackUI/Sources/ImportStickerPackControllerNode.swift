@@ -212,8 +212,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         self.contentContainerNode.addSubnode(self.contentGridNode)
         self.contentContainerNode.addSubnode(self.createActionSeparatorNode)
         self.contentContainerNode.addSubnode(self.createActionButtonNode)
-        self.contentContainerNode.addSubnode(self.addToExistingActionSeparatorNode)
-        self.contentContainerNode.addSubnode(self.addToExistingActionButtonNode)
+//        self.contentContainerNode.addSubnode(self.addToExistingActionSeparatorNode)
+//        self.contentContainerNode.addSubnode(self.addToExistingActionButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentTitleNode)
         self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
         
