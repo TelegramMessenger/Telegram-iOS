@@ -43,11 +43,12 @@
 
 @end
 
-static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys() {
-    static NSArray<MTDatacenterAuthPublicKey *> *serverPublicKeys = nil;
+static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys(bool isProduction) {
+    static NSArray<MTDatacenterAuthPublicKey *> *testingPublicKeys = nil;
+    static NSArray<MTDatacenterAuthPublicKey *> *productionPublicKeys = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        serverPublicKeys = @[
+        testingPublicKeys = @[
             [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
              "MIIBCgKCAQEAyMEdY1aR+sCR3ZSJrtztKTKqigvO/vBfqACJLZtS7QMgCGXJ6XIR\n"
              "yy7mx66W0/sOFa7/1mAZtEoIokDP3ShoqF4fVNb6XeqgQfaUHd8wJpDWHcR2OFwv\n"
@@ -55,7 +56,10 @@ static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys() {
              "j25sIWeYPHYeOrFp/eXaqhISP6G+q2IeTaWTXpwZj4LzXq5YOpk4bYEQ6mvRq7D1\n"
              "aHWfYmlEGepfaYR8Q0YqvvhYtMte3ITnuSJs171+GDqpdKcSwHnd6FudwGO4pcCO\n"
              "j4WcDuXc2CTHgH8gFTNhp/Y8/SpDOhvn9QIDAQAB\n"
-             "-----END RSA PUBLIC KEY-----"],
+             "-----END RSA PUBLIC KEY-----"]
+        ];
+
+        productionPublicKeys = @[
             [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
              "MIIBCgKCAQEA6LszBcC1LGzyr992NzE0ieY+BSaOW622Aa9Bd4ZHLl+TuFQ4lo4g\n"
              "5nKaMBwK/BIb9xUfg0Q29/2mgIR6Zr9krM7HjuIcCzFvDtr+L0GQjae9H0pRB2OO\n"
@@ -66,7 +70,11 @@ static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys() {
              "-----END RSA PUBLIC KEY-----"]
         ];
     });
-    return serverPublicKeys;
+    if (isProduction) {
+        return productionPublicKeys;
+    } else {
+        return testingPublicKeys;
+    }
 }
 
 static MTDatacenterAuthPublicKey *selectPublicKey(id<EncryptionProvider> encryptionProvider, NSArray<NSNumber *> *fingerprints, NSArray<MTDatacenterAuthPublicKey *> *publicKeys) {
@@ -170,7 +178,7 @@ typedef enum {
             _stage = MTDatacenterAuthStagePQ;
         }
     } else {
-        _publicKeys = defaultPublicKeys();
+        _publicKeys = defaultPublicKeys(!mtProto.context.isTestingEnvironment);
         _stage = MTDatacenterAuthStagePQ;
     }
     
@@ -184,6 +192,10 @@ typedef enum {
 }
     
 - (void)mtProtoPublicKeysUpdated:(MTProto *)mtProto datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys {
+    if (!mtProto.cdn) {
+        return;
+    }
+
     if (_stage == MTDatacenterAuthStageWaitingForPublicKeys) {
         if (mtProto.datacenterId == datacenterId) {
             _publicKeys = [self convertPublicKeysFromDictionaries:publicKeys];
@@ -279,77 +291,6 @@ typedef enum {
     }
     
     return nil;
-}
-
-static NSData *aesCbcEncrypt(NSData *data, NSData *key, NSData *iv) {
-    size_t keyLength = kCCKeySizeAES256;
-    if (key.length != keyLength) {
-        return nil;
-    }
-    if (iv.length != 16) {
-        return nil;
-    }
-    if (data.length % 16 != 0) {
-        return nil;
-    }
-
-    NSMutableData *outData = [[NSMutableData alloc] initWithLength:data.length];
-
-    CCOperation operation = kCCEncrypt;
-    CCAlgorithm algoritm = kCCAlgorithmAES128;
-    CCOptions options = 0; // No padding
-
-    size_t outDataActualSize = 0;
-
-    int status = CCCrypt(
-        operation,
-        algoritm,
-        options,
-        key.bytes,
-        keyLength,
-        iv.bytes,
-        data.bytes,
-        data.length,
-        outData.mutableBytes,
-        outData.length,
-        &outDataActualSize
-    );
-
-    if (status != kCCSuccess) {
-        return nil;
-    }
-    if (outDataActualSize != data.length) {
-        return nil;
-    }
-
-    return outData;
-}
-
-static NSData *encryptRSALegacy(id<EncryptionProvider> encryptionProvider, NSData *pqInnerData, NSString *publicKey) {
-    NSMutableData *dataWithHash = [[NSMutableData alloc] init];
-    [dataWithHash appendData:MTSha1(pqInnerData)];
-    [dataWithHash appendData:pqInnerData];
-    while (dataWithHash.length < 255) {
-        uint8_t random = 0;
-        arc4random_buf(&random, 1);
-        [dataWithHash appendBytes:&random length:1];
-    }
-
-    NSData *encryptedData = MTRsaEncrypt(encryptionProvider, publicKey, dataWithHash);
-
-    if (encryptedData.length < 256) {
-        NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
-        for (int i = 0; i < 256 - (int)encryptedData.length; i++)
-        {
-            uint8_t random = 0;
-            arc4random_buf(&random, 1);
-            [newEncryptedData appendBytes:&random length:1];
-        }
-        [newEncryptedData appendData:encryptedData];
-        encryptedData = newEncryptedData;
-    }
-
-    return encryptedData;
 }
 
 static NSData *reversedBytes(NSData *data) {
