@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import GradientBackground
 
 private let regularTitleFont = Font.regular(36.0)
 private let regularSubtitleFont: UIFont = {
@@ -110,6 +111,7 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     private var highlightedImage: UIImage?
     
     private var blurredBackgroundNode: NavigationBackgroundNode?
+    private var gradientBackgroundNode: GradientBackgroundNode.CloneNode?
     private let backgroundNode: ASImageNode
     
     var action: (() -> Void)?
@@ -121,11 +123,15 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.title = title
         self.subtitle = subtitle
         
-        if background is CustomPasscodeBackground {
-            let blurredBackgroundColor = (UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
-            
-            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
-            self.blurredBackgroundNode = blurredBackgroundNode
+        if let background = background as? CustomPasscodeBackground {
+            if false, background.inverted {
+                let gradientBackgroundNode = background.makeForegroundNode(backgroundNode: background.makeBackgroundNode())
+                self.gradientBackgroundNode = gradientBackgroundNode as? GradientBackgroundNode.CloneNode
+            } else {
+                let blurredBackgroundColor = (background.inverted ? UIColor(rgb: 0xffffff, alpha: 0.1) : UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
+                let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
+                self.blurredBackgroundNode = blurredBackgroundNode
+            }
         }
         
         self.backgroundNode = ASImageNode()
@@ -135,6 +141,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         
         super.init()
         
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            self.addSubnode(gradientBackgroundNode)
+        }
         if let blurredBackgroundNode = self.blurredBackgroundNode {
             self.addSubnode(blurredBackgroundNode)
         }
@@ -172,6 +181,12 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.regularImage = generateButtonImage(background: self.background, frame: self.frame, title: self.title, subtitle: self.subtitle, highlighted: false)
         self.highlightedImage = generateButtonImage(background: self.background, frame: self.frame, title: self.title, subtitle: self.subtitle, highlighted: true)
         self.updateState(highlighted: self.isHighlighted)
+        
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            let containerSize = self.background.size
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: self.frame.minX / containerSize.width, y: self.frame.minY / containerSize.height), size: CGSize(width: self.frame.width / containerSize.width, height: self.frame.height / containerSize.height))
+            gradientBackgroundNode.layer.contentsRect = shiftedContentsRect
+        }
     }
     
     private func updateState(highlighted: Bool) {
@@ -192,6 +207,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     override func layout() {
         super.layout()
         
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            gradientBackgroundNode.frame = self.bounds
+        }
         if let blurredBackgroundNode = self.blurredBackgroundNode {
             blurredBackgroundNode.frame = self.bounds
             blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: .immediate)
