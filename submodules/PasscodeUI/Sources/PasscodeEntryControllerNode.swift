@@ -203,6 +203,32 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
         
         switch self.wallpaper {
+            case let .color(colorValue):
+                let color = UIColor(argb: colorValue)
+                let baseColor: UIColor
+                let lightness = color.lightness
+                if lightness < 0.1 || lightness > 0.9 {
+                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                } else{
+                    baseColor = color
+                }
+                
+                let color1: UIColor
+                let color2: UIColor
+                let color3: UIColor
+                let color4: UIColor
+                if self.theme.overallDarkAppearance {
+                    color1 = baseColor.withMultiplied(hue: 1.034, saturation: 0.819, brightness: 0.214)
+                    color2 = baseColor.withMultiplied(hue: 1.029, saturation: 0.77, brightness: 0.132)
+                    color3 = color1
+                    color4 = color2
+                } else {
+                    color1 = baseColor.withMultiplied(hue: 1.029, saturation: 0.312, brightness: 1.26)
+                    color2 = baseColor.withMultiplied(hue: 1.034, saturation: 0.729, brightness: 0.942)
+                    color3 = baseColor.withMultiplied(hue: 1.029, saturation: 0.729, brightness: 1.231)
+                    color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
+                }
+                self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
             case let .gradient(_, colors, settings):
                 self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) }, inverted: (settings.intensity ?? 0) < 0)
             case .image, .file:
@@ -230,7 +256,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.backgroundCustomNode = customBackgroundNode
                 self.insertSubnode(customBackgroundNode, aboveSubnode: self.backgroundImageNode)
                 if let background = background as? CustomPasscodeBackground, background.inverted {
-                    self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.7)
+                    self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.75)
                 } else {
                     self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
                 }
