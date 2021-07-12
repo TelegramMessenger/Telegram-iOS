@@ -122,7 +122,7 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.subtitle = subtitle
         
         if background is CustomPasscodeBackground {
-            let blurredBackgroundColor = (selectDateFillStaticColor(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
+            let blurredBackgroundColor = (UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
             
             let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
             self.blurredBackgroundNode = blurredBackgroundNode
