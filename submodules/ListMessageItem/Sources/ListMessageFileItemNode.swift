@@ -1118,8 +1118,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.item?.header
+    override public func headers() -> [ListViewItemHeader]? {
+        return self.item?.header.flatMap { [$0] }
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -2055,7 +2055,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:&authInfoSelector];
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p@%p missing key %lld selector %d]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector);
+        MTLog(@"[MTProto#%p@%p missing key %lld selector %d useExplicitAuthKey: %lld, canResetAuthData: %s]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector, _useExplicitAuthKey.authKeyId, _canResetAuthData ? "true" : "false");
     }
     
     if (_useExplicitAuthKey != nil) {

@@ -108,14 +108,6 @@ class ChatHoleItemNode: ListViewItemNode {
         }
     }
     
-    /*override public func header() -> ListViewItemHeader? {
-        if let item = self.item {
-            return item.header
-        } else {
-            return nil
-        }
-    }*/
-    
     override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }

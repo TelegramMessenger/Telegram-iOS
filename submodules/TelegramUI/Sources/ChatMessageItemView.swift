@@ -801,9 +801,9 @@ public class ChatMessageItemView: ListViewItemNode {
         return nil
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return item.headers
         } else {
             return nil
         }
