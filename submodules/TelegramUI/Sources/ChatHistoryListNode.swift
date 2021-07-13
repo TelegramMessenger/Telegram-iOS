@@ -17,6 +17,7 @@ import AppBundle
 import ListMessageItem
 import AccountContext
 import ChatInterfaceState
+import ChatListUI
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -28,69 +29,6 @@ struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageId
     var upperBound: MessageId
     var isLast: Bool
-}
-
-private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
-    private let selectionGestureActivationThreshold: CGFloat = 5.0
-    
-    var recognized: Bool? = nil
-    var initialLocation: CGPoint = CGPoint()
-    
-    var shouldBegin: (() -> Bool)?
-    
-    override init(target: Any?, action: Selector?) {
-        super.init(target: target, action: action)
-        
-        self.minimumNumberOfTouches = 2
-        self.maximumNumberOfTouches = 2
-    }
-    
-    override func reset() {
-        super.reset()
-        
-        self.recognized = nil
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        super.touchesBegan(touches, with: event)
-        
-        if let shouldBegin = self.shouldBegin, !shouldBegin() {
-            self.state = .failed
-        } else {
-            let touch = touches.first!
-            self.initialLocation = touch.location(in: self.view)
-        }
-    }
-    
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
-        let location = touches.first!.location(in: self.view)
-        let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
-        
-        let touchesArray = Array(touches)
-        if self.recognized == nil, touchesArray.count == 2 {
-            if let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
-                let firstLocation = firstTouch.location(in: self.view)
-                let secondLocation = secondTouch.location(in: self.view)
-                
-                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
-                    let dx = v1.x - v2.x
-                    let dy = v1.y - v2.y
-                    return sqrt(dx * dx + dy * dy)
-                }
-                if distance(firstLocation, secondLocation) > 200.0 {
-                    self.state = .failed
-                }
-            }
-            if self.state != .failed && (abs(translation.y) >= selectionGestureActivationThreshold) {
-                self.recognized = true
-            }
-        }
-        
-        if let recognized = self.recognized, recognized {
-            super.touchesMoved(touches, with: event)
-        }
-    }
 }
 
 private let historyMessageCount: Int = 90

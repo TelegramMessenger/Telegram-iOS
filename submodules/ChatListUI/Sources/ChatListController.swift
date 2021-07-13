@@ -1272,6 +1272,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             if !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing {
+                var isEditing = false
+                strongSelf.chatListDisplayNode.containerNode.updateState { state in
+                    isEditing = state.editing
+                    return state
+                }
+                if !isEditing {
+                    strongSelf.editPressed()
+                }
                 strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing = true
                 if let layout = strongSelf.validLayout {
                     strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))

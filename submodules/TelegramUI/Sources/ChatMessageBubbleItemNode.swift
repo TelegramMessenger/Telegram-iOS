@@ -710,20 +710,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     func animateFromMicInput(micInputNode: UIView, transition: CombinedTransition) -> ContextExtractedContentContainingNode? {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
-                if let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode {
-                    let scale = statusContainerNode.contentRect.height / 100.0
-                    micInputNode.transform = CGAffineTransform(scaleX: scale, y: scale)
-                    micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
-                    statusContainerNode.contentNode.view.addSubview(micInputNode)
+                let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode
+                let scale = statusContainerNode.contentRect.height / 100.0
+                micInputNode.transform = CGAffineTransform(scaleX: scale, y: scale)
+                micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
+                statusContainerNode.contentNode.view.addSubview(micInputNode)
 
-                    transition.horizontal.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
-                        micInputNode?.removeFromSuperview()
-                    })
+                transition.horizontal.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
+                    micInputNode?.removeFromSuperview()
+                })
 
-                    transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
+                transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
 
-                    return statusContainerNode
-                }
+                return statusContainerNode
             }
         }
         return nil

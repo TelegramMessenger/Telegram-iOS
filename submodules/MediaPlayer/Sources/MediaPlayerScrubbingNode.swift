@@ -317,13 +317,17 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
             if value != self._statusValue {
                 if let value = value, value.seekId == self.ignoreSeekId {
                 } else {
+                    let previousStatusValue = self._statusValue
                     self._statusValue = value
                     self.updateProgressAnimations()
                     
-                    let playbackStatus = value?.status
+                    var playbackStatus = value?.status
                     if self.playbackStatusValue != playbackStatus {
                         self.playbackStatusValue = playbackStatus
                         if let playbackStatusUpdated = self.playbackStatusUpdated {
+                            if playbackStatus == .paused, previousStatusValue?.status == .playing, let value = value, value.timestamp > value.duration - 0.1 {
+                                playbackStatus = .playing
+                            }
                             playbackStatusUpdated(playbackStatus)
                         }
                     }

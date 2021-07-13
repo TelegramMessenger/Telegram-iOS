@@ -132,6 +132,11 @@ open class ManagedAnimationNode: ASDisplayNode {
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
     
+    public var imageUpdated: ((UIImage) -> Void)?
+    public var image: UIImage? {
+        return self.imageNode.image
+    }
+    
     public var state: ManagedAnimationState?
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
@@ -260,6 +265,7 @@ open class ManagedAnimationNode: ASDisplayNode {
                 } else {
                     self.imageNode.image = image
                 }
+                self.imageUpdated?(image)
             }
             
             for (callbackFrame, callback) in state.item.callbacks {
