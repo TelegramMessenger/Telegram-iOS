@@ -1893,9 +1893,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.layoutParams?.0 {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

@@ -7927,6 +7927,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 itemNode.updateSelectionState(animated: animated)
             }
         }
+
+        self.chatDisplayNode.historyNode.forEachItemHeaderNode{ itemHeaderNode in
+            if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNode {
+                avatarNode.updateSelectionState(animated: animated)
+            }
+        }
     }
     
     private func updatePollTooltipMessageState(animated: Bool) {

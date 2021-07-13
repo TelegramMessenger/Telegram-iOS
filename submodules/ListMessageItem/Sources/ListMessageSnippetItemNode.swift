@@ -759,8 +759,12 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.item?.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.item {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

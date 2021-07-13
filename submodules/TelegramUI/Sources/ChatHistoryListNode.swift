@@ -1148,6 +1148,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in
                         if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
                             dateNode.updatePresentationData(chatPresentationData, context: context)
+                        } else if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNode {
+                            avatarNode.updatePresentationData(chatPresentationData, context: context)
                         } else if let dateNode = itemHeaderNode as? ListMessageDateHeaderNode {
                             dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
                         }
