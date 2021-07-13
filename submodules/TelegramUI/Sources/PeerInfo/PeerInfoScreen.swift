@@ -347,7 +347,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     
     let selectionPanel: ChatMessageSelectionInputPanelNode
     let separatorNode: ASDisplayNode
-    let backgroundNode: ASDisplayNode
+    let backgroundNode: NavigationBackgroundNode
     
     init(context: AccountContext, peerId: PeerId, deleteMessages: @escaping () -> Void, shareMessages: @escaping () -> Void, forwardMessages: @escaping () -> Void, reportMessages: @escaping () -> Void) {
         self.context = context
@@ -360,11 +360,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.separatorNode = ASDisplayNode()
-        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode = NavigationBackgroundNode(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
         
         self.selectionPanel = ChatMessageSelectionInputPanelNode(theme: presentationData.theme, strings: presentationData.strings, peerMedia: true)
         self.selectionPanel.context = context
-        self.selectionPanel.backgroundColor = presentationData.theme.chat.inputPanel.panelBackgroundColor
         
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
@@ -466,7 +465,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     }
     
     func update(layout: ContainerViewLayout, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+        self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
         let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
@@ -477,6 +476,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         let panelHeightWithInset = panelHeight + layout.intrinsicInsets.bottom
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeightWithInset)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         return panelHeightWithInset
