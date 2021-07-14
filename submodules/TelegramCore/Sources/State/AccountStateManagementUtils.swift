@@ -1425,7 +1425,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
             case let .updateDialogFilter(_, id, filter):
                 updatedState.addUpdateChatListFilter(id: id, filter: filter)
             case let .updateBotCommands(peer, botId, apiCommands):
-                let botPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId))
+                let botPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
                 let commands: [BotCommand] = apiCommands.map { command in
                     switch command {
                     case let .botCommand(command, description):

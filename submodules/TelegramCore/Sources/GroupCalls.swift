@@ -81,7 +81,7 @@ public enum GetCurrentGroupCallError {
 }
 
 public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
-    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), limit: 3))
     |> mapError { _ -> GetCurrentGroupCallError in
         return .generic
     }
@@ -2364,7 +2364,7 @@ public final class AudioBroadcastDataSource {
 }
 
 public func getAudioBroadcastDataSource(account: Account, callId: Int64, accessHash: Int64) -> Signal<AudioBroadcastDataSource?, NoError> {
-    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), limit: 3))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.phone.GroupCall?, NoError> in
         return .single(nil)
