@@ -12,22 +12,35 @@ protocol PasscodeBackground {
     var foregroundImage: UIImage? { get }
     
     func makeBackgroundNode() -> ASDisplayNode?
+    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode?
 }
 
 final class CustomPasscodeBackground: PasscodeBackground {
     private let colors: [UIColor]
+    private let backgroundNode: GradientBackgroundNode
+    let inverted: Bool
     
     public private(set) var size: CGSize
     public private(set) var backgroundImage: UIImage? = nil
     public private(set) var foregroundImage: UIImage? = nil
     
-    init(size: CGSize, colors: [UIColor]) {
+    init(size: CGSize, colors: [UIColor], inverted: Bool) {
         self.size = size
         self.colors = colors
+        self.inverted = inverted
+        self.backgroundNode = createGradientBackgroundNode(colors: self.colors)
     }
     
     func makeBackgroundNode() -> ASDisplayNode? {
-        return createGradientBackgroundNode(colors: self.colors)
+        return self.backgroundNode
+    }
+    
+    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
+        if self.inverted, let backgroundNode = backgroundNode as? GradientBackgroundNode {
+            return GradientBackgroundNode.CloneNode(parentNode: backgroundNode)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -58,6 +71,10 @@ final class GradientPasscodeBackground: PasscodeBackground {
     }
     
     func makeBackgroundNode() -> ASDisplayNode? {
+        return nil
+    }
+    
+    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
         return nil
     }
 }
@@ -109,6 +126,10 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
     }
 
     func makeBackgroundNode() -> ASDisplayNode? {
+        return nil
+    }
+    
+    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
         return nil
     }
 }

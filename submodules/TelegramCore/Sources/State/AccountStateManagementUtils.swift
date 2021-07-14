@@ -1424,6 +1424,38 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addUpdateChatListFilterOrder(order: order)
             case let .updateDialogFilter(_, id, filter):
                 updatedState.addUpdateChatListFilter(id: id, filter: filter)
+            case let .updateBotCommands(peer, botId, apiCommands):
+                let botPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId))
+                let commands: [BotCommand] = apiCommands.map { command in
+                    switch command {
+                    case let .botCommand(command, description):
+                        return BotCommand(text: command, description: description)
+                    }
+                }
+                updatedState.updateCachedPeerData(peer.peerId, { current in
+                    if peer.peerId.namespace == Namespaces.Peer.CloudUser, let previous = current as? CachedUserData {
+                        if let botInfo = previous.botInfo {
+                            return previous.withUpdatedBotInfo(BotInfo(description: botInfo.description, commands: commands))
+                        }
+                    } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup, let previous = current as? CachedGroupData {
+                        if let index = previous.botInfos.firstIndex(where: { $0.peerId == botPeerId }) {
+                            var updatedBotInfos = previous.botInfos
+                            let previousBotInfo = updatedBotInfos[index]
+                            updatedBotInfos.remove(at: index)
+                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, commands: commands)), at: index)
+                            return previous.withUpdatedBotInfos(updatedBotInfos)
+                        }
+                    } else if peer.peerId.namespace == Namespaces.Peer.CloudChannel, let previous = current as? CachedChannelData {
+                        if let index = previous.botInfos.firstIndex(where: { $0.peerId == botPeerId }) {
+                            var updatedBotInfos = previous.botInfos
+                            let previousBotInfo = updatedBotInfos[index]
+                            updatedBotInfos.remove(at: index)
+                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, commands: commands)), at: index)
+                            return previous.withUpdatedBotInfos(updatedBotInfos)
+                        }
+                    }
+                    return current
+                })
             default:
                 break
         }
@@ -2991,7 +3023,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         })
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _):
+                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let isVideoEnabled = (flags & (1 << 9)) != 0

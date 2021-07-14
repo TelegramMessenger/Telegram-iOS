@@ -435,7 +435,7 @@ public final class ShareController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = (exportMessageLink(account: strongSelf.currentAccount, peerId: chatPeer.id, messageId: message.id)
+                                let _ = (TelegramEngine(account: strongSelf.currentAccount).messages.exportMessageLink(peerId: chatPeer.id, messageId: message.id)
                                 |> map { result -> String? in
                                     return result
                                 }
@@ -1082,7 +1082,7 @@ final class MessageStoryRenderer {
             dateHeaderNode = currentDateHeaderNode
             headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
         } else {
-            dateHeaderNode = headerItem.node()
+            dateHeaderNode = headerItem.node(synchronousLoad: true)
             dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode

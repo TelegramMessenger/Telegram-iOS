@@ -84,6 +84,16 @@ public struct ListViewItemLayoutParams {
 }
 
 open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
+    public struct HeaderId: Hashable {
+        public var space: AnyHashable
+        public var id: AnyHashable
+
+        public init(space: AnyHashable, id: AnyHashable) {
+            self.space = space
+            self.id = id
+        }
+    }
+
     let rotated: Bool
     final var index: Int?
     
@@ -116,6 +126,9 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
+
+    final var tempHeaderSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
+    final var headerSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
     
     final let wantsScrollDynamics: Bool
     
@@ -533,7 +546,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return false
     }
     
-    open func header() -> ListViewItemHeader? {
+    open func headers() -> [ListViewItemHeader]? {
         return nil
     }
     

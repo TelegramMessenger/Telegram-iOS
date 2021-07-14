@@ -11,6 +11,7 @@ import TelegramPresentationData
 import PresentationDataUtils
 import TelegramCore
 import AnimatedStickerNode
+import ActivityIndicator
 
 public enum TwoFactorDataInputMode {
     public struct Recovery {
@@ -40,6 +41,7 @@ public enum TwoFactorDataInputMode {
     case updateEmailAddress(password: String)
     case emailConfirmation(passwordAndHint: (String, String)?, emailPattern: String, codeLength: Int?)
     case passwordHint(recovery: Recovery?, password: String)
+    case rememberPassword
 }
 
 public final class TwoFactorDataInputScreen: ViewController {
@@ -49,8 +51,15 @@ public final class TwoFactorDataInputScreen: ViewController {
     private let mode: TwoFactorDataInputMode
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate) -> Void
     private let actionDisposable = MetaDisposable()
-
+    
+    private let forgotDataDisposable = MetaDisposable()
+    private let forgotDataPromise = Promise<TwoStepVerificationConfiguration?>(nil)
+    private var didSetupForgotData = false
+    
     public var passwordRecoveryFailed: (() -> Void)?
+    
+    public var passwordRemembered: (() -> Void)?
+    public var twoStepAuthSettingsController: ((TwoStepVerificationConfiguration) -> ViewController)?
     
     public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorDataInputMode, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
         self.sharedContext = sharedContext
@@ -79,10 +88,19 @@ public final class TwoFactorDataInputScreen: ViewController {
 
     deinit {
         self.actionDisposable.dispose()
+        self.forgotDataDisposable.dispose()
     }
     
     @objc private func backPressed() {
         self.dismiss()
+    }
+    
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if case .rememberPassword = self.mode {
+            (self.displayNode as? TwoFactorDataInputScreenNode)?.focus()
+        }
     }
     
     override public func loadDisplayNode() {
@@ -394,6 +412,63 @@ public final class TwoFactorDataInputScreen: ViewController {
                 } else {
                     strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .emailAddress(password: password, hint: value), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation))
                 }
+            case .rememberPassword:
+                guard case let .authorized(engine) = strongSelf.engine else {
+                    return
+                }
+                
+                guard let value = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !value.isEmpty else {
+                    return
+                }
+                
+                (strongSelf.displayNode as? TwoFactorDataInputScreenNode)?.isLoading = true
+                
+                let _ = (engine.auth.requestTwoStepVerifiationSettings(password: value)
+                |> deliverOnMainQueue).start(error: { [weak self] error in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    (strongSelf.displayNode as? TwoFactorDataInputScreenNode)?.isLoading = false
+
+                    let presentationData = strongSelf.presentationData
+                    let text: String?
+                    switch error {
+                        case .limitExceeded:
+                            text = presentationData.strings.LoginPassword_FloodError
+                        case .invalidPassword:
+                            text = nil
+                        case .generic:
+                            text = presentationData.strings.Login_UnknownError
+                    }
+                    if let text = text {
+                        strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    } else {
+                        (strongSelf.displayNode as? TwoFactorDataInputScreenNode)?.onAction(success: false)
+                    }
+                }, completed: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    (strongSelf.displayNode as? TwoFactorDataInputScreenNode)?.isLoading = false
+                    strongSelf.passwordRemembered?()
+                    
+                    guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                        return
+                    }
+                    var controllers = navigationController.viewControllers.filter { controller in
+                        if controller is TwoFactorAuthSplashScreen {
+                            return false
+                        }
+                        if controller is TwoFactorDataInputScreen {
+                            return false
+                        }
+                        return true
+                    }
+                    controllers.append(TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .remember))
+                    navigationController.setViewControllers(controllers, animated: true)
+                })
             }
         }, skipAction: { [weak self] in
             guard let strongSelf = self else {
@@ -472,6 +547,156 @@ public final class TwoFactorDataInputScreen: ViewController {
                     }),
                     TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})
                 ]), in: .window(.root))
+            case .rememberPassword:
+                guard case let .authorized(engine) = strongSelf.engine else {
+                    return
+                }
+                
+                strongSelf.view.endEditing(true)
+                
+                let sharedContext = strongSelf.sharedContext
+                let presentationData = sharedContext.currentPresentationData.with { $0 }
+                let navigationController = strongSelf.navigationController as? NavigationController
+                
+                if !strongSelf.didSetupForgotData {
+                    strongSelf.didSetupForgotData = true
+                    strongSelf.forgotDataPromise.set(engine.auth.twoStepVerificationConfiguration() |> map(Optional.init))
+                }
+                let disposable = strongSelf.forgotDataDisposable
+                
+                disposable.set((strongSelf.forgotDataPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] configuration in
+                    if let strongSelf = self, let configuration = configuration {
+                        switch configuration {
+                            case let .set(_, hasRecoveryEmail, _, _, pendingResetTimestamp):
+                                if hasRecoveryEmail {
+                                    disposable.set((engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
+                                    |> deliverOnMainQueue).start(next: { emailPattern in
+                                        var stateUpdated: ((SetupTwoStepVerificationStateUpdate) -> Void)?
+                                        let controller = TwoFactorDataInputScreen(sharedContext: sharedContext, engine: .authorized(engine), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .authorized), stateUpdated: { state in
+                                            stateUpdated?(state)
+                                        })
+                                        stateUpdated = { [weak controller] state in
+                                            controller?.view.endEditing(true)
+                                            controller?.dismiss()
+                                            
+                                            switch state {
+                                            case .noPassword, .awaitingEmailConfirmation, .passwordSet:
+                                                controller?.dismiss()
+                                                
+                                                navigationController?.filterController(strongSelf, animated: true)
+                                            case .pendingPasswordReset:
+                                                let _ = (engine.auth.twoStepVerificationConfiguration()
+                                                |> deliverOnMainQueue).start(next: { [weak self] configuration in
+                                                    if let strongSelf = self {
+                                                        if let navigationController = navigationController, let twoStepAuthSettingsController = strongSelf.twoStepAuthSettingsController?(configuration) {
+                                                            var controllers = navigationController.viewControllers.filter { controller in
+                                                                if controller is TwoFactorDataInputScreen {
+                                                                    return false
+                                                                }
+                                                                return true
+                                                            }
+                                                            controllers.append(twoStepAuthSettingsController)
+                                                            navigationController.setViewControllers(controllers, animated: true)
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        }
+                                        strongSelf.push(controller)
+                                    }, error: { _ in
+                                        strongSelf.present(textAlertController(sharedContext: sharedContext, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }))
+                                } else {
+                                    if let pendingResetTimestamp = pendingResetTimestamp {
+                                        let remainingSeconds = pendingResetTimestamp - Int32(Date().timeIntervalSince1970)
+                                        if remainingSeconds <= 0 {
+                                            let _ = (engine.auth.requestTwoStepPasswordReset()
+                                            |> deliverOnMainQueue).start(next: { result in
+                                                switch result {
+                                                case .done, .waitingForReset:
+                                                    let _ = (engine.auth.twoStepVerificationConfiguration()
+                                                    |> deliverOnMainQueue).start(next: { [weak self] configuration in
+                                                        if let strongSelf = self {
+                                                            if let navigationController = navigationController, let twoStepAuthSettingsController = strongSelf.twoStepAuthSettingsController?(configuration) {
+                                                                var controllers = navigationController.viewControllers.filter { controller in
+                                                                    if controller is TwoFactorDataInputScreen {
+                                                                        return false
+                                                                    }
+                                                                    return true
+                                                                }
+                                                                controllers.append(twoStepAuthSettingsController)
+                                                                navigationController.setViewControllers(controllers, animated: true)
+                                                            }
+                                                        }
+                                                    })
+                                                case .declined:
+                                                    break
+                                                case let .error(reason):
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    strongSelf.present(textAlertController(sharedContext: sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                                }
+                                            })
+                                        }
+                                    } else {
+                                        strongSelf.present(textAlertController(sharedContext: sharedContext, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
+                                            let _ = (engine.auth.requestTwoStepPasswordReset()
+                                            |> deliverOnMainQueue).start(next: { result in
+                                                switch result {
+                                                case .done, .waitingForReset:
+                                                    let _ = (engine.auth.twoStepVerificationConfiguration()
+                                                    |> deliverOnMainQueue).start(next: { [weak self] configuration in
+                                                        if let strongSelf = self {
+                                                            if let navigationController = navigationController, let twoStepAuthSettingsController = strongSelf.twoStepAuthSettingsController?(configuration) {
+                                                                var controllers = navigationController.viewControllers.filter { controller in
+                                                                    if controller is TwoFactorDataInputScreen {
+                                                                        return false
+                                                                    }
+                                                                    return true
+                                                                }
+                                                                controllers.append(twoStepAuthSettingsController)
+                                                                navigationController.setViewControllers(controllers, animated: true)
+                                                            }
+                                                        }
+                                                    })
+                                                case .declined:
+                                                    break
+                                                case let .error(reason):
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    strongSelf.present(textAlertController(sharedContext: sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                                }
+                                            })
+                                        })]), in: .window(.root))
+                                    }
+                                }
+                            case .notSet:
+                                break
+                        }
+                    }
+                }))
             default:
                 break
             }
@@ -513,7 +738,19 @@ public final class TwoFactorDataInputScreen: ViewController {
                             case .declined:
                                 break
                             case let .error(reason):
-                                break
+                                let text: String
+                                switch reason {
+                                case let .limitExceeded(retryAtTimestamp):
+                                    if let retryAtTimestamp = retryAtTimestamp {
+                                        let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                        text = strongSelf.presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: strongSelf.presentationData.strings, value: remainingSeconds)).0
+                                    } else {
+                                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                                    }
+                                case .generic:
+                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                }
+                                strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         })
                     })]), in: .window(.root))
@@ -621,7 +858,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
                 }
 
-                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts)), animated: true)
+                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: TwoFactorAuthSplashScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .recoveryDone(recoveredAccountData: recoveredAccountData, syncContacts: syncContacts, isPasswordSet: !password.isEmpty)), animated: true)
             }, error: { [weak self, weak statusController] error in
                 statusController?.dismiss()
 
@@ -642,7 +879,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 }
 
                 strongSelf.present(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }, completed: { [weak self, weak statusController] in
+            }, completed: { [weak statusController] in
                 statusController?.dismiss()
             })
         case let .authorized(engine):
@@ -750,10 +987,17 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     private let hideButtonNode: HighlightableButtonNode
     private let clearButtonNode: HighlightableButtonNode
     
+    private var activityIndicator: ActivityIndicator?
+    
     fileprivate var ignoreTextChanged: Bool = false
     
     var isFocused: Bool {
-        return self.inputNode.textField.isFirstResponder
+        get {
+            return self.inputNode.textField.isFirstResponder
+        }
+        set {
+            let _ = self.inputNode.textField.becomeFirstResponder()
+        }
     }
     
     var text: String {
@@ -764,6 +1008,43 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
             self.textFieldChanged(self.inputNode.textField)
         }
     }
+    
+    var isFailed: Bool = false {
+        didSet {
+            if self.isFailed != oldValue {
+                UIView.transition(with: self.view, duration: 0.2, options: [.transitionCrossDissolve, .curveEaseInOut]) {
+                    self.inputNode.textField.textColor = self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.list.freePlainInputField.primaryColor
+                    self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.actionSheet.inputClearButtonColor, on: !self.inputNode.textField.isSecureTextEntry), for: [])
+                    self.backgroundNode.image = self.isFailed ? generateStretchableFilledCircleImage(diameter: 20.0, color: self.theme.list.itemDestructiveColor.withAlphaComponent(0.1)) : generateStretchableFilledCircleImage(diameter: 20.0, color: self.theme.list.freePlainInputField.backgroundColor)
+                } completion: { _ in
+                    
+                }
+            }
+        }
+    }
+    
+    var isLoading: Bool = false {
+        didSet {
+            if self.isLoading != oldValue {
+                if self.isLoading {
+                    if self.activityIndicator == nil {
+                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.actionSheet.inputClearButtonColor, 24.0, 1.0, false))
+                        self.activityIndicator = activityIndicator
+                        self.addSubnode(activityIndicator)
+                        if let size = self.validLayout {
+                            self.updateLayout(size: size, transition: .immediate)
+                        }
+                    }
+                } else if let activityIndicator = self.activityIndicator {
+                    self.activityIndicator = nil
+                    activityIndicator.removeFromSupernode()
+                }
+                self.hideButtonNode.isHidden = self.isLoading
+            }
+        }
+    }
+    
+    private var validLayout: CGSize?
     
     init(theme: PresentationTheme, mode: TwoFactorDataInputTextNodeType, placeholder: String, focusUpdated: @escaping (TwoFactorDataInputTextNode, Bool) -> Void, next: @escaping (TwoFactorDataInputTextNode) -> Void, updated: @escaping (TwoFactorDataInputTextNode) -> Void, toggleTextHidden: @escaping (TwoFactorDataInputTextNode) -> Void) {
         self.theme = theme
@@ -862,6 +1143,9 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if self.isLoading {
+            return false
+        }
         return true
     }
     
@@ -869,7 +1153,9 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         if !self.ignoreTextChanged {
             switch self.mode {
             case .password:
-                break
+                if self.isFailed {
+                    self.isFailed = false
+                }
             default:
                 self.clearButtonNode.isHidden = self.text.isEmpty
             }
@@ -887,6 +1173,8 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+        
         let leftInset: CGFloat = 16.0
         let rightInset: CGFloat = 38.0
         
@@ -894,6 +1182,11 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         transition.updateFrame(node: self.inputNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height)))
         transition.updateFrame(node: self.hideButtonNode, frame: CGRect(origin: CGPoint(x: size.width - rightInset - 4.0, y: 0.0), size: CGSize(width: rightInset + 4.0, height: size.height)))
         transition.updateFrame(node: self.clearButtonNode, frame: CGRect(origin: CGPoint(x: size.width - rightInset - 4.0, y: 0.0), size: CGSize(width: rightInset + 4.0, height: size.height)))
+        
+        if let activityIndicator = self.activityIndicator {
+            let indicatorSize = activityIndicator.measure(CGSize(width: 24.0, height: 24.0))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: size.width - rightInset + 6.0, y: floorToScreenPixels((size.height - indicatorSize.height) / 2.0) + 1.0), size: indicatorSize))
+        }
     }
     
     func focus() {
@@ -901,7 +1194,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     }
     
     func updateTextHidden(_ value: Bool) {
-        self.hideButtonNode.setImage(generateTextHiddenImage(color: self.theme.actionSheet.inputClearButtonColor, on: !value), for: [])
+        self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.actionSheet.inputClearButtonColor, on: !value), for: [])
         let text = self.inputNode.textField.text ?? ""
         self.inputNode.textField.isSecureTextEntry = value
         if value {
@@ -942,10 +1235,16 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
     private let inputNodes: [TwoFactorDataInputTextNode]
     private let buttonNode: SolidRoundedButtonNode
     
-    private var navigationHeight: CGFloat?
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var inputText: [String] {
         return self.inputNodes.map { $0.text }
+    }
+    
+    var isLoading: Bool = false {
+        didSet {
+            self.inputNodes.first?.isLoading = self.isLoading
+        }
     }
     
     init(presentationData: PresentationData, mode: TwoFactorDataInputMode, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
@@ -979,6 +1278,13 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             if let path = getAppBundle().path(forResource: "TwoFactorSetupHint", ofType: "tgs") {
                 let animatedStickerNode = AnimatedStickerNode()
                 animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                animatedStickerNode.visibility = true
+                self.animatedStickerNode = animatedStickerNode
+            }
+        case .rememberPassword:
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupRemember", ofType: "tgs") {
+                let animatedStickerNode = AnimatedStickerNode()
+                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .count(3), mode: .direct(cachePathPrefix: nil))
                 animatedStickerNode.visibility = true
                 self.animatedStickerNode = animatedStickerNode
             }
@@ -1144,6 +1450,24 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                     toggleTextHidden?(node)
                 }),
             ]
+        case .rememberPassword:
+            title = presentationData.strings.TwoFactorRemember_Title
+            text = NSAttributedString(string: presentationData.strings.TwoFactorRemember_Text, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            buttonText = presentationData.strings.TwoFactorRemember_CheckPassword
+            skipActionText = presentationData.strings.TwoFactorRemember_Forgot
+            changeEmailActionText = ""
+            resendCodeActionText = ""
+            inputNodes = [
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: false), placeholder: presentationData.strings.TwoFactorRemember_Placeholder, focusUpdated: { node, focused in
+                    focusUpdated?(node, focused)
+                }, next: { node in
+                    next?(node)
+                }, updated: { node in
+                    updated?(node)
+                }, toggleTextHidden: { node in
+                    toggleTextHidden?(node)
+                })
+            ]
         }
         
         self.titleNode = ImmediateTextNode()
@@ -1187,6 +1511,10 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
+        
+        if case .rememberPassword = mode {
+            self.buttonNode.alpha = 0.0
+        }
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
@@ -1362,6 +1690,30 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 strongSelf.skipActionButtonNode.isHidden = hasText
             case .password:
                 break
+            case .rememberPassword:
+                let hasText = strongSelf.inputNodes.contains(where: { !$0.text.isEmpty })
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                transition.updateAlpha(node: strongSelf.buttonNode, alpha: hasText ? 1.0 : 0.0)
+                transition.updateAlpha(node: strongSelf.skipActionTitleNode, alpha: hasText ? 0.0 : 1.0)
+                strongSelf.skipActionButtonNode.isHidden = hasText
+                
+                if strongSelf.textNode.attributedText?.string != strongSelf.presentationData.strings.TwoFactorRemember_Text {
+                    if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
+                        snapshotView.frame = strongSelf.textNode.view.frame
+                        strongSelf.textNode.view.superview?.addSubview(snapshotView)
+                        
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion:  { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        
+                        strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    strongSelf.textNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.TwoFactorRemember_Text, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                    }
+                }
             }
             updateAnimations()
         }
@@ -1370,7 +1722,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 return
             }
             switch strongSelf.mode {
-            case .password, .passwordRecovery:
+                case .password, .passwordRecovery, .rememberPassword:
                 textHidden = !textHidden
                 for node in strongSelf.inputNodes {
                     node.updateTextHidden(textHidden)
@@ -1381,6 +1733,10 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             updateAnimations()
         }
         self.inputNodes.first.flatMap { updated?($0) }
+    }
+    
+    func focus() {
+        self.inputNodes.first?.isFocused = true
     }
     
     @objc private func skipActionPressed() {
@@ -1414,8 +1770,42 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
     }
     
+    func onAction(success: Bool) {
+        switch self.mode {
+            case .rememberPassword:
+                if !success {
+                    self.skipActionTitleNode.isHidden = false
+                    self.skipActionButtonNode.isHidden = false
+                    
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    transition.updateAlpha(node: self.buttonNode, alpha: 0.0)
+                    transition.updateAlpha(node: self.skipActionTitleNode, alpha: 1.0)
+                    
+                    if let snapshotView = self.textNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.textNode.view.frame
+                        self.textNode.view.superview?.addSubview(snapshotView)
+                        
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion:  { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        
+                        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_WrongPassword, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
+                    self.inputNodes.first?.isFailed = true
+                    
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                    }
+                }
+            default:
+                break
+        }
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.navigationHeight = navigationHeight
+        self.validLayout = (layout, navigationHeight)
         
         let contentAreaSize = layout.size
         let availableAreaSize = CGSize(width: layout.size.width, height: layout.size.height - layout.insets(options: [.input]).bottom)
@@ -1526,7 +1916,8 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
 
         var skipButtonFrame = buttonFrame
-        if !self.buttonNode.isHidden {
+        if case .rememberPassword = self.mode {
+        } else if !self.buttonNode.isHidden {
             skipButtonFrame.origin.y += skipButtonFrame.height
         }
 

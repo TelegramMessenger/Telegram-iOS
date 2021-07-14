@@ -60,7 +60,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
             switch search {
             case .recentPeers:
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
-                    let _ = (removeRecentPeer(account: context.account, peerId: peerId)
+                    let _ = (context.engine.peers.removeRecentPeer(peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })

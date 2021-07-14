@@ -99,6 +99,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 }
             }
         }
+        self.keyboardNode.backspace = { [weak self] in
+            if let strongSelf = self {
+                let _ = strongSelf.inputFieldNode.delete()
+                if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
+                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), backwards: true)
+                }
+            }
+        }
         self.inputFieldNode.complete = { [weak self] passcode in
             guard let strongSelf = self else {
                 return
@@ -195,14 +203,40 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
         
         switch self.wallpaper {
-            case let .gradient(_, colors, _):
-                self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) })
+            case let .color(colorValue):
+                let color = UIColor(argb: colorValue)
+                let baseColor: UIColor
+                let lightness = color.lightness
+                if lightness < 0.1 || lightness > 0.9 {
+                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                } else{
+                    baseColor = color
+                }
+                
+                let color1: UIColor
+                let color2: UIColor
+                let color3: UIColor
+                let color4: UIColor
+                if self.theme.overallDarkAppearance {
+                    color1 = baseColor.withMultiplied(hue: 1.034, saturation: 0.819, brightness: 0.214)
+                    color2 = baseColor.withMultiplied(hue: 1.029, saturation: 0.77, brightness: 0.132)
+                    color3 = color1
+                    color4 = color2
+                } else {
+                    color1 = baseColor.withMultiplied(hue: 1.029, saturation: 0.312, brightness: 1.26)
+                    color2 = baseColor.withMultiplied(hue: 1.034, saturation: 0.729, brightness: 0.942)
+                    color3 = baseColor.withMultiplied(hue: 1.029, saturation: 0.729, brightness: 1.231)
+                    color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
+                }
+                self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
+            case let .gradient(_, colors, settings):
+                self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) }, inverted: (settings.intensity ?? 0) < 0)
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
                     if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
-                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) })
+                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
                         self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
                     }
@@ -221,6 +255,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             } else if let customBackgroundNode = background.makeBackgroundNode() {
                 self.backgroundCustomNode = customBackgroundNode
                 self.insertSubnode(customBackgroundNode, aboveSubnode: self.backgroundImageNode)
+                if let background = background as? CustomPasscodeBackground, background.inverted {
+                    self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.75)
+                } else {
+                    self.backgroundDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
+                }
                 self.backgroundDimNode.isHidden = false
             }
             self.keyboardNode.updateBackground(self.presentationData, background)
@@ -318,7 +357,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
             gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring))
-            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)

@@ -150,7 +150,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             textNode.removeFromSupernode()
         }
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
         }

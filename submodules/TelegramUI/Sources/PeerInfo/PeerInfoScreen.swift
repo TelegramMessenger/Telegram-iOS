@@ -60,6 +60,7 @@ import HashtagSearchUI
 import ActionSheetPeerItem
 import TelegramCallsUI
 import PeerInfoAvatarListNode
+import PasswordSetupUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -346,7 +347,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     
     let selectionPanel: ChatMessageSelectionInputPanelNode
     let separatorNode: ASDisplayNode
-    let backgroundNode: ASDisplayNode
+    let backgroundNode: NavigationBackgroundNode
     
     init(context: AccountContext, peerId: PeerId, deleteMessages: @escaping () -> Void, shareMessages: @escaping () -> Void, forwardMessages: @escaping () -> Void, reportMessages: @escaping () -> Void) {
         self.context = context
@@ -359,11 +360,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.separatorNode = ASDisplayNode()
-        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode = NavigationBackgroundNode(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
         
         self.selectionPanel = ChatMessageSelectionInputPanelNode(theme: presentationData.theme, strings: presentationData.strings, peerMedia: true)
         self.selectionPanel.context = context
-        self.selectionPanel.backgroundColor = presentationData.theme.chat.inputPanel.panelBackgroundColor
         
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
@@ -465,7 +465,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     }
     
     func update(layout: ContainerViewLayout, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+        self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
         let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
@@ -476,6 +476,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         let panelHeightWithInset = panelHeight + layout.intrinsicInsets.bottom
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeightWithInset)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         return panelHeightWithInset
@@ -529,6 +530,7 @@ private enum PeerInfoSettingsSection {
     case username
     case addAccount
     case logout
+    case rememberPassword
 }
 
 private final class PeerInfoInteraction {
@@ -708,7 +710,14 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 interaction.openSettings(.phoneNumber)
             }))
         } else if settings.suggestPasswordConfirmation {
-            
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPasswordTitle, text: .markdown(presentationData.strings.Settings_CheckPasswordText), linkAction: { _ in
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPassword, action: {
+                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
+                interaction.openSettings(.rememberPassword)
+            }))
         }
         
         if !settings.accountsAndPeers.isEmpty {
@@ -2931,14 +2940,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             var currentVideoCallsAvailable: Bool?
                         
             if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
-                previousCallsPrivate = previousCachedData.callsPrivate ?? false
+                previousCallsPrivate = previousCachedData.callsPrivate
                 currentCallsPrivate = cachedData.callsPrivate
                 
-                previousVideoCallsAvailable = previousCachedData.videoCallsAvailable ?? true
+                previousVideoCallsAvailable = previousCachedData.videoCallsAvailable
                 currentVideoCallsAvailable = cachedData.videoCallsAvailable
             }
             
             if let previousSuggestPhoneNumberConfirmation = previousData?.globalSettings?.suggestPhoneNumberConfirmation, previousSuggestPhoneNumberConfirmation != data.globalSettings?.suggestPhoneNumberConfirmation {
+                infoUpdated = true
+            }
+            if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
                 infoUpdated = true
             }
             if previousCallsPrivate != currentCallsPrivate || previousVideoCallsAvailable != currentVideoCallsAvailable {
@@ -5445,6 +5457,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: accounts.count + 1 < maximumNumberOfAccounts, phoneNumber: phoneNumber))
                     }
                 }
+            case .rememberPassword:
+                let context = self.context
+                let controller = TwoFactorDataInputScreen(sharedContext: self.context.sharedContext, engine: .authorized(self.context.engine), mode: .rememberPassword, stateUpdated: { _ in
+                }, presentation: .modalInLargeLayout)
+                controller.twoStepAuthSettingsController = { configuration in
+                    return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
+                }
+                controller.passwordRemembered = {
+                    let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
+                }
+                self.controller?.push(controller)
         }
     }
     
@@ -6651,11 +6674,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?) in
                 let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
                 let phoneNumberWarning = suggestions.contains(.validatePhoneNumber)
+                let passwordWarning = suggestions.contains(.validatePassword)
                 var otherAccountsBadge: String?
                 if accountTabBarAvatarBadge > 0 {
                     otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
-                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning ? "!" : otherAccountsBadge)
+                return (presentationData.strings.Settings_Title, accountTabBarAvatar?.0 ?? icon, accountTabBarAvatar?.1 ?? icon, notificationsWarning || phoneNumberWarning || passwordWarning ? "!" : otherAccountsBadge)
             }
             
             self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).start(next: { [weak self] title, image, selectedImage, badgeValue in
@@ -7209,14 +7233,14 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             if case let .peer(selectedPeer, _, _) = memberPeer {
                 let memberId = selectedPeer.id
                 if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberId)
                     |> map { _ -> Void in
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
                 } else {
-                    return addGroupMember(account: context.account, peerId: groupPeer.id, memberId: memberId)
+                    return context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
                     |> deliverOnMainQueue
                     |> `catch` { error -> Signal<Void, NoError> in
                         switch error {
@@ -7264,7 +7288,7 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
                                 guard let upgradedPeerId = upgradedPeerId else {
                                     return .single(nil)
                                 }
-                                return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: upgradedPeerId, memberId: memberId)
+                                return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: upgradedPeerId, memberId: memberId)
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()
                                 }
@@ -7300,11 +7324,11 @@ func presentAddMembers(context: AccountContext, parentController: ViewController
             |> castError(AddChannelMemberError.self)
             |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
                 if memberIds.count == 1 {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberIds[0])
+                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
                     |> map { _ -> Void in
                     }
                 } else {
-                    return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
+                    return context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
                     }
                 }
             }

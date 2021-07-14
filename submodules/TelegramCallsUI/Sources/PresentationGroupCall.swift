@@ -106,7 +106,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 recordingStartTimestamp: nil,
                 sortAscending: true,
                 defaultParticipantsAreMuted: nil,
-                isVideoEnabled: false
+                isVideoEnabled: false,
+                unmutedVideoLimit: 0
             ),
             topParticipants: [],
             participantCount: 0,
@@ -148,7 +149,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 }
                 return GroupCallPanelData(
                     peerId: peerId,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -415,7 +416,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
     private var screencastCapturer: OngoingCallVideoCapturer?
 
-    private var ssrcMapping: [UInt32: PeerId] = [:]
+    private struct SsrcMapping {
+        var peerId: PeerId
+        var isPresentation: Bool
+    }
+    private var ssrcMapping: [UInt32: SsrcMapping] = [:]
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
     private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
@@ -1206,6 +1211,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 subscribedToScheduled: self.stateValue.subscribedToScheduled,
                 totalCount: 0,
                 isVideoEnabled: callInfo.isVideoEnabled,
+                unmutedVideoLimit: callInfo.unmutedVideoLimit,
                 version: 0
             ),
             previousServiceState: nil
@@ -1293,7 +1299,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
             strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
             if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
-                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted, isVideoEnabled: callInfo.isVideoEnabled)), audioSessionControl: strongSelf.audioSessionControl)
+                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted, isVideoEnabled: callInfo.isVideoEnabled, unmutedVideoLimit: callInfo.unmutedVideoLimit)), audioSessionControl: strongSelf.audioSessionControl)
             } else {
                 strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                     id: callInfo.id,
@@ -1306,7 +1312,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     recordingStartTimestamp: state.recordingStartTimestamp,
                     sortAscending: state.sortAscending,
                     defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
-                    isVideoEnabled: state.isVideoEnabled
+                    isVideoEnabled: state.isVideoEnabled,
+                    unmutedVideoLimit: state.unmutedVideoLimit
                 ))))
                 
                 strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -1484,7 +1491,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.ssrcMapping.removeAll()
                     for participant in joinCallResult.state.participants {
                         if let ssrc = participant.ssrc {
-                            strongSelf.ssrcMapping[ssrc] = participant.peer.id
+                            strongSelf.ssrcMapping[ssrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: false)
+                        }
+                        if let presentationSsrc = participant.presentationDescription?.audioSsrc {
+                            strongSelf.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: true)
                         }
                     }
 
@@ -1616,8 +1626,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         peerId = strongSelf.joinAsPeerId
                         ssrcValue = 0
                     case let .source(ssrc):
-                        peerId = strongSelf.ssrcMapping[ssrc]
-                        ssrcValue = ssrc
+                        if let mapping = strongSelf.ssrcMapping[ssrc] {
+                            if mapping.isPresentation {
+                                peerId = nil
+                                ssrcValue = 0
+                            } else {
+                                peerId = mapping.peerId
+                                ssrcValue = ssrc
+                            }
+                        } else {
+                            ssrcValue = ssrc
+                        }
                     }
                     if let peerId = peerId {
                         if case .local = ssrcKey {
@@ -1843,6 +1862,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                         }
                     }
+
+                    var otherParticipantsWithVideo = 0
                     
                     for participant in participants {
                         var participant = participant
@@ -1852,7 +1873,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if let ssrc = participant.ssrc {
-                            strongSelf.ssrcMapping[ssrc] = participant.peer.id
+                            strongSelf.ssrcMapping[ssrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: false)
+                        }
+                        if let presentationSsrc = participant.presentationDescription?.audioSsrc {
+                            strongSelf.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: true)
                         }
                         
                         if participant.peer.id == strongSelf.joinAsPeerId {
@@ -1939,6 +1963,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     strongSelf.genericCallContext?.setVolume(ssrc: ssrc, volume: 0.0)
                                 }
                             }
+                            if let presentationSsrc = participant.presentationDescription?.audioSsrc {
+                                if let volume = participant.volume {
+                                    strongSelf.genericCallContext?.setVolume(ssrc: presentationSsrc, volume: Double(volume) / 10000.0)
+                                } else if participant.muteState?.mutedByYou == true {
+                                    strongSelf.genericCallContext?.setVolume(ssrc: presentationSsrc, volume: 0.0)
+                                }
+                            }
+
+                            if participant.videoDescription != nil || participant.presentationDescription != nil {
+                                otherParticipantsWithVideo += 1
+                            }
                         }
                         
                         if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
@@ -1963,7 +1998,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.stateValue.recordingStartTimestamp = state.recordingStartTimestamp
                     strongSelf.stateValue.title = state.title
                     strongSelf.stateValue.scheduleTimestamp = state.scheduleTimestamp
-                    strongSelf.stateValue.isVideoEnabled = state.isVideoEnabled
+                    strongSelf.stateValue.isVideoEnabled = state.isVideoEnabled && otherParticipantsWithVideo < state.unmutedVideoLimit
                     
                     strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                         id: callInfo.id,
@@ -1976,7 +2011,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         recordingStartTimestamp: state.recordingStartTimestamp,
                         sortAscending: state.sortAscending,
                         defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
-                        isVideoEnabled: state.isVideoEnabled
+                        isVideoEnabled: state.isVideoEnabled,
+                        unmutedVideoLimit: state.unmutedVideoLimit
                     ))))
                     
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2673,14 +2709,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func setVolume(peerId: PeerId, volume: Int32, sync: Bool) {
-        for (ssrc, id) in self.ssrcMapping {
-            if id == peerId {
+        var found = false
+        for (ssrc, mapping) in self.ssrcMapping {
+            if mapping.peerId == peerId {
                 self.genericCallContext?.setVolume(ssrc: ssrc, volume: Double(volume) / 10000.0)
-                if sync {
-                    self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume, raiseHand: nil)
-                }
-                break
+                found = true
             }
+        }
+        if found && sync {
+            self.participantsContext?.updateMuteState(peerId: peerId, muteState: nil, volume: volume, raiseHand: nil)
         }
     }
     

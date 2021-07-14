@@ -6527,6 +6527,7 @@ Sorry for the inconvenience.";
 "Conversation.InputMenu" = "Menu";
 "Conversation.MessageDoesntExist" = "Message doesn't exist";
 
+"Settings.CheckPasswordTitle" = "Your Password";
 "Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
 "Settings.KeepPassword" = "Yes, definitely";
 "Settings.TryEnterPassword" = "Not sure, let me try";
@@ -6542,15 +6543,31 @@ Sorry for the inconvenience.";
 "TwoFactorSetup.PasswordRecovery.SkipAlertAction" = "Skip";
 
 "TwoStepAuth.RecoveryUnavailableResetTitle" = "Reset Password";
-"TwoStepAuth.RecoveryUnavailableResetText" = "Since you haven't provided a recovery e-mail when setting up your password, your remaining options are either to remember your password or wait 7 days until your password is reset.";
+"TwoStepAuth.RecoveryUnavailableResetText" = "Since you didn’t provide a recovery email when setting up your password, your remaining options are either to remember your password or wait 7 days until your password is reset.";
 "TwoStepAuth.RecoveryEmailResetText" = "If you don't have access to your recovery email, your remaining options are either to remember your password or wait 7 days until your password resets.";
 "TwoStepAuth.RecoveryUnavailableResetAction" = "Reset";
 "TwoStepAuth.ResetPendingText" = "You can reset your password in %@.";
 "TwoStepAuth.CancelResetTitle" = "Cancel Reset";
 "TwoStepAuth.ResetAction" = "Reset Password";
-"TwoStepAuth.CancelResetText" = "Cancel the password resetting process? If you proceed, the expired part of the 7-day delay will be lost.";
-"TwoStepAuth.RecoveryEmailResetNoAccess" = "Lost access to your Email?";
+"TwoStepAuth.CancelResetText" = "Cancel the password reset process? If you request a new reset later, it will take another 7 days.";
+"TwoStepAuth.RecoveryEmailResetNoAccess" = "Can’t access your email?";
 
 "TwoFactorSetup.ResetDone.Title" = "New Password Set!";
 "TwoFactorSetup.ResetDone.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
 "TwoFactorSetup.ResetDone.Action" = "Continue";
+
+"TwoFactorSetup.ResetDone.TitleNoPassword" = "Password Removed";
+"TwoFactorSetup.ResetDone.TextNoPassword" = "You can always set a new password in\n\n\nSettings>Privacy & Security>Two-Step Verification";
+
+"TwoFactorSetup.ResetFloodWait" = "You recently requested a password reset that was cancelled. Please wait %@ before making a new request.";
+"TwoFactorSetup.ResetFloodWait" = "You have recently requested a password reset that was canceled. Please wait for %@ before making a new request.";
+
+"TwoFactorRemember.Title" = "Enter Your Password";
+"TwoFactorRemember.Text" = "Do you still remeber your password?";
+"TwoFactorRemember.Placeholder" = "Password";
+"TwoFactorRemember.Forgot" = "Forgot Password?";
+"TwoFactorRemember.CheckPassword" = "Check Password";
+"TwoFactorRemember.WrongPassword" = "This password is incorrect.";
+"TwoFactorRemember.Done.Title" = "Perfect!";
+"TwoFactorRemember.Done.Text" = "You still remember your password.";
+"TwoFactorRemember.Done.Action" = "Back to Settings";

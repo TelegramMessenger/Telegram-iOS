@@ -287,5 +287,45 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+
+        public func addGroupMember(peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
+            return _internal_addGroupMember(account: self.account, peerId: peerId, memberId: memberId)
+        }
+
+        public func addChannelMember(peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
+            return _internal_addChannelMember(account: self.account, peerId: peerId, memberId: memberId)
+        }
+
+        public func addChannelMembers(peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
+            return _internal_addChannelMembers(account: self.account, peerId: peerId, memberIds: memberIds)
+        }
+
+        public func recentPeers() -> Signal<RecentPeers, NoError> {
+            return _internal_recentPeers(account: self.account)
+        }
+
+        public func managedUpdatedRecentPeers() -> Signal<Void, NoError> {
+            return _internal_managedUpdatedRecentPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
+        }
+
+        public func removeRecentPeer(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_removeRecentPeer(account: self.account, peerId: peerId)
+        }
+
+        public func updateRecentPeersEnabled(enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_updateRecentPeersEnabled(postbox: self.account.postbox, network: self.account.network, enabled: enabled)
+        }
+
+        public func addRecentlyUsedInlineBot(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_addRecentlyUsedInlineBot(postbox: self.account.postbox, peerId: peerId)
+        }
+
+        public func recentlyUsedInlineBots() -> Signal<[(Peer, Double)], NoError> {
+            return _internal_recentlyUsedInlineBots(postbox: self.account.postbox)
+        }
+
+        public func removeRecentlyUsedInlineBot(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_removeRecentlyUsedInlineBot(account: self.account, peerId: peerId)
+        }
     }
 }

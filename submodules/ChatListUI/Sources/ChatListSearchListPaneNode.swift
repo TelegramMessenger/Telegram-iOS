@@ -1395,7 +1395,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }))
         
         let previousRecentItems = Atomic<[ChatListRecentEntry]?>(value: nil)
-        let hasRecentPeers = recentPeers(account: context.account)
+        let hasRecentPeers = context.engine.peers.recentPeers()
         |> map { value -> Bool in
             switch value {
                 case let .peers(peers):
@@ -1465,7 +1465,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         if tagMask == nil && !peersFilter.contains(.excludeRecent) {
-            self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
+            self.updatedRecentPeersDisposable.set(context.engine.peers.managedUpdatedRecentPeers().start())
         }
         
         self.recentDisposable.set((combineLatest(queue: .mainQueue(),

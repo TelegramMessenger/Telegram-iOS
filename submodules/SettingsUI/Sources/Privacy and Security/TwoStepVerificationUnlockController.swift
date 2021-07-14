@@ -253,21 +253,21 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
     return entries
 }
 
-enum TwoStepVerificationUnlockSettingsControllerMode {
+public enum TwoStepVerificationUnlockSettingsControllerMode {
     case access(intro: Bool, data: Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>?)
     case manage(password: String, email: String, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-struct TwoStepVerificationPendingEmailState: Equatable {
+public struct TwoStepVerificationPendingEmailState: Equatable {
     let password: String?
     let email: TwoStepVerificationPendingEmail
 }
 
-enum TwoStepVerificationAccessConfiguration: Equatable {
+public enum TwoStepVerificationAccessConfiguration: Equatable {
     case notSet(pendingEmail: TwoStepVerificationPendingEmailState?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool, pendingResetTimestamp: Int32?)
     
-    init(configuration: TwoStepVerificationConfiguration, password: String?) {
+    public init(configuration: TwoStepVerificationConfiguration, password: String?) {
         switch configuration {
             case let .notSet(pendingEmail):
                 self = .notSet(pendingEmail: pendingEmail.flatMap({ TwoStepVerificationPendingEmailState(password: password, email: $0) }))
@@ -277,12 +277,12 @@ enum TwoStepVerificationAccessConfiguration: Equatable {
     }
 }
 
-enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
+public enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
     case access(configuration: TwoStepVerificationAccessConfiguration?)
     case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
+public func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
     let initialState = TwoStepVerificationUnlockSettingsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -552,7 +552,19 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 case .declined:
                                                     break
                                                 case let .error(reason):
-                                                    break
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                                 }
                                             })
                                         }
@@ -568,7 +580,19 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 case .declined:
                                                     break
                                                 case let .error(reason):
-                                                    break
+                                                    let text: String
+                                                    switch reason {
+                                                    case let .limitExceeded(retryAtTimestamp):
+                                                        if let retryAtTimestamp = retryAtTimestamp {
+                                                            let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                        } else {
+                                                            text = presentationData.strings.TwoStepAuth_FloodError
+                                                        }
+                                                    case .generic:
+                                                        text = presentationData.strings.Login_UnknownError
+                                                    }
+                                                    presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                                 }
                                             })
                                         })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -858,7 +882,20 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             case .declined:
                 break
             case let .error(reason):
-                break
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                switch reason {
+                case let .limitExceeded(retryAtTimestamp):
+                    if let retryAtTimestamp = retryAtTimestamp {
+                        let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
+                        text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                    } else {
+                        text = presentationData.strings.TwoStepAuth_FloodError
+                    }
+                case .generic:
+                    text = presentationData.strings.Login_UnknownError
+                }
+                presentControllerImpl?(textAlertController(sharedContext: context.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         })
     })

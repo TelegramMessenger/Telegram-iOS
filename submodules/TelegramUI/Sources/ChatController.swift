@@ -1902,7 +1902,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
                                         threadMessageId = replyThreadMessage.messageId
                                     }
-                                    let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
+                                    let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
                                     |> map { result -> String? in
                                         return result
                                     }
@@ -7056,7 +7056,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings, fontSize: self.presentationInterfaceState.fontSize)
         
-        self.recentlyUsedInlineBotsDisposable = (recentlyUsedInlineBots(postbox: self.context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] peers in
+        self.recentlyUsedInlineBotsDisposable = (self.context.engine.peers.recentlyUsedInlineBots() |> deliverOnMainQueue).start(next: { [weak self] peers in
             self?.recentlyUsedInlineBotsValue = peers.filter({ $0.1 >= 0.14 }).map({ $0.0 })
         })
         
@@ -7925,6 +7925,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 itemNode.updateSelectionState(animated: animated)
+            }
+        }
+
+        self.chatDisplayNode.historyNode.forEachItemHeaderNode{ itemHeaderNode in
+            if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNode {
+                avatarNode.updateSelectionState(animated: animated)
             }
         }
     }
