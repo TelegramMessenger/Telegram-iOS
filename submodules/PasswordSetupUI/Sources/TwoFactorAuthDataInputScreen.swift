@@ -1014,7 +1014,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
             if self.isFailed != oldValue {
                 UIView.transition(with: self.view, duration: 0.2, options: [.transitionCrossDissolve, .curveEaseInOut]) {
                     self.inputNode.textField.textColor = self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.list.freePlainInputField.primaryColor
-                    self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.actionSheet.inputClearButtonColor, on: !self.inputNode.textField.isSecureTextEntry), for: [])
+                    self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.list.freePlainInputField.controlColor, on: !self.inputNode.textField.isSecureTextEntry), for: [])
                     self.backgroundNode.image = self.isFailed ? generateStretchableFilledCircleImage(diameter: 20.0, color: self.theme.list.itemDestructiveColor.withAlphaComponent(0.1)) : generateStretchableFilledCircleImage(diameter: 20.0, color: self.theme.list.freePlainInputField.backgroundColor)
                 } completion: { _ in
                     
@@ -1194,7 +1194,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     }
     
     func updateTextHidden(_ value: Bool) {
-        self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.actionSheet.inputClearButtonColor, on: !value), for: [])
+        self.hideButtonNode.setImage(generateTextHiddenImage(color: self.isFailed ? self.theme.list.itemDestructiveColor : self.theme.list.freePlainInputField.controlColor, on: !value), for: [])
         let text = self.inputNode.textField.text ?? ""
         self.inputNode.textField.isSecureTextEntry = value
         if value {
