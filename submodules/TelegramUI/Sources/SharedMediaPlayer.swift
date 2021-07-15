@@ -225,6 +225,8 @@ final class SharedMediaPlayer {
                             switch strongSelf.playbackRate {
                                 case .x1:
                                     rateValue = 1.0
+                                case .x1_5:
+                                    rateValue = 1.4
                                 case .x2:
                                     rateValue = 1.8
                                 default:
@@ -446,6 +448,8 @@ final class SharedMediaPlayer {
                     switch baseRate {
                         case .x1:
                             rateValue = 1.0
+                        case .x1_5:
+                            rateValue = 1.4
                         case .x2:
                             rateValue = 1.8
                         case .x4:
