@@ -218,6 +218,115 @@ public final class OngoingGroupCallContext {
             self.maxQuality = maxQuality
         }
     }
+
+    public final class VideoFrameData {
+        public final class NativeBuffer {
+            public let pixelBuffer: CVPixelBuffer
+
+            init(pixelBuffer: CVPixelBuffer) {
+                self.pixelBuffer = pixelBuffer
+            }
+        }
+
+        public final class NV12Buffer {
+            private let wrapped: CallVideoFrameNV12Buffer
+
+            public var width: Int {
+                return Int(self.wrapped.width)
+            }
+
+            public var height: Int {
+                return Int(self.wrapped.height)
+            }
+
+            public var y: Data {
+                return self.wrapped.y
+            }
+
+            public var strideY: Int {
+                return Int(self.wrapped.strideY)
+            }
+
+            public var uv: Data {
+                return self.wrapped.uv
+            }
+
+            public var strideUV: Int {
+                return Int(self.wrapped.strideUV)
+            }
+
+            init(wrapped: CallVideoFrameNV12Buffer) {
+                self.wrapped = wrapped
+            }
+        }
+
+        public final class I420Buffer {
+            private let wrapped: CallVideoFrameI420Buffer
+
+            public var width: Int {
+                return Int(self.wrapped.width)
+            }
+
+            public var height: Int {
+                return Int(self.wrapped.height)
+            }
+
+            public var y: Data {
+                return self.wrapped.y
+            }
+
+            public var strideY: Int {
+                return Int(self.wrapped.strideY)
+            }
+
+            public var u: Data {
+                return self.wrapped.u
+            }
+
+            public var strideU: Int {
+                return Int(self.wrapped.strideU)
+            }
+
+            public var v: Data {
+                return self.wrapped.v
+            }
+
+            public var strideV: Int {
+                return Int(self.wrapped.strideV)
+            }
+
+            init(wrapped: CallVideoFrameI420Buffer) {
+                self.wrapped = wrapped
+            }
+        }
+
+        public enum Buffer {
+            case native(NativeBuffer)
+            case nv12(NV12Buffer)
+            case i420(I420Buffer)
+        }
+
+        public let buffer: Buffer
+        public let width: Int
+        public let height: Int
+        public let orientation: OngoingCallVideoOrientation
+
+        init(frameData: CallVideoFrameData) {
+            if let nativeBuffer = frameData.buffer as? CallVideoFrameNativePixelBuffer {
+                self.buffer = .native(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
+            } else if let nv12Buffer = frameData.buffer as? CallVideoFrameNV12Buffer {
+                self.buffer = .nv12(NV12Buffer(wrapped: nv12Buffer))
+            } else if let i420Buffer = frameData.buffer as? CallVideoFrameI420Buffer {
+                self.buffer = .i420(I420Buffer(wrapped: i420Buffer))
+            } else {
+                preconditionFailure()
+            }
+
+            self.width = Int(frameData.width)
+            self.height = Int(frameData.height)
+            self.orientation = OngoingCallVideoOrientation(frameData.orientation)
+        }
+    }
     
     private final class Impl {
         let queue: Queue
@@ -615,6 +724,27 @@ public final class OngoingGroupCallContext {
             })
         }
 
+        func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let innerDisposable = strongSelf.context.addVideoOutput(withEndpointId: endpointId) { videoFrameData in
+                        subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+                    }
+                    disposable.set(ActionDisposable {
+                        innerDisposable.dispose()
+                    })
+                }
+
+                return disposable
+            }
+        }
+
         func addExternalAudioData(data: Data) {
             self.context.addExternalAudioData(data)
         }
@@ -775,6 +905,18 @@ public final class OngoingGroupCallContext {
     public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.with { impl in
             impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
+        }
+    }
+
+    public func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.video(endpointId: endpointId).start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
         }
     }
 

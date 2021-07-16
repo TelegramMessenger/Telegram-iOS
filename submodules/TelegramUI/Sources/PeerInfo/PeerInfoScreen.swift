@@ -2354,7 +2354,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.updateProfileVideo(image, asset: asset, adjustments: adjustments)
             }
             galleryController.removedEntry = { [weak self] entry in
-                let _ = self?.headerNode.avatarListNode.listContainerNode.deleteItem(PeerInfoAvatarListItem(entry: entry))
+                if let item = PeerInfoAvatarListItem(entry: entry) {
+                    let _ = self?.headerNode.avatarListNode.listContainerNode.deleteItem(item)
+                }
             }
             strongSelf.hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
                 self?.headerNode.updateAvatarIsHidden(entry: entry)

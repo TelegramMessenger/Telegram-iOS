@@ -2595,6 +2595,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             let videoCapturer = OngoingCallVideoCapturer()
             self.videoCapturer = videoCapturer
         }
+
+        if let videoCapturer = self.videoCapturer {
+            self.requestVideo(capturer: videoCapturer)
+        }
+    }
+
+    func requestVideo(capturer: OngoingCallVideoCapturer) {
+        self.videoCapturer = capturer
+        
         self.hasVideo = true
         if let videoCapturer = self.videoCapturer {
             self.genericCallContext?.requestVideo(videoCapturer)
@@ -3188,6 +3197,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 completion(nil, nil)
             }
         })
+    }
+
+    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
+        return self.genericCallContext?.video(endpointId: endpointId)
     }
     
     public func loadMoreMembers(token: String) {
