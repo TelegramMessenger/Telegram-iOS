@@ -1254,7 +1254,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
-        self.inputPanelBackgroundNode.update(size: CGSize(width: apparentInputBackgroundFrame.size.width, height: apparentInputBackgroundFrame.size.height + 41.0), transition: transition)
+        self.inputPanelBackgroundNode.update(size: CGSize(width: apparentInputBackgroundFrame.size.width, height: apparentInputBackgroundFrame.size.height + 41.0 + 31.0), transition: transition)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         
@@ -2294,8 +2294,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-            if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
-                Keyboard.applyAutocorrection()
+            if let textInputNode = textInputPanelNode.textInputNode, textInputNode.isFirstResponder() {
+                Keyboard.applyAutocorrection(textView: textInputNode.textView)
             }
             
             var effectivePresentationInterfaceState = self.chatPresentationInterfaceState
@@ -2349,10 +2349,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
-                            #if DEBUG
-                            //webpage = nil
-                            #endif
+
                             messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+
+                            #if DEBUG
+                            if text.string == "sleep" {
+                                messages.removeAll()
+
+                                for i in 0 ..< 5 {
+                                    messages.append(.message(text: "sleep\(i)", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                                }
+                            }
+                            #endif
                         }
                     }
 

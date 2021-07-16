@@ -583,14 +583,14 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
                 return $0.withUpdatedRemovingPeerId(adminId)
             }
             if peerId.namespace == Namespaces.Peer.CloudGroup {
-                removeAdminDisposable.set((removeGroupAdmin(account: context.account, peerId: peerId, adminId: adminId)
+                removeAdminDisposable.set((context.engine.peers.removeGroupAdmin(peerId: peerId, adminId: adminId)
                 |> deliverOnMainQueue).start(completed: {
                     updateState {
                         return $0.withUpdatedRemovingPeerId(nil)
                     }
                 }))
             } else {
-                removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: nil, rank: nil)
+                removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: nil, rank: nil)
                 |> deliverOnMainQueue).start(completed: {
                     updateState {
                         return $0.withUpdatedRemovingPeerId(nil)
@@ -665,7 +665,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     |> deliverOnMainQueue).start(next: { peerId in
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             var didReportLoadCompleted = false
-            let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId) { membersState in
+            let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?) = context.peerChannelMemberCategoriesContextsManager.admins(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId) { membersState in
                 if case .loading = membersState.loadingState, membersState.list.isEmpty {
                     adminsPromise.set(.single(nil))
                 } else {

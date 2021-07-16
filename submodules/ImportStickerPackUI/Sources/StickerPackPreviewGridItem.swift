@@ -27,21 +27,21 @@ final class StickerPackPreviewGridItem: GridItem {
     let stickerItem: ImportStickerPack.Sticker
     let interaction: StickerPackPreviewInteraction
     let theme: PresentationTheme
-    let isEmpty: Bool
+    let isVerified: Bool
     
     let section: GridSection? = nil
     
-    init(account: Account, stickerItem: ImportStickerPack.Sticker, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isEmpty: Bool) {
+    init(account: Account, stickerItem: ImportStickerPack.Sticker, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool) {
         self.account = account
         self.stickerItem = stickerItem
         self.interaction = interaction
         self.theme = theme
-        self.isEmpty = isEmpty
+        self.isVerified = isVerified
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified)
         return node
     }
     
@@ -50,7 +50,7 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isVerified: self.isVerified)
     }
 }
 
@@ -58,9 +58,10 @@ private let textFont = Font.regular(20.0)
 
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, ImportStickerPack.Sticker?, CGSize)?
-    private var isEmpty: Bool?
+    private var isVerified: Bool?
     private let imageNode: ASImageNode
     private var animationNode: AnimatedStickerNode?
+    private var placeholderNode: ShimmerEffectNode?
     
     private var theme: PresentationTheme?
     
@@ -84,7 +85,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = ASImageNode()
-
+        
         super.init()
         
         self.addSubnode(self.imageNode)
@@ -100,11 +101,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: ImportStickerPack.Sticker?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isEmpty: Bool) {
+    func setup(account: Account, stickerItem: ImportStickerPack.Sticker?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isVerified: Bool) {
         self.interaction = interaction
         self.theme = theme
         
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 !== stickerItem || self.isEmpty != isEmpty {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 !== stickerItem || self.isVerified != isVerified {
             var dimensions = CGSize(width: 512.0, height: 512.0)
             if let stickerItem = stickerItem {
                 switch stickerItem.content {
@@ -121,15 +122,35 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         }
                     case .animation:
                         self.imageNode.isHidden = true
-                        let animationNode = AnimatedStickerNode()
-                        self.animationNode = animationNode
-                        self.addSubnode(animationNode)
                         
-                        let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                        if let resource = stickerItem.resource {
-                            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                        if isVerified {
+                            let animationNode = AnimatedStickerNode()
+                            self.animationNode = animationNode
+                            
+                            if let placeholderNode = self.placeholderNode {
+                                self.placeholderNode = nil
+                                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak placeholderNode] _ in
+                                    placeholderNode?.removeFromSupernode()
+                                })
+                                self.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                            } else {
+                                self.addSubnode(animationNode)
+                            }
+                            
+                            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                            if let resource = stickerItem.resource {
+                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                            }
+                            animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
+                        } else {
+                            let placeholderNode = ShimmerEffectNode()
+                            self.placeholderNode = placeholderNode
+
+                            self.addSubnode(placeholderNode)
+                            if let (absoluteRect, containerSize) = self.absoluteLocation {
+                                placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
+                            }
                         }
-                        animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                 }
             } else {
                 dimensions = CGSize()
@@ -137,7 +158,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.currentState = (account, stickerItem, dimensions)
             self.setNeedsLayout()
         }
-        self.isEmpty = isEmpty
+        self.isVerified = isVerified
     }
     
     override func layout() {
@@ -153,6 +174,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             if let animationNode = self.animationNode {
                 animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 animationNode.updateLayout(size: imageSize)
+            }
+            
+            if let placeholderNode = self.placeholderNode, let theme = self.theme {
+                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.roundedRect(rect: CGRect(origin: CGPoint(), size: imageSize), cornerRadius: 11.0)], horizontal: true, size: imageSize)
+                placeholderNode.frame = self.imageNode.frame
             }
         }
     }
@@ -183,6 +209,14 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5)
                 }
             }
+        }
+    }
+    
+    var absoluteLocation: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        self.absoluteLocation = (absoluteRect, containerSize)
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
         }
     }
 }

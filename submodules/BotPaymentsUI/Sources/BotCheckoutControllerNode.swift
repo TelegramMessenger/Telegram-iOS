@@ -686,7 +686,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -754,7 +754,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -810,7 +810,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                             controller.dismiss()
                                         }
                                         switch update {
-                                            case .noPassword, .awaitingEmailConfirmation:
+                                            case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                 break
                                             case .passwordSet:
                                                 var updatedToken = token
@@ -944,7 +944,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         self.listNode.supernode?.insertSubnode(self.inProgressDimNode, aboveSubnode: self.listNode)
 
-        self.passwordTipDisposable = (twoStepVerificationConfiguration(account: self.context.account)
+        self.passwordTipDisposable = (self.context.engine.auth.twoStepVerificationConfiguration()
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -952,7 +952,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             switch value {
             case .notSet:
                 break
-            case let .set(hint, _, _, _):
+            case let .set(hint, _, _, _, _):
                 if !hint.isEmpty {
                     strongSelf.passwordTip = hint
                 }
@@ -1069,7 +1069,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             if let savedCredentialsToken = savedCredentialsToken {
                                 credentials = .saved(id: id, tempPassword: savedCredentialsToken.token)
                             } else {
-                                let _ = (cachedTwoStepPasswordToken(postbox: self.context.account.postbox)
+                                let _ = (self.context.engine.auth.cachedTwoStepPasswordToken()
                                 |> deliverOnMainQueue).start(next: { [weak self] token in
                                     if let strongSelf = self {
                                         let timestamp = strongSelf.context.account.network.getApproximateRemoteTimestamp()
@@ -1340,7 +1340,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }),
                     TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
                         if let strongSelf = self {
-                            let _ = cacheTwoStepPasswordToken(postbox: strongSelf.context.account.postbox, token: token).start()
+                            let _ = strongSelf.context.engine.auth.cacheTwoStepPasswordToken(token: token).start()
                             strongSelf.pay(savedCredentialsToken: token)
                         }
                     })

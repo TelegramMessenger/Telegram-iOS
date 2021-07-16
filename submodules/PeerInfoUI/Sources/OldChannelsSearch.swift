@@ -263,7 +263,7 @@ private final class OldChannelsSearchContainerNode: SearchDisplayControllerConte
             }
         })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

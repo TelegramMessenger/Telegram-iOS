@@ -270,101 +270,102 @@
 
 - (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController
 {
-    if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
-        return;
-    
-    if ([_context currentlyInSplitView])
-        return;
-        
-    TGCameraController *controller = nil;
-    CGSize screenSize = TGScreenSize();
-    
-    id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
-    
-    if (cameraView.previewView != nil)
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
-    else
-        controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
-    controller.stickersContext = _stickersContext;
-    controller.shouldStoreCapturedAssets = true;
-    
-    TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
-    controllerWindow.hidden = false;
-    controllerWindow.clipsToBounds = true;
-    
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
-        controllerWindow.frame = CGRectMake(0, 0, screenSize.width, screenSize.height);
-    else
-        controllerWindow.frame = [_context fullscreenBounds];
-    
-    bool standalone = true;
-    CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
-    if (cameraView != nil)
-    {
-        standalone = false;
-        if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-            startFrame = CGRectZero;
-        else
-            startFrame = [controller.view convertRect:cameraView.previewView.frame fromView:cameraView];
-    }
-    
-    [cameraView detachPreviewView];
-    [controller beginTransitionInFromRect:startFrame];
-    
-    __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    __weak TGCameraController *weakCameraController = controller;
-    __weak TGAttachmentCameraView *weakCameraView = cameraView;
-    
-    controller.beginTransitionOut = ^CGRect
-    {
-        __strong TGCameraController *strongCameraController = weakCameraController;
-        if (strongCameraController == nil)
-            return CGRectZero;
-        
-        __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
-        if (strongCameraView != nil)
-        {
-            [strongCameraView willAttachPreviewView];
-            if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-                return CGRectZero;
+    [[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault completion:^(BOOL allowed) {
+        if (!allowed)
+            return;
+        if ([_context currentlyInSplitView])
+            return;
             
-            return [strongCameraController.view convertRect:strongCameraView.frame fromView:strongCameraView.superview];
+        TGCameraController *controller = nil;
+        CGSize screenSize = TGScreenSize();
+        
+        id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
+        
+        if (cameraView.previewView != nil)
+            controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
+        else
+            controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
+        controller.stickersContext = _stickersContext;
+        controller.shouldStoreCapturedAssets = true;
+        
+        TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
+        controllerWindow.hidden = false;
+        controllerWindow.clipsToBounds = true;
+        
+        if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
+            controllerWindow.frame = CGRectMake(0, 0, screenSize.width, screenSize.height);
+        else
+            controllerWindow.frame = [_context fullscreenBounds];
+        
+        bool standalone = true;
+        CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
+        if (cameraView != nil)
+        {
+            standalone = false;
+            if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
+                startFrame = CGRectZero;
+            else
+                startFrame = [controller.view convertRect:cameraView.previewView.frame fromView:cameraView];
         }
         
-        return CGRectZero;
-    };
-    
-    controller.finishedTransitionOut = ^
-    {
-        __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
-        if (strongCameraView == nil)
-            return;
+        [cameraView detachPreviewView];
+        [controller beginTransitionInFromRect:startFrame];
         
-        [strongCameraView attachPreviewViewAnimated:true];
-    };
-    
-    controller.finishedWithPhoto = ^(__unused TGOverlayController *controller, UIImage *resultImage, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer)
-    {
-        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
+        __weak TGMediaAvatarMenuMixin *weakSelf = self;
+        __weak TGCameraController *weakCameraController = controller;
+        __weak TGAttachmentCameraView *weakCameraView = cameraView;
         
-        if (strongSelf.didFinishWithImage != nil)
-            strongSelf.didFinishWithImage(resultImage);
+        controller.beginTransitionOut = ^CGRect
+        {
+            __strong TGCameraController *strongCameraController = weakCameraController;
+            if (strongCameraController == nil)
+                return CGRectZero;
+            
+            __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
+            if (strongCameraView != nil)
+            {
+                [strongCameraView willAttachPreviewView];
+                if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
+                    return CGRectZero;
+                
+                return [strongCameraController.view convertRect:strongCameraView.frame fromView:strongCameraView.superview];
+            }
+            
+            return CGRectZero;
+        };
         
-        [menuController dismissAnimated:false];
-    };
-    
-    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *url, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
-        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
+        controller.finishedTransitionOut = ^
+        {
+            __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
+            if (strongCameraView == nil)
+                return;
+            
+            [strongCameraView attachPreviewViewAnimated:true];
+        };
         
-        if (strongSelf.didFinishWithVideo != nil)
-            strongSelf.didFinishWithVideo(previewImage, [[AVURLAsset alloc] initWithURL:url options:nil], adjustments);
+        controller.finishedWithPhoto = ^(__unused TGOverlayController *controller, UIImage *resultImage, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer)
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (strongSelf.didFinishWithImage != nil)
+                strongSelf.didFinishWithImage(resultImage);
+            
+            [menuController dismissAnimated:false];
+        };
         
-        [menuController dismissAnimated:false];
-    };
+        controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *url, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (strongSelf.didFinishWithVideo != nil)
+                strongSelf.didFinishWithVideo(previewImage, [[AVURLAsset alloc] initWithURL:url options:nil], adjustments);
+            
+            [menuController dismissAnimated:false];
+        };
+    } alertDismissCompletion:nil];
 }
 
 - (void)_displayMediaPicker

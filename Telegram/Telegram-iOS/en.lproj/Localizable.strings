@@ -6504,6 +6504,9 @@ Sorry for the inconvenience.";
 "ImportStickerPack.StickerCount_many" = "%@ Stickers";
 "ImportStickerPack.StickerCount_0" = "%@ Stickers";
 "ImportStickerPack.CreateStickerSet" = "Create Sticker Set";
+"ImportStickerPack.CreateNewStickerSet" = "Create a New Sticker Set";
+"ImportStickerPack.AddToExistingStickerSet" = "Add to an Existing Sticker Set";
+"ImportStickerPack.ChooseStickerSet" = "Choose Sticker Set";
 "ImportStickerPack.RemoveFromImport" = "Remove From Import";
 "ImportStickerPack.ChooseName" = "Choose Name";
 "ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
@@ -6524,7 +6527,47 @@ Sorry for the inconvenience.";
 "Conversation.InputMenu" = "Menu";
 "Conversation.MessageDoesntExist" = "Message doesn't exist";
 
-"Settings.CheckPasswordTitle" = "Is %@ still your number?";
+"Settings.CheckPasswordTitle" = "Your Password";
 "Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
 "Settings.KeepPassword" = "Yes, definitely";
 "Settings.TryEnterPassword" = "Not sure, let me try";
+
+"TwoFactorSetup.PasswordRecovery.Title" = "Create New Password";
+"TwoFactorSetup.PasswordRecovery.Text" = "You can now set a new password that will be used to log into your account.";
+"TwoFactorSetup.PasswordRecovery.PlaceholderPassword" = "New Password";
+"TwoFactorSetup.PasswordRecovery.PlaceholderConfirmPassword" = "Re-enter New Password";
+"TwoFactorSetup.PasswordRecovery.Action" = "Continue";
+"TwoFactorSetup.PasswordRecovery.Skip" = "Skip";
+"TwoFactorSetup.PasswordRecovery.SkipAlertTitle" = "Attention!";
+"TwoFactorSetup.PasswordRecovery.SkipAlertText" = "Skipping this step will disable 2-step verification for your account. Are you sure you want to skip?";
+"TwoFactorSetup.PasswordRecovery.SkipAlertAction" = "Skip";
+
+"TwoStepAuth.RecoveryUnavailableResetTitle" = "Reset Password";
+"TwoStepAuth.RecoveryUnavailableResetText" = "Since you didn’t provide a recovery email when setting up your password, your remaining options are either to remember your password or wait 7 days until your password is reset.";
+"TwoStepAuth.RecoveryEmailResetText" = "If you don't have access to your recovery email, your remaining options are either to remember your password or wait 7 days until your password resets.";
+"TwoStepAuth.RecoveryUnavailableResetAction" = "Reset";
+"TwoStepAuth.ResetPendingText" = "You can reset your password in %@.";
+"TwoStepAuth.CancelResetTitle" = "Cancel Reset";
+"TwoStepAuth.ResetAction" = "Reset Password";
+"TwoStepAuth.CancelResetText" = "Cancel the password reset process? If you request a new reset later, it will take another 7 days.";
+"TwoStepAuth.RecoveryEmailResetNoAccess" = "Can’t access your email?";
+
+"TwoFactorSetup.ResetDone.Title" = "New Password Set!";
+"TwoFactorSetup.ResetDone.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.ResetDone.Action" = "Continue";
+
+"TwoFactorSetup.ResetDone.TitleNoPassword" = "Password Removed";
+"TwoFactorSetup.ResetDone.TextNoPassword" = "You can always set a new password in\n\n\nSettings>Privacy & Security>Two-Step Verification";
+
+"TwoFactorSetup.ResetFloodWait" = "You recently requested a password reset that was cancelled. Please wait %@ before making a new request.";
+"TwoFactorSetup.ResetFloodWait" = "You have recently requested a password reset that was canceled. Please wait for %@ before making a new request.";
+
+"TwoFactorRemember.Title" = "Enter Your Password";
+"TwoFactorRemember.Text" = "Do you still remeber your password?";
+"TwoFactorRemember.Placeholder" = "Password";
+"TwoFactorRemember.Forgot" = "Forgot Password?";
+"TwoFactorRemember.CheckPassword" = "Check Password";
+"TwoFactorRemember.WrongPassword" = "This password is incorrect.";
+"TwoFactorRemember.Done.Title" = "Perfect!";
+"TwoFactorRemember.Done.Text" = "You still remember your password.";
+"TwoFactorRemember.Done.Action" = "Back to Settings";

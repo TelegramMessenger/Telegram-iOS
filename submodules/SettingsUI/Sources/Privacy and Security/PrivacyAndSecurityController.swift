@@ -506,11 +506,11 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     actionsDisposable.add(updateAutoArchiveDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
-    privacySettingsPromise.set(.single(initialSettings) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
+    privacySettingsPromise.set(.single(initialSettings) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
         
     let blockedPeersContext = blockedPeersContext ?? BlockedPeersContext(account: context.account)
-    let activeSessionsContext = activeSessionsContext ?? ActiveSessionsContext(account: context.account)
-    let webSessionsContext = webSessionsContext ?? WebSessionsContext(account: context.account)
+    let activeSessionsContext = activeSessionsContext ?? context.engine.privacy.activeSessions()
+    let webSessionsContext = webSessionsContext ?? context.engine.privacy.webSessions()
     
     let blockedPeersState = Promise<BlockedPeersContextState>()
     blockedPeersState.set(blockedPeersContext.state)
@@ -542,7 +542,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }
     
     let updateHasTwoStepAuth: () -> Void = {
-        let signal = twoStepVerificationConfiguration(account: context.account)
+        let signal = context.engine.auth.twoStepVerificationConfiguration()
         |> map { value -> TwoStepVerificationAccessConfiguration? in
             return TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
         }
@@ -727,15 +727,15 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: { data in
-        var intro = false
+        let intro = false
         if let data = data {
             switch data {
             case .set:
                 break
             case let .notSet(pendingEmail):
-                //intro = pendingEmail == nil
                 if pendingEmail == nil {
-                    let controller = TwoFactorAuthSplashScreen(context: context, mode: .intro)
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro)
+
                     pushControllerImpl?(controller, true)
                     return
                 } else {
@@ -779,7 +779,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             return .complete()
         }
         
-        updateAutoArchiveDisposable.set((updateAccountAutoArchiveChats(account: context.account, value: archiveValue)
+        updateAutoArchiveDisposable.set((context.engine.privacy.updateAccountAutoArchiveChats(value: archiveValue)
         |> mapToSignal { _ -> Signal<Void, NoError> in }
         |> then(applyTimeout)
         |> deliverOnMainQueue).start(completed: {
@@ -817,7 +817,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                             }
                             return .complete()
                         }
-                    updateAccountTimeoutDisposable.set((updateAccountRemovalTimeout(account: context.account, timeout: timeout)
+                        updateAccountTimeoutDisposable.set((context.engine.privacy.updateAccountRemovalTimeout(timeout: timeout)
                         |> then(applyTimeout)
                         |> deliverOnMainQueue).start(completed: {
                             updateState { state in
@@ -851,7 +851,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         pushControllerImpl?(dataPrivacyController(context: context), true)
     })
     
-    actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
+    actionsDisposable.add(context.engine.peers.managedUpdatedRecentPeers().start())
 
     actionsDisposable.add((privacySettingsPromise.get()
     |> deliverOnMainQueue).start(next: { settings in
@@ -865,7 +865,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
     |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
         if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {

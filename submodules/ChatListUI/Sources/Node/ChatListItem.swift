@@ -773,9 +773,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, item.editing else {
             return
         }
-        if case let .peer(_, _, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
-            if promoInfo == nil {
-                item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
+        if case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
+            if promoInfo == nil, let mainPeer = peer.chatMainPeer {
+                item.interaction.togglePeerSelected(mainPeer)
             }
         }
     }

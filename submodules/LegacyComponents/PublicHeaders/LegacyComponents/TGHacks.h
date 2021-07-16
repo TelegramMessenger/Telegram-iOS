@@ -30,16 +30,9 @@ typedef enum {
 + (void)setSecondaryAnimationDurationFactor:(float)factor;
 + (void)setForceSystemCurve:(bool)forceSystemCurve;
 
-+ (CGFloat)applicationStatusBarOffset;
-+ (void)setApplicationStatusBarOffset:(CGFloat)offset;
-+ (void)animateApplicationStatusBarStyleTransitionWithDuration:(NSTimeInterval)duration;
-+ (CGFloat)statusBarHeightForOrientation:(UIInterfaceOrientation)orientation;
-
 + (bool)isKeyboardVisible;
-+ (CGFloat)keyboardHeightForOrientation:(UIInterfaceOrientation)orientation;
-+ (void)applyCurrentKeyboardAutocorrectionVariant;
++ (void)applyCurrentKeyboardAutocorrectionVariant:(UITextView *)textView;
 + (UIWindow *)applicationKeyboardWindow;
-+ (UIView *)applicationKeyboardView;
 + (void)setApplicationKeyboardOffset:(CGFloat)offset;
 
 + (void)forcePerformWithAnimation:(dispatch_block_t)block;

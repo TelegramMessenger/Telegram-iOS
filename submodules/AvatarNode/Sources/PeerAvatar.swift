@@ -160,7 +160,7 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                                 shouldBlur = true
                             }
                             if shouldBlur {
-                                let imageContextSize = CGSize(width: 64.0, height: 64.0)
+                                let imageContextSize = size.width > 200.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
                                 let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, clear: true)
                                 imageContext.withFlippedContext { c in
                                     c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
@@ -172,7 +172,13 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                                 }
 
                                 telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-
+                                if size.width > 200.0 {
+                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                }
+                                
                                 dataImage = imageContext.generateImage()!.cgImage!
                             }
                             

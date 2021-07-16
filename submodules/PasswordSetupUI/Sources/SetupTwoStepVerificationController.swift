@@ -12,6 +12,7 @@ import AccountContext
 
 public class SetupTwoStepVerificationController: ViewController {
     private let context: AccountContext
+
     private let initialState: SetupTwoStepVerificationInitialState
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void
     
@@ -31,13 +32,14 @@ public class SetupTwoStepVerificationController: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    
+
     public init(context: AccountContext, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
         self.context = context
+
         self.initialState = initialState
         self.stateUpdated = stateUpdated
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -45,7 +47,7 @@ public class SetupTwoStepVerificationController: ViewController {
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

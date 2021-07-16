@@ -22,6 +22,7 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
         self.textNode = ASTextNode()
         self.textNode.isLayerBacked = false
         self.textNode.textAlignment = .center
+        self.textNode.displaysAsynchronously = false
         
         super.init()
         

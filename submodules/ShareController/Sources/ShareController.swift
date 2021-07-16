@@ -435,7 +435,7 @@ public final class ShareController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = (exportMessageLink(account: strongSelf.currentAccount, peerId: chatPeer.id, messageId: message.id)
+                                let _ = (TelegramEngine(account: strongSelf.currentAccount).messages.exportMessageLink(peerId: chatPeer.id, messageId: message.id)
                                 |> map { result -> String? in
                                     return result
                                 }

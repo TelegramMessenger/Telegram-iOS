@@ -894,7 +894,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 self.screenCaptureEventsDisposable = (screenCaptureEvents()
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
                     if let strongSelf = self, strongSelf.traceVisibility() {
-                        let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: id.peerId).start()
+                        let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: id.peerId).start()
                     }
                 })
             }

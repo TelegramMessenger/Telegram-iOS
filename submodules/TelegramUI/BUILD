@@ -198,7 +198,6 @@ swift_library(
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/PersistentStringHash:PersistentStringHash",
-        "//submodules/MessageReactionListUI:MessageReactionListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Markdown:Markdown",

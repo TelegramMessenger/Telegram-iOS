@@ -435,10 +435,6 @@ public final class OngoingCallVideoCapturer {
         self.impl.setIsVideoEnabled(value)
     }
 
-    public func injectSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        self.impl.submitSampleBuffer(sampleBuffer)
-    }
-
     public func injectPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: CGImagePropertyOrientation) {
         var videoRotation: OngoingCallVideoOrientation = .rotation0
         switch rotation {
@@ -908,7 +904,7 @@ public final class OngoingCallContext {
                 if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
                     if sendDebugLogs {
-                        let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: dataString).start()
+                        let _ = TelegramEngine(account: self.account).calls.saveCallDebugLog(callId: callId, log: dataString).start()
                     }
                 }
             }

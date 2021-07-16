@@ -71,7 +71,9 @@ public func adjustSaturationInContext(context: DrawingContext, saturation: CGFlo
     vImageMatrixMultiply_ARGB8888(&buffer, &buffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
 }
 
-private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
+private func generateGradient(size: CGSize, colors inputColors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
+    let colors: [UIColor] = inputColors.count == 1 ? [inputColors[0], inputColors[0], inputColors[0]] : inputColors
+
     let width = Int(size.width)
     let height = Int(size.height)
 
@@ -146,10 +148,29 @@ private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoi
                 b = b + distance * rgb[i * 3 + 2]
             }
 
+            if distanceSum < 0.00001 {
+                distanceSum = 0.00001
+            }
+
+            var pixelB = b / distanceSum * 255.0
+            if pixelB > 255.0 {
+                pixelB = 255.0
+            }
+
+            var pixelG = g / distanceSum * 255.0
+            if pixelG > 255.0 {
+                pixelG = 255.0
+            }
+
+            var pixelR = r / distanceSum * 255.0
+            if pixelR > 255.0 {
+                pixelR = 255.0
+            }
+
             let pixelBytes = lineBytes.advanced(by: x * 4)
-            pixelBytes.advanced(by: 0).pointee = UInt8(b / distanceSum * 255.0)
-            pixelBytes.advanced(by: 1).pointee = UInt8(g / distanceSum * 255.0)
-            pixelBytes.advanced(by: 2).pointee = UInt8(r / distanceSum * 255.0)
+            pixelBytes.advanced(by: 0).pointee = UInt8(pixelB)
+            pixelBytes.advanced(by: 1).pointee = UInt8(pixelG)
+            pixelBytes.advanced(by: 2).pointee = UInt8(pixelR)
             pixelBytes.advanced(by: 3).pointee = 0xff
         }
     }
@@ -219,16 +240,6 @@ public final class GradientBackgroundNode: ASDisplayNode {
     }
 
     private var validLayout: CGSize?
-
-    private struct PhaseTransitionKey: Hashable {
-        var width: Int
-        var height: Int
-        var fromPhase: Int
-        var toPhase: Int
-        var numberOfFrames: Int
-        var curve: ContainedViewLayoutTransitionCurve
-    }
-
     private let cloneNodes = SparseBag<Weak<CloneNode>>()
 
     private let useSharedAnimationPhase: Bool
@@ -259,7 +270,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
     deinit {
     }
 
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
         let sizeUpdated = self.validLayout != size
         self.validLayout = size
 
@@ -273,7 +284,20 @@ public final class GradientBackgroundNode: ASDisplayNode {
                 self.invalidated = false
 
                 var steps: [[CGPoint]] = []
-                if extendAnimation {
+                if backwards {
+                    let phaseCount = extendAnimation ? 6 : 1
+                    self.phase = (self.phase + phaseCount) % 8
+                    self.validPhase = self.phase
+                    
+                    var stepPhase = self.phase - phaseCount
+                    if stepPhase < 0 {
+                        stepPhase = 8 + stepPhase
+                    }
+                    for _ in 0 ... phaseCount {
+                        steps.append(gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: stepPhase)))
+                        stepPhase = (stepPhase + 1) % 8
+                    }
+                } else if extendAnimation {
                     let phaseCount = 4
                     var stepPhase = (self.phase + phaseCount) % 8
                     for _ in 0 ... phaseCount {
@@ -332,13 +356,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     let animation = CAKeyframeAnimation(keyPath: "contents")
                     animation.values = images.map { $0.cgImage! }
                     animation.duration = duration * UIView.animationDurationFactor()
-                    if extendAnimation {
+                    if backwards || extendAnimation {
                         animation.calculationMode = .discrete
                     } else {
                         animation.calculationMode = .linear
                     }
                     animation.isRemovedOnCompletion = true
-                    if extendAnimation {
+                    if extendAnimation && !backwards {
                         animation.fillMode = .backwards
                         animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
                     }
@@ -347,19 +371,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     self.contentView.layer.add(animation, forKey: "contents")
 
                     if !self.cloneNodes.isEmpty {
-                        let animation = CAKeyframeAnimation(keyPath: "contents")
-                        animation.values = dimmedImages.map { $0.cgImage! }
-                        animation.duration = duration * UIView.animationDurationFactor()
-                        if extendAnimation {
-                            animation.calculationMode = .discrete
-                        } else {
-                            animation.calculationMode = .linear
-                        }
-                        animation.isRemovedOnCompletion = true
-                        if extendAnimation {
-                            animation.fillMode = .backwards
-                            animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
-                        }
+                        let cloneAnimation = CAKeyframeAnimation(keyPath: "contents")
+                        cloneAnimation.values = dimmedImages.map { $0.cgImage! }
+                        cloneAnimation.duration = animation.duration
+                        cloneAnimation.calculationMode = animation.calculationMode
+                        cloneAnimation.isRemovedOnCompletion = animation.isRemovedOnCompletion
+                        cloneAnimation.fillMode = animation.fillMode
+                        cloneAnimation.beginTime = animation.beginTime
 
                         self._dimmedImage = dimmedImages.last
 
@@ -367,7 +385,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
                             if let value = cloneNode.value {
                                 value.image = dimmedImages.last
                                 value.layer.removeAnimation(forKey: "contents")
-                                value.layer.add(animation, forKey: "contents")
+                                value.layer.add(cloneAnimation, forKey: "contents")
                             }
                         }
                     }
@@ -422,12 +440,12 @@ public final class GradientBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
         guard case let .animated(duration, _) = transition, duration > 0.001 else {
             return
         }
 
-        if extendAnimation {
+        if extendAnimation || backwards {
             self.invalidated = true
         } else {
             if self.phase == 0 {
@@ -440,7 +458,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
             GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation)
+            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards)
         }
     }
 }

@@ -29,8 +29,8 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
     
     private let stickerPack: ImportStickerPack
     private var presentationDataDisposable: Disposable?
-            
-
+    private var verificationDisposable: Disposable?
+    
     public init(context: AccountContext, stickerPack: ImportStickerPack, parentNavigationController: NavigationController?) {
         self.context = context
         self.parentNavigationController = parentNavigationController
@@ -57,6 +57,7 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.verificationDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -77,8 +78,65 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         self.controllerNode.navigationController = self.parentNavigationController
         
         Queue.mainQueue().after(0.1) {
-            self.controllerNode.updateStickerPack(self.stickerPack)
+            self.controllerNode.updateStickerPack(self.stickerPack, verifiedStickers: Set(), declinedStickers: Set(), uploadedStickerResources: [:])
+            
+            if self.stickerPack.isAnimated {
+                let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    var signals: [Signal<(UUID, StickerVerificationStatus, MediaResource?), NoError>] = []
+                    for sticker in strongSelf.stickerPack.stickers {
+                        if let resource = strongSelf.controllerNode.stickerResources[sticker.uuid] {
+                            signals.append(strongSelf.context.engine.stickers.uploadSticker(peer: peer, resource: resource, alt: sticker.emojis.first ?? "", dimensions: PixelDimensions(width: 512, height: 512), isAnimated: true)
+                            |> map { result -> (UUID, StickerVerificationStatus, MediaResource?) in
+                                switch result {
+                                    case .progress:
+                                        return (sticker.uuid, .loading, nil)
+                                    case let .complete(resource, mimeType):
+                                        if mimeType == "application/x-tgsticker" {
+                                            return (sticker.uuid, .verified, resource)
+                                        } else {
+                                            return (sticker.uuid, .declined, nil)
+                                        }
+                                }
+                            }
+                            |> `catch` { _ -> Signal<(UUID, StickerVerificationStatus, MediaResource?), NoError> in
+                                return .single((sticker.uuid, .declined, nil))
+                            })
+                        }
+                    }
+                    strongSelf.verificationDisposable = (combineLatest(signals)
+                    |> deliverOnMainQueue).start(next: { [weak self] results in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        var verifiedStickers = Set<UUID>()
+                        var declinedStickers = Set<UUID>()
+                        var uploadedStickerResources: [UUID: MediaResource] = [:]
+                        for (uuid, result, resource) in results {
+                            switch result {
+                                case .verified:
+                                    if let resource = resource {
+                                        verifiedStickers.insert(uuid)
+                                        uploadedStickerResources[uuid] = resource
+                                    } else {
+                                        declinedStickers.insert(uuid)
+                                    }
+                                case .declined:
+                                    declinedStickers.insert(uuid)
+                                case .loading:
+                                    break
+                            }
+                        }
+                        strongSelf.controllerNode.updateStickerPack(strongSelf.stickerPack, verifiedStickers: verifiedStickers, declinedStickers: declinedStickers, uploadedStickerResources: uploadedStickerResources)
+                    })
+                })
+            }
         }
+        
         self.ready.set(self.controllerNode.ready.get())
     }
     

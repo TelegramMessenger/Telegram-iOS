@@ -427,7 +427,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 case .generic:
                     createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
                 case .supergroup:
-                    createSignal = createSupergroup(account: context.account, title: title, description: nil)
+                    createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                     |> map(Optional.init)
                     |> mapError { error -> CreateGroupError in
                         switch error {
@@ -454,7 +454,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         guard let address = address else {
                             return .complete()
                         }
-                        return createSupergroup(account: context.account, title: title, description: nil, location: (location.latitude, location.longitude, address))
+                        return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
                         |> map(Optional.init)
                         |> mapError { error -> CreateGroupError in
                             switch error {

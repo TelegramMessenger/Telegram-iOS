@@ -71,7 +71,7 @@ final class CommandMenuChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.clipsToBounds = false
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
+//        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
@@ -85,7 +85,7 @@ final class CommandMenuChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.addSubnode(self.listView)
         
-        self.disposable.set((peerCommands(account: context.account, id: peerId)
+        self.disposable.set((context.engine.peers.peerCommands(id: peerId)
         |> deliverOnMainQueue).start(next: { [weak self] results in
             if let strongSelf = self {
                 strongSelf.updateResults(results.commands)

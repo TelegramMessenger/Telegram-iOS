@@ -16,7 +16,6 @@ import LocationResources
 import ImageBlur
 import TelegramAnimatedStickerNode
 import WallpaperResources
-import Svg
 import GZip
 import TelegramUniversalVideoContent
 import GradientBackground
@@ -68,22 +67,6 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchCachedBlurredWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
-    } else if let representation = representation as? CachedPatternWallpaperMaskRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperMaskRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
-    } else if let representation = representation as? CachedPatternWallpaperRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
-        } 
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -417,194 +400,6 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
     }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
-private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return Signal({ subscriber in
-        if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
-            let url = URL(fileURLWithPath: path)
-            
-            if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
-                data = unzippedData
-            }
-            
-            if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                let size = representation.size ?? CGSize(width: 1440.0, height: 2960.0)
-                
-                if let image = drawSvgImage(data, size, .black, .white) {
-                    if let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                        CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
-                        
-                        let colorQuality: Float = 0.87
-                        
-                        let options = NSMutableDictionary()
-                        options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                        
-                        CGImageDestinationAddImage(alphaDestination, image.cgImage!, options as CFDictionary)
-                        if CGImageDestinationFinalize(alphaDestination) {
-                            subscriber.putNext(.temporaryPath(path))
-                            subscriber.putCompletion()
-                        }
-                    }
-                }
-            } else if let image = UIImage(data: data) {
-                let size = representation.size.flatMap { image.size.aspectFitted($0) } ?? CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-                
-                let alphaImage = generateImage(size, contextGenerator: { size, context in
-                    context.setFillColor(UIColor.black.cgColor)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: image.cgImage!)
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                }, scale: 1.0)
-                   
-                if let alphaImage = alphaImage, let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
-                    
-                    let colorQuality: Float = 0.87
-                    
-                    let options = NSMutableDictionary()
-                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                    
-                    CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, options as CFDictionary)
-                    if CGImageDestinationFinalize(alphaDestination) {
-                        subscriber.putNext(.temporaryPath(path))
-                        subscriber.putCompletion()
-                    }
-                }
-            }
-        }
-        return EmptyDisposable
-    }) |> runOn(Queue.concurrentDefaultQueue())
-}
-
-private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return Signal({ subscriber in
-        if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
-                data = unzippedData
-            }
-            
-            let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
-            let url = URL(fileURLWithPath: path)
-            
-            let colors: [UIColor] = representation.colors.map(UIColor.init(rgb:))
-            
-            let intensity = CGFloat(representation.intensity) / 100.0
-            
-            var size: CGSize?
-            var maskImage: UIImage?
-            if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                let defaultSize = CGSize(width: 1440.0, height: 2960.0)
-                size = defaultSize
-                if let image = drawSvgImage(data, defaultSize, .black, .white) {
-                    maskImage = image
-                }
-            } else if let image = UIImage(data: data) {
-                size = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-                maskImage = image
-            }
-            
-            var colorImage: UIImage?
-            if let size = size {
-                colorImage = generateImage(size, contextGenerator: { size, c in
-                    let rect = CGRect(origin: CGPoint(), size: size)
-                    c.setBlendMode(.copy)
-
-                    let averageBackgroundColor = UIColor.average(of: colors)
-                    
-                    if colors.count == 1, let color = colors.first {
-                        c.setFillColor(color.cgColor)
-                        c.fill(rect)
-                    } else if colors.count >= 3 {
-                        let drawingRect = rect
-                        let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
-                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
-                        c.scaleBy(x: 1.0, y: 1.0)
-                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
-                        c.draw(image.cgImage!, in: drawingRect)
-                        c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
-                        c.scaleBy(x: 1.0, y: 1.0)
-                        c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
-                    } else {
-                        let gradientColors = colors.map { $0.cgColor } as CFArray
-                        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-                        
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< colors.count {
-                            locations.append(delta * CGFloat(i))
-                        }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                        
-                        c.saveGState()
-                        c.translateBy(x: rect.width / 2.0, y: rect.height / 2.0)
-                        c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
-                        c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
-                        
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                        c.restoreGState()
-                    }
-                    
-                    c.setBlendMode(.normal)
-                    if let cgImage = maskImage?.cgImage {
-                        c.clip(to: rect, mask: cgImage)
-                    }
-
-                    if colors.count >= 3 {
-                        c.setBlendMode(.softLight)
-                    }
-
-                    let isLight = averageBackgroundColor.hsb.b >= 0.3
-                    if isLight {
-                        c.setFillColor(UIColor(white: 0.0, alpha: abs(intensity)).cgColor)
-                        c.fill(rect)
-                    } else {
-                        c.setFillColor(UIColor(white: 1.0, alpha: abs(intensity)).cgColor)
-                        c.fill(rect)
-                    }
-
-                    /*if colors.count == 1, let color = colors.first {
-                        c.setFillColor(patternColor(for: color, intensity: intensity).cgColor)
-                        c.fill(rect)
-                    } else {
-                        let gradientColors = colors.map { patternColor(for: $0, intensity: intensity).cgColor } as CFArray
-                        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-                        
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< colors.count {
-                            locations.append(delta * CGFloat(i))
-                        }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                        
-                        c.translateBy(x: rect.width / 2.0, y: rect.height / 2.0)
-                        c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
-                        c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
-                        
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                    }*/
-                }, scale: 1.0)
-            }
-            
-            if let colorImage = colorImage, let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
-                
-                let colorQuality: Float = 0.9
-                
-                let options = NSMutableDictionary()
-                options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                
-                CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
-                if CGImageDestinationFinalize(colorDestination) {
-                    subscriber.putNext(.temporaryPath(path))
-                    subscriber.putCompletion()
-                }
-            }
-        }
-        return EmptyDisposable
-    }) |> runOn(Queue.concurrentDefaultQueue())
-}
-
 public func fetchCachedSharedResourceRepresentation(accountManager: AccountManager, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedScaledImageRepresentation {
         return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
@@ -621,22 +416,6 @@ public func fetchCachedSharedResourceRepresentation(accountManager: AccountManag
                 return .complete()
             }
             return fetchCachedBlurredWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
-    } else if let representation = representation as? CachedPatternWallpaperMaskRepresentation {
-        return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperMaskRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
-    } else if let representation = representation as? CachedPatternWallpaperRepresentation {
-        return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
     } else {
         return .never()

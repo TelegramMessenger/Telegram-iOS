@@ -283,6 +283,8 @@ official_apple_pay_merchants = [
     "merchant.privatbank.test.telergramios",
     "merchant.privatbank.prod.telergram",
     "merchant.paymaster.test.telegramios",
+    "merchant.smartglocal.prod.telegramios",
+    "merchant.smartglocal.test.telegramios",
 ]
 
 official_bundle_ids = [
@@ -1504,6 +1506,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems",
+        "//submodules/BroadcastUploadHelpers:BroadcastUploadHelpers",
     ],
 )
 

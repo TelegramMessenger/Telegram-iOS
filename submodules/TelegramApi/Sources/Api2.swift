@@ -1,7 +1,7 @@
 public extension Api {
     public enum GroupCall: TypeConstructorDescription {
         case groupCallDiscarded(id: Int64, accessHash: Int64, duration: Int32)
-        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, title: String?, streamDcId: Int32?, recordStartDate: Int32?, scheduleDate: Int32?, version: Int32)
+        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, title: String?, streamDcId: Int32?, recordStartDate: Int32?, scheduleDate: Int32?, unmutedVideoCount: Int32?, unmutedVideoLimit: Int32, version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13,9 +13,9 @@ public extension Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeInt32(duration, buffer: buffer, boxed: false)
                     break
-                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let version):
+                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let unmutedVideoCount, let unmutedVideoLimit, let version):
                     if boxed {
-                        buffer.appendInt32(1698544301)
+                        buffer.appendInt32(-711498484)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -25,6 +25,8 @@ public extension Api {
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(streamDcId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 5) != 0 {serializeInt32(recordStartDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(unmutedVideoCount!, buffer: buffer, boxed: false)}
+                    serializeInt32(unmutedVideoLimit, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
@@ -34,8 +36,8 @@ public extension Api {
         switch self {
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                 return ("groupCallDiscarded", [("id", id), ("accessHash", accessHash), ("duration", duration)])
-                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let version):
-                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("title", title), ("streamDcId", streamDcId), ("recordStartDate", recordStartDate), ("scheduleDate", scheduleDate), ("version", version)])
+                case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let unmutedVideoCount, let unmutedVideoLimit, let version):
+                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("title", title), ("streamDcId", streamDcId), ("recordStartDate", recordStartDate), ("scheduleDate", scheduleDate), ("unmutedVideoCount", unmutedVideoCount), ("unmutedVideoLimit", unmutedVideoLimit), ("version", version)])
     }
     }
     
@@ -74,7 +76,11 @@ public extension Api {
             var _8: Int32?
             if Int(_1!) & Int(1 << 7) != 0 {_8 = reader.readInt32() }
             var _9: Int32?
-            _9 = reader.readInt32()
+            if Int(_1!) & Int(1 << 10) != 0 {_9 = reader.readInt32() }
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: Int32?
+            _11 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -83,9 +89,11 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
-            let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, version: _9!)
+            let _c9 = (Int(_1!) & Int(1 << 10) == 0) || _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, unmutedVideoCount: _9, unmutedVideoLimit: _10!, version: _11!)
             }
             else {
                 return nil
@@ -4690,6 +4698,7 @@ public extension Api {
         case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, actorId: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, invite: Api.ExportedChatInvite?, qts: Int32)
         case updateBotStopped(userId: Int32, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateGroupCallConnection(flags: Int32, params: Api.DataJSON)
+        case updateBotCommands(peer: Api.Peer, botId: Int32, commands: [Api.BotCommand])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5492,6 +5501,18 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     params.serialize(buffer, true)
                     break
+                case .updateBotCommands(let peer, let botId, let commands):
+                    if boxed {
+                        buffer.appendInt32(-813823885)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(botId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(commands.count))
+                    for item in commands {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -5681,6 +5702,8 @@ public extension Api {
                 return ("updateBotStopped", [("userId", userId), ("date", date), ("stopped", stopped), ("qts", qts)])
                 case .updateGroupCallConnection(let flags, let params):
                 return ("updateGroupCallConnection", [("flags", flags), ("params", params)])
+                case .updateBotCommands(let peer, let botId, let commands):
+                return ("updateBotCommands", [("peer", peer), ("botId", botId), ("commands", commands)])
     }
     }
     
@@ -7314,6 +7337,27 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateGroupCallConnection(flags: _1!, params: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotCommands(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.BotCommand]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotCommands(peer: _1!, botId: _2!, commands: _3!)
             }
             else {
                 return nil
@@ -14942,13 +14986,13 @@ public extension Api {
     
     }
     public enum GroupCallParticipantVideo: TypeConstructorDescription {
-        case groupCallParticipantVideo(flags: Int32, endpoint: String, sourceGroups: [Api.GroupCallParticipantVideoSourceGroup])
+        case groupCallParticipantVideo(flags: Int32, endpoint: String, sourceGroups: [Api.GroupCallParticipantVideoSourceGroup], audioSource: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups, let audioSource):
                     if boxed {
-                        buffer.appendInt32(2028213859)
+                        buffer.appendInt32(1735736008)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(endpoint, buffer: buffer, boxed: false)
@@ -14957,14 +15001,15 @@ public extension Api {
                     for item in sourceGroups {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(audioSource!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups):
-                return ("groupCallParticipantVideo", [("flags", flags), ("endpoint", endpoint), ("sourceGroups", sourceGroups)])
+                case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups, let audioSource):
+                return ("groupCallParticipantVideo", [("flags", flags), ("endpoint", endpoint), ("sourceGroups", sourceGroups), ("audioSource", audioSource)])
     }
     }
     
@@ -14977,11 +15022,14 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipantVideoSourceGroup.self)
             }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!, audioSource: _4)
             }
             else {
                 return nil

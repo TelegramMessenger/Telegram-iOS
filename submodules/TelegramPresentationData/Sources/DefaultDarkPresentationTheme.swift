@@ -5,9 +5,56 @@ import SyncCore
 import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
-public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: [], bubbleColors: nil, wallpaper: nil)
+public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: [], bubbleColors: nil, wallpaper: nil, baseColor: nil)
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+private extension PresentationThemeBaseColor {
+/*
+
+     Оранжевая с красным
+     https://t.me/bg/9LW_RcoOSVACAAAAFTk3DTyXN-M?bg_color=fec496~dd6cb9~962fbf~4f5bd5&intensity=-40
+
+     Голубая с розовым
+     https://t.me/bg/9iklpvIPQVABAAAAORQXKur_Eyc?bg_color=8adbf2~888dec~e39fea~679ced&intensity=-30
+
+     Мятная
+     https://t.me/bg/CJNyxPMgSVAEAAAAvW9sMwc51cw?bg_color=7fa381~fff5c5~336f55~fbe37d&intensity=-20
+
+     Синяя с розовым
+     https://t.me/bg/9LW_RcoOSVACAAAAFTk3DTyXN-M?bg_color=fec496~dd6cb9~962fbf~4f5bd5&intensity=-40
+
+*/
+
+    var colorWallpaper: (BuiltinWallpaperData, Int32, [UInt32])? {
+        switch self {
+        case .blue:
+            return nil
+        case .cyan:
+            return (.variant5, -30, [0xa4dbff, 0x009fdd, 0x527bdd])
+        case .green:
+            return (.variant3, -20, [0x7fa381, 0xfff5c5, 0x336f55, 0xfbe37d])
+        case .pink:
+            return (.variant9, -35, [0xe4b2ea, 0x8376c2, 0xeab9d9, 0xb493e6])
+        case .orange:
+            return (.variant2, -40, [0xfec496, 0xdd6cb9, 0x962fbf, 0x4f5bd5])
+        case .purple:
+            return (.variant6, -30, [0x8adbf2, 0x888dec, 0xe39fea, 0x679ced])
+        case .red:
+            return (.variant4, -35, [0xe4b2ea, 0x8376c2, 0xeab9d9, 0xb493e6])
+        case .yellow:
+            return (.variant1, -30, [0xeaa36e, 0xf0e486, 0xf29ebf, 0xe8c06e])
+        case .gray:
+            return nil
+        case .black:
+            return nil
+        case .white:
+            return nil
+        case .custom, .preset, .theme:
+            return nil
+        }
+    }
+}
+
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -82,6 +129,8 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     var defaultWallpaper: TelegramWallpaper?
     if let forcedWallpaper = forcedWallpaper {
         defaultWallpaper = forcedWallpaper
+    } else if let baseColor = baseColor, let (variant, intensity, colors) = baseColor.colorWallpaper, !colors.isEmpty {
+        defaultWallpaper = defaultBuiltinWallpaper(data: variant, colors: colors, intensity: intensity)
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
             defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())

@@ -39,10 +39,6 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
         self.context = context
     }
     
-    public func checkAddressBookAuthorizationStatus(alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
-        return true
-    }
-    
     public func checkPhotoAuthorizationStatus(for intent: TGPhotoAccessIntent, alertDismissCompletion: (() -> Void)!) -> Bool {
         if let context = self.context {
             DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
@@ -58,24 +54,10 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
         return true
     }
     
-    public func checkCameraAuthorizationStatus(for intent: TGCameraAccessIntent, alertDismissCompletion: (() -> Void)!) -> Bool {
-        return true
-    }
-    
-    public func checkLocationAuthorizationStatus(for intent: TGLocationAccessIntent, alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
-        let subject: DeviceAccessLocationSubject
-        if intent == TGLocationAccessIntentSend {
-            subject = .send
-        } else if intent == TGLocationAccessIntentLiveLocation {
-            subject = .live
-        } else if intent == TGLocationAccessIntentTracking {
-            subject = .tracking
-        } else {
-            assertionFailure()
-            subject = .send
-        }
+    public func checkCameraAuthorizationStatus(for intent: TGCameraAccessIntent, completion: ((Bool) -> Void)!, alertDismissCompletion: (() -> Void)!) -> Bool {
         if let context = self.context {
-            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+            DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+                completion(value)
                 if !value {
                     alertDismissCompletion?()
                 }
@@ -85,25 +67,25 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
     }
 }
 
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
-    }
-    return result
-}
-
-private let keyboardWindowClass: AnyClass? = {
+private func isKeyboardWindow(window: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: window))
     if #available(iOS 9.0, *) {
-        return NSClassFromString(encodeText("VJSfnpufLfzcpbseXjoepx", -1))
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("RemoteKeyboardWindow") {
+            return true
+        }
     } else {
-        return NSClassFromString(encodeText("VJUfyuFggfdutXjoepx", -1))
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("TextEffectsWindow") {
+            return true
+        }
     }
-}()
+    return false
+}
 
 private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyComponentsGlobalsProvider {
     func log(_ string: String!) {
-        print(string)
+        if let string = string {
+            print("\(string)")
+        }
     }
 
     public func effectiveLocalization() -> TGLocalization! {
@@ -119,12 +101,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationKeyboardWindow() -> UIWindow! {
-        guard let keyboardWindowClass = keyboardWindowClass else {
-            return nil
-        }
-        
         for window in legacyComponentsApplication?.windows ?? [] {
-            if window.isKind(of: keyboardWindowClass) {
+            if isKeyboardWindow(window: window) {
                 return window
             }
         }

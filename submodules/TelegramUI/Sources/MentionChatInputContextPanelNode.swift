@@ -165,7 +165,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             }
         }, removeRequested: { [weak self] peerId in
             if let strongSelf = self {
-                let _ = removeRecentlyUsedInlineBot(account: strongSelf.context.account, peerId: peerId).start()
+                let _ = strongSelf.context.engine.peers.removeRecentlyUsedInlineBot(peerId: peerId).start()
                 
                 strongSelf.revealedPeerId = nil
                 strongSelf.currentResults = strongSelf.currentResults.filter { $0.id != peerId }

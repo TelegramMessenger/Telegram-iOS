@@ -417,7 +417,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             if let (account, stateOrLoading, type) = accountStateAndType {
                 switch type {
                     case .music:
-                        minimumStoreDuration = 15.0 * 60.0
+                        minimumStoreDuration = 10.0 * 60.0
                     case .voice:
                         minimumStoreDuration = 5.0 * 60.0
                     case .file:

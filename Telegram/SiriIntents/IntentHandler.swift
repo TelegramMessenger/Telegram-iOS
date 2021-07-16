@@ -1048,7 +1048,7 @@ private final class WidgetIntentHandler {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [Friend] in
                     var peers: [Peer] = []
                     
-                    for id in getRecentPeers(transaction: transaction) {
+                    for id in _internal_getRecentPeers(transaction: transaction) {
                         if let peer = transaction.getPeer(id), !(peer is TelegramSecretChat), !peer.isDeleted {
                             peers.append(peer)
                         }

@@ -430,7 +430,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         if let privacySettings = privacySettings {
             privacySignal = .single(privacySettings)
         } else {
-            privacySignal = requestAccountPrivacySettings(account: context.account)
+            privacySignal = context.engine.privacy.requestAccountPrivacySettings()
         }
         let callsSignal: Signal<(VoiceCallSettings, VoipConfiguration)?, NoError>
         if case .voiceCalls = kind {
@@ -535,10 +535,10 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             present(.push, twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
         }),
         activeSessionsContext == nil ? nil : SettingsSearchableItem(id: .privacy(9), title: strings.Settings_Devices, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions) + [strings.PrivacySettings_AuthSessions], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, recentSessionsController(context: context, activeSessionsContext: activeSessionsContext!, webSessionsContext: webSessionsContext ?? WebSessionsContext(account: context.account), websitesOnly: false))
+            present(.push, recentSessionsController(context: context, activeSessionsContext: activeSessionsContext!, webSessionsContext: webSessionsContext ?? context.engine.privacy.webSessions(), websitesOnly: false))
         }),
         webSessionsContext == nil ? nil : SettingsSearchableItem(id: .privacy(10), title: strings.PrivacySettings_WebSessions, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, recentSessionsController(context: context, activeSessionsContext: activeSessionsContext ?? ActiveSessionsContext(account: context.account), webSessionsContext: webSessionsContext ?? WebSessionsContext(account: context.account), websitesOnly: true))
+            present(.push, recentSessionsController(context: context, activeSessionsContext: activeSessionsContext ?? context.engine.privacy.activeSessions(), webSessionsContext: webSessionsContext ?? context.engine.privacy.webSessions(), websitesOnly: true))
         }),
         SettingsSearchableItem(id: .privacy(11), title: strings.PrivacySettings_DeleteAccountTitle, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_DeleteAccountIfAwayFor), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentPrivacySettings(context, present, .accountTimeout)

@@ -26,6 +26,9 @@ objc_library(
         "tgcalls/tgcalls/platform/darwin/DesktopSharingCapturer.*",
         "tgcalls/tgcalls/platform/darwin/DesktopCaptureSourceViewMac.*",
         "tgcalls/tgcalls/platform/darwin/DesktopCaptureSourceView.*",
+        "tgcalls/tgcalls/platform/darwin/TGCMIODevice.*",
+        "tgcalls/tgcalls/platform/darwin/TGCMIOCapturer.*",
+        "tgcalls/tgcalls/platform/darwin/VideoCMIOCapture.*",
         "tgcalls/tgcalls/desktop_capturer/**",
     ]),
     hdrs = glob([

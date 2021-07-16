@@ -780,16 +780,16 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let presentationData = context.sharedContext.currentPresentationData.modify {$0}
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-            return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
         
-        let updatePeerNotificationInterval:(PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-            return updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+        let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+            return context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
         }
         
         let updatePeerDisplayPreviews:(PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
             peerId, displayPreviews in
-            return updatePeerDisplayPreviewsSetting(account: context.account, peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
         }
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -842,13 +842,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         updateNotificationsView({})
                     })
                 }, removePeerFromExceptions: {
-                    let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                        updatePeerMuteSetting(transaction: transaction, peerId: peerId, muteInterval: nil)
-                        updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peerId, displayPreviews: .default)
-                        updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peerId, sound: .default)
+                    let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peerId])
+                    |> map { _ -> Peer? in }
+                    |> then(context.account.postbox.transaction { transaction -> Peer? in
                         return transaction.getPeer(peerId)
-                    }
-                    |> deliverOnMainQueue).start(next: { peer in
+                    })).start(next: { peer in
                         guard let peer = peer else {
                             return
                         }
@@ -917,11 +915,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 updateState { value in
                     return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
                 }
-                _ = (context.account.postbox.transaction { transaction in
-                    updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peer.id, sound: .default)
-                    updatePeerMuteSetting(transaction: transaction, peerId: peer.id, muteInterval: nil)
-                    updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peer.id, displayPreviews: .default)
-                }
+                let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peer.id])
                 |> deliverOnMainQueue).start(completed: {
                     updateNotificationsView({})
                 })
@@ -953,13 +947,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                             }
                             return state
                         }
-                        let _ = (context.account.postbox.transaction { transaction -> Void in
-                            for value in values {
-                                updatePeerNotificationSoundInteractive(transaction: transaction, peerId: value.peer.id, sound: .default)
-                                updatePeerMuteSetting(transaction: transaction, peerId: value.peer.id, muteInterval: nil)
-                                updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: value.peer.id, displayPreviews: .default)
-                            }
-                        }
+                        let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: values.map(\.peer.id))
                         |> deliverOnMainQueue).start(completed: {
                             updateNotificationsView({})
                         })
@@ -1279,7 +1267,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             }
         })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }
