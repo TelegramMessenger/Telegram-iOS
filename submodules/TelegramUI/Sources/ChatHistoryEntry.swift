@@ -17,12 +17,14 @@ public struct ChatMessageEntryAttributes: Equatable {
     let isContact: Bool
     let contentTypeHint: ChatMessageEntryContentType
     let updatingMedia: ChatUpdatingMessageMedia?
+    let isPlaying: Bool
     
-    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?) {
+    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
         self.updatingMedia = updatingMedia
+        self.isPlaying = isPlaying
     }
     
     public init() {
@@ -30,6 +32,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.isContact = false
         self.contentTypeHint = .generic
         self.updatingMedia = nil
+        self.isPlaying = false
     }
 }
 

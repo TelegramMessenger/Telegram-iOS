@@ -93,7 +93,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
             
             let lineWidth: CGFloat = 4.0
             
-            let pathDiameter = bounds.size.width - lineWidth
+            let pathDiameter = bounds.size.width - lineWidth - 8.0
             
             let path = UIBezierPath(arcCenter: CGPoint(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise:true)
             path.lineWidth = lineWidth

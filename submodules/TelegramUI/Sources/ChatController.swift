@@ -566,6 +566,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var openMessageByAction: Bool = false
 
             for media in message.media {
+                if let file = media as? TelegramMediaFile, file.isInstantVideo {
+                    if strongSelf.chatDisplayNode.isInputViewFocused {
+                        strongSelf.returnInputViewFocus = true
+                        strongSelf.chatDisplayNode.dismissInput()
+                    }
+                }
                 if let action = media as? TelegramMediaAction {
                     switch action.action {
                         case .pinnedMessageUpdated:
@@ -4192,6 +4198,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func loadDisplayNode() {
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, backgroundNode: self.chatBackgroundNode, controller: self)
         
+        if let currentItem = self.tempVoicePlaylistCurrentItem {
+            self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
+        }
+        
         self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode in
             guard let strongSelf = self else {
                 return
@@ -7032,6 +7042,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    private var returnInputViewFocus = false
+    
     override public func viewDidAppear(_ animated: Bool) {
         #if DEBUG
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
@@ -7110,16 +7122,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.voicePlaylistDidEndTimestamp = CACurrentMediaTime()
                     raiseToListen.activateBasedOnProximity(delay: 0.0)
                 }
+                
+                if strongSelf.returnInputViewFocus {
+                    strongSelf.returnInputViewFocus = false
+                    strongSelf.chatDisplayNode.ensureInputViewFocused()
+                }
             }
             self.tempVoicePlaylistItemChanged = { [weak self] previousItem, currentItem in
                 guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
                     return
                 }
-                if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId, let previousItem = previousItem?.id as? PeerMessagesMediaPlaylistItemId, previousItem.messageId.peerId == peerId, currentItem.messageId.peerId == peerId, currentItem.messageId != previousItem.messageId {
-                    if strongSelf.chatDisplayNode.historyNode.isMessageVisibleOnScreen(currentItem.messageId) {
-                        strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId, nil), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
-                    }
-                }
+                
+                strongSelf.chatDisplayNode.historyNode.voicePlaylistItemChanged(previousItem, currentItem)
+//                if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
+//                    self.controllerInteraction?.currentlyPlayingMessageId = currentItem.messageId
+//                    if let previousItem = previousItem?.id as? PeerMessagesMediaPlaylistItemId, previousItem.messageId.peerId == peerId, currentItem.messageId.peerId == peerId, currentItem.messageId != previousItem.messageId {
+//                        if strongSelf.chatDisplayNode.historyNode.isMessageVisibleOnScreen(currentItem.messageId) {
+//                            strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId, nil), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
+//                        }
+//                    }
+//                }
             }
         }
         
