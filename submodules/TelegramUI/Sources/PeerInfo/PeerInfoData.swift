@@ -649,7 +649,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         canManageInvitations = true
                     }
                     if canManageInvitations {
-                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, adminId: nil, revoked: false, forceUpdate: true)
+                        let invitationsContext = context.engine.peers.peerExportedInvitations(peerId: peerId, adminId: nil, revoked: false, forceUpdate: true)
                         invitationsContextPromise.set(.single(invitationsContext))
                         invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
                     }
@@ -812,7 +812,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         canManageInvitations = true
                     }
                     if canManageInvitations {
-                        let invitationsContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, adminId: nil, revoked: false, forceUpdate: true)
+                        let invitationsContext = context.engine.peers.peerExportedInvitations(peerId: peerId, adminId: nil, revoked: false, forceUpdate: true)
                         invitationsContextPromise.set(.single(invitationsContext))
                         invitationsStatePromise.set(invitationsContext.state |> map(Optional.init))
                     }

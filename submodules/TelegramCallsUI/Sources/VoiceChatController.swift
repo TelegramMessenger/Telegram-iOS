@@ -918,6 +918,7 @@ public final class VoiceChatController: ViewController {
         private var requestedVideoSources = Set<String>()
         private var requestedVideoChannels: [PresentationGroupCallRequestedVideo] = []
 
+        private var videoRenderingContext: VideoRenderingContext
         private var videoNodes: [String: GroupVideoNode] = [:]
         private var wideVideoNodes = Set<String>()
         private var videoOrder: [String] = []
@@ -971,6 +972,8 @@ public final class VoiceChatController: ViewController {
             self.sharedContext = sharedContext
             self.context = call.accountContext
             self.call = call
+
+            self.videoRenderingContext = VideoRenderingContext()
             
             self.isScheduling = call.schedulePending
                         
@@ -1164,7 +1167,7 @@ public final class VoiceChatController: ViewController {
             
             let displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
             |> then(
-                combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: call.peerId))
+                combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: call.peerId))
                 |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
                     var result = currentAccountPeer
                     result.append(contentsOf: availablePeers)
@@ -1550,7 +1553,7 @@ public final class VoiceChatController: ViewController {
                                                 return .complete()
                                             }).start()
                                         } else {
-                                            let _ = (updatePeerDescription(account: strongSelf.context.account, peerId: peer.id, description: bio)
+                                            let _ = (strongSelf.context.engine.peers.updatePeerDescription(peerId: peer.id, description: bio)
                                             |> `catch` { _ -> Signal<Void, NoError> in
                                                 return .complete()
                                             }).start()
@@ -2332,13 +2335,19 @@ public final class VoiceChatController: ViewController {
                             }))
                         }
                     } else {
-                        strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { videoView, backdropVideoView in
+                        if let input = (strongSelf.call as! PresentationGroupCallImpl).video(endpointId: endpointId) {
+                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                                completion(GroupVideoNode(videoView: videoView, backdropVideoView: strongSelf.videoRenderingContext.makeView(input: input, blur: true)))
+                            }
+                        }
+
+                        /*strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { videoView, backdropVideoView in
                             if let videoView = videoView {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView))
                             } else {
                                 completion(nil)
                             }
-                        })
+                        })*/
                     }
                 }
             }
@@ -3482,7 +3491,29 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self, ready else {
                         return
                     }
-                    strongSelf.call.makeOutgoingVideoView(requestClone: false, completion: { [weak self] view, _ in
+                    let videoCapturer = OngoingCallVideoCapturer()
+                    let input = videoCapturer.video()
+                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                        let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
+                        let controller = VoiceChatCameraPreviewController(context: strongSelf.context, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
+                            if let strongSelf = self {
+                                strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
+                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer)
+
+                                if let (layout, navigationHeight) = strongSelf.validLayout {
+                                    strongSelf.animatingButtonsSwap = true
+                                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+                                }
+                            }
+                        }, switchCamera: { [weak self] in
+                            Queue.mainQueue().after(0.1) {
+                                self?.call.switchVideoCamera()
+                            }
+                        })
+                        strongSelf.controller?.present(controller, in: .window(.root))
+                    }
+
+                    /*strongSelf.call.makeOutgoingVideoView(requestClone: false, completion: { [weak self] view, _ in
                         guard let strongSelf = self, let view = view else {
                             return
                         }
@@ -3503,7 +3534,7 @@ public final class VoiceChatController: ViewController {
                             }
                         })
                         strongSelf.controller?.present(controller, in: .window(.root))
-                    })
+                    })*/
                 })
             }
         }
@@ -4547,12 +4578,18 @@ public final class VoiceChatController: ViewController {
         
         private var appIsActive = true {
             didSet {
-                self.updateVisibility()
+                if self.appIsActive != oldValue {
+                    self.updateVisibility()
+                    self.updateRequestedVideoChannels()
+                }
             }
         }
         private var visibility = false {
             didSet {
-                self.updateVisibility()
+                if self.visibility != oldValue {
+                    self.updateVisibility()
+                    self.updateRequestedVideoChannels()
+                }
             }
         }
         
@@ -4574,6 +4611,8 @@ public final class VoiceChatController: ViewController {
                     itemNode.gridVisibility = visible
                 }
             }
+
+            self.videoRenderingContext.updateVisibility(isVisible: visible)
         }
         
         func animateIn() {
@@ -5201,7 +5240,63 @@ public final class VoiceChatController: ViewController {
 
                 if !self.requestedVideoSources.contains(channel.endpointId) {
                     self.requestedVideoSources.insert(channel.endpointId)
-                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { [weak self] videoView, backdropVideoView in
+
+                    let input = (self.call as! PresentationGroupCallImpl).video(endpointId: channel.endpointId)
+                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
+                        let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: self.videoRenderingContext.makeView(input: input, blur: true))
+
+                        self.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))
+                        |> deliverOnMainQueue
+                        ).start(next: { [weak self, weak videoNode] ready, timeouted in
+                            if let strongSelf = self, let videoNode = videoNode {
+                                Queue.mainQueue().after(0.1) {
+                                    if timeouted && !ready {
+                                        strongSelf.timeoutedEndpointIds.insert(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIds.remove(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
+                                        strongSelf.wideVideoNodes.remove(channel.endpointId)
+
+                                        strongSelf.updateMembers()
+                                    } else if ready {
+                                        strongSelf.readyVideoEndpointIds.insert(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
+                                        strongSelf.timeoutedEndpointIds.remove(channel.endpointId)
+                                        if videoNode.aspectRatio <= 0.77 {
+                                            strongSelf.wideVideoNodes.insert(channel.endpointId)
+                                        } else {
+                                            strongSelf.wideVideoNodes.remove(channel.endpointId)
+                                        }
+                                        strongSelf.updateMembers()
+
+                                        if let (layout, _) = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
+                                            if let interaction = strongSelf.itemInteraction {
+                                                loop: for i in 0 ..< strongSelf.currentFullscreenEntries.count {
+                                                    let entry = strongSelf.currentFullscreenEntries[i]
+                                                    switch entry {
+                                                    case let .peer(peerEntry, _):
+                                                        if peerEntry.effectiveVideoEndpointId == channel.endpointId {
+                                                            let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                                            strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.fullscreenItem(context: strongSelf.context, presentationData: presentationData, interaction: interaction), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                            break loop
+                                                        }
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }), forKey: channel.endpointId)
+                        self.videoNodes[channel.endpointId] = videoNode
+
+                        if let _ = self.validLayout {
+                            self.updateMembers()
+                        }
+                    }
+
+                    /*self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
                             guard let strongSelf = self, let videoView = videoView else {
                                 return
@@ -5258,7 +5353,7 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.updateMembers()
                             }
                         }
-                    })
+                    })*/
                 }
             }
 
@@ -5366,7 +5461,9 @@ public final class VoiceChatController: ViewController {
 
         private func updateRequestedVideoChannels() {
             Queue.mainQueue().after(0.3) {
-                self.call.setRequestedVideoList(items: self.requestedVideoChannels)
+                let enableVideo = self.appIsActive && self.visibility
+
+                self.call.setRequestedVideoList(items: enableVideo ? self.requestedVideoChannels : [])
                 self.filterRequestedVideoChannels(channels: self.requestedVideoChannels)
             }
         }
@@ -5839,7 +5936,7 @@ public final class VoiceChatController: ViewController {
                     let proceed = {
                         let _ = strongSelf.currentAvatarMixin.swap(nil)
                         let postbox = strongSelf.context.account.postbox
-                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                        strongSelf.updateAvatarDisposable.set((strongSelf.context.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                         })
                         |> deliverOnMainQueue).start())
@@ -5892,9 +5989,9 @@ public final class VoiceChatController: ViewController {
             self.updateAvatarPromise.set(.single((representation, 0.0)))
 
             let postbox = self.call.account.postbox
-            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? updateAccountPhoto(account: self.call.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? self.call.accountContext.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-            }) : updatePeerPhoto(postbox: postbox, network: self.call.account.network, stateManager: self.call.account.stateManager, accountPeerId: self.context.account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: postbox, network: self.call.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+            }) : self.call.accountContext.engine.peers.updatePeerPhoto(peerId: peerId, photo: self.call.accountContext.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             })
             
@@ -5930,7 +6027,8 @@ public final class VoiceChatController: ViewController {
             if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
                 videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
             }
-            
+
+            let context = self.context
             let account = self.context.account
             let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
                 let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
@@ -5940,7 +6038,7 @@ public final class VoiceChatController: ViewController {
                         return nil
                     }
                 }
-                let uploadInterface = LegacyLiveUploadInterface(account: account)
+                let uploadInterface = LegacyLiveUploadInterface(context: context)
                 let signal: SSignal
                 if let asset = asset as? AVAsset {
                     signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
@@ -6011,11 +6109,11 @@ public final class VoiceChatController: ViewController {
             self.updateAvatarDisposable.set((signal
             |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                 if peerId.namespace == Namespaces.Peer.CloudUser {
-                    return updateAccountPhoto(account: account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {
-                    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 }

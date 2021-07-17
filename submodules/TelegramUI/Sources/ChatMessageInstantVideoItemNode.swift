@@ -31,8 +31,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
     
+    private var appliedParams: ListViewItemLayoutParams?
     private var appliedItem: ChatMessageItem?
     private var appliedForwardInfo: (Peer?, String?)?
+    private var appliedHasAvatar = false
+    private var appliedCurrentlyPlaying = false
+    private var appliedAutomaticDownload = false
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var forwardBackgroundNode: ASImageNode?
@@ -217,6 +221,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         
         let currentItem = self.appliedItem
         let currentForwardInfo = self.appliedForwardInfo
+        let currentPlaying = self.appliedCurrentlyPlaying
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
@@ -318,7 +323,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 deliveryFailedInset += 24.0
             }
             
-            let displaySize = layoutConstants.instantVideo.dimensions
+            var isPlaying = false
+            var displaySize = layoutConstants.instantVideo.dimensions
+            let maximumDisplaySize = CGSize(width: params.width - 20.0, height: params.width - 20.0)
+            if item.associatedData.currentlyPlayingMessageId == item.message.index {
+                isPlaying = true
+                displaySize = maximumDisplaySize
+            }
             
             var automaticDownload = true
             for media in item.message.media {
@@ -332,7 +343,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 isReplyThread = true
             }
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, maximumDisplaySize, isPlaying ? 1.0 : 0.0, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
@@ -495,30 +506,40 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
-                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
-                    
-                    strongSelf.appliedItem = item
-                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
-                
-                    strongSelf.updateAccessibilityData(accessibilityData)
-                    
                     let transition: ContainedViewLayoutTransition
                     if animation.isAnimated {
                         transition = .animated(duration: 0.2, curve: .spring)
                     } else {
                         transition = .immediate
                     }
-                    strongSelf.interactiveVideoNode.frame = videoFrame
+                    
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
+                    strongSelf.appliedParams = params
+                    strongSelf.appliedItem = item
+                    strongSelf.appliedHasAvatar = hasAvatar
+                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    strongSelf.appliedCurrentlyPlaying = isPlaying
+                    
+                    strongSelf.updateAccessibilityData(accessibilityData)
+                                        
+                    
+                    
                     let videoLayoutData: ChatMessageInstantVideoItemLayoutData
                     if incoming {
                         videoLayoutData = .constrained(left: 0.0, right: max(0.0, availableContentWidth - videoFrame.width))
                     } else {
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
-                    videoApply(videoLayoutData, transition)
+                    
+                    if currentItem != nil && currentPlaying != isPlaying {
+                    } else {
+                        strongSelf.interactiveVideoNode.frame = videoFrame
+                        videoApply(videoLayoutData, transition)
+                    }
                     
                     strongSelf.contextSourceNode.contentRect = videoFrame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -1023,5 +1044,76 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
+    }
+    
+    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+        super.animateFrameTransition(progress, currentValue)
+        
+        guard let item = self.appliedItem, let params = self.appliedParams, progress > 0.0, let (initialHeight, targetHeight) = self.apparentHeightTransition else {
+            return
+        }
+        
+        let layoutConstants = chatMessageItemLayoutConstants(self.layoutConstants, params: params, presentationData: item.presentationData)
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        
+        var isReplyThread = false
+        if case .replyThread = item.chatLocation {
+            isReplyThread = true
+        }
+        
+        var isPlaying = false
+        var displaySize = layoutConstants.instantVideo.dimensions
+        let maximumDisplaySize = CGSize(width: params.width - 20.0, height: params.width - 20.0)
+        if item.associatedData.currentlyPlayingMessageId == item.message.index {
+            isPlaying = true
+        }
+        
+        let avatarInset: CGFloat
+        if self.appliedHasAvatar {
+            avatarInset = layoutConstants.avatarDiameter
+        } else {
+            avatarInset = 0.0
+        }
+        
+        let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+        var deliveryFailedInset: CGFloat = 0.0
+        if isFailed {
+            deliveryFailedInset += 24.0
+        }
+        
+        let makeVideoLayout = self.interactiveVideoNode.asyncLayout()
+        
+        let initialSize: CGSize
+        let targetSize: CGSize
+        let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
+        let scaleProgress: CGFloat
+        if currentValue < targetHeight {
+            initialSize = displaySize
+            targetSize = maximumDisplaySize
+            scaleProgress = animationProgress
+        } else if currentValue > targetHeight {
+            initialSize = maximumDisplaySize
+            targetSize = displaySize
+            scaleProgress = 1.0 - animationProgress
+        } else {
+            initialSize = isPlaying ? maximumDisplaySize : displaySize
+            targetSize = initialSize
+            scaleProgress = isPlaying ? 1.0 : 0.0
+        }
+        displaySize = CGSize(width: initialSize.width + (targetSize.width - initialSize.width) * animationProgress, height: initialSize.height + (targetSize.height - initialSize.height) * animationProgress)
+        
+        let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, maximumDisplaySize, scaleProgress, .free, self.appliedAutomaticDownload)
+        
+        let availableContentWidth = params.width - params.leftInset - params.rightInset - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left
+        let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
+        self.interactiveVideoNode.frame = videoFrame
+        
+        let videoLayoutData: ChatMessageInstantVideoItemLayoutData
+        if incoming {
+            videoLayoutData = .constrained(left: 0.0, right: max(0.0, availableContentWidth - videoFrame.width))
+        } else {
+            videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
+        }
+        videoApply(videoLayoutData, .immediate)
     }
 }

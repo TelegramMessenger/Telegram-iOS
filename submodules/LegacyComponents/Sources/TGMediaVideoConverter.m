@@ -1414,7 +1414,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 64;
             
         case TGMediaVideoConversionPresetVideoMessage:
-            return 32;
+            return 64;
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:

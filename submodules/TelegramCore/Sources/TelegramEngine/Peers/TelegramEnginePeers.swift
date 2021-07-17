@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSignalKit
 import Postbox
 import SyncCore
@@ -326,6 +327,137 @@ public extension TelegramEngine {
 
         public func removeRecentlyUsedInlineBot(peerId: PeerId) -> Signal<Void, NoError> {
             return _internal_removeRecentlyUsedInlineBot(account: self.account, peerId: peerId)
+        }
+
+        public func uploadedPeerPhoto(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+            return _internal_uploadedPeerPhoto(postbox: self.account.postbox, network: self.account.network, resource: resource)
+        }
+
+        public func uploadedPeerVideo(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+            return _internal_uploadedPeerVideo(postbox: self.account.postbox, network: self.account.network, messageMediaPreuploadManager: self.account.messageMediaPreuploadManager, resource: resource)
+        }
+
+        public func updatePeerPhoto(peerId: PeerId, photo: Signal<UploadedPeerPhotoData, NoError>?, video: Signal<UploadedPeerPhotoData?, NoError>? = nil, videoStartTimestamp: Double? = nil, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+            return _internal_updatePeerPhoto(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, accountPeerId: self.account.peerId, peerId: peerId, photo: photo, video: video, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+        }
+
+        public func requestUpdateChatListFilter(id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
+            return _internal_requestUpdateChatListFilter(postbox: self.account.postbox, network: self.account.network, id: id, filter: filter)
+        }
+
+        public func requestUpdateChatListFilterOrder(ids: [Int32]) -> Signal<Never, RequestUpdateChatListFilterOrderError> {
+            return _internal_requestUpdateChatListFilterOrder(account: self.account, ids: ids)
+        }
+
+        public func generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
+            return _internal_generateNewChatListFilterId(filters: filters)
+        }
+
+        public func updateChatListFiltersInteractively(_ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
+            return _internal_updateChatListFiltersInteractively(postbox: self.account.postbox, f)
+        }
+
+        public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
+            return _internal_updatedChatListFilters(postbox: self.account.postbox)
+        }
+
+        public func updatedChatListFiltersInfo() -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {
+            return _internal_updatedChatListFiltersInfo(postbox: self.account.postbox)
+        }
+
+        public func currentChatListFilters() -> Signal<[ChatListFilter], NoError> {
+            return _internal_currentChatListFilters(postbox: self.account.postbox)
+        }
+
+        public func markChatListFeaturedFiltersAsSeen() -> Signal<Never, NoError> {
+            return _internal_markChatListFeaturedFiltersAsSeen(postbox: self.account.postbox)
+        }
+
+        public func updateChatListFeaturedFilters() -> Signal<Never, NoError> {
+            return _internal_updateChatListFeaturedFilters(postbox: self.account.postbox, network: self.account.network)
+        }
+
+        public func unmarkChatListFeaturedFiltersAsSeen() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction in
+                _internal_unmarkChatListFeaturedFiltersAsSeen(transaction: transaction)
+            }
+            |> ignoreValues
+        }
+
+        public func checkPeerChatServiceActions(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_checkPeerChatServiceActions(postbox: self.account.postbox, peerId: peerId)
+        }
+
+        public func createPeerExportedInvitation(peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+            return _internal_createPeerExportedInvitation(account: self.account, peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
+        }
+
+        public func editPeerExportedInvitation(peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
+            return _internal_editPeerExportedInvitation(account: self.account, peerId: peerId, link: link, expireDate: expireDate, usageLimit: usageLimit)
+        }
+
+        public func revokePeerExportedInvitation(peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
+            return _internal_revokePeerExportedInvitation(account: self.account, peerId: peerId, link: link)
+        }
+
+        public func deletePeerExportedInvitation(peerId: PeerId, link: String) -> Signal<Never, DeletePeerExportedInvitationError> {
+            return _internal_deletePeerExportedInvitation(account: self.account, peerId: peerId, link: link)
+        }
+
+        public func deleteAllRevokedPeerExportedInvitations(peerId: PeerId, adminId: PeerId) -> Signal<Never, NoError> {
+            return _internal_deleteAllRevokedPeerExportedInvitations(account: self.account, peerId: peerId, adminId: adminId)
+        }
+
+        public func peerExportedInvitationsCreators(peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
+            return _internal_peerExportedInvitationsCreators(account: self.account, peerId: peerId)
+        }
+
+        public func peerExportedInvitations(peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) -> PeerExportedInvitationsContext {
+            return PeerExportedInvitationsContext(account: self.account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
+        }
+
+        public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation) -> PeerInvitationImportersContext {
+            return PeerInvitationImportersContext(account: self.account, peerId: peerId, invite: invite)
+        }
+
+        public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {
+            return _internal_notificationExceptionsList(postbox: self.account.postbox, network: self.account.network)
+        }
+
+        public func fetchAndUpdateCachedPeerData(peerId: PeerId) -> Signal<Bool, NoError> {
+            return _internal_fetchAndUpdateCachedPeerData(accountPeerId: self.account.peerId, peerId: peerId, network: self.account.network, postbox: self.account.postbox)
+        }
+
+        public func toggleItemPinned(location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
+            return _internal_toggleItemPinned(postbox: self.account.postbox, location: location, itemId: itemId)
+        }
+
+        public func getPinnedItemIds(location: TogglePeerChatPinnedLocation) -> Signal<[PinnedItemId], NoError> {
+            return self.account.postbox.transaction { transaction -> [PinnedItemId] in
+                return _internal_getPinnedItemIds(transaction: transaction, location: location)
+            }
+        }
+
+        public func reorderPinnedItemIds(location: TogglePeerChatPinnedLocation, itemIds: [PinnedItemId]) -> Signal<Bool, NoError> {
+            return self.account.postbox.transaction { transaction -> Bool in
+                return _internal_reorderPinnedItemIds(transaction: transaction, location: location, itemIds: itemIds)
+            }
+        }
+
+        public func joinChatInteractively(with hash: String) -> Signal <PeerId?, JoinLinkError> {
+            return _internal_joinChatInteractively(with: hash, account: self.account)
+        }
+
+        public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, NoError> {
+            return _internal_joinLinkInformation(hash, account: self.account)
+        }
+
+        public func updatePeerTitle(peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
+            return _internal_updatePeerTitle(account: self.account, peerId: peerId, title: title)
+        }
+
+        public func updatePeerDescription(peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
+            return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
     }
 }

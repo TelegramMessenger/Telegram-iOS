@@ -418,12 +418,12 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     var getControllerImpl: (() -> ViewController?)?
     
     let adminId = admin?.peer.peer?.id
-    let invitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, adminId: adminId, revoked: false, forceUpdate: true)
-    let revokedInvitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, adminId: adminId, revoked: true, forceUpdate: true)
+    let invitesContext = context.engine.peers.peerExportedInvitations(peerId: peerId, adminId: adminId, revoked: false, forceUpdate: true)
+    let revokedInvitesContext = context.engine.peers.peerExportedInvitations(peerId: peerId, adminId: adminId, revoked: true, forceUpdate: true)
     
     let creators: Signal<[ExportedInvitationCreator], NoError>
     if adminId == nil {
-        creators = .single([]) |> then(peerExportedInvitationsCreators(account: context.account, peerId: peerId))
+        creators = .single([]) |> then(context.engine.peers.peerExportedInvitationsCreators(peerId: peerId))
     } else {
         creators = .single([])
     }
@@ -520,7 +520,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                                     }
                                 }
                                 if revoke {
-                                    revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                    revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
                                         updateState { state in
                                             var updatedState = state
                                             updatedState.revokingPrivateLink = false
@@ -661,7 +661,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                         ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
                             dismissAction()
 
-                            revokeLinkDisposable.set((deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                            revokeLinkDisposable.set((context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
                             }))
                             
                             revokedInvitesContext.remove(invite)
@@ -695,7 +695,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
                                     if case let .replace(_, newInvite) = result {
                                         invitesContext.add(newInvite)
                                     }
@@ -732,7 +732,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
                 ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteAllRevokedLinksAlert_Action, color: .destructive, action: {
                     dismissAction()
                     
-                    deleteAllRevokedLinksDisposable.set((deleteAllRevokedPeerExportedInvitations(account: context.account, peerId: peerId, adminId: adminId ?? context.account.peerId) |> deliverOnMainQueue).start(completed: {
+                    deleteAllRevokedLinksDisposable.set((context.engine.peers.deleteAllRevokedPeerExportedInvitations(peerId: peerId, adminId: adminId ?? context.account.peerId) |> deliverOnMainQueue).start(completed: {
                     }))
                     
                     revokedInvitesContext.clear()
@@ -770,7 +770,7 @@ public func inviteLinkListController(context: AccountContext, peerId: PeerId, ad
     |> distinctUntilChanged
     |> deliverOnMainQueue
     |> map { invite -> PeerInvitationImportersContext? in
-        return invite.flatMap { PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: $0) }
+        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, invite: $0) }
     } |> afterNext { context in
         if let context = context {
             importersState.set(context.state |> map(Optional.init))

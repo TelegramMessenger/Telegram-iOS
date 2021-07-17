@@ -17,6 +17,7 @@ import AppBundle
 import ListMessageItem
 import AccountContext
 import ChatInterfaceState
+import ChatListUI
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -28,69 +29,6 @@ struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageId
     var upperBound: MessageId
     var isLast: Bool
-}
-
-private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
-    private let selectionGestureActivationThreshold: CGFloat = 5.0
-    
-    var recognized: Bool? = nil
-    var initialLocation: CGPoint = CGPoint()
-    
-    var shouldBegin: (() -> Bool)?
-    
-    override init(target: Any?, action: Selector?) {
-        super.init(target: target, action: action)
-        
-        self.minimumNumberOfTouches = 2
-        self.maximumNumberOfTouches = 2
-    }
-    
-    override func reset() {
-        super.reset()
-        
-        self.recognized = nil
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        super.touchesBegan(touches, with: event)
-        
-        if let shouldBegin = self.shouldBegin, !shouldBegin() {
-            self.state = .failed
-        } else {
-            let touch = touches.first!
-            self.initialLocation = touch.location(in: self.view)
-        }
-    }
-    
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
-        let location = touches.first!.location(in: self.view)
-        let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
-        
-        let touchesArray = Array(touches)
-        if self.recognized == nil, touchesArray.count == 2 {
-            if let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
-                let firstLocation = firstTouch.location(in: self.view)
-                let secondLocation = secondTouch.location(in: self.view)
-                
-                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
-                    let dx = v1.x - v2.x
-                    let dy = v1.y - v2.y
-                    return sqrt(dx * dx + dy * dy)
-                }
-                if distance(firstLocation, secondLocation) > 200.0 {
-                    self.state = .failed
-                }
-            }
-            if self.state != .failed && (abs(translation.y) >= selectionGestureActivationThreshold) {
-                self.recognized = true
-            }
-        }
-        
-        if let recognized = self.recognized, recognized {
-            super.touchesMoved(touches, with: event)
-        }
-    }
 }
 
 private let historyMessageCount: Int = 90
@@ -373,7 +311,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], subject: ChatControllerSubject?) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
@@ -422,8 +360,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         }
     }
     
-    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers)
-    return associatedData
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId)
 }
 
 private extension ChatHistoryLocationInput {
@@ -590,7 +527,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
     }
-        
+    
+    private let currentlyPlayingMessageIdPromise = ValuePromise<MessageIndex?>(nil)
+    private var appliedPlayingMessageId: MessageIndex? = nil
+    
     private(set) var isScrollAtBottomPosition = false
     public var isScrollAtBottomPositionUpdated: (() -> Void)?
     
@@ -894,8 +834,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.pendingRemovedMessagesPromise.get(),
             animatedEmojiStickers,
             customChannelDiscussionReadState,
-            customThreadOutgoingReadState
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState in
+            customThreadOutgoingReadState,
+            self.currentlyPlayingMessageIdPromise.get()
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -978,7 +919,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     reverse = reverseValue
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, subject: subject)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId)
                 
                 let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, pendingUnpinnedAllMessages: pendingUnpinnedAllMessages, pendingRemovedMessages: pendingRemovedMessages, associatedData: associatedData, updatingMedia: updatingMedia, customChannelDiscussionReadState: customChannelDiscussionReadState, customThreadOutgoingReadState: customThreadOutgoingReadState)
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
@@ -993,7 +934,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     assert(update.1 >= previousVersion)
                 }
-                
+                                
                 if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
                     switch originalScrollPosition {
                     case let .index(index, position, _, _, highlight):
@@ -1032,11 +973,21 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                     }
                 }
-                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode())
+                
+                var scrollAnimationCurve: ListViewAnimationCurve? = nil
+                if let strongSelf = self, strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let currentlyPlayingMessageId = currentlyPlayingMessageId {
+                    updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Down, animated: true, highlight: true)
+                    scrollAnimationCurve = .Spring(duration: 0.4)
+                }
+                
+                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, scrollAnimationCurve: scrollAnimationCurve, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode())
                 let mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
                 Queue.mainQueue().async {
                     guard let strongSelf = self else {
                         return
+                    }
+                    if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId {
+                        strongSelf.appliedPlayingMessageId = currentlyPlayingMessageId
                     }
                     strongSelf.enqueueHistoryViewTransition(mappedTransition)
                 }
@@ -2350,6 +2301,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         })
         self.selectionScrollDisplayLink?.isPaused = false
+    }
+
+    
+    func voicePlaylistItemChanged(_ previousItem: SharedMediaPlaylistItem?, _ currentItem: SharedMediaPlaylistItem?) -> Void {
+        if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
+            self.currentlyPlayingMessageIdPromise.set(currentItem.messageIndex)
+        } else {
+            self.currentlyPlayingMessageIdPromise.set(nil)
+        }
     }
 
     private var currentSendAnimationCorrelationId: Int64?

@@ -451,6 +451,27 @@ public final class OngoingCallVideoCapturer {
         }
         self.impl.submitPixelBuffer(pixelBuffer, rotation: videoRotation.orientation)
     }
+
+    public func video() -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        let queue = Queue.mainQueue()
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                let innerDisposable = strongSelf.impl.addVideoOutput { videoFrameData in
+                    subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+                }
+                disposable.set(ActionDisposable {
+                    innerDisposable.dispose()
+                })
+            }
+
+            return disposable
+        }
+    }
 }
 
 extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProtocol {

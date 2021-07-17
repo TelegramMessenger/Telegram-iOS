@@ -9,7 +9,7 @@ public enum MediaResourceStatsCategory {
     case call
 }
 
-public final class TelegramMediaResourceFetchTag: MediaResourceFetchTag {
+final class TelegramMediaResourceFetchTag: MediaResourceFetchTag {
     public let statsCategory: MediaResourceStatsCategory
     
     public init(statsCategory: MediaResourceStatsCategory) {

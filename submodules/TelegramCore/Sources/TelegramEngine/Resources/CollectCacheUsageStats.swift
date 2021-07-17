@@ -53,7 +53,7 @@ private final class CacheUsageStatsState {
     var upperBound: MessageIndex?
 }
 
-public func collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
+func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
     var initialState = CacheUsageStatsState()
     if let peerId = peerId {
         initialState.lowerBound = MessageIndex.lowerBound(peerId: peerId)
@@ -291,6 +291,6 @@ public func collectCacheUsageStats(account: Account, peerId: PeerId? = nil, addi
     }
 }
 
-public func clearCachedMediaResources(account: Account, mediaResourceIds: Set<WrappedMediaResourceId>) -> Signal<Void, NoError> {
+func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<WrappedMediaResourceId>) -> Signal<Void, NoError> {
     return account.postbox.mediaBox.removeCachedResources(mediaResourceIds)
 }
