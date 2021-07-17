@@ -46,7 +46,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
     }
     suggestionContext.hashtagListSignal = { query in
         return SSignal { subscriber in
-            let disposable = (recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> [String] in
+            let disposable = (context.engine.messages.recentlyUsedHashtags() |> map { hashtags -> [String] in
                 let normalizedQuery = query?.lowercased()
                 var result: [String] = []
                 if let normalizedQuery = normalizedQuery {

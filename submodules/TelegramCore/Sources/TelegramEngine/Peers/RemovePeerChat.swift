@@ -34,7 +34,7 @@ func _internal_removePeerChat(account: Account, transaction: Transaction, mediaB
             }
         })
     }
-    updateChatListFiltersInteractively(transaction: transaction, { filters in
+    _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
         var filters = filters
         for i in 0 ..< filters.count {
             if filters[i].data.includePeers.peers.contains(peerId) {

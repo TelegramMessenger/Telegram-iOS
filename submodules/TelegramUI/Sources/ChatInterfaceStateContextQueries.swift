@@ -149,7 +149,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .hashtags([]) })
             }
             
-            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = recentlyUsedHashtags(postbox: context.account.postbox)
+            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.messages.recentlyUsedHashtags()
                 |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let normalizedQuery = query.lowercased()
                 var result: [String] = []
@@ -279,7 +279,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
+                    let contextResults = context.engine.messages.requestChatContextResults(botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
                         return `deferred` {
                             Queue.mainQueue().async {
                                 requestBotLocationStatus(user.id)

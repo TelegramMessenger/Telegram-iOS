@@ -70,7 +70,7 @@ public final class JoinLinkPreviewController: ViewController {
         if let resolvedState = self.resolvedState {
             signal = .single(resolvedState)
         } else {
-            signal = joinLinkInformation(self.link, account: self.context.account)
+            signal = self.context.engine.peers.joinLinkInformation(self.link)
         }
         
         self.disposable.set((signal
@@ -121,7 +121,7 @@ public final class JoinLinkPreviewController: ViewController {
     }
     
     private func join() {
-        self.disposable.set((joinChatInteractively(with: self.link, account: self.context.account) |> deliverOnMainQueue).start(next: { [weak self] peerId in
+        self.disposable.set((self.context.engine.peers.joinChatInteractively(with: self.link) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
                 if let peerId = peerId {
                     strongSelf.navigateToPeer(peerId, nil)

@@ -755,7 +755,7 @@ final class WatchLocationHandler: WatchRequestHandler {
                             guard let peerId = peerId else {
                                 return .single(nil)
                             }
-                            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }

@@ -384,6 +384,7 @@ final class CallListControllerNode: ASDisplayNode {
             let disposable = strongSelf.openGroupCallDisposable
             
             let account = strongSelf.context.account
+            let engine = strongSelf.context.engine
             var signal: Signal<CachedChannelData.ActiveCall?, NoError> = strongSelf.context.account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
                 let cachedData = transaction.getPeerCachedData(peerId: peerId)
                 if let cachedData = cachedData as? CachedChannelData {
@@ -397,7 +398,7 @@ final class CallListControllerNode: ASDisplayNode {
                 if let activeCall = activeCall {
                     return .single(activeCall)
                 } else {
-                    return updatedCurrentPeerGroupCall(account: account, peerId: peerId)
+                    return engine.calls.updatedCurrentPeerGroupCall(peerId: peerId)
                 }
             }
             

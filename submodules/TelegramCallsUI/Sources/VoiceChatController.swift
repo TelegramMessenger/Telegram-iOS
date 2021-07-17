@@ -1167,7 +1167,7 @@ public final class VoiceChatController: ViewController {
             
             let displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
             |> then(
-                combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: call.peerId))
+                combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: call.peerId))
                 |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
                     var result = currentAccountPeer
                     result.append(contentsOf: availablePeers)
@@ -1553,7 +1553,7 @@ public final class VoiceChatController: ViewController {
                                                 return .complete()
                                             }).start()
                                         } else {
-                                            let _ = (updatePeerDescription(account: strongSelf.context.account, peerId: peer.id, description: bio)
+                                            let _ = (strongSelf.context.engine.peers.updatePeerDescription(peerId: peer.id, description: bio)
                                             |> `catch` { _ -> Signal<Void, NoError> in
                                                 return .complete()
                                             }).start()
@@ -5936,7 +5936,7 @@ public final class VoiceChatController: ViewController {
                     let proceed = {
                         let _ = strongSelf.currentAvatarMixin.swap(nil)
                         let postbox = strongSelf.context.account.postbox
-                        strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                        strongSelf.updateAvatarDisposable.set((strongSelf.context.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                         })
                         |> deliverOnMainQueue).start())
@@ -5989,9 +5989,9 @@ public final class VoiceChatController: ViewController {
             self.updateAvatarPromise.set(.single((representation, 0.0)))
 
             let postbox = self.call.account.postbox
-            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? updateAccountPhoto(account: self.call.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? self.call.accountContext.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-            }) : updatePeerPhoto(postbox: postbox, network: self.call.account.network, stateManager: self.call.account.stateManager, accountPeerId: self.context.account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: postbox, network: self.call.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+            }) : self.call.accountContext.engine.peers.updatePeerPhoto(peerId: peerId, photo: self.call.accountContext.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             })
             
@@ -6027,7 +6027,8 @@ public final class VoiceChatController: ViewController {
             if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
                 videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
             }
-            
+
+            let context = self.context
             let account = self.context.account
             let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
                 let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
@@ -6037,7 +6038,7 @@ public final class VoiceChatController: ViewController {
                         return nil
                     }
                 }
-                let uploadInterface = LegacyLiveUploadInterface(account: account)
+                let uploadInterface = LegacyLiveUploadInterface(context: context)
                 let signal: SSignal
                 if let asset = asset as? AVAsset {
                     signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
@@ -6108,11 +6109,11 @@ public final class VoiceChatController: ViewController {
             self.updateAvatarDisposable.set((signal
             |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                 if peerId.namespace == Namespaces.Peer.CloudUser {
-                    return updateAccountPhoto(account: account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {
-                    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 }

@@ -157,7 +157,7 @@ public final class AccountContextImpl: AccountContext {
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, /*tonContext: StoredTonContext?, */limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
@@ -166,7 +166,7 @@ public final class AccountContextImpl: AccountContext {
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
         if let locationManager = self.sharedContextImpl.locationManager {
-            self.liveLocationManager = LiveLocationManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
+            self.liveLocationManager = LiveLocationManagerImpl(engine: self.engine, account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }

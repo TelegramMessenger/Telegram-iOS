@@ -577,7 +577,7 @@ class WebSearchControllerNode: ASDisplayNode {
         let geoPoint = currentProcessedResults.geoPoint.flatMap { geoPoint -> (Double, Double) in
             return (geoPoint.latitude, geoPoint.longitude)
         }
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((self.context.engine.messages.requestChatContextResults(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
             |> deliverOnMainQueue).start(next: { [weak self] nextResults in
                 guard let strongSelf = self, let nextResults = nextResults else {
                     return

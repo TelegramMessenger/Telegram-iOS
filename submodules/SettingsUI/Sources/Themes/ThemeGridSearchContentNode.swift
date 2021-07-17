@@ -520,7 +520,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                     let geoPoint = collection.geoPoint.flatMap { geoPoint -> (Double, Double) in
                                         return (geoPoint.latitude, geoPoint.longitude)
                                     }
-                                    return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(geoPoint), offset: nextOffset)
+                                    return self.context.engine.messages.requestChatContextResults(botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(geoPoint), offset: nextOffset)
                                     |> map { results -> ChatContextResultCollection? in
                                         return results?.results
                                     }
@@ -572,7 +572,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
-                            requestContextResults(account: context.account, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
+                            requestContextResults(context: context, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }

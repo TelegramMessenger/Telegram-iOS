@@ -10,7 +10,7 @@ public enum UpdatePeerTitleError {
     case generic
 }
 
-public func updatePeerTitle(account: Account, peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
+func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerTitleError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
@@ -58,7 +58,7 @@ public enum UpdatePeerDescriptionError {
     case generic
 }
 
-public func updatePeerDescription(account: Account, peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
+func _internal_updatePeerDescription(account: Account, peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerDescriptionError> in
         if let peer = transaction.getPeer(peerId) {
             if (peer is TelegramChannel || peer is TelegramGroup), let inputPeer = apiInputPeer(peer) {

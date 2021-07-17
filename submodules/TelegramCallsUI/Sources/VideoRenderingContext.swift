@@ -19,6 +19,8 @@ protocol VideoRenderingView: UIView {
 class VideoRenderingContext {
     private var metalContextImpl: Any?
 
+    #if targetEnvironment(simulator)
+    #else
     @available(iOS 13.0, *)
     var metalContext: MetalVideoRenderingContext {
         if let value = self.metalContextImpl as? MetalVideoRenderingContext {
@@ -29,19 +31,27 @@ class VideoRenderingContext {
             return value
         }
     }
+    #endif
 
     func makeView(input: Signal<OngoingGroupCallContext.VideoFrameData, NoError>, blur: Bool) -> VideoRenderingView? {
+        #if targetEnvironment(simulator)
+        return SampleBufferVideoRenderingView(input: input)
+        #else
         if #available(iOS 13.0, *) {
             return MetalVideoRenderingView(renderingContext: self.metalContext, input: input, blur: blur)
         } else {
             return SampleBufferVideoRenderingView(input: input)
         }
+        #endif
     }
 
     func updateVisibility(isVisible: Bool) {
+        #if targetEnvironment(simulator)
+        #else
         if #available(iOS 13.0, *) {
             self.metalContext.updateVisibility(isVisible: isVisible)
         }
+        #endif
     }
 }
 

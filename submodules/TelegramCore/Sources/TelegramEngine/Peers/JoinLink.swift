@@ -29,7 +29,7 @@ public enum ExternalJoiningChatState {
     case peek(PeerId, Int32)
 }
 
-public func joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
+func _internal_joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
     return account.network.request(Api.functions.messages.importChatInvite(hash: hash))
     |> mapError { error -> JoinLinkError in
         switch error.errorDescription {
@@ -59,7 +59,7 @@ public func joinChatInteractively(with hash: String, account: Account) -> Signal
     }
 }
 
-public func joinLinkInformation(_ hash: String, account: Account) -> Signal<ExternalJoiningChatState, NoError> {
+func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<ExternalJoiningChatState, NoError> {
     return account.network.request(Api.functions.messages.checkChatInvite(hash: hash))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.ChatInvite?, NoError> in

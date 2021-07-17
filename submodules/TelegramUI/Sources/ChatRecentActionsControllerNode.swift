@@ -168,8 +168,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
                                             if let strongSelf = self {
-                                                let _ = (revokePeerExportedInvitation(account: strongSelf.context.account, peerId: peer.id, link: invite.link)
-                                                
+                                                let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: invite.link)
                                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                                     self?.eventLogContext.reload()
                                                 })

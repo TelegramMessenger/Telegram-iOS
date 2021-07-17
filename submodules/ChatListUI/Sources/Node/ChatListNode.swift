@@ -703,7 +703,7 @@ public final class ChatListNode: ListView {
             } else {
                 location = .group(groupId)
             }
-            let _ = (toggleItemPinned(postbox: context.account.postbox, location: location, itemId: itemId)
+            let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
             |> deliverOnMainQueue).start(next: { result in
                 if let strongSelf = self {
                     switch result {
@@ -1204,16 +1204,18 @@ public final class ChatListNode: ListView {
                     }
                     
                     if case let .index(index) = fromEntry.sortIndex, let _ = index.pinningIndex {
-                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            let location: TogglePeerChatPinnedLocation
-                            if let chatListFilter = chatListFilter {
-                                location = .filter(chatListFilter.id)
-                            } else {
-                                location = .group(groupId)
-                            }
-                            
-                            var itemIds = getPinnedItemIds(transaction: transaction, location: location)
-                            
+                        let location: TogglePeerChatPinnedLocation
+                        if let chatListFilter = chatListFilter {
+                            location = .filter(chatListFilter.id)
+                        } else {
+                            location = .group(groupId)
+                        }
+
+                        let engine = strongSelf.context.engine
+                        return engine.peers.getPinnedItemIds(location: location)
+                        |> mapToSignal { itemIds -> Signal<Bool, NoError> in
+                            var itemIds = itemIds
+
                             var itemId: PinnedItemId?
                             switch fromEntry {
                             case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
@@ -1221,7 +1223,7 @@ public final class ChatListNode: ListView {
                             default:
                                 break
                             }
-                            
+
                             if let itemId = itemId {
                                 itemIds = itemIds.filter({ $0 != itemId })
                                 if let referenceId = referenceId {
@@ -1245,9 +1247,9 @@ public final class ChatListNode: ListView {
                                 } else {
                                     itemIds.append(itemId)
                                 }
-                                return reorderPinnedItemIds(transaction: transaction, location: location, itemIds: itemIds)
+                                return engine.peers.reorderPinnedItemIds(location: location, itemIds: itemIds)
                             } else {
-                                return false
+                                return .single(false)
                             }
                         }
                     }
@@ -1378,7 +1380,7 @@ public final class ChatListNode: ListView {
     
     private func resetFilter() {
         if let chatListFilter = self.chatListFilter {
-            self.updatedFilterDisposable.set((updatedChatListFilters(postbox: self.context.account.postbox)
+            self.updatedFilterDisposable.set((self.context.engine.peers.updatedChatListFilters()
             |> map { filters -> ChatListFilter? in
                 for filter in filters {
                     if filter.id == chatListFilter.id {

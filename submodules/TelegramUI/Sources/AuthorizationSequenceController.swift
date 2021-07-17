@@ -705,7 +705,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                             if let resource = resource {
-                                return uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: nil, resource: resource) |> map(Optional.init)
+                                return TelegramEngineUnauthorized(account: account).auth.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                             } else {
                                 return .single(nil)
                             }

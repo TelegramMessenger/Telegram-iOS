@@ -33,7 +33,7 @@ private final class MessageMediaPreuploadManagerContext {
         assert(self.queue.isCurrent())
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
         let context = MessageMediaPreuploadManagerUploadContext()
         self.uploadContexts[id] = context
         let queue = self.queue
@@ -103,7 +103,7 @@ private final class MessageMediaPreuploadManagerContext {
     }
 }
 
-public final class MessageMediaPreuploadManager {
+final class MessageMediaPreuploadManager {
     private let impl: QueueLocalObject<MessageMediaPreuploadManagerContext>
     
     init() {
@@ -113,7 +113,7 @@ public final class MessageMediaPreuploadManager {
         })
     }
     
-    public func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
         self.impl.with { context in
             context.add(network: network, postbox: postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }

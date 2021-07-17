@@ -3,8 +3,15 @@ import Postbox
 import SwiftSignalKit
 import SyncCore
 
+func _internal_enqueueOutgoingMessageWithChatContextResult(account: Account, to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, replyToMessageId: MessageId?, hideVia: Bool, silentPosting: Bool, scheduleTime: Int32?, correlationId: Int64?) -> Bool {
+    guard let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId) else {
+        return false
+    }
+    let _ = enqueueMessages(account: account, peerId: peerId, messages: [message]).start()
+    return true
+}
 
-public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> EnqueueMessage? {
+private func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, replyToMessageId: MessageId?, hideVia: Bool, silentPosting: Bool, scheduleTime: Int32?, correlationId: Int64?) -> EnqueueMessage? {
     var attributes: [MessageAttribute] = []
     attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id, hideVia: hideVia))
     if !hideVia {
@@ -12,6 +19,9 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
     }
     if let scheduleTime = scheduleTime {
         attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
+    }
+    if silentPosting {
+        attributes.append(NotificationInfoMessageAttribute(flags: .muted))
     }
     switch result.message {
         case let .auto(caption, entities, replyMarkup):
@@ -32,19 +42,19 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                                 return true
                             }
                             if let media: Media = internalReference.file ?? internalReference.image {
-                                return .message(text: caption, attributes: filteredAttributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                                return .message(text: caption, attributes: filteredAttributes, mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                             } else {
-                                return .message(text: caption, attributes: filteredAttributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                                return .message(text: caption, attributes: filteredAttributes, mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                             }
                         } else {
-                            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: internalReference.title ?? "", description: internalReference.description ?? "", image: internalReference.image, file: internalReference.file)), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: internalReference.title ?? "", description: internalReference.description ?? "", image: internalReference.image, file: internalReference.file)), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                         }
                     } else if let file = internalReference.file, internalReference.type == "gif" {
-                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     } else if let image = internalReference.image {
-                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: image), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: image), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     } else if let file = internalReference.file {
-                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     } else {
                         return nil
                     }
@@ -56,9 +66,9 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                             let thumbnailResource = thumbnail.resource
                             let imageDimensions = thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128)
                             let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                            return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: tmpImage), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                            return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: tmpImage), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                         } else {
-                            return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                            return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                         }
                     } else if externalReference.type == "document" || externalReference.type == "gif" || externalReference.type == "audio" || externalReference.type == "voice" {
                         var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
@@ -118,9 +128,9 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                         }
                         
                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: externalReference.content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
-                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                        return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     } else {
-                        return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+                        return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     }
             }
         case let .text(text, entities, disableUrlPreview, replyMarkup):
@@ -130,21 +140,21 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+            return .message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
         case let .mapLocation(media, replyMarkup):
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
         case let .contact(media, replyMarkup):
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
         case let .invoice(media, replyMarkup):
             if let replyMarkup = replyMarkup {
                 attributes.append(replyMarkup)
             }
-            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId)
+            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
     }
 }

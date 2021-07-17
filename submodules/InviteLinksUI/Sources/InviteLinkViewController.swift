@@ -374,7 +374,7 @@ public final class InviteLinkViewController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
-            self.importersContext = importersContext ?? PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: invite)
+            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, invite: invite)
             
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -483,7 +483,7 @@ public final class InviteLinkViewController: ViewController {
                                     dismissAction()
                                     self?.controller?.dismiss()
                                     
-                                    let _ = (deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                    let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
                                     })
                                     
                                     self?.controller?.revokedInvitationsContext?.remove(invite)
@@ -537,7 +537,7 @@ public final class InviteLinkViewController: ViewController {
                                         dismissAction()
                                         self?.controller?.dismiss()
 
-                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
                                             if case let .replace(_, newInvite) = result {
                                                 self?.controller?.invitationsContext?.add(newInvite)
                                             }

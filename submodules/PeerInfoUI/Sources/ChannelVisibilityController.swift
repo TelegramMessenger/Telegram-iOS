@@ -1027,7 +1027,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                         }
                                     }
                                     if revoke {
-                                        revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                        revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
                                             updateState {
                                                 $0.withUpdatedRevokingPrivateLink(false)
                                             }

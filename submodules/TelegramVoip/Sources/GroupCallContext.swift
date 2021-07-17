@@ -34,27 +34,16 @@ private protocol BroadcastPartSource: AnyObject {
 
 private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let queue: Queue
-    private let account: Account
+    private let engine: TelegramEngine
     private let callId: Int64
     private let accessHash: Int64
     private var dataSource: AudioBroadcastDataSource?
-
-    #if DEBUG
-    private let debugDumpDirectory: TempBoxDirectory?
-    #endif
     
-    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64) {
+    init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64) {
         self.queue = queue
-        self.account = account
+        self.engine = engine
         self.callId = callId
         self.accessHash = accessHash
-
-        #if DEBUG
-        self.debugDumpDirectory = nil
-        /*let debugDumpDirectory = TempBox.shared.tempDirectory()
-        self.debugDumpDirectory = debugDumpDirectory
-        print("Debug streaming dump path: \(debugDumpDirectory.path)")*/
-        #endif
     }
     
     func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
@@ -69,11 +58,12 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         if let dataSourceValue = self.dataSource {
             dataSource = .single(dataSourceValue)
         } else {
-            dataSource = getAudioBroadcastDataSource(account: self.account, callId: self.callId, accessHash: self.accessHash)
+            dataSource = self.engine.calls.getAudioBroadcastDataSource(callId: self.callId, accessHash: self.accessHash)
         }
 
         let callId = self.callId
         let accessHash = self.accessHash
+        let engine = self.engine
         
         let queue = self.queue
         let signal = dataSource
@@ -81,7 +71,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         |> mapToSignal { [weak self] dataSource -> Signal<GetAudioBroadcastPartResult?, NoError> in
             if let dataSource = dataSource {
                 self?.dataSource = dataSource
-                return getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
                 |> map(Optional.init)
             } else {
                 return .single(nil)
@@ -89,10 +79,6 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             }
         }
         |> deliverOn(self.queue)
-
-        #if DEBUG
-        let debugDumpDirectory = self.debugDumpDirectory
-        #endif
             
         return signal.start(next: { result in
             guard let result = result else {
@@ -102,12 +88,6 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                #if DEBUG
-                if let debugDumpDirectory = debugDumpDirectory {
-                    let _ = try? dataValue.write(to: URL(fileURLWithPath: debugDumpDirectory.path + "/" + "\(timestampIdMilliseconds).ogg"))
-                }
-                #endif
-
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
@@ -137,12 +117,12 @@ private final class OngoingGroupCallBroadcastPartTaskImpl : NSObject, OngoingGro
 
 public final class OngoingGroupCallContext {
     public struct AudioStreamData {
-        public var account: Account
+        public var engine: TelegramEngine
         public var callId: Int64
         public var accessHash: Int64
         
-        public init(account: Account, callId: Int64, accessHash: Int64) {
-            self.account = account
+        public init(engine: TelegramEngine, callId: Int64, accessHash: Int64) {
+            self.engine = engine
             self.callId = callId
             self.accessHash = accessHash
         }
@@ -351,7 +331,7 @@ public final class OngoingGroupCallContext {
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
             
             if let audioStreamData = audioStreamData {
-                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, engine: audioStreamData.engine, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
                 self.broadcastPartsSource = broadcastPartsSource
             }
             

@@ -394,7 +394,7 @@ func cacheUsageStats(context: AccountContext) -> Signal<CacheUsageStatsResult?, 
         containerPath + "/Documents/tempcache_v1/store",
     ]
     return .single(nil)
-    |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.sharedContext.applicationBindings.containerPath + "/telegram-data/logs")
+    |> then(context.engine.resources.collectCacheUsageStats(additionalCachePaths: additionalPaths, logFilesPath: context.sharedContext.applicationBindings.containerPath + "/telegram-data/logs")
     |> map(Optional.init))
 }
 
@@ -581,7 +581,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             var updatedTempPaths = stats.tempPaths
                             var updatedTempSize = stats.tempSize
                             
-                            var signal: Signal<Void, NoError> = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
+                            var signal: Signal<Void, NoError> = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                             if otherSize.0 {
                                 let removeTempFiles: Signal<Void, NoError> = Signal { subscriber in
                                     let fileManager = FileManager.default
@@ -784,7 +784,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                     }
                                 }
                                 
-                                var signal = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
+                                var signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                                 
                                 let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                                 
@@ -911,7 +911,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             }
                         }
                         
-                        var signal = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
+                        var signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                         
                         let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                         

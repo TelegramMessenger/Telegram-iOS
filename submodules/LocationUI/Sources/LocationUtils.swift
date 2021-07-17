@@ -43,7 +43,7 @@ public func nearbyVenues(context: AccountContext, latitude: Double, longitude: D
             guard let peerId = peerId else {
                 return .single(nil)
             }
-            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+            return context.engine.messages.requestChatContextResults(botId: peerId, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
             |> map { results -> ChatContextResultCollection? in
                 return results?.results
             }

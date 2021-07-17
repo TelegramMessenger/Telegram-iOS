@@ -14,7 +14,7 @@ public enum TogglePeerChatPinnedResult {
     case limitExceeded(Int)
 }
 
-public func toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
+func _internal_toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.transaction { transaction -> TogglePeerChatPinnedResult in
         switch location {
         case let .group(groupId):
@@ -60,7 +60,7 @@ public func toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLoc
             }
         case let .filter(filterId):
             var result: TogglePeerChatPinnedResult = .done
-            updateChatListFiltersInteractively(transaction: transaction, { filters in
+            _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
                 var filters = filters
                 if let index = filters.firstIndex(where: { $0.id == filterId }) {
                     switch itemId {
@@ -81,13 +81,13 @@ public func toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLoc
     }
 }
 
-public func getPinnedItemIds(transaction: Transaction, location: TogglePeerChatPinnedLocation) -> [PinnedItemId] {
+func _internal_getPinnedItemIds(transaction: Transaction, location: TogglePeerChatPinnedLocation) -> [PinnedItemId] {
     switch location {
     case let .group(groupId):
         return transaction.getPinnedItemIds(groupId: groupId)
     case let .filter(filterId):
         var itemIds: [PinnedItemId] = []
-        let _ = updateChatListFiltersInteractively(transaction: transaction, { filters in
+        let _ = _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
             if let index = filters.firstIndex(where: { $0.id == filterId }) {
                 itemIds = filters[index].data.includePeers.pinnedPeers.map { peerId in
                     return .peer(peerId)
@@ -99,7 +99,7 @@ public func getPinnedItemIds(transaction: Transaction, location: TogglePeerChatP
     }
 }
 
-public func reorderPinnedItemIds(transaction: Transaction, location: TogglePeerChatPinnedLocation, itemIds: [PinnedItemId]) -> Bool {
+func _internal_reorderPinnedItemIds(transaction: Transaction, location: TogglePeerChatPinnedLocation, itemIds: [PinnedItemId]) -> Bool {
     switch location {
     case let .group(groupId):
         if transaction.getPinnedItemIds(groupId: groupId) != itemIds {
@@ -111,7 +111,7 @@ public func reorderPinnedItemIds(transaction: Transaction, location: TogglePeerC
         }
     case let .filter(filterId):
         var result: Bool = false
-        updateChatListFiltersInteractively(transaction: transaction, { filters in
+        _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
             var filters = filters
             if let index = filters.firstIndex(where: { $0.id == filterId }) {
                 let peerIds: [PeerId] = itemIds.map { itemId -> PeerId in
