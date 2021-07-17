@@ -37,7 +37,7 @@
 "NiceFeatures.Filters.Header" = "FILTERS (TABS)";
 "NiceFeatures.Filters.Notice" = "Select the number of custom tabs.\nLong-tap on tab to change filter.";
 "NiceFeatures.Filters.ShowBadge" = "Show Badges (Filters)";
-"NiceFeatures.UseClassicInfoUi" = "Classic Chat Info UI (Groups and Channels)";
+"NiceFeatures.UseClassicInfoUi" = "Use classic Chat Info UI";
 
 /*Common*/
 "Common.ExitNow" = "Exit Now";

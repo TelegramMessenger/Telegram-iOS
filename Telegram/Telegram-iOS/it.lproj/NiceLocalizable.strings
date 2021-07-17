@@ -112,6 +112,7 @@
 "NGLab.RegDate.Notice" = "Questa è una data approssimativa";
 "NGLab.RegDate.MenuItem" = "registrato";
 "NGLab.RegDate.FetchError" = "Spiacente, impossibile ottenere data registrazione.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Impossibile verificare il dispositivo.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Sincronizza impostazioni e cartelle con iCloud";
