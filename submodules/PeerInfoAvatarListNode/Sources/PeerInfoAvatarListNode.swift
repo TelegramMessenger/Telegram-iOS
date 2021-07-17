@@ -114,6 +114,18 @@ public enum PeerInfoAvatarListItem: Equatable {
         }
     }
     
+    var representations: [ImageRepresentationWithReference] {
+        switch self {
+            case .custom:
+                return []
+            case let .topImage(representations, _, _):
+                return representations
+            case let .image(_, representations, _, _):
+                return representations
+        }
+    }
+    
+    
     var videoRepresentations: [VideoRepresentationWithReference] {
         switch self {
             case .custom:
@@ -1128,6 +1140,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if self.currentIndex >= 0 && self.currentIndex < self.items.count {
             let preloadSpan: Int = 2
             for i in max(0, self.currentIndex - preloadSpan) ... min(self.currentIndex + preloadSpan, self.items.count - 1) {
+                if self.items[i].representations.isEmpty {
+                    continue
+                }
                 validIds.append(self.items[i].id)
                 var itemNode: PeerInfoAvatarListItemNode?
                 var wasAdded = false

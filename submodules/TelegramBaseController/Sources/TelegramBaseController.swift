@@ -77,6 +77,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     public var tempVoicePlaylistEnded: (() -> Void)?
     public var tempVoicePlaylistItemChanged: ((SharedMediaPlaylistItem?, SharedMediaPlaylistItem?) -> Void)?
+    public var tempVoicePlaylistCurrentItem: SharedMediaPlaylistItem?
     
     public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     
@@ -150,6 +151,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         updatedVoiceItem = playlistStateAndType.1.item
                     }
                     
+                    strongSelf.tempVoicePlaylistCurrentItem = updatedVoiceItem
                     strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
                     if let playlistStateAndType = playlistStateAndType {
                         strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
