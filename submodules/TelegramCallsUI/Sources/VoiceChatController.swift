@@ -918,6 +918,7 @@ public final class VoiceChatController: ViewController {
         private var requestedVideoSources = Set<String>()
         private var requestedVideoChannels: [PresentationGroupCallRequestedVideo] = []
 
+        private var videoRenderingContext: VideoRenderingContext
         private var videoNodes: [String: GroupVideoNode] = [:]
         private var wideVideoNodes = Set<String>()
         private var videoOrder: [String] = []
@@ -971,6 +972,8 @@ public final class VoiceChatController: ViewController {
             self.sharedContext = sharedContext
             self.context = call.accountContext
             self.call = call
+
+            self.videoRenderingContext = VideoRenderingContext()
             
             self.isScheduling = call.schedulePending
                         
@@ -2332,13 +2335,19 @@ public final class VoiceChatController: ViewController {
                             }))
                         }
                     } else {
-                        strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { videoView, backdropVideoView in
+                        if let input = (strongSelf.call as! PresentationGroupCallImpl).video(endpointId: endpointId) {
+                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                                completion(GroupVideoNode(videoView: videoView, backdropVideoView: strongSelf.videoRenderingContext.makeView(input: input, blur: true)))
+                            }
+                        }
+
+                        /*strongSelf.call.makeIncomingVideoView(endpointId: endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { videoView, backdropVideoView in
                             if let videoView = videoView {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: backdropVideoView))
                             } else {
                                 completion(nil)
                             }
-                        })
+                        })*/
                     }
                 }
             }
@@ -3482,7 +3491,29 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self, ready else {
                         return
                     }
-                    strongSelf.call.makeOutgoingVideoView(requestClone: false, completion: { [weak self] view, _ in
+                    let videoCapturer = OngoingCallVideoCapturer()
+                    let input = videoCapturer.video()
+                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                        let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
+                        let controller = VoiceChatCameraPreviewController(context: strongSelf.context, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
+                            if let strongSelf = self {
+                                strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
+                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer)
+
+                                if let (layout, navigationHeight) = strongSelf.validLayout {
+                                    strongSelf.animatingButtonsSwap = true
+                                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+                                }
+                            }
+                        }, switchCamera: { [weak self] in
+                            Queue.mainQueue().after(0.1) {
+                                self?.call.switchVideoCamera()
+                            }
+                        })
+                        strongSelf.controller?.present(controller, in: .window(.root))
+                    }
+
+                    /*strongSelf.call.makeOutgoingVideoView(requestClone: false, completion: { [weak self] view, _ in
                         guard let strongSelf = self, let view = view else {
                             return
                         }
@@ -3503,7 +3534,7 @@ public final class VoiceChatController: ViewController {
                             }
                         })
                         strongSelf.controller?.present(controller, in: .window(.root))
-                    })
+                    })*/
                 })
             }
         }
@@ -4547,12 +4578,18 @@ public final class VoiceChatController: ViewController {
         
         private var appIsActive = true {
             didSet {
-                self.updateVisibility()
+                if self.appIsActive != oldValue {
+                    self.updateVisibility()
+                    self.updateRequestedVideoChannels()
+                }
             }
         }
         private var visibility = false {
             didSet {
-                self.updateVisibility()
+                if self.visibility != oldValue {
+                    self.updateVisibility()
+                    self.updateRequestedVideoChannels()
+                }
             }
         }
         
@@ -4574,6 +4611,8 @@ public final class VoiceChatController: ViewController {
                     itemNode.gridVisibility = visible
                 }
             }
+
+            self.videoRenderingContext.updateVisibility(isVisible: visible)
         }
         
         func animateIn() {
@@ -5201,7 +5240,63 @@ public final class VoiceChatController: ViewController {
 
                 if !self.requestedVideoSources.contains(channel.endpointId) {
                     self.requestedVideoSources.insert(channel.endpointId)
-                    self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { [weak self] videoView, backdropVideoView in
+
+                    let input = (self.call as! PresentationGroupCallImpl).video(endpointId: channel.endpointId)
+                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
+                        let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: self.videoRenderingContext.makeView(input: input, blur: true))
+
+                        self.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))
+                        |> deliverOnMainQueue
+                        ).start(next: { [weak self, weak videoNode] ready, timeouted in
+                            if let strongSelf = self, let videoNode = videoNode {
+                                Queue.mainQueue().after(0.1) {
+                                    if timeouted && !ready {
+                                        strongSelf.timeoutedEndpointIds.insert(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIds.remove(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
+                                        strongSelf.wideVideoNodes.remove(channel.endpointId)
+
+                                        strongSelf.updateMembers()
+                                    } else if ready {
+                                        strongSelf.readyVideoEndpointIds.insert(channel.endpointId)
+                                        strongSelf.readyVideoEndpointIdsPromise.set(strongSelf.readyVideoEndpointIds)
+                                        strongSelf.timeoutedEndpointIds.remove(channel.endpointId)
+                                        if videoNode.aspectRatio <= 0.77 {
+                                            strongSelf.wideVideoNodes.insert(channel.endpointId)
+                                        } else {
+                                            strongSelf.wideVideoNodes.remove(channel.endpointId)
+                                        }
+                                        strongSelf.updateMembers()
+
+                                        if let (layout, _) = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
+                                            if let interaction = strongSelf.itemInteraction {
+                                                loop: for i in 0 ..< strongSelf.currentFullscreenEntries.count {
+                                                    let entry = strongSelf.currentFullscreenEntries[i]
+                                                    switch entry {
+                                                    case let .peer(peerEntry, _):
+                                                        if peerEntry.effectiveVideoEndpointId == channel.endpointId {
+                                                            let presentationData = strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme)
+                                                            strongSelf.fullscreenListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ListViewUpdateItem(index: i, previousIndex: i, item: entry.fullscreenItem(context: strongSelf.context, presentationData: presentationData, interaction: interaction), directionHint: nil)], options: [.Synchronous], updateOpaqueState: nil)
+                                                            break loop
+                                                        }
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }), forKey: channel.endpointId)
+                        self.videoNodes[channel.endpointId] = videoNode
+
+                        if let _ = self.validLayout {
+                            self.updateMembers()
+                        }
+                    }
+
+                    /*self.call.makeIncomingVideoView(endpointId: channel.endpointId, requestClone: GroupVideoNode.useBlurTransparency, completion: { [weak self] videoView, backdropVideoView in
                         Queue.mainQueue().async {
                             guard let strongSelf = self, let videoView = videoView else {
                                 return
@@ -5258,7 +5353,7 @@ public final class VoiceChatController: ViewController {
                                 strongSelf.updateMembers()
                             }
                         }
-                    })
+                    })*/
                 }
             }
 
@@ -5366,7 +5461,9 @@ public final class VoiceChatController: ViewController {
 
         private func updateRequestedVideoChannels() {
             Queue.mainQueue().after(0.3) {
-                self.call.setRequestedVideoList(items: self.requestedVideoChannels)
+                let enableVideo = self.appIsActive && self.visibility
+
+                self.call.setRequestedVideoList(items: enableVideo ? self.requestedVideoChannels : [])
                 self.filterRequestedVideoChannels(channels: self.requestedVideoChannels)
             }
         }

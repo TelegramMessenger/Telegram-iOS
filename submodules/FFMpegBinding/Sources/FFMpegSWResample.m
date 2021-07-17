@@ -6,6 +6,7 @@
 #import "libswresample/swresample.h"
 
 @interface FFMpegSWResample () {
+    int _sourceChannelCount;
     SwrContext *_context;
     NSUInteger _ratio;
     NSInteger _destinationChannelCount;
@@ -21,6 +22,7 @@
 - (instancetype)initWithSourceChannelCount:(NSInteger)sourceChannelCount sourceSampleRate:(NSInteger)sourceSampleRate sourceSampleFormat:(enum FFMpegAVSampleFormat)sourceSampleFormat destinationChannelCount:(NSInteger)destinationChannelCount destinationSampleRate:(NSInteger)destinationSampleRate destinationSampleFormat:(enum FFMpegAVSampleFormat)destinationSampleFormat {
     self = [super init];
     if (self != nil) {
+        _sourceChannelCount = sourceChannelCount;
         _destinationChannelCount = destinationChannelCount;
         _destinationSampleFormat = destinationSampleFormat;
         _context = swr_alloc_set_opts(NULL,
@@ -47,6 +49,12 @@
 
 - (NSData * _Nullable)resample:(FFMpegAVFrame *)frame {
     AVFrame *frameImpl = (AVFrame *)[frame impl];
+
+    int numChannels = frameImpl->channels;
+    if (numChannels != _sourceChannelCount) {
+        return nil;
+    }
+
     int bufSize = av_samples_get_buffer_size(NULL,
                                              (int)_destinationChannelCount,
                                              frameImpl->nb_samples * (int)_ratio,

@@ -137,11 +137,14 @@ public enum PeerInfoAvatarListItem: Equatable {
         }
     }
     
-    public init(entry: AvatarGalleryEntry) {
+    public init?(entry: AvatarGalleryEntry) {
         switch entry {
             case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                 self = .topImage(representations, videoRepresentations, immediateThumbnailData)
             case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _):
+                if representations.isEmpty {
+                    return nil
+                }
                 self = .image(reference, representations, videoRepresentations, immediateThumbnailData)
         }
     }
@@ -888,6 +891,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
                 case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _):
+                    if representations.isEmpty {
+                        continue
+                    }
                     if image.0 == reference {
                         entries.insert(entry, at: 0)
                         items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData), at: 0)
@@ -928,6 +934,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
                 case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _):
+                    if representations.isEmpty {
+                        continue
+                    }
                     if image.0 != reference {
                         entries.append(entry)
                         items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData))
@@ -1026,7 +1035,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     items.append(.custom(customNode))
                 }
                 for entry in entries {
-                    items.append(PeerInfoAvatarListItem(entry: entry))
+                    if let item = PeerInfoAvatarListItem(entry: entry) {
+                        items.append(item)
+                    }
                 }
                 strongSelf.galleryEntries = entries
                 strongSelf.items = items

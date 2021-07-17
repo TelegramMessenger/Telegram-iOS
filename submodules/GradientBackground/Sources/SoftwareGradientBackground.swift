@@ -71,7 +71,9 @@ public func adjustSaturationInContext(context: DrawingContext, saturation: CGFlo
     vImageMatrixMultiply_ARGB8888(&buffer, &buffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
 }
 
-private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
+private func generateGradient(size: CGSize, colors inputColors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
+    let colors: [UIColor] = inputColors.count == 1 ? [inputColors[0], inputColors[0], inputColors[0]] : inputColors
+
     let width = Int(size.width)
     let height = Int(size.height)
 
@@ -146,10 +148,29 @@ private func generateGradient(size: CGSize, colors: [UIColor], positions: [CGPoi
                 b = b + distance * rgb[i * 3 + 2]
             }
 
+            if distanceSum < 0.00001 {
+                distanceSum = 0.00001
+            }
+
+            var pixelB = b / distanceSum * 255.0
+            if pixelB > 255.0 {
+                pixelB = 255.0
+            }
+
+            var pixelG = g / distanceSum * 255.0
+            if pixelG > 255.0 {
+                pixelG = 255.0
+            }
+
+            var pixelR = r / distanceSum * 255.0
+            if pixelR > 255.0 {
+                pixelR = 255.0
+            }
+
             let pixelBytes = lineBytes.advanced(by: x * 4)
-            pixelBytes.advanced(by: 0).pointee = UInt8(b / distanceSum * 255.0)
-            pixelBytes.advanced(by: 1).pointee = UInt8(g / distanceSum * 255.0)
-            pixelBytes.advanced(by: 2).pointee = UInt8(r / distanceSum * 255.0)
+            pixelBytes.advanced(by: 0).pointee = UInt8(pixelB)
+            pixelBytes.advanced(by: 1).pointee = UInt8(pixelG)
+            pixelBytes.advanced(by: 2).pointee = UInt8(pixelR)
             pixelBytes.advanced(by: 3).pointee = 0xff
         }
     }
