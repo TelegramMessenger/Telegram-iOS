@@ -23,7 +23,7 @@ public func convertMessagesForEnqueue(_ messages: [Message]) -> [EnqueueMessage]
         if !m.media.isEmpty {
             media = .standalone(media: m.media[0])
         }
-        let enqMsg: EnqueueMessage = .message(text: m.text, attributes: m.attributes, mediaReference: media, replyToMessageId: nil, localGroupingKey: m.groupingKey)
+        let enqMsg: EnqueueMessage = .message(text: m.text, attributes: m.attributes, mediaReference: media, replyToMessageId: nil, localGroupingKey: m.groupingKey, correlationId: nil)
         messagesToC.append(enqMsg)
     }
     return messagesToC
@@ -36,7 +36,7 @@ public func convertMessagesForEnqueueDict(_ messages: [Message]) -> [MessageId:E
         if !m.media.isEmpty {
             media = .standalone(media: m.media[0])
         }
-        let enqMsg: EnqueueMessage = .message(text: m.text, attributes: m.attributes, mediaReference: media, replyToMessageId: nil, localGroupingKey: m.groupingKey)
+        let enqMsg: EnqueueMessage = .message(text: m.text, attributes: m.attributes, mediaReference: media, replyToMessageId: nil, localGroupingKey: m.groupingKey, correlationId: nil)
         messagesToC[m.id] = enqMsg
     }
     return messagesToC

@@ -2854,23 +2854,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
-        if let updatedTrButtonNode = updatedTrButtonNode {
-            if updatedTrButtonNode !== strongSelf.trButtonNode {
-                if let trButtonNode = strongSelf.trButtonNode {
-                    trButtonNode.removeFromSupernode()
-                }
-                strongSelf.trButtonNode = updatedTrButtonNode
-                strongSelf.insertSubnode(updatedTrButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
-                updatedTrButtonNode.addTarget(strongSelf, action: #selector(strongSelf.trButtonPressed), forControlEvents: .touchUpInside)
-            }
-            if let updatedTrButtonBackground = updatedTrButtonBackground {
-                strongSelf.trButtonNode?.setBackgroundImage(updatedTrButtonBackground, for: [.normal])
-            }
-        } else if let trButtonNode = strongSelf.trButtonNode {
-            trButtonNode.removeFromSupernode()
-            strongSelf.trButtonNode = nil
-        }
-        
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
@@ -2902,14 +2885,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
-            
-            if let trButtonNode = strongSelf.trButtonNode {
-                var shareButtonSize: CGFloat = 0.0
-                if hasShareButton {
-                    shareButtonSize = 29.0 + 4.0
-                }
-                trButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0 - shareButtonSize), size: CGSize(width: 29.0, height: 29.0))
-            }
             
             }
             

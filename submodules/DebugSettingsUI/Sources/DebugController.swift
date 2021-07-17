@@ -480,9 +480,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             strongController.dismiss()
                             
                             let messages = logs.map { (name, path) -> EnqueueMessage in
-                                let id = arc4random64()
+                                let id = Int64.random(in: Int64.min ... Int64.max)
                                 let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                             }
                             let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                         }

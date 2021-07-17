@@ -1071,7 +1071,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             ngContextItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuBan, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
-                                banDisposables.set((fetchChannelParticipant(account: context.account, peerId: peer.id, participantId: user.id)
+                                banDisposables.set((context.engine.peers.fetchChannelParticipant(peerId: peer.id, participantId: user.id)
                                     |> deliverOnMainQueue).start(next: { participant in
                                 controllerInteraction.presentController(channelBannedMemberController(context: context, peerId: peer.id, memberId: message.author!.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }), forKey: user.id)

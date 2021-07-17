@@ -10994,7 +10994,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
         if (cloud) {
             let _ = (enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: messages.map { message -> EnqueueMessage in
-                return .forward(source: message.id, grouping: .auto, attributes: [])
+                return .forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil)
             })
                 |> deliverOnMainQueue).start(next: { messageIds in
                     let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in

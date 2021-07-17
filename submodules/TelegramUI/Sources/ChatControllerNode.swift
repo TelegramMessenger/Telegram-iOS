@@ -2428,13 +2428,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 if let msg = msg {
                                     messages.append(convertMessagesForEnqueue([msg])[0])
                                 } else {
-                                    messages.append(.forward(source: id, grouping: .auto, attributes: []))
+                                    messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
                                 }
                             }
                         }
                     } else if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
-                            messages.append(.forward(source: id, grouping: .auto, attributes: []))
+                            messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
                         }
                     }
                     
