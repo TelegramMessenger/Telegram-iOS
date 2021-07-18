@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import AppBundle
 import SemanticStatusNode
+import AnimationUI
 
 private let labelFont = Font.regular(13.0)
 
@@ -30,6 +31,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         }
         
         enum Image {
+            case cameraOff
+            case cameraOn
             case camera
             case mute
             case flipCamera
@@ -37,10 +40,12 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case speaker
             case airpods
             case airpodsPro
+            case airpodsMax
             case headphones
             case accept
             case end
             case cancel
+            case share
         }
         
         var appearance: Appearance
@@ -56,20 +61,26 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         }
     }
     
+    private let wrapperNode: ASDisplayNode
     private let contentContainer: ASDisplayNode
     private let effectView: UIVisualEffectView
     private let contentBackgroundNode: ASImageNode
     private let contentNode: ASImageNode
+    private var animationNode: AnimationNode?
     private let overlayHighlightNode: ASImageNode
     private var statusNode: SemanticStatusNode?
     let textNode: ImmediateTextNode
     
-    private let largeButtonSize: CGFloat = 72.0
+    private let largeButtonSize: CGFloat
     
+    private var size: CGSize?
     private(set) var currentContent: Content?
     private(set) var currentText: String = ""
     
-    init() {
+    init(largeButtonSize: CGFloat = 72.0) {
+        self.largeButtonSize = largeButtonSize
+        
+        self.wrapperNode = ASDisplayNode()
         self.contentContainer = ASDisplayNode()
         
         self.effectView = UIVisualEffectView()
@@ -94,10 +105,11 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: nil)
         
-        self.addSubnode(self.contentContainer)
+        self.addSubnode(self.wrapperNode)
+        self.wrapperNode.addSubnode(self.contentContainer)
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
-        self.addSubnode(self.textNode)
+        self.wrapperNode.addSubnode(self.textNode)
         
         self.contentContainer.view.addSubview(self.effectView)
         self.contentContainer.addSubnode(self.contentBackgroundNode)
@@ -121,6 +133,11 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         }
     }
     
+    override func layout() {
+        super.layout()
+        self.wrapperNode.frame = self.bounds
+    }
+    
     func update(size: CGSize, content: Content, text: String, transition: ContainedViewLayoutTransition) {
         let scaleFactor = size.width / self.largeButtonSize
         
@@ -131,9 +148,10 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         self.contentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         self.overlayHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
-        if self.currentContent != content {
+        if self.currentContent != content || self.size != size {
             let previousContent = self.currentContent
             self.currentContent = content
+            self.size = size
             
             if content.hasProgress {
                 let statusFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
@@ -164,10 +182,39 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 self.effectView.isHidden = true
             }
             
-            transition.updateAlpha(node: self, alpha: content.isEnabled ? 1.0 : 0.4)
-            self.isUserInteractionEnabled = content.isEnabled
+            transition.updateAlpha(node: self.wrapperNode, alpha: content.isEnabled ? 1.0 : 0.4)
+            self.wrapperNode.isUserInteractionEnabled = content.isEnabled
             
             let contentBackgroundImage: UIImage? = nil
+            
+            var animationName: String?
+            switch content.image {
+                case .cameraOff:
+                    animationName = "anim_cameraoff"
+                case .cameraOn:
+                    animationName = "anim_cameraon"
+                default:
+                    break
+            }
+            
+            if let animationName = animationName {
+                let animationFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
+                if self.animationNode == nil {
+                    let animationNode = AnimationNode(animation: animationName, colors: nil, scale: 1.0)
+                    self.animationNode = animationNode
+                    self.contentContainer.insertSubnode(animationNode, aboveSubnode: self.contentNode)
+                }
+                if let animationNode = self.animationNode {
+                    animationNode.bounds = animationFrame
+                    animationNode.position = CGPoint(x: self.largeButtonSize / 2.0, y: self.largeButtonSize / 2.0)
+                    if previousContent == nil {
+                        animationNode.seekToEnd()
+                    } else if previousContent?.image != content.image {
+                        animationNode.setAnimation(name: animationName)
+                        animationNode.play()
+                    }
+                }
+            }
             
             let contentImage = generateImage(CGSize(width: self.largeButtonSize, height: self.largeButtonSize), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -209,6 +256,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 var image: UIImage?
                 
                 switch content.image {
+                case .cameraOff, .cameraOn:
+                    image = nil
                 case .camera:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCameraButton"), color: imageColor)
                 case .mute:
@@ -223,6 +272,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsButton"), color: imageColor)
                 case .airpodsPro:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsProButton"), color: imageColor)
+                case .airpodsMax:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsMaxButton"), color: imageColor)
                 case .headphones:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallHeadphonesButton"), color: imageColor)
                 case .accept:
@@ -246,6 +297,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         context.addLine(to: CGPoint(x: 2.0 + UIScreenPixel, y: 26.0 - UIScreenPixel))
                         context.strokePath()
                     })
+                case .share:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: imageColor)
                 }
             
                 if let image = image {
@@ -323,6 +376,9 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         
         transition.updatePosition(node: self.contentContainer, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateSublayerTransformScale(node: self.contentContainer, scale: scaleFactor)
+        if let animationNode = self.animationNode {
+            transition.updateTransformScale(node: animationNode, scale: isSmall ? 1.35 : 1.12)
+        }
         
         if self.currentText != text {
             self.textNode.attributedText = NSAttributedString(string: text, font: labelFont, textColor: .white)

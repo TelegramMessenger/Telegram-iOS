@@ -39,7 +39,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     private var statusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
-    private var videoFrame: CGRect?
+    private(set) var videoFrame: CGRect?
     
     private var item: ChatMessageBubbleContentItem?
     private var automaticDownload: Bool?
@@ -47,7 +47,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private var secretProgressIcon: UIImage?
     
     private let fetchDisposable = MetaDisposable()
-    
+
+    private var durationBackgroundNode: NavigationBackgroundNode?
     private var durationNode: ChatInstantVideoMessageDurationNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
@@ -81,6 +82,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
     }
+    
+    private var animating = false
     
     override init() {
         self.secretVideoPlaceholderBackground = ASImageNode()
@@ -129,7 +132,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
         let previousFile = self.media
         
         let currentItem = self.item
@@ -137,7 +140,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
-        return { item, width, displaySize, statusDisplayType, automaticDownload in
+        return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusDisplayType, automaticDownload in
             var secretVideoPlaceholderBackgroundImage: UIImage?
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
@@ -162,7 +165,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 secretVideoPlaceholderBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(theme.theme, wallpaper: !theme.wallpaper.isEmpty)
             }
             
-            let imageSize = displaySize
+            let imageSize = maximumDisplaySize
+            let imageScale = displaySize.width / maximumDisplaySize.width
             
             let updatedMessageId = item.message.id != currentItem?.message.id
             
@@ -293,20 +297,24 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
-            var contentSize = imageSize
+            var displayVideoFrame = videoFrame
+            displayVideoFrame.size.width *= imageScale
+            displayVideoFrame.size.height *= imageScale
+            
+            var contentSize = displayVideoFrame.size
             var dateAndStatusOverflow = false
-            if case .bubble = statusDisplayType, videoFrame.maxX + dateAndStatusSize.width > width {
+            if case .bubble = statusDisplayType, displayVideoFrame.maxX + dateAndStatusSize.width > width {
                 contentSize.height += dateAndStatusSize.height + 2.0
                 contentSize.width = max(contentSize.width, dateAndStatusSize.width)
                 dateAndStatusOverflow = true
             }
             
-            let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floor(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
+            let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floorToScreenPixels(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
             
             return (result, { [weak self] layoutData, transition in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    strongSelf.videoFrame = videoFrame
+                    strongSelf.videoFrame = displayVideoFrame
                     strongSelf.secretProgressIcon = secretProgressIcon
                     strongSelf.automaticDownload = automaticDownload
                     
@@ -326,10 +334,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let infoBackgroundImage = strongSelf.infoBackgroundNode.image, let muteImage = strongSelf.muteIconNode.image {
                         let infoWidth = muteImage.size.width
-                        let infoBackgroundFrame = CGRect(origin: CGPoint(x: floor(videoFrame.minX + (videoFrame.size.width - infoWidth) / 2.0), y: videoFrame.maxY - infoBackgroundImage.size.height - 8.0), size: CGSize(width: infoWidth, height: infoBackgroundImage.size.height))
-                        transition.updateFrame(node: strongSelf.infoBackgroundNode, frame: infoBackgroundFrame)
+                        let infoBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(displayVideoFrame.minX + (displayVideoFrame.size.width - infoWidth) / 2.0), y: displayVideoFrame.maxY - infoBackgroundImage.size.height - 8.0), size: CGSize(width: infoWidth, height: infoBackgroundImage.size.height))
+                        strongSelf.infoBackgroundNode.frame = infoBackgroundFrame
                         let muteIconFrame = CGRect(origin: CGPoint(x: infoBackgroundFrame.width - muteImage.size.width, y: 0.0), size: muteImage.size)
-                        transition.updateFrame(node: strongSelf.muteIconNode, frame: muteIconFrame)
+                        strongSelf.muteIconNode.frame = muteIconFrame
                     }
                     
                     if let updatedFile = updatedFile, updatedMedia {
@@ -339,47 +347,70 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.fetchedThumbnailDisposable.set(nil)
                         }
                     }
-                    
+                                        
                     dateAndStatusApply(false)
                     switch layoutData {
                         case let .unconstrained(width):
                             let dateAndStatusOrigin: CGPoint
                             if dateAndStatusOverflow {
-                                dateAndStatusOrigin = CGPoint(x: videoFrame.minX - 4.0, y: videoFrame.maxY + 2.0)
+                                dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
                             } else {
-                                dateAndStatusOrigin = CGPoint(x: min(floor(videoFrame.midX) + 55.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.height - dateAndStatusSize.height)
+                                dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
                             }
                             strongSelf.dateAndStatusNode.frame = CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize)
                         case let .constrained(_, right):
-                            strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, videoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
+                            strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
                     }
-                    
+                                        
                     var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
                     if let telegramFile = updatedFile {
                         if updatedMedia {
                             let durationTextColor: UIColor
-                            let durationFillColor: UIColor
+                            let durationBlurColor: (UIColor, Bool)?
                             switch statusDisplayType {
                                 case .free:
                                      let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                                     durationTextColor = serviceColor.primaryText
-                                    durationFillColor = serviceColor.fill
+                                    durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                                 case .bubble:
-                                    durationFillColor = .clear
+                                    durationBlurColor = nil
                                     if item.message.effectivelyIncoming(item.context.account.peerId) {
                                         durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                                     } else {
                                         durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
                                     }
                             }
+
+                            if let durationBlurColor = durationBlurColor {
+                                if let durationBackgroundNode = strongSelf.durationBackgroundNode {
+                                    durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1, transition: .immediate)
+                                } else {
+                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor.0, enableBlur: durationBlurColor.1)
+                                    strongSelf.durationBackgroundNode = durationBackgroundNode
+                                    strongSelf.addSubnode(durationBackgroundNode)
+                                }
+                            } else if let durationBackgroundNode = strongSelf.durationBackgroundNode {
+                                strongSelf.durationBackgroundNode = nil
+                                durationBackgroundNode.removeFromSupernode()
+                            }
+
                             let durationNode: ChatInstantVideoMessageDurationNode
                             if let current = strongSelf.durationNode {
                                 durationNode = current
-                                current.updateTheme(textColor: durationTextColor, fillColor: durationFillColor)
+                                current.updateTheme(textColor: durationTextColor)
                             } else {
-                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationTextColor, fillColor: durationFillColor)
+                                durationNode = ChatInstantVideoMessageDurationNode(textColor: durationTextColor)
                                 strongSelf.durationNode = durationNode
                                 strongSelf.addSubnode(durationNode)
+                                durationNode.sizeUpdated = { [weak strongSelf] size in
+                                    guard let strongSelf = strongSelf else {
+                                        return
+                                    }
+                                    if let durationBackgroundNode = strongSelf.durationBackgroundNode, let durationNode = strongSelf.durationNode {
+                                        durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
+                                        durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                                    }
+                                }
                             }
                             durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
                             
@@ -447,17 +478,24 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let durationNode = strongSelf.durationNode {
-                        durationNode.frame = CGRect(origin: CGPoint(x: videoFrame.midX - 56.0, y: videoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
+                        durationNode.frame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
                         durationNode.isSeen = !notConsumed
+                        let size = durationNode.size
+                        if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
+                            durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
+                            durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+                        }
                     }
                     
                     if let videoNode = strongSelf.videoNode {
-                        videoNode.frame = videoFrame
+                        videoNode.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+                        videoNode.transform = CATransform3DMakeScale(imageScale, imageScale, 1.0)
+                        videoNode.position = displayVideoFrame.center
                         videoNode.updateLayout(size: arguments.boundingSize, transition: .immediate)
                     }
-                    strongSelf.secretVideoPlaceholderBackground.frame = videoFrame
+                    strongSelf.secretVideoPlaceholderBackground.frame = displayVideoFrame
                     
-                    let placeholderFrame = videoFrame.insetBy(dx: 2.0, dy: 2.0)
+                    let placeholderFrame = displayVideoFrame.insetBy(dx: 2.0, dy: 2.0)
                     strongSelf.secretVideoPlaceholder.frame = placeholderFrame
                     let makeSecretPlaceholderLayout = strongSelf.secretVideoPlaceholder.asyncLayout()
                     let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderFrame.size.width / 2.0), imageSize: placeholderFrame.size, boundingSize: placeholderFrame.size, intrinsicInsets: UIEdgeInsets())
@@ -570,7 +608,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if self.statusNode == nil {
                 let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor)
                 self.isUserInteractionEnabled = false
-                statusNode.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floor((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floor((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+                statusNode.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
                 self.statusNode = statusNode
                 self.addSubnode(statusNode)
             }
@@ -642,7 +680,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if let current = self.playbackStatusNode {
                 playbackStatusNode = current
             } else {
-                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.8))
+                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6))
                 self.addSubnode(playbackStatusNode)
                 self.playbackStatusNode = playbackStatusNode
             }
@@ -741,7 +779,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             if item.message.flags.isSending {
                                 let messageId = item.message.id
                                 let _ = item.context.account.postbox.transaction({ transaction -> Void in
-                                    deleteMessages(transaction: transaction, mediaBox: item.context.account.postbox.mediaBox, ids: [messageId])
+                                    item.context.engine.messages.deleteMessages(transaction: transaction, ids: [messageId])
                                 }).start()
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
@@ -771,16 +809,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         return nil
     }
 
-    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode) {
+    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode) {
         let makeLayout = node?.asyncLayout()
-        return { item, width, displaySize, statusType, automaticDownload in
+        return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusType, automaticDownload in
             var createdNode: ChatMessageInteractiveInstantVideoNode?
             let sizeAndApplyLayout: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void)
             if let makeLayout = makeLayout {
-                sizeAndApplyLayout = makeLayout(item, width, displaySize, statusType, automaticDownload)
+                sizeAndApplyLayout = makeLayout(item, width, displaySize, maximumDisplaySize, scaleProgress, statusType, automaticDownload)
             } else {
                 let node = ChatMessageInteractiveInstantVideoNode()
-                sizeAndApplyLayout = node.asyncLayout()(item, width, displaySize, statusType, automaticDownload)
+                sizeAndApplyLayout = node.asyncLayout()(item, width, displaySize, maximumDisplaySize, scaleProgress, statusType, automaticDownload)
                 createdNode = node
             }
             return (sizeAndApplyLayout.0, { [weak node] layoutData, transition in
@@ -830,6 +868,29 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }, false, true, isUnconsumed, nil)
         } else {
             return nil
+        }
+    }
+
+    func animateFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
+        guard let videoFrame = self.videoFrame else {
+            return
+        }
+
+        let scale = videoFrame.height / snapshotView.frame.height
+        snapshotView.transform = CGAffineTransform(scaleX: scale, y: scale)
+        snapshotView.center = CGPoint(x: videoFrame.midX, y: videoFrame.midY)
+
+        self.view.addSubview(snapshotView)
+
+        transition.horizontal.updateAlpha(layer: snapshotView.layer, alpha: 0.0, completion: { [weak snapshotView] _ in
+            snapshotView?.removeFromSuperview()
+        })
+
+        transition.horizontal.animateTransformScale(node: self, from: 1.0 / scale)
+
+        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
+        if let durationNode = self.durationNode {
+            durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
         }
     }
 }

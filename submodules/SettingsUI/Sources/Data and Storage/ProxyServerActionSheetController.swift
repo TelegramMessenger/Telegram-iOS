@@ -12,6 +12,7 @@ import ActivityIndicator
 import OverlayStatusController
 import AccountContext
 import PresentationDataUtils
+import UrlEscaping
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -131,7 +132,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         let serverTextNode = ImmediateTextNode()
         serverTextNode.isUserInteractionEnabled = false
         serverTextNode.displaysAsynchronously = false
-        serverTextNode.attributedText = NSAttributedString(string: server.host, font: textFont, textColor: theme.primaryTextColor)
+        serverTextNode.attributedText = NSAttributedString(string: urlEncodedStringFromString(server.host), font: textFont, textColor: theme.primaryTextColor)
         fieldNodes.append((serverTitleNode, serverTextNode))
         
         let portTitleNode = ImmediateTextNode()

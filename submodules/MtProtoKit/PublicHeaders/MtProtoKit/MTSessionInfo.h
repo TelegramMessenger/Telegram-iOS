@@ -19,6 +19,8 @@
 
 - (bool)messageProcessed:(int64_t)messageId;
 - (void)setMessageProcessed:(int64_t)messageId;
+- (bool)wasMessageSentOnce:(int64_t)messageId;
+- (void)setMessageWasSentOnce:(int64_t)messageId;
 - (void)scheduleMessageConfirmation:(int64_t)messageId size:(NSInteger)size;
 - (NSArray *)scheduledMessageConfirmations;
 - (bool)scheduledMessageConfirmationsExceedSize:(NSInteger)sizeLimit orCount:(NSUInteger)countLimit;

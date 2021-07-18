@@ -39,8 +39,9 @@ public final class PeerSelectionControllerParams {
     public let attemptSelection: ((Peer) -> Void)?
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
+    public let multipleSelection: Bool
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filter = filter
         self.hasChatListSelector = hasChatListSelector
@@ -50,11 +51,13 @@ public final class PeerSelectionControllerParams {
         self.attemptSelection = attemptSelection
         self.createNewGroup = createNewGroup
         self.pretendPresentedInModal = pretendPresentedInModal
+        self.multipleSelection = multipleSelection
     }
 }
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

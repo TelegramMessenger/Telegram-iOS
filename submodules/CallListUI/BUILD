@@ -26,6 +26,8 @@ swift_library(
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
         "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/TelegramBaseController:TelegramBaseController",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

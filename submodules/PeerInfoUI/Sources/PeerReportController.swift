@@ -33,7 +33,7 @@ public enum PeerReportOption {
     case other
 }
 
-public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextController?, backAction: ((ContextController) -> Void)? = nil, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], passthrough: Bool = false, completion: @escaping (ReportReason?, Bool) -> Void) {
+public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)? = nil, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], passthrough: Bool = false, completion: @escaping (ReportReason?, Bool) -> Void) {
     if let contextController = contextController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var items: [ContextMenuItem] = []
@@ -107,19 +107,19 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                         } else {
                             switch subject {
                                 case let .peer(peerId):
-                                    let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
                                     })
                                 case let .messages(messageIds):
-                                    let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
                                     })
                                 case let .profilePhoto(peerId, photoId):
-                                    let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: "")
+                                    let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
                                         completion(nil, false)
@@ -163,7 +163,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
         }
         contextController.setItems(.single(items))
     } else {
-        contextController?.dismiss()
+        contextController?.dismiss(completion: nil)
         parent.view.endEditing(true)
         parent.present(peerReportOptionsController(context: context, subject: subject, passthrough: passthrough, present: { [weak parent] c, a in
             parent?.present(c, in: .window(.root), with: a)
@@ -233,19 +233,19 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     } else {
                         switch subject {
                             case let .peer(peerId):
-                                let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)
                                 })
                             case let .messages(messageIds):
-                                let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)
                                 })
                             case let .profilePhoto(peerId, photoId):
-                                let _ = (reportPeerPhoto(account: context.account, peerId: peerId, reason: reportReason, message: message)
+                                let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()
                                     completion(nil, true)

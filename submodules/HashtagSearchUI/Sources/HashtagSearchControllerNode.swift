@@ -10,12 +10,14 @@ import ChatListUI
 import SegmentedControlNode
 
 final class HashtagSearchControllerNode: ASDisplayNode {
-    private let toolbarBackgroundNode: ASDisplayNode
+    private let navigationBar: NavigationBar?
+
+    private let toolbarBackgroundNode: NavigationBackgroundNode
     private let toolbarSeparatorNode: ASDisplayNode
     private let segmentedControlNode: SegmentedControlNode
     let listNode: ListView
     
-    var chatController: ChatController?
+    let chatController: ChatController?
     
     private let context: AccountContext
     private let query: String
@@ -24,9 +26,9 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    var navigationBar: NavigationBar?
-    
-    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationController: NavigationController?) {
+    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
+        self.navigationBar = navigationBar
+
         self.context = context
         self.query = query
         self.listNode = ListView()
@@ -34,8 +36,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             return strings.VoiceOver_ScrollStatus(row, count).0
         }
         
-        self.toolbarBackgroundNode = ASDisplayNode()
-        self.toolbarBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.toolbarBackgroundNode = NavigationBackgroundNode(color: theme.rootController.navigationBar.blurredBackgroundColor)
         
         self.toolbarSeparatorNode = ASDisplayNode()
         self.toolbarSeparatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
@@ -102,13 +103,13 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.containerLayout = (layout, navigationBarHeight)
         
-        if self.chatController != nil && self.toolbarBackgroundNode.supernode == nil {
-            self.addSubnode(self.toolbarBackgroundNode)
-            self.addSubnode(self.toolbarSeparatorNode)
-            self.addSubnode(self.segmentedControlNode)
+        if self.chatController != nil && self.toolbarSeparatorNode.supernode == nil {
+            //self.addSubnode(self.toolbarBackgroundNode)
+            self.navigationBar?.additionalContentNode.addSubnode(self.toolbarSeparatorNode)
+            self.navigationBar?.additionalContentNode.addSubnode(self.segmentedControlNode)
         }
         
         var insets = layout.insets(options: [.input])
@@ -118,10 +119,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
         
         transition.updateFrame(node: self.toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: toolbarHeight)))
-        transition.updateFrame(node: self.toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY + toolbarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        self.toolbarBackgroundNode.update(size: self.toolbarBackgroundNode.bounds.size, transition: transition)
+        transition.updateFrame(node: self.toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: layout.size.width - 14.0 * 2.0), transition: transition)
-        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
+        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + 2.0 + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
         
         if let chatController = self.chatController {
             insets.top += toolbarHeight - 4.0
@@ -151,6 +153,12 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+        }
+
+        if self.chatController != nil {
+            return toolbarHeight
+        } else {
+            return 0.0
         }
     }
 }

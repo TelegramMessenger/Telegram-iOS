@@ -92,7 +92,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     let rootPath = rootPathForBasePath(appGroupUrl.path)
     
-    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
+    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
     
     let logsPath = rootPath + "/widget-logs"
     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -130,7 +130,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
     for (accountId, items) in itemsByAccount {
-        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: true, transaction: { postbox, transaction -> [ParsedPeer] in
+        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [ParsedPeer] in
             guard let state = transaction.getState() as? AuthorizedAccountState else {
                 return []
             }

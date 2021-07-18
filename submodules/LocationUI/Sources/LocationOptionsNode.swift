@@ -19,7 +19,7 @@ final class LocationOptionsNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
@@ -47,7 +47,7 @@ final class LocationOptionsNode: ASDisplayNode {
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.presentationData.theme))
     }

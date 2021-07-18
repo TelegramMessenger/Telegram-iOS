@@ -6,6 +6,7 @@ import Display
 public final class GalleryFooterNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     
+    private var currentThumbnailPanelHeight: CGFloat?
     private var currentFooterContentNode: GalleryFooterContentNode?
     private var currentOverlayContentNode: GalleryOverlayContentNode?
     private var currentLayout: (ContainerViewLayout, CGFloat, Bool)?
@@ -36,11 +37,16 @@ public final class GalleryFooterNode: ASDisplayNode {
         let cleanInsets = layout.insets(options: [])
         
         var dismissedCurrentFooterContentNode: GalleryFooterContentNode?
+        var dismissedThumbnailPanelHeight: CGFloat?
         if self.currentFooterContentNode !== footerContentNode {
             if let currentFooterContentNode = self.currentFooterContentNode {
                 currentFooterContentNode.requestLayout = nil
                 dismissedCurrentFooterContentNode = currentFooterContentNode
             }
+            if let currentThumbnailPanelHeight = self.currentThumbnailPanelHeight {
+                dismissedThumbnailPanelHeight = currentThumbnailPanelHeight
+            }
+            self.currentThumbnailPanelHeight = thumbnailPanelHeight
             self.currentFooterContentNode = footerContentNode
             if let footerContentNode = footerContentNode {
                 footerContentNode.setVisibilityAlpha(self.visibilityAlpha, animated: transition.isAnimated)
@@ -54,22 +60,25 @@ public final class GalleryFooterNode: ASDisplayNode {
             }
         }
         
+        var animateOverlayIn = false
         var dismissedCurrentOverlayContentNode: GalleryOverlayContentNode?
         if self.currentOverlayContentNode !== overlayContentNode {
             if let currentOverlayContentNode = self.currentOverlayContentNode {
                 dismissedCurrentOverlayContentNode = currentOverlayContentNode
             }
             self.currentOverlayContentNode = overlayContentNode
+            animateOverlayIn = true
             if let overlayContentNode = overlayContentNode {
                 overlayContentNode.setVisibilityAlpha(self.visibilityAlpha)
                 self.addSubnode(overlayContentNode)
             }
         }
         
+        let effectiveThumbnailPanelHeight = self.currentThumbnailPanelHeight ?? thumbnailPanelHeight
         var backgroundHeight: CGFloat = 0.0
-        let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : (thumbnailPanelHeight > 0.0 ? 106.0 : 54.0)) : 0.0
+        let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : (effectiveThumbnailPanelHeight > 0.0 ? 106.0 : 54.0)) : 0.0
         if let footerContentNode = self.currentFooterContentNode {
-            backgroundHeight = footerContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, contentInset: thumbnailPanelHeight, transition: transition)
+            backgroundHeight = footerContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, contentInset: effectiveThumbnailPanelHeight, transition: transition)
             transition.updateFrame(node: footerContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight + verticalOffset), size: CGSize(width: layout.size.width, height: backgroundHeight)))
             if let dismissedCurrentFooterContentNode = dismissedCurrentFooterContentNode {
                 let contentTransition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -96,7 +105,9 @@ public final class GalleryFooterNode: ASDisplayNode {
             overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: backgroundHeight, transition: transition)
             transition.updateFrame(node: overlayContentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
-            overlayContentNode.animateIn(previousContentNode: dismissedCurrentOverlayContentNode, transition: contentTransition)
+            if animateOverlayIn {
+                overlayContentNode.animateIn(previousContentNode: dismissedCurrentOverlayContentNode, transition: contentTransition)
+            }
             if let dismissedCurrentOverlayContentNode = dismissedCurrentOverlayContentNode {
                 dismissedCurrentOverlayContentNode.animateOut(nextContentNode: overlayContentNode, transition: contentTransition, completion: { [weak self, weak dismissedCurrentOverlayContentNode] in
                     if let strongSelf = self, let dismissedCurrentOverlayContentNode = dismissedCurrentOverlayContentNode, dismissedCurrentOverlayContentNode !== strongSelf.currentOverlayContentNode {

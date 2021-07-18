@@ -84,6 +84,16 @@ public struct ListViewItemLayoutParams {
 }
 
 open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
+    public struct HeaderId: Hashable {
+        public var space: AnyHashable
+        public var id: AnyHashable
+
+        public init(space: AnyHashable, id: AnyHashable) {
+            self.space = space
+            self.id = id
+        }
+    }
+
     let rotated: Bool
     final var index: Int?
     
@@ -116,6 +126,9 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
+
+    final var tempHeaderSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
+    final var headerSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
     
     final let wantsScrollDynamics: Bool
     
@@ -221,6 +234,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     var apparentHeight: CGFloat = 0.0
+    public private(set) var apparentHeightTransition: (CGFloat, CGFloat)?
     private var _bounds: CGRect = CGRect()
     private var _position: CGPoint = CGPoint()
     
@@ -465,6 +479,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
+        self.apparentHeightTransition = (self.apparentHeight, value)
         let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
@@ -533,7 +548,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return false
     }
     
-    open func header() -> ListViewItemHeader? {
+    open func headers() -> [ListViewItemHeader]? {
         return nil
     }
     
@@ -547,7 +562,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
         self.frame = frame
-        self.updateAbsoluteRect(frame, within: containerSize)
+        if frame.maxY < 0.0 || frame.minY > containerSize.height {
+        } else {
+            self.updateAbsoluteRect(frame, within: containerSize)
+        }
         if let extractedBackgroundNode = self.extractedBackgroundNode {
             extractedBackgroundNode.frame = frame.offsetBy(dx: 0.0, dy: -self.insets.top)
         }
@@ -556,10 +574,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
     }
     
-    open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    open func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let extractedBackgroundNode = self.extractedBackgroundNode {
             let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-            transition.animatePositionAdditive(node: extractedBackgroundNode, offset: CGPoint(x: 0.0, y: -value))
+            transition.animatePositionAdditive(node: extractedBackgroundNode, offset: CGPoint(x: -value.x, y: -value.y))
         }
     }
     

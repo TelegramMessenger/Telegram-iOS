@@ -196,6 +196,20 @@
         {
             if (request.errorContext != nil)
             {
+                if (request.errorContext.waitingForRequestToComplete != nil) {
+                    bool foundDependency = false;
+                    for (MTRequest *anotherRequest in _requests) {
+                        if (request.errorContext.waitingForRequestToComplete == anotherRequest.internalId) {
+                            foundDependency = true;
+                            break;
+                        }
+                    }
+
+                    if (!foundDependency) {
+                        needTransaction = true;
+                    }
+                }
+
                 if (request.requestContext == nil)
                 {
                     if (request.errorContext.minimalExecuteTime > currentTime + DBL_EPSILON)
@@ -407,10 +421,23 @@
         
         if (request.errorContext != nil)
         {
-            if (request.errorContext.minimalExecuteTime > currentTime)
+            if (request.errorContext.minimalExecuteTime > currentTime) {
                 continue;
-            if (request.errorContext.waitingForTokenExport)
+            }
+            if (request.errorContext.waitingForTokenExport) {
                 continue;
+            }
+
+            bool foundDependency = false;
+            for (MTRequest *anotherRequest in _requests) {
+                if (request.errorContext.waitingForRequestToComplete == anotherRequest.internalId) {
+                    foundDependency = true;
+                    break;
+                }
+            }
+            if (foundDependency) {
+                continue;
+            }
         }
         
         if (request.requestContext == nil || (!request.requestContext.waitingForMessageId && !request.requestContext.delivered && request.requestContext.transactionId == nil))
@@ -689,6 +716,28 @@
                                 restartRequest = true;
                                 request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + 2.0);
                             }
+                        }
+                        else if (
+                            (
+                                rpcError.errorCode == 400 &&
+                                [rpcError.errorDescription isEqualToString:@"MSG_WAIT_TIMEOUT"]
+                            ) ||
+                            (
+                                rpcError.errorCode == 500 &&
+                                [rpcError.errorDescription isEqualToString:@"MSG_WAIT_FAILED"]
+                            )
+                        ) {
+                            if (request.errorContext == nil) {
+                                request.errorContext = [[MTRequestErrorContext alloc] init];
+                            }
+
+                            for (MTRequest *anotherRequest in _requests) {
+                                if (request.shouldDependOnRequest != nil && request.shouldDependOnRequest(anotherRequest)) {
+                                    request.errorContext.waitingForRequestToComplete = anotherRequest.internalId;
+                                    break;
+                                }
+                            }
+                            restartRequest = true;
                         }
                         else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
                         {

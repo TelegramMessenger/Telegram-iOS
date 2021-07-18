@@ -221,7 +221,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonNode)
@@ -233,7 +233,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
     
     func updatePresentationData(_ presentationData: ItemListPresentationData) {
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-        self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
     }
     
     func updateLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -384,7 +384,7 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     
     let peersSignal: Signal<[InactiveChannel]?, NoError> = .single(nil)
     |> then(
-        inactiveChannelList(network: context.account.network)
+        context.engine.peers.inactiveChannelList()
         |> map { peers -> [InactiveChannel]? in
             return peers.sorted(by: { lhs, rhs in
                 return lhs.lastActivityDate < rhs.lastActivityDate
@@ -455,21 +455,21 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
         let state = stateValue.with { $0 }
         let _ = (peersPromise.get()
         |> take(1)
-        |> mapToSignal { peers in
+        |> mapToSignal { peers -> Signal<Never, NoError> in
+            let peers = peers ?? []
             return context.account.postbox.transaction { transaction -> Void in
-                if let peers = peers {
-                    for peer in peers {
-                        if state.selectedPeers.contains(peer.peer.id) {
-                            if transaction.getPeer(peer.peer.id) == nil {
-                                updatePeers(transaction: transaction, peers: [peer.peer], update: { _, updated in
-                                    return updated
-                                })
-                            }
-                            removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peer.peer.id, reportChatSpam: false, deleteGloballyIfPossible: false)
+                for peer in peers {
+                    if state.selectedPeers.contains(peer.peer.id) {
+                        if transaction.getPeer(peer.peer.id) == nil {
+                            updatePeers(transaction: transaction, peers: [peer.peer], update: { _, updated in
+                                return updated
+                            })
                         }
                     }
                 }
             }
+            |> ignoreValues
+            |> then(context.engine.peers.removePeerChats(peerIds: Array(peers.map(\.peer.id))))
         }
         |> deliverOnMainQueue).start(completed: {
             completed(true)

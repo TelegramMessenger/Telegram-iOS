@@ -20,6 +20,7 @@ swift_library(
         "//submodules/ShareController:ShareController",
         "//submodules/SelectablePeerNode:SelectablePeerNode",
         "//submodules/PeerInfoUI:PeerInfoUI",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

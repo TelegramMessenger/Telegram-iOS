@@ -16,9 +16,9 @@ import LocationResources
 import ImageBlur
 import TelegramAnimatedStickerNode
 import WallpaperResources
-import Svg
 import GZip
 import TelegramUniversalVideoContent
+import GradientBackground
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -67,22 +67,6 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchCachedBlurredWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
-    } else if let representation = representation as? CachedPatternWallpaperMaskRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperMaskRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
-    } else if let representation = representation as? CachedPatternWallpaperRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
-        } 
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -167,8 +151,14 @@ private func videoFirstFrameData(account: Account, resource: MediaResource, chun
 private func fetchCachedStickerAJpegRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedStickerAJpegRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = WebP.convert(fromWebP: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+            var image: UIImage?
+            if let webpImage = WebP.convert(fromWebP: data) {
+                image = webpImage
+            } else if let pngImage = UIImage(data: data) {
+                image = pngImage
+            }
+            if let image = image {
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 let colorData = NSMutableData()
@@ -245,7 +235,7 @@ private func fetchCachedScaledImageRepresentation(resource: MediaResource, resou
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
 
                 let size: CGSize
@@ -318,7 +308,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 
                 let fullSizeImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil)
                 
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -352,7 +342,7 @@ private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, re
             return Signal({ subscriber in
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrame.path), options: [.mappedIfSafe]) {
                     if let image = UIImage(data: data) {
-                        let path = NSTemporaryDirectory() + "\(arc4random64())"
+                        let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                         let url = URL(fileURLWithPath: path)
                         
                         let size = representation.size
@@ -387,7 +377,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 45.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -403,173 +393,6 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
                         subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
-                }
-            }
-        }
-        return EmptyDisposable
-    }) |> runOn(Queue.concurrentDefaultQueue())
-}
-
-private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return Signal({ subscriber in
-        if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            let path = NSTemporaryDirectory() + "\(arc4random64())"
-            let url = URL(fileURLWithPath: path)
-            
-            if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
-                data = unzippedData
-            }
-            
-            if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                let size = representation.size ?? CGSize(width: 1440.0, height: 2960.0)
-                
-                if let image = drawSvgImage(data, size, .black, .white) {
-                    if let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                        CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
-                        
-                        let colorQuality: Float = 0.87
-                        
-                        let options = NSMutableDictionary()
-                        options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                        
-                        CGImageDestinationAddImage(alphaDestination, image.cgImage!, options as CFDictionary)
-                        if CGImageDestinationFinalize(alphaDestination) {
-                            subscriber.putNext(.temporaryPath(path))
-                            subscriber.putCompletion()
-                        }
-                    }
-                }
-            } else if let image = UIImage(data: data) {
-                let size = representation.size.flatMap { image.size.aspectFitted($0) } ?? CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-                
-                let alphaImage = generateImage(size, contextGenerator: { size, context in
-                    context.setFillColor(UIColor.black.cgColor)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: image.cgImage!)
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                }, scale: 1.0)
-                   
-                if let alphaImage = alphaImage, let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
-                    
-                    let colorQuality: Float = 0.87
-                    
-                    let options = NSMutableDictionary()
-                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                    
-                    CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, options as CFDictionary)
-                    if CGImageDestinationFinalize(alphaDestination) {
-                        subscriber.putNext(.temporaryPath(path))
-                        subscriber.putCompletion()
-                    }
-                }
-            }
-        }
-        return EmptyDisposable
-    }) |> runOn(Queue.concurrentDefaultQueue())
-}
-
-private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return Signal({ subscriber in
-        if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
-                data = unzippedData
-            }
-            
-            let path = NSTemporaryDirectory() + "\(arc4random64())"
-            let url = URL(fileURLWithPath: path)
-            
-            var colors: [UIColor] = []
-            if let bottomColor = representation.bottomColor {
-                colors.append(UIColor(rgb: bottomColor))
-            }
-            colors.append(UIColor(rgb: representation.color))
-            
-            let intensity = CGFloat(representation.intensity) / 100.0
-            
-            var size: CGSize?
-            var maskImage: UIImage?
-            if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                let defaultSize = CGSize(width: 1440.0, height: 2960.0)
-                size = defaultSize
-                if let image = drawSvgImage(data, defaultSize, .black, .white) {
-                    maskImage = image
-                }
-            } else if let image = UIImage(data: data) {
-                size = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-                maskImage = image
-            }
-            
-            var colorImage: UIImage?
-            if let size = size {
-                colorImage = generateImage(size, contextGenerator: { size, c in
-                    let rect = CGRect(origin: CGPoint(), size: size)
-                    c.setBlendMode(.copy)
-                    
-                    if colors.count == 1, let color = colors.first {
-                        c.setFillColor(color.cgColor)
-                        c.fill(rect)
-                    } else {
-                        let gradientColors = colors.map { $0.cgColor } as CFArray
-                        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-                        
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< colors.count {
-                            locations.append(delta * CGFloat(i))
-                        }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                        
-                        c.saveGState()
-                        c.translateBy(x: rect.width / 2.0, y: rect.height / 2.0)
-                        c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
-                        c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
-                        
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                        c.restoreGState()
-                    }
-                    
-                    c.setBlendMode(.normal)
-                    if let cgImage = maskImage?.cgImage {
-                        c.clip(to: rect, mask: cgImage)
-                    }
-
-                    if colors.count == 1, let color = colors.first {
-                        c.setFillColor(patternColor(for: color, intensity: intensity).cgColor)
-                        c.fill(rect)
-                    } else {
-                        let gradientColors = colors.map { patternColor(for: $0, intensity: intensity).cgColor } as CFArray
-                        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-                        
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< colors.count {
-                            locations.append(delta * CGFloat(i))
-                        }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                        
-                        c.translateBy(x: rect.width / 2.0, y: rect.height / 2.0)
-                        c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
-                        c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
-                        
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                    }
-                }, scale: 1.0)
-            }
-            
-            if let colorImage = colorImage, let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
-                
-                let colorQuality: Float = 0.9
-                
-                let options = NSMutableDictionary()
-                options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                
-                CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
-                if CGImageDestinationFinalize(colorDestination) {
-                    subscriber.putNext(.temporaryPath(path))
-                    subscriber.putCompletion()
                 }
             }
         }
@@ -594,22 +417,6 @@ public func fetchCachedSharedResourceRepresentation(accountManager: AccountManag
             }
             return fetchCachedBlurredWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
-    } else if let representation = representation as? CachedPatternWallpaperMaskRepresentation {
-        return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperMaskRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
-    } else if let representation = representation as? CachedPatternWallpaperRepresentation {
-        return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if !data.complete {
-                return .complete()
-            }
-            return fetchCachedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
-        }
     } else {
         return .never()
     }
@@ -619,7 +426,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 45.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
@@ -652,7 +459,7 @@ private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: M
         switch result {
             case let .artworkData(data):
                 if let image = UIImage(data: data) {
-                    let path = NSTemporaryDirectory() + "\(arc4random64())"
+                    let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                     let url = URL(fileURLWithPath: path)
                     
                     var size = image.size
@@ -694,7 +501,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         return .never()
     }
     return Signal({ subscriber in
-        let path = NSTemporaryDirectory() + "\(arc4random64())"
+        let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
         let url = URL(fileURLWithPath: path)
         
         let nsString = (resource.emoji as NSString)
@@ -803,7 +610,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
     |> mapToSignal { data in
         return Signal({ subscriber in
             if let data = data, let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
                 let size = CGSize(width: 160.0, height: 160.0)

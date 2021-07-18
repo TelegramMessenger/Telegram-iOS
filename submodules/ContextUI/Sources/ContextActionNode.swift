@@ -17,7 +17,7 @@ public protocol ContextActionNodeProtocol: ASDisplayNode {
 
 final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     private let action: ContextMenuActionItem
-    private let getController: () -> ContextController?
+    private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
     
     private let backgroundNode: ASDisplayNode
@@ -33,7 +33,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     
     private var pointerInteraction: PointerInteraction?
     
-    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.action = action
         self.getController = getController
         self.actionSelected = actionSelected

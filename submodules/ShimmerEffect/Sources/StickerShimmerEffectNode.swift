@@ -2,124 +2,6 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private final class ShimmerEffectForegroundNode: ASDisplayNode {
-    private var currentBackgroundColor: UIColor?
-    private var currentForegroundColor: UIColor?
-    private let imageNodeContainer: ASDisplayNode
-    private let imageNode: ASImageNode
-    
-    private var absoluteLocation: (CGRect, CGSize)?
-    private var isCurrentlyInHierarchy = false
-    private var shouldBeAnimating = false
-    
-    override init() {
-        self.imageNodeContainer = ASDisplayNode()
-        self.imageNodeContainer.isLayerBacked = true
-        
-        self.imageNode = ASImageNode()
-        self.imageNode.isLayerBacked = true
-        self.imageNode.displaysAsynchronously = false
-        self.imageNode.displayWithoutProcessing = true
-        self.imageNode.contentMode = .scaleToFill
-        
-        super.init()
-        
-        self.isLayerBacked = true
-        self.clipsToBounds = true
-        
-        self.imageNodeContainer.addSubnode(self.imageNode)
-        self.addSubnode(self.imageNodeContainer)
-    }
-    
-    override func didEnterHierarchy() {
-        super.didEnterHierarchy()
-        
-        self.isCurrentlyInHierarchy = true
-        self.updateAnimation()
-    }
-    
-    override func didExitHierarchy() {
-        super.didExitHierarchy()
-        
-        self.isCurrentlyInHierarchy = false
-        self.updateAnimation()
-    }
-    
-    func update(backgroundColor: UIColor, foregroundColor: UIColor) {
-        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
-            return
-        }
-        self.currentBackgroundColor = backgroundColor
-        self.currentForegroundColor = foregroundColor
-        
-        let image = generateImage(CGSize(width: 320.0, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(backgroundColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: size))
-            
-            context.clip(to: CGRect(origin: CGPoint(), size: size))
-            
-            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
-            let peakColor = foregroundColor.cgColor
-            
-            var locations: [CGFloat] = [0.0, 0.5, 1.0]
-            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
-            
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
-        })
-        self.imageNode.image = image
-    }
-    
-    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-        if let absoluteLocation = self.absoluteLocation, absoluteLocation.0 == rect && absoluteLocation.1 == containerSize {
-            return
-        }
-        let sizeUpdated = self.absoluteLocation?.1 != containerSize
-        let frameUpdated = self.absoluteLocation?.0 != rect
-        self.absoluteLocation = (rect, containerSize)
-        
-        if sizeUpdated {
-            if self.shouldBeAnimating {
-                self.imageNode.layer.removeAnimation(forKey: "shimmer")
-                self.addImageAnimation()
-            } else {
-                self.updateAnimation()
-            }
-        }
-        
-        if frameUpdated {
-            self.imageNodeContainer.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
-        }
-    }
-    
-    private func updateAnimation() {
-        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil
-        if shouldBeAnimating != self.shouldBeAnimating {
-            self.shouldBeAnimating = shouldBeAnimating
-            if shouldBeAnimating {
-                self.addImageAnimation()
-            } else {
-                self.imageNode.layer.removeAnimation(forKey: "shimmer")
-            }
-        }
-    }
-    
-    private func addImageAnimation() {
-        guard let containerSize = self.absoluteLocation?.1 else {
-            return
-        }
-        let gradientHeight: CGFloat = 320.0
-        self.imageNode.frame = CGRect(origin: CGPoint(x: -gradientHeight, y: 0.0), size: CGSize(width: gradientHeight, height: containerSize.height))
-        let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.width + gradientHeight) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
-        animation.repeatCount = Float.infinity
-        animation.beginTime = 1.0
-        self.imageNode.layer.add(animation, forKey: "shimmer")
-    }
-}
-
 private let decodingMap: [String] = ["A", "A", "C", "A", "A", "A", "A", "H", "A", "A", "A", "L", "M", "A", "A", "A", "Q", "A", "S", "T", "A", "V", "A", "A", "A", "Z", "a", "a", "c", "a", "a", "a", "a", "h", "a", "a", "a", "l", "m", "a", "a", "a", "q", "a", "s", "t", "a", "v", "a", ".", "a", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", ","]
 private func decodeStickerThumbnailData(_ data: Data) -> String {
     var string = "M"
@@ -140,6 +22,7 @@ private func decodeStickerThumbnailData(_ data: Data) -> String {
 }
 
 public class StickerShimmerEffectNode: ASDisplayNode {
+    private var backdropNode: ASDisplayNode?
     private let backgroundNode: ASDisplayNode
     private let effectNode: ShimmerEffectForegroundNode
     private let foregroundNode: ASImageNode
@@ -163,9 +46,19 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.addSubnode(self.effectNode)
         self.addSubnode(self.foregroundNode)
     }
-    
+        
     public var isEmpty: Bool {
         return self.currentData == nil
+    }
+    
+    public func addBackdropNode(_ backdropNode: ASDisplayNode) {
+        if let current = self.backdropNode {
+            current.removeFromSupernode()
+        }
+        self.backdropNode = backdropNode
+        self.insertSubnode(backdropNode, at: 0)
+        
+        self.effectNode.layer.compositingFilter = "screenBlendMode"
     }
     
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -188,8 +81,9 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         
         self.backgroundNode.backgroundColor = foregroundColor
         
-        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor)
+        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true)
         
+        let bounds = CGRect(origin: CGPoint(), size: size)
         let image = generateImage(size, rotatedContext: { size, context in
             if let backgroundColor = backgroundColor {
                 context.setFillColor(backgroundColor.cgColor)
@@ -219,7 +113,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
                 UIGraphicsPopContext()
             }
         })
-                
+                        
         if backgroundColor == nil {
             self.foregroundNode.image = nil
             
@@ -228,7 +122,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
                 maskView = current
             } else {
                 maskView = UIImageView()
-                maskView.frame = CGRect(origin: CGPoint(), size: size)
+                maskView.frame = bounds
                 self.maskView = maskView
                 self.view.mask = maskView
             }
@@ -244,9 +138,10 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         
         self.maskView?.image = image
         
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.foregroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.effectNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backdropNode?.frame = bounds
+        self.backgroundNode.frame = bounds
+        self.foregroundNode.frame = bounds
+        self.effectNode.frame = bounds
     }
 }
 

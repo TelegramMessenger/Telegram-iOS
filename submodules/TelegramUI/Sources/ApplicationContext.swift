@@ -36,6 +36,8 @@ final class UnauthorizedApplicationContext {
     let isReady = Promise<Bool>()
     
     var authorizationCompleted: Bool = false
+
+    private var serviceNotificationEventsDisposable: Disposable?
     
     init(apiId: Int32, apiHash: String, sharedContext: SharedAccountContextImpl, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
         self.sharedContext = sharedContext
@@ -71,6 +73,20 @@ final class UnauthorizedApplicationContext {
         }, { result in
             ApplicationSpecificNotice.setPermissionWarning(accountManager: sharedContext.accountManager, permission: .cellularData, value: 0)
         })
+
+        self.serviceNotificationEventsDisposable = (account.serviceNotificationEvents
+        |> deliverOnMainQueue).start(next: { [weak self] text in
+            if let strongSelf = self {
+                let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
+                let alertController = textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(alertController, in: .window(.root))
+            }
+        })
+    }
+
+    deinit {
+        self.serviceNotificationEventsDisposable?.dispose()
     }
 }
 
@@ -356,7 +372,7 @@ final class AuthorizedApplicationContext {
                             
                             if inAppNotificationSettings.displayPreviews {
                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
+                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
                                     if let strongSelf = self {
                                         var foundOverlay = false
                                         strongSelf.mainWindow.forEachViewController({ controller in
@@ -445,11 +461,11 @@ final class AuthorizedApplicationContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (acceptTermsOfService(account: strongSelf.context.account, id: termsOfServiceUpdate.id)
+                    let _ = (strongSelf.context.engine.accountData.acceptTermsOfService(id: termsOfServiceUpdate.id)
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let strongSelf = self, let botName = botName {
-                            strongSelf.termsOfServiceProceedToBotDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                                 if let strongSelf = self, let peerId = peerId {
                                     self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)))
                                 }
@@ -464,7 +480,7 @@ final class AuthorizedApplicationContext {
                     }
                     let accountId = strongSelf.context.account.id
                     let accountManager = strongSelf.context.sharedContext.accountManager
-                    let _ = (deleteAccount(account: strongSelf.context.account)
+                    let _ = (strongSelf.context.engine.auth.deleteAccount()
                     |> deliverOnMainQueue).start(error: { _ in
                         guard let strongSelf = self else {
                             return
@@ -743,7 +759,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         let navigateToMessage = {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true, timecode: nil)))
                         }
                         
                         if chatIsVisible {
@@ -763,6 +779,7 @@ final class AuthorizedApplicationContext {
         self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
         if let groupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController {
             if let overlayController = groupCallController.currentOverlayController {
+                groupCallController.parentNavigationController = self.rootController
                 self.rootController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
             }
         }
@@ -821,7 +838,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: $0, highlight: true) }, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: $0, highlight: true, timecode: nil) }, activateInput: activateInput))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }

@@ -2601,7 +2601,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     }
                 }
                 for resource in resources {
-                    let id = arc4random64()
+                    let id = Int64.random(in: Int64.min ... Int64.max)
                     innerState.documents.insert(.local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0))), at: addIndex)
                     addIndex += 1
                 }
@@ -2613,7 +2613,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     innerState = removeDocumentWithId(innerState, id: removeDocumentId)
                 }
                 loop: for resource in resources {
-                    let id = arc4random64()
+                    let id = Int64.random(in: Int64.min ... Int64.max)
                     innerState.selfieDocument = .local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0)))
                     break loop
                 }
@@ -2622,7 +2622,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     innerState = removeDocumentWithId(innerState, id: removeDocumentId)
                 }
                 loop: for resource in resources {
-                    let id = arc4random64()
+                    let id = Int64.random(in: Int64.min ... Int64.max)
                     innerState.frontSideDocument = .local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0)))
                     break loop
                 }
@@ -2631,7 +2631,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     innerState = removeDocumentWithId(innerState, id: removeDocumentId)
                 }
                 loop: for resource in resources {
-                    let id = arc4random64()
+                    let id = Int64.random(in: Int64.min ... Int64.max)
                     innerState.backSideDocument = .local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0)))
                     break loop
                 }
@@ -2647,7 +2647,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                     }
                 }
                 for resource in resources {
-                    let id = arc4random64()
+                    let id = Int64.random(in: Int64.min ... Int64.max)
                     innerState.translations.insert(.local(SecureIdVerificationLocalDocument(id: id, resource: SecureIdLocalImageResource(localId: id, source: resource), timestamp: Int32(Date().timeIntervalSince1970), state: .uploading(0.0))), at: addIndex)
                     addIndex += 1
                 }

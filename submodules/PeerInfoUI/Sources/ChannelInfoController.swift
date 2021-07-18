@@ -732,13 +732,13 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 
                 let completedImpl: (UIImage) -> Void = { image in
                     if let data = image.jpegData(compressionQuality: 0.6) {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
                         updateState {
                             $0.withUpdatedUpdatingAvatar(.image(representation, true))
                         }
-                        updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+                        updateAvatarDisposable.set((context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         })
                         |> deliverOnMainQueue).start(next: { result in
@@ -777,7 +777,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                             return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                    updateAvatarDisposable.set((context.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
@@ -836,11 +836,11 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             }
             let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
                 let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
-                    let _ = updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound).start()
+                    let _ = context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound).start()
                 })
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, updateSettings: { value in
-                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: value).start())
+                changeMuteSettingsDisposable.set(context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
@@ -918,7 +918,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, aboutLinkAction: { action, itemLink in
         aboutLinkActionImpl?(action, itemLink)
     }, toggleSignatures: { enabled in
-        actionsDisposable.add(toggleShouldChannelMessagesSignatures(account: context.account, peerId: peerId, enabled: enabled).start())
+        actionsDisposable.add(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: enabled).start())
     })
 
     var wasEditing: Bool?
@@ -993,7 +993,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         
                         let updateTitle: Signal<Void, Void>
                         if let titleValue = updateValues.title {
-                            updateTitle = updatePeerTitle(account: context.account, peerId: peerId, title: titleValue)
+                            updateTitle = context.engine.peers.updatePeerTitle(peerId: peerId, title: titleValue)
                                 |> mapError { _ in return Void() }
                         } else {
                             updateTitle = .complete()
@@ -1001,7 +1001,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         
                         let updateDescription: Signal<Void, Void>
                         if let descriptionValue = updateValues.description {
-                            updateDescription = updatePeerDescription(account: context.account, peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
+                            updateDescription = context.engine.peers.updatePeerDescription(peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
                                 |> mapError { _ in return Void() }
                         } else {
                             updateDescription = .complete()

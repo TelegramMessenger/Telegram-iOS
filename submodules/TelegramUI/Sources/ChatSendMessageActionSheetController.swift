@@ -17,7 +17,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     private let controllerInteraction: ChatControllerInteraction?
     private let interfaceState: ChatPresentationInterfaceState
     private let gesture: ContextGesture
-    private let sendButtonFrame: CGRect
+    private let sourceSendButton: ASDisplayNode
     private let textInputNode: EditableTextNode
     private let completion: () -> Void
     
@@ -29,12 +29,12 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState
         self.gesture = gesture
-        self.sendButtonFrame = sendButtonFrame
+        self.sourceSendButton = sourceSendButton
         self.textInputNode = textInputNode
         self.completion = completion
                 
@@ -76,7 +76,7 @@ final class ChatSendMessageActionSheetController: ViewController {
             canSchedule = !isSecret
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

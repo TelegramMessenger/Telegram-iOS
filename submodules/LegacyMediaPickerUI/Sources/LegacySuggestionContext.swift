@@ -19,7 +19,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                     for peer in peers {
                         if let peer = peer as? TelegramUser {
                             let user = TGUser()
-                            user.uid = peer.id.id
+                            user.uid = peer.id.id._internalGetInt32Value()
                             user.firstName = peer.firstName
                             user.lastName = peer.lastName
                             user.userName = peer.addressName
@@ -46,7 +46,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
     }
     suggestionContext.hashtagListSignal = { query in
         return SSignal { subscriber in
-            let disposable = (recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> [String] in
+            let disposable = (context.engine.messages.recentlyUsedHashtags() |> map { hashtags -> [String] in
                 let normalizedQuery = query?.lowercased()
                 var result: [String] = []
                 if let normalizedQuery = normalizedQuery {
@@ -74,7 +74,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
             return SSignal.complete()
         }
         return SSignal { subscriber in
-            let disposable = (searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
+            let disposable = (context.engine.stickers.searchEmojiKeywords(inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
             |> map { keywords -> [TGAlphacodeEntry] in
                 var result: [TGAlphacodeEntry] = []
                 for keyword in keywords {

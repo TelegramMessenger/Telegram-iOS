@@ -31,11 +31,11 @@ public struct Namespaces {
     }
     
     public struct Peer {
-        public static let CloudUser: Int32 = 0
-        public static let CloudGroup: Int32 = 1
-        public static let CloudChannel: Int32 = 2
-        public static let SecretChat: Int32 = 3
-        public static let Empty: Int32 = Int32.max
+        public static let CloudUser = PeerId.Namespace._internalFromInt32Value(0)
+        public static let CloudGroup = PeerId.Namespace._internalFromInt32Value(1)
+        public static let CloudChannel = PeerId.Namespace._internalFromInt32Value(2)
+        public static let SecretChat = PeerId.Namespace._internalFromInt32Value(3)
+        public static let Empty = PeerId.Namespace.max
     }
     
     public struct ItemCollection {
@@ -202,7 +202,6 @@ private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
     case suggestedLocalization = 3
     case limitsConfiguration = 4
-    case coreSettings = 7
     case contentPrivacySettings = 8
     case networkSettings = 9
     case remoteStorageConfiguration = 10
@@ -248,12 +247,6 @@ public struct PreferencesKeys {
     public static let limitsConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.limitsConfiguration.rawValue)
-        return key
-    }()
-    
-    public static let coreSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.coreSettings.rawValue)
         return key
     }()
     
@@ -356,6 +349,7 @@ private enum SharedDataKeyValues: Int32 {
     case autodownloadSettings = 5
     case themeSettings = 6
     case countriesList = 7
+    case wallapersState = 8
 }
 
 public struct SharedDataKeys {
@@ -398,6 +392,12 @@ public struct SharedDataKeys {
     public static let countriesList: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.countriesList.rawValue)
+        return key
+    }()
+
+    public static let wallapersState: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.wallapersState.rawValue)
         return key
     }()
 }

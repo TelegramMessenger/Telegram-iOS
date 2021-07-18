@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import StickerPackPreviewUI
+import ContextUI
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {
@@ -38,7 +39,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     var previewedStickerItem: StickerPackItem?
     
-    var updateBackgroundOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    var updateBackgroundOffset: ((CGFloat, Bool, ContainedViewLayoutTransition) -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
     var getControllerInteraction: (() -> ChatControllerInteraction?)?
@@ -88,12 +89,16 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                            var menuItems: [PeekControllerMenuItem] = []
+                            var menuItems: [ContextMenuItem] = []
                             menuItems = [
-                                PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { _, _ in
-                                    return controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
-                                }),
-                                PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                f(.default)
+                                
+                                let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode, itemNode.bounds)
+                                })),
+                                .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
                                     if let strongSelf = self {
                                         if isStarred {
                                             let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -101,9 +106,10 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                             let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                         }
                                     }
-                                    return true
-                                }),
-                                PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                })),
+                                .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                
                                     if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
                                         loop: for attribute in item.file.attributes {
                                             switch attribute {
@@ -111,7 +117,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 if let packReference = packReference {
                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                                                            return controllerInteraction.sendSticker(file, nil, true, sourceNode, sourceRect)
+                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect)
                                                         } else {
                                                             return false
                                                         }
@@ -125,12 +131,8 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 break
                                             }
                                         }
-                                        return true
                                     }
-                                    return true
-                                }),
-                                PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
-                            ]
+                            }))]
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {
                             return nil
@@ -141,7 +143,8 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             return nil
             }, present: { [weak self] content, sourceNode in
                 if let strongSelf = self {
-                    let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
                         return sourceNode
                     })
                     strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(controller, nil)
@@ -172,13 +175,13 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.ignoreScrolling {
             self.updateVisibleItems(synchronous: false)
-            self.updateBackground(transition: .immediate)
+            self.updateBackground(animateIn: false, transition: .immediate)
         }
     }
     
-    private func updateBackground(transition: ContainedViewLayoutTransition) {
+    private func updateBackground(animateIn: Bool, transition: ContainedViewLayoutTransition) {
         if let topInset = self.topInset {
-            self.updateBackgroundOffset?(max(0.0, -self.scrollNode.view.contentOffset.y + topInset), transition)
+            self.updateBackgroundOffset?(max(0.0, -self.scrollNode.view.contentOffset.y + topInset), animateIn, transition)
         }
     }
     
@@ -225,7 +228,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             let currentBackgroundOffset = max(0.0, -self.scrollNode.view.contentOffset.y + topInset)
             if abs(currentBackgroundOffset - previousBackgroundOffset) > .ulpOfOne {
                 transition.animateOffsetAdditive(node: self.scrollNode, offset: currentBackgroundOffset - previousBackgroundOffset)
-                self.updateBackground(transition: transition)
+                self.updateBackground(animateIn: false, transition: transition)
             }
         } else {
             self.animateInOnLayout = true
@@ -244,7 +247,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         self.validLayout = size
         
         if self.animateInOnLayout {
-            self.updateBackgroundOffset?(size.height, .immediate)
+            self.updateBackgroundOffset?(size.height, false, .immediate)
         }
         
         var synchronous = false
@@ -262,12 +265,18 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         
         var backgroundTransition = transition
         
+        var animateIn = false
         if self.animateInOnLayout {
+            animateIn = true
             self.animateInOnLayout = false
             backgroundTransition = .animated(duration: 0.3, curve: .spring)
             if let topInset = self.topInset {
                 let currentBackgroundOffset = max(0.0, -self.scrollNode.view.contentOffset.y + topInset)
-                backgroundTransition.animateOffsetAdditive(node: self.scrollNode, offset: currentBackgroundOffset - size.height)
+                let bounds = self.scrollNode.bounds
+                self.scrollNode.bounds = bounds.offsetBy(dx: 0.0, dy: currentBackgroundOffset - size.height)
+                backgroundTransition.animateView {
+                    self.scrollNode.bounds = bounds
+                }
             }
         } else {
             if let previousBackgroundOffset = previousBackgroundOffset, let topInset = self.topInset {
@@ -278,7 +287,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             }
         }
         
-        self.updateBackground(transition: backgroundTransition)
+        self.updateBackground(animateIn: animateIn, transition: backgroundTransition)
     }
     
     private func updateItemsLayout(width: CGFloat) {
@@ -376,7 +385,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     }
 }
 
-private let backroundDiameter: CGFloat = 20.0
+private let backgroundDiameter: CGFloat = 20.0
 private let shadowBlur: CGFloat = 6.0
 
 final class InlineReactionSearchPanel: ChatInputContextPanelNode {
@@ -399,8 +408,8 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.backgroundNode = ASDisplayNode()
         
-        let shadowImage = generateImage(CGSize(width: backroundDiameter + shadowBlur * 2.0, height: floor(backroundDiameter / 2.0 + shadowBlur)), rotatedContext: { size, context in
-            let diameter = backroundDiameter
+        let shadowImage = generateImage(CGSize(width: backgroundDiameter + shadowBlur * 2.0, height: floor(backgroundDiameter / 2.0 + shadowBlur)), rotatedContext: { size, context in
+            let diameter = backgroundDiameter
             let shadow = UIColor(white: 0.0, alpha: 0.5)
             context.clear(CGRect(origin: CGPoint(), size: size))
             
@@ -419,7 +428,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             
             context.setFillColor(theme.list.plainBackgroundColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        })?.stretchableImage(withLeftCapWidth: Int(backroundDiameter / 2.0 + shadowBlur), topCapHeight: 0)
+        })?.stretchableImage(withLeftCapWidth: Int(backgroundDiameter / 2.0 + shadowBlur), topCapHeight: 0)
         
         self.backgroundTopLeftNode = ASImageNode()
         self.backgroundTopLeftNode.image = shadowImage
@@ -457,23 +466,28 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             return self?.controllerInteraction
         }
         
-        self.stickersNode.updateBackgroundOffset = { [weak self] offset, transition in
+        self.stickersNode.updateBackgroundOffset = { [weak self] offset, animateIn, transition in
             guard let strongSelf = self, let (_, _) = strongSelf.validLayout else {
                 return
             }
-            transition.updateFrame(node: strongSelf.backgroundContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize()), beginWithCurrentState: false)
-            
+            if animateIn {
+                transition.animateView {
+                    strongSelf.backgroundContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize())
+                }
+            } else {
+                transition.updateFrame(node: strongSelf.backgroundContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize()), beginWithCurrentState: false)
+            }
             let cornersTransitionDistance: CGFloat = 20.0
             let cornersTransition: CGFloat = max(0.0, min(1.0, (cornersTransitionDistance - offset) / cornersTransitionDistance))
-            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopLeftContainerNode, scale: 1.0, offset: CGPoint(x: -cornersTransition * backroundDiameter, y: 0.0), beginWithCurrentState: true)
-            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopRightContainerNode, scale: 1.0, offset: CGPoint(x: cornersTransition * backroundDiameter, y: 0.0), beginWithCurrentState: true)
+            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopLeftContainerNode, scale: 1.0, offset: CGPoint(x: -cornersTransition * backgroundDiameter, y: 0.0), beginWithCurrentState: true)
+            transition.updateSublayerTransformScaleAndOffset(node: strongSelf.backgroundTopRightContainerNode, scale: 1.0, offset: CGPoint(x: cornersTransition * backgroundDiameter, y: 0.0), beginWithCurrentState: true)
         }
         
         self.stickersNode.sendSticker = { [weak self] file, node, rect in
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.controllerInteraction?.sendSticker(file, strongSelf.query, true, node, rect)
+            let _ = strongSelf.controllerInteraction?.sendSticker(file, false, false, strongSelf.query, true, node, rect)
         }
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -495,13 +509,13 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: backroundDiameter / 2.0), size: size))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: backgroundDiameter / 2.0), size: size))
         
-        transition.updateFrame(node: self.backgroundTopLeftContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -shadowBlur), size: CGSize(width: size.width / 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
-        transition.updateFrame(node: self.backgroundTopRightContainerNode, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: -shadowBlur), size: CGSize(width: size.width - size.width / 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopLeftContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -shadowBlur), size: CGSize(width: size.width / 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopRightContainerNode, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: -shadowBlur), size: CGSize(width: size.width - size.width / 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
         
-        transition.updateFrame(node: self.backgroundTopLeftNode, frame: CGRect(origin: CGPoint(x: -shadowBlur, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
-        transition.updateFrame(node: self.backgroundTopRightNode, frame: CGRect(origin: CGPoint(x: -shadowBlur - size.width / 2.0, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopLeftNode, frame: CGRect(origin: CGPoint(x: -shadowBlur, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
+        transition.updateFrame(node: self.backgroundTopRightNode, frame: CGRect(origin: CGPoint(x: -shadowBlur - size.width / 2.0, y: 0.0), size: CGSize(width: size.width + shadowBlur * 2.0, height: backgroundDiameter / 2.0 + shadowBlur)))
         
         transition.updateFrame(node: self.stickersNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset * 2.0, height: size.height)))
         self.stickersNode.update(size: CGSize(width: size.width - leftInset * 2.0, height: size.height), transition: transition)

@@ -138,6 +138,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     }
     
     public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+        let isFirstTime = self.peer == nil
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
             return
@@ -165,7 +166,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         let onlineLayout = self.onlineNode.asyncLayout()
         let (onlineSize, onlineApply) = onlineLayout(online, false)
-        let _ = onlineApply(false)
+        let _ = onlineApply(!isFirstTime)
         
         self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel), color: nil, transition: .immediate)
         self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)

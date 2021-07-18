@@ -14,6 +14,7 @@ import PresentationDataUtils
 import PeerInfoUI
 import ShareController
 import AvatarNode
+import UndoUI
 
 public final class VoiceChatJoinScreen: ViewController {
     private var controllerNode: Node {
@@ -71,7 +72,7 @@ public final class VoiceChatJoinScreen: ViewController {
         let context = self.context
         let peerId = self.peerId
         let invite = self.invite
-        let signal = updatedCurrentPeerGroupCall(account: context.account, peerId: peerId)
+        let signal = context.engine.calls.updatedCurrentPeerGroupCall(peerId: peerId)
         |> castError(GetCurrentGroupCallError.self)
         |> mapToSignal { call -> Signal<(Peer, GroupCallSummary)?, GetCurrentGroupCallError> in
             if let call = call {
@@ -79,7 +80,7 @@ public final class VoiceChatJoinScreen: ViewController {
                     return transaction.getPeer(peerId)
                 }
                 |> castError(GetCurrentGroupCallError.self)
-                return combineLatest(peer, getCurrentGroupCall(account: context.account, callId: call.id, accessHash: call.accessHash))
+                return combineLatest(peer, context.engine.calls.getCurrentGroupCall(callId: call.id, accessHash: call.accessHash))
                 |> map { peer, call -> (Peer, GroupCallSummary)? in
                     if let peer = peer, let call = call {
                         return (peer, call)
@@ -124,7 +125,7 @@ public final class VoiceChatJoinScreen: ViewController {
             currentGroupCall = .single(nil)
         }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
                     if let (currentGroupCall, currentGroupCallId, canUnmute) = currentGroupCallIdAndCanUnmute, call.info.id == currentGroupCallId {
@@ -143,8 +144,8 @@ public final class VoiceChatJoinScreen: ViewController {
                     } else if let cachedData = cachedData as? CachedGroupData {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     }
-                                    
-                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title)
+                    
+                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
                         strongSelf.join(activeCall)
@@ -152,7 +153,8 @@ public final class VoiceChatJoinScreen: ViewController {
                         strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
                     }
                 } else {
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.InviteLinks_InviteLinkExpired, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                     strongSelf.dismiss()
                 }
             }
@@ -181,7 +183,7 @@ public final class VoiceChatJoinScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {
@@ -513,10 +515,16 @@ public final class VoiceChatJoinScreen: ViewController {
                 self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
                 
                 let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-                
                 let dimPosition = self.dimNode.layer.position
-                self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                let targetBounds = self.bounds
+                self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
+                self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
+                transition.animateView({
+                    self.bounds = targetBounds
+                    self.dimNode.position = dimPosition
+                })
             }
         }
         

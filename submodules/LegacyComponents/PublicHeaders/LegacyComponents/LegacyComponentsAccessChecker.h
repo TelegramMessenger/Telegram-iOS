@@ -26,14 +26,10 @@ typedef enum {
 
 @protocol LegacyComponentsAccessChecker <NSObject>
 
-- (bool)checkAddressBookAuthorizationStatusWithAlertDismissComlpetion:(void (^)(void))alertDismissCompletion;
-
 - (bool)checkPhotoAuthorizationStatusForIntent:(TGPhotoAccessIntent)intent alertDismissCompletion:(void (^)(void))alertDismissCompletion;
 
 - (bool)checkMicrophoneAuthorizationStatusForIntent:(TGMicrophoneAccessIntent)intent alertDismissCompletion:(void (^)(void))alertDismissCompletion;
 
-- (bool)checkCameraAuthorizationStatusForIntent:(TGCameraAccessIntent)intent alertDismissCompletion:(void (^)(void))alertDismissCompletion;
-
-- (bool)checkLocationAuthorizationStatusForIntent:(TGLocationAccessIntent)intent alertDismissComlpetion:(void (^)(void))alertDismissCompletion;
+- (bool)checkCameraAuthorizationStatusForIntent:(TGCameraAccessIntent)intent completion:(void (^)(BOOL))completion alertDismissCompletion:(void (^)(void))alertDismissCompletion;
 
 @end

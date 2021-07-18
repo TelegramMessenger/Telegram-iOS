@@ -123,7 +123,10 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     
     controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         if let selectionContext = selectionContext, let editingContext = editingContext {
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: legacyAssetPickerItemGenerator())
+            let nativeGenerator = legacyAssetPickerItemGenerator()
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: { _1, _2, _3, _4 in
+                nativeGenerator(_1, _2, _3, _4, nil)
+            })
             sendMessagesWithSignals(signals, silentPosting, scheduleTime)
         }
         
@@ -139,7 +142,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
@@ -164,7 +167,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
@@ -217,16 +220,19 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
     
     controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, _, _ in
         if let selectionContext = selectionContext, let editingContext = editingContext {
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
+            let nativeGenerator = legacyAssetPickerItemGenerator()
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3, _4 in
+                nativeGenerator(_1, _2, _3, _4, nil)
+            })
             if let parentController = parentController {
                 parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account in
                     return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
-                    |> `catch` { _ -> Signal<[EnqueueMessage], NoError> in
+                    |> `catch` { _ -> Signal<[LegacyAssetPickerEnqueueMessage], NoError> in
                         return .single([])
                     }
                     |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, NoError> in
                         let resultSignals = peerIds.map({ peerId in
-                            return enqueueMessages(account: account, peerId: peerId, messages: messages)
+                            return enqueueMessages(account: account, peerId: peerId, messages: messages.map { $0.message })
                             |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in
                                 return .complete()
                             }

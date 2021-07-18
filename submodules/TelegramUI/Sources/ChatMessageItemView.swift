@@ -207,7 +207,7 @@ final class ChatMessageAccessibilityData {
             if let chatPeer = message.peers[item.message.id.peerId] {
                 let authorName = message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 
@@ -705,7 +705,7 @@ public class ChatMessageItemView: ListViewItemNode {
         self.frame = CGRect()
     }
     
-    func setupItem(_ item: ChatMessageItem) {
+    func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
     }
     
@@ -728,6 +728,9 @@ public class ChatMessageItemView: ListViewItemNode {
         if let avatarNode = accessoryItemNode as? ChatMessageAvatarAccessoryItemNode {
             avatarNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: self.apparentFrame.height - 38.0 - self.insets.top - 2.0 - UIScreenPixel), size: CGSize(width: 38.0, height: 38.0))
         }
+    }
+
+    func cancelInsertionAnimations() {
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -798,9 +801,9 @@ public class ChatMessageItemView: ListViewItemNode {
         return nil
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return item.headers
         } else {
             return nil
         }

@@ -14,8 +14,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var preferredVideoCodec: String?
     public var disableVideoAspectScaling: Bool
     public var enableVoipTcp: Bool
-    public var snapPinListToTop: Bool
-    public var demoAudioStream: Bool
+    public var demoVideoChats: Bool
+    public var experimentalCompatibility: Bool
+    public var enableNoiseSuppression: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -30,8 +31,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             preferredVideoCodec: nil,
             disableVideoAspectScaling: false,
             enableVoipTcp: false,
-            snapPinListToTop: false,
-            demoAudioStream: false
+            demoVideoChats: false,
+            experimentalCompatibility: false,
+            enableNoiseSuppression: false
         )
     }
     
@@ -47,8 +49,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         preferredVideoCodec: String?,
         disableVideoAspectScaling: Bool,
         enableVoipTcp: Bool,
-        snapPinListToTop: Bool,
-        demoAudioStream: Bool
+        demoVideoChats: Bool,
+        experimentalCompatibility: Bool,
+        enableNoiseSuppression: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -61,8 +64,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.preferredVideoCodec = preferredVideoCodec
         self.disableVideoAspectScaling = disableVideoAspectScaling
         self.enableVoipTcp = enableVoipTcp
-        self.snapPinListToTop = snapPinListToTop
-        self.demoAudioStream = demoAudioStream
+        self.demoVideoChats = demoVideoChats
+        self.experimentalCompatibility = experimentalCompatibility
+        self.enableNoiseSuppression = enableNoiseSuppression
     }
     
     public init(decoder: PostboxDecoder) {
@@ -77,8 +81,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.preferredVideoCodec = decoder.decodeOptionalStringForKey("preferredVideoCodec")
         self.disableVideoAspectScaling = decoder.decodeInt32ForKey("disableVideoAspectScaling", orElse: 0) != 0
         self.enableVoipTcp = decoder.decodeInt32ForKey("enableVoipTcp", orElse: 0) != 0
-        self.snapPinListToTop = decoder.decodeInt32ForKey("snapPinListToTop", orElse: 0) != 0
-        self.demoAudioStream = decoder.decodeInt32ForKey("demoAudioStream", orElse: 0) != 0
+        self.demoVideoChats = decoder.decodeInt32ForKey("demoVideoChats", orElse: 0) != 0
+        self.experimentalCompatibility = decoder.decodeInt32ForKey("experimentalCompatibility", orElse: 0) != 0
+        self.enableNoiseSuppression = decoder.decodeInt32ForKey("enableNoiseSuppression", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -95,8 +100,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         }
         encoder.encodeInt32(self.disableVideoAspectScaling ? 1 : 0, forKey: "disableVideoAspectScaling")
         encoder.encodeInt32(self.enableVoipTcp ? 1 : 0, forKey: "enableVoipTcp")
-        encoder.encodeInt32(self.snapPinListToTop ? 1 : 0, forKey: "snapPinListToTop")
-        encoder.encodeInt32(self.demoAudioStream ? 1 : 0, forKey: "demoAudioStream")
+        encoder.encodeInt32(self.demoVideoChats ? 1 : 0, forKey: "demoVideoChats")
+        encoder.encodeInt32(self.experimentalCompatibility ? 1 : 0, forKey: "experimentalCompatibility")
+        encoder.encodeInt32(self.enableNoiseSuppression ? 1 : 0, forKey: "enableNoiseSuppression")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

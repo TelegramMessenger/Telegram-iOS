@@ -124,6 +124,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.disposable?.dispose()
     }
     
+    func ensureMessageIsVisible(id: MessageId) {    
+    }
+    
     func scrollToTop() -> Bool {
         if !self.listNode.scrollToOffsetFromTop(0.0) {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
@@ -143,7 +146,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         var scrollToItem: ListViewScrollToItem?
         if isScrollingLockedAtTop {
             switch self.listNode.visibleContentOffset() {
-            case .known(0.0):
+            case let .known(value) where value <= CGFloat.ulpOfOne:
                 break
             default:
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: duration), directionHint: .Up)

@@ -9,10 +9,34 @@ import TelegramPresentationData
 import LegacyComponents
 import AccountContext
 import MergeLists
+import Postbox
 
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0
 
+private func intensityToSliderValue(_ value: Int32, allowDark: Bool) -> CGFloat {
+    if allowDark {
+        if value < 0 {
+            return max(0.0, min(100.0, CGFloat(abs(value))))
+        } else {
+            return 100.0 + max(0.0, min(100.0, CGFloat(value)))
+        }
+    } else {
+        return CGFloat(max(value, 0)) * 2.0
+    }
+}
+
+private func sliderValueToIntensity(_ value: CGFloat, allowDark: Bool) -> Int32 {
+    if allowDark {
+        if value < 100.0 {
+            return -Int32(max(1.0, value))
+        } else {
+            return Int32(value - 100.0)
+        }
+    } else {
+        return Int32(value / 2.0)
+    }
+}
 
 private struct WallpaperPatternEntry: Comparable, Identifiable {
     let index: Int
@@ -105,7 +129,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     var item: WallpaperPatternItem?
 
     init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: true)
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
 
@@ -165,7 +189,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
     
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let topSeparatorNode: ASDisplayNode
     
     let scrollNode: ASScrollNode
@@ -189,10 +213,22 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: (UIColor, UIColor?, Int32?)? = nil {
+    var backgroundColors: ([UInt32], Int32?, Int32?)? = nil {
         didSet {
-            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb
-            || oldValue?.2 != self.backgroundColors?.2 {
+            var updated = false
+            if oldValue?.0 != self.backgroundColors?.0 || oldValue?.1 != self.backgroundColors?.1 {
+                updated = true
+            } else if oldValue?.2 != self.backgroundColors?.2 {
+                if let oldIntensity = oldValue?.2, let newIntensity = self.backgroundColors?.2 {
+                    if (oldIntensity < 0) != (newIntensity < 0) {
+                        updated = true
+                    }
+                } else if (oldValue?.2 != nil) != (self.backgroundColors?.2 != nil) {
+                    updated = true
+                }
+            }
+
+            if updated {
                 self.updateWallpapers()
             }
         }
@@ -202,12 +238,14 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var patternChanged: ((TelegramWallpaper?, Int32?, Bool) -> Void)?
 
+    private let allowDark: Bool
+
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
+        self.allowDark = theme.overallDarkAppearance
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
@@ -230,12 +268,21 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
-        
         self.disposable = ((telegramWallpapers(postbox: context.account.postbox, network: context.account.network)
-        |> map { wallpapers in
+        |> map { wallpapers -> [TelegramWallpaper] in
+            var existingIds = Set<MediaId>()
+
             return wallpapers.filter { wallpaper in
                 if case let .file(file) = wallpaper, wallpaper.isPattern, file.file.mimeType != "image/webp" {
-                    return true
+                    if file.id == 0 {
+                        return true
+                    }
+                    if existingIds.contains(file.file.fileId) {
+                        return false
+                    } else {
+                        existingIds.insert(file.file.fileId)
+                        return true
+                    }
                 } else {
                     return false
                 }
@@ -261,16 +308,25 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.scrollNode.view.alwaysBounceHorizontal = true
         
         let sliderView = TGPhotoEditorSliderView()
+        sliderView.disableSnapToPositions = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
-        sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
-        sliderView.maximumValue = 100.0
-        sliderView.value = 40.0
+        sliderView.minimumValue = 0.0
+        sliderView.maximumValue = 200.0
+        if self.allowDark {
+            sliderView.positionsCount = 3
+        }
+        sliderView.useLinesForPositions = true
+        sliderView.value = intensityToSliderValue(50, allowDark: self.allowDark)
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
         sliderView.backColor = self.theme.list.disclosureArrowColor
-        sliderView.trackColor = self.theme.list.itemAccentColor
+        if self.allowDark {
+            sliderView.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            sliderView.trackColor = self.theme.list.itemAccentColor
+        }
         
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -286,26 +342,35 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil, nil)
+        let backgroundColors = self.backgroundColors ?? ([0xd6e2ee], nil, nil)
+        let intensity: Int32 = backgroundColors.2.flatMap { value in
+            if value < 0 {
+                return -80
+            } else {
+                return 80
+            }
+        } ?? 80
         
         var selectedFileId: Int64?
+        var selectedSlug: String?
         if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
             selectedFileId = file.id
+            selectedSlug = file.slug
         }
         
         for wallpaper in self.wallpapers {
-            let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
+            let node = SettingsThemeWallpaperNode(displayLoading: true, overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
             node.cornerRadius = 5.0
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100, rotation: backgroundColors.2)
+                let settings = WallpaperSettings(colors: backgroundColors.0, intensity: intensity, rotation: backgroundColors.1)
                 updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             
             var selected = false
-            if case let .file(file) = wallpaper, file.id == selectedFileId {
+            if case let .file(file) = wallpaper, (file.id == selectedFileId || file.slug == selectedSlug) {
                 selected = true
             }
             
@@ -314,7 +379,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 if let strongSelf = self {
                     strongSelf.currentWallpaper = updatedWallpaper
                     if let sliderView = strongSelf.sliderView {
-                        strongSelf.patternChanged?(updatedWallpaper, Int32(sliderView.value), false)
+                        strongSelf.patternChanged?(updatedWallpaper, sliderValueToIntensity(sliderView.value, allowDark: strongSelf.allowDark), false)
                     }
                     if let subnodes = strongSelf.scrollNode.subnodes {
                         for case let subnode as SettingsThemeWallpaperNode in subnodes {
@@ -337,11 +402,15 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
         self.sliderView?.backColor = self.theme.list.disclosureArrowColor
-        self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        if self.allowDark {
+            self.sliderView?.trackColor = self.theme.list.disclosureArrowColor
+        } else {
+            self.sliderView?.trackColor = self.theme.list.itemAccentColor
+        }
         self.titleNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         
@@ -356,12 +425,19 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
         
         if let wallpaper = self.currentWallpaper {
-            self.patternChanged?(wallpaper, Int32(sliderView.value), sliderView.isTracking)
+            self.patternChanged?(wallpaper, sliderValueToIntensity(sliderView.value, allowDark: self.allowDark), sliderView.isTracking)
         }
     }
     
     func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
-        var wallpaper = initialWallpaper ?? self.wallpapers.first
+        let wallpaper: TelegramWallpaper?
+
+        switch initialWallpaper {
+        case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
+            wallpaper = .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: self.wallpapers[0].settings ?? WallpaperSettings())
+        default:
+            wallpaper = self.wallpapers.first
+        }
         
         if let wallpaper = wallpaper {
             var selectedFileId: Int64?
@@ -370,7 +446,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity ?? 50)
+            self.sliderView?.value = intensity.flatMap { intensityToSliderValue($0, allowDark: self.allowDark) } ?? intensityToSliderValue(50, allowDark: self.allowDark)
             
             self.scrollNode.view.contentOffset = CGPoint()
             
@@ -386,8 +462,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 }
             }
                         
-            if initialWallpaper == nil, let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
-                self.patternChanged?(wallpaper, Int32(sliderView.value), false)
+            if let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
+                self.patternChanged?(wallpaper, sliderValueToIntensity(sliderView.value, allowDark: self.allowDark), false)
             }
             
             if let selectedNode = selectedNode {
@@ -418,6 +494,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.validLayout = size
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: UIScreenPixel))
         
         let titleSize = self.titleNode.updateLayout(self.bounds.size)

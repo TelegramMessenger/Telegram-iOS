@@ -50,14 +50,14 @@ enum ChatPanelRestrictionInfoDisplayType {
 }
 
 final class ChatPanelInterfaceInteraction {
-    let setupReplyMessage: (MessageId, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
+    let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let beginMessageSelection: ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     let deleteSelectedMessages: () -> Void
     let reportSelectedMessages: () -> Void
-    let reportMessages: ([Message], ContextController?) -> Void
-    let blockMessageAuthor: (Message, ContextController?) -> Void
-    let deleteMessages: ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void
+    let reportMessages: ([Message], ContextControllerProtocol?) -> Void
+    let blockMessageAuthor: (Message, ContextControllerProtocol?) -> Void
+    let deleteMessages: ([Message], ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void
     let forwardSelectedMessages: () -> Void
     let forwardCurrentForwardMessages: () -> Void
     let forwardMessages: ([Message]) -> Void
@@ -92,10 +92,10 @@ final class ChatPanelInterfaceInteraction {
     let displayVideoUnmuteTip: (CGPoint?) -> Void
     let switchMediaRecordingMode: () -> Void
     let setupMessageAutoremoveTimeout: () -> Void
-    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
+    let sendSticker: (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
-    let pinMessage: (MessageId, ContextController?) -> Void
-    let unpinMessage: (MessageId, Bool, ContextController?) -> Void
+    let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
+    let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
     let unpinAllMessages: () -> Void
     let openPinnedList: (MessageId) -> Void
     let shareAccountContact: () -> Void
@@ -130,17 +130,18 @@ final class ChatPanelInterfaceInteraction {
     let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
     let presentInviteMembers: () -> Void
     let presentGigagroupHelp: () -> Void
+    let updateShowCommands: ((Bool) -> Bool) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
-        setupReplyMessage: @escaping (MessageId, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
+        setupReplyMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         setupEditMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         beginMessageSelection: @escaping ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
-        reportMessages: @escaping ([Message], ContextController?) -> Void,
-        blockMessageAuthor: @escaping (Message, ContextController?) -> Void,
-        deleteMessages: @escaping ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void,
+        reportMessages: @escaping ([Message], ContextControllerProtocol?) -> Void,
+        blockMessageAuthor: @escaping (Message, ContextControllerProtocol?) -> Void,
+        deleteMessages: @escaping ([Message], ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void,
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
         forwardMessages: @escaping ([Message]) -> Void,
@@ -175,10 +176,10 @@ final class ChatPanelInterfaceInteraction {
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,
         setupMessageAutoremoveTimeout: @escaping () -> Void,
-        sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
-        pinMessage: @escaping (MessageId, ContextController?) -> Void,
-        unpinMessage: @escaping (MessageId, Bool, ContextController?) -> Void,
+        pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
+        unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
         unpinAllMessages: @escaping () -> Void,
         openPinnedList: @escaping (MessageId) -> Void,
         shareAccountContact: @escaping () -> Void,
@@ -213,6 +214,7 @@ final class ChatPanelInterfaceInteraction {
         presentInviteMembers: @escaping () -> Void,
         presentGigagroupHelp: @escaping () -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
+        updateShowCommands: @escaping ((Bool) -> Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -295,6 +297,7 @@ final class ChatPanelInterfaceInteraction {
         self.joinGroupCall = joinGroupCall
         self.presentInviteMembers = presentInviteMembers
         self.presentGigagroupHelp = presentGigagroupHelp
+        self.updateShowCommands = updateShowCommands
         self.statuses = statuses
     }
 }

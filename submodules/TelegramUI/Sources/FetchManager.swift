@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramUIPreferences
 import AccountContext
+import UniversalMediaPlayer
 
 private struct FetchManagerLocationEntryId: Hashable {
     let location: FetchManagerLocation

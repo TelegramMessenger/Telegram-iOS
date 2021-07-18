@@ -25,7 +25,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let sharedContext: SharedAccountContext
     private var context: AccountContext?
     private var presentationData: PresentationData
-    private let forcedTheme: PresentationTheme?
+    private let forceTheme: PresentationTheme?
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
@@ -61,6 +61,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
+    var debugAction: (() -> Void)?
     var openStats: (() -> Void)?
     var completed: (([PeerId]) -> Void)?
     
@@ -80,10 +81,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forcedTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
-        self.forcedTheme = forcedTheme
+        self.forceTheme = forceTheme
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
@@ -96,8 +97,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.defaultAction = defaultAction
         self.requestLayout = requestLayout
         
-        if let forcedTheme = self.forcedTheme {
-            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
         let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
@@ -272,8 +273,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             return
         }
         self.presentationData = presentationData
-        if let forcedTheme = self.forcedTheme {
-            self.presentationData = self.presentationData.withUpdated(theme: forcedTheme)
+        if let forceTheme = self.forceTheme {
+            self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
         }
         
         let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
@@ -378,7 +379,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
                         animation.fillMode = .both
                         if !fastOut {
-                            animation.beginTime = CACurrentMediaTime() + 0.1
+                            animation.beginTime = contentNode.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.1
                         }
                         contentNode.layer.add(animation, forKey: "opacity")
                     }
@@ -594,6 +595,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.animateOut(shared: true, completion: {
                 })
                 self.completed?(peerIds)
+                
+                Queue.mainQueue().after(0.44) {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.success()
+                }
             }
             let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
@@ -730,10 +738,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
+        }, debugAction: { [weak self] in
+            self?.debugAction?()
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            let _ = (recentlySearchedPeers(postbox: context.account.postbox)
+            let _ = (context.engine.peers.recentlySearchedPeers()
             |> take(1)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {

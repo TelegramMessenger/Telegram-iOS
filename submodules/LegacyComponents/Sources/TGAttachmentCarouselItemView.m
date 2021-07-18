@@ -270,7 +270,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 if (strongSelf->_selectionContext.allowGrouping)
                     [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-                strongSelf.sendPressed(nil, false, false, 0);
+                strongSelf.sendPressed(nil, false, false, 0, false);
             }
         }];
         [_sendMediaItemView setHidden:true animated:false];
@@ -282,7 +282,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf != nil && strongSelf.sendPressed != nil)
-                    strongSelf.sendPressed(nil, true, false, 0);
+                    strongSelf.sendPressed(nil, true, false, 0, false);
             }];
             _sendFileItemView.requiresDivider = false;
             [_sendFileItemView setHidden:true animated:false];
@@ -344,6 +344,21 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_assetsDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_itemsSizeChangedDisposable dispose];
+}
+
+- (UIView *)getItemSnapshot:(NSString *)uniqueId {
+    for (UIView *cell in _collectionView.visibleCells) {
+        if ([cell isKindOfClass:[TGAttachmentAssetCell class]]) {
+            TGAttachmentAssetCell *assetCell = (TGAttachmentAssetCell *)cell;
+            if (assetCell.asset.identifier != nil && [assetCell.asset.identifier isEqualToString:uniqueId]) {
+                UIView *snapshotView = [assetCell snapshotViewAfterScreenUpdates:false];
+                snapshotView.frame = [assetCell convertRect:assetCell.bounds toView:nil];
+                assetCell.alpha = 0.01f;
+                return snapshotView;
+            }
+        }
+    }
+    return nil;
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete
@@ -792,7 +807,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (strongSelf->_selectionContext.allowGrouping)
                 [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime);
+            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime, true);
         }
     };
     

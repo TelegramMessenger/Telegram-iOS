@@ -319,6 +319,10 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     bordered = false
                                 case "WhiteFilled":
                                     name = "⍺ White"
+                                case "New1":
+                                    name = item.strings.Appearance_AppIconNew1
+                                case "New2":
+                                    name = item.strings.Appearance_AppIconNew2
                                 default:
                                     break
                             }

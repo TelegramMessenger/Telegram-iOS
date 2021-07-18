@@ -465,7 +465,7 @@ class ChatListFilterPresetCategoryItemNode: ItemListRevealOptionsItemNode, ItemL
         }
     }
     
-    override func header() -> ListViewItemHeader? {
+    override func headers() -> [ListViewItemHeader]? {
         return nil
     }
 }

@@ -227,7 +227,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                     } else {
                         return false
                     }
@@ -238,24 +238,23 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             guard let strongSelf = self else {
                 return
             }
-            let account = strongSelf.context.account
+            let context = strongSelf.context
             if install {
-                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                var installSignal = strongSelf.context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
                         if installed {
                             return .complete()
                         } else {
-                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                            return preloadedStickerPackThumbnail(account: context.account, info: info, items: items)
                             |> filter { $0 }
                             |> ignoreValues
                             |> then(
-                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                                context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                                 |> ignoreValues
                             )
                             |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                return .complete()
                             }
                             |> then(.single((info, items)))
                         }
@@ -312,18 +311,18 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     }
                     
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
                 }))
             } else {
-                let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                let _ = (context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self {
-                let _ = strongSelf.controllerInteraction.sendSticker(file, nil, false, sourceNode, sourceRect)
+                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)
@@ -343,22 +342,22 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
         if !text.isEmpty {
-            let account = self.context.account
+            let context = self.context
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text.basicEmoji.0)
+                    signals = .single([context.engine.stickers.searchStickers(query: text.basicEmoji.0)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
-                    var signal = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
                     if !languageCode.lowercased().hasPrefix("en") {
                         signal = signal
                         |> mapToSignal { keywords in
                             return .single(keywords)
                             |> then(
-                                searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
+                                context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
                                 |> map { englishKeywords in
                                     return keywords + englishKeywords
                                 }
@@ -371,7 +370,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(searchStickers(account: self.context.account, query: emoji.basicEmoji.0)
+                            signals.append(context.engine.stickers.searchStickers(query: emoji.basicEmoji.0)
                             |> take(1)
                             |> map { (emoji, $0) })
                         }
@@ -395,8 +394,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 })
             }
             
-            let local = searchStickerSets(postbox: context.account.postbox, query: text)
-            let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
+            let local = context.engine.stickers.searchStickerSets(query: text)
+            let remote = context.engine.stickers.searchStickerSetsRemotely(query: text)
             |> delay(0.2, queue: Queue.mainQueue())
             let rawPacks = local
             |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in

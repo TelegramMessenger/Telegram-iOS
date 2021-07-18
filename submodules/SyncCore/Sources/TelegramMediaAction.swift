@@ -46,7 +46,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case peerJoined
     case phoneNumberRequest
     case geoProximityReached(from: PeerId, to: PeerId, distance: Int32)
-    case groupPhoneCall(callId: Int64, accessHash: Int64, duration: Int32?)
+    case groupPhoneCall(callId: Int64, accessHash: Int64, scheduleDate: Int32?, duration: Int32?)
     case inviteToGroupPhoneCall(callId: Int64, accessHash: Int64, peerIds: [PeerId])
     
     public init(decoder: PostboxDecoder) {
@@ -101,7 +101,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case 21:
                 self = .geoProximityReached(from: PeerId(decoder.decodeInt64ForKey("fromId", orElse: 0)), to: PeerId(decoder.decodeInt64ForKey("toId", orElse: 0)), distance: (decoder.decodeInt32ForKey("dst", orElse: 0)))
             case 22:
-                self = .groupPhoneCall(callId: decoder.decodeInt64ForKey("callId", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), duration: decoder.decodeOptionalInt32ForKey("duration"))
+                self = .groupPhoneCall(callId: decoder.decodeInt64ForKey("callId", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), scheduleDate: decoder.decodeOptionalInt32ForKey("scheduleDate"), duration: decoder.decodeOptionalInt32ForKey("duration"))
             case 23:
                 var peerIds: [PeerId] = []
                 if let peerId = decoder.decodeOptionalInt64ForKey("peerId") {
@@ -200,10 +200,15 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt64(from.toInt64(), forKey: "fromId")
                 encoder.encodeInt64(to.toInt64(), forKey: "toId")
                 encoder.encodeInt32(distance, forKey: "dst")
-            case let .groupPhoneCall(callId, accessHash, duration):
+            case let .groupPhoneCall(callId, accessHash, scheduleDate, duration):
                 encoder.encodeInt32(22, forKey: "_rawValue")
                 encoder.encodeInt64(callId, forKey: "callId")
                 encoder.encodeInt64(accessHash, forKey: "accessHash")
+                if let scheduleDate = scheduleDate {
+                    encoder.encodeInt32(scheduleDate, forKey: "scheduleDate")
+                } else {
+                    encoder.encodeNil(forKey: "scheduleDate")
+                }
                 if let duration = duration {
                     encoder.encodeInt32(duration, forKey: "duration")
                 } else {

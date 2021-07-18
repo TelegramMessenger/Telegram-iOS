@@ -91,6 +91,8 @@ typedef enum
     TGVideoCameraGLView *_previewView;
     TGVideoMessageRingView *_ringView;
     
+    UIPinchGestureRecognizer *_pinchGestureRecognizer;
+    
     UIView *_separatorView;
     
     UIImageView *_placeholderView;
@@ -344,7 +346,6 @@ typedef enum
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
-//    controlsFrame.size.width = _wrapperView.frame.size.width;
     
     _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;
@@ -417,10 +418,41 @@ typedef enum
         [self.view addSubview:_switchButton];
     }
     
+    _pinchGestureRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
+    _pinchGestureRecognizer.delegate = self;
+    [self.view addGestureRecognizer:_pinchGestureRecognizer];
+    
     void (^voidBlock)(void) = ^{};
     _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithUpButtonPressedBlock:voidBlock upButtonReleasedBlock:voidBlock downButtonPressedBlock:voidBlock downButtonReleasedBlock:voidBlock];
     
     [self configureCamera];
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer == _pinchGestureRecognizer)
+        return _capturePipeline.isZoomAvailable;
+    
+    return true;
+}
+
+- (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer
+{
+    switch (gestureRecognizer.state)
+    {
+        case UIGestureRecognizerStateChanged:
+        {
+            CGFloat delta = (gestureRecognizer.scale - 1.0f) / 1.5f;
+            CGFloat value = MAX(0.0f, MIN(1.0f, _capturePipeline.zoomLevel + delta));
+            
+            [_capturePipeline setZoomLevel:value];
+            
+            gestureRecognizer.scale = 1.0f;
+        }
+            break;
+        default:
+            break;
+    }
 }
 
 - (TGVideoMessageTransitionType)_transitionType
@@ -658,9 +690,10 @@ typedef enum
         return;
     
     [_activityDisposable dispose];
-    [self stopRecording:^{
+    [self stopRecording:^() {
         TGDispatchOnMainThread(^{
-            [self dismiss:false];
+            //[self dismiss:false];
+            [self description];
         });
     }];
 }
@@ -955,7 +988,20 @@ typedef enum
 
 - (void)stopRecording:(void (^)())completed
 {
-    [_capturePipeline stopRecording:completed];
+    __weak TGVideoMessageCaptureController *weakSelf = self;
+    [_capturePipeline stopRecording:^(bool success) {
+        TGDispatchOnMainThread(^{
+            __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+            if (strongSelf == nil) {
+                return;
+            }
+            if (!success) {
+                if (!strongSelf->_dismissed && strongSelf.finishedWithVideo != nil) {
+                    strongSelf.finishedWithVideo(nil, nil, 0, 0.0, CGSizeZero, nil, nil, false, 0);
+                }
+            }
+        });
+    }];
     [_buttonHandler ignoreEventsFor:1.0f andDisable:true];
     [_capturePipeline stopRunning];
 }
@@ -1015,10 +1061,14 @@ typedef enum
         }
     }
     
-    if (!_dismissed && self.finishedWithVideo != nil)
+    if (!_dismissed) {
         self.finishedWithVideo(url, image, fileSize, duration, dimensions, liveUploadData, adjustments, isSilent, scheduleTimestamp);
-    else
+    } else {
         [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
+        if (self.finishedWithVideo != nil) {
+            self.finishedWithVideo(nil, nil, 0, 0.0, CGSizeZero, nil, nil, false, 0);
+        }
+    }
 }
 
 - (UIImageOrientation)orientationForThumbnailWithTransform:(CGAffineTransform)transform mirrored:(bool)mirrored
@@ -1499,6 +1549,16 @@ static UIImage *startImage = nil;
         *cropMirrored = false;
     
     return CGSizeMake(240.0f, 240.0f);
+}
+
+- (UIView *)extractVideoContent {
+    UIView *result = [_circleView snapshotViewAfterScreenUpdates:false];
+    result.frame = [_circleView convertRect:_circleView.bounds toView:nil];
+    return result;
+}
+
+- (void)hideVideoContent {
+    _circleWrapperView.alpha = 0.02f;
 }
 
 @end

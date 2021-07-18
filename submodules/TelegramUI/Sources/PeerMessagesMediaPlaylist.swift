@@ -59,7 +59,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     let message: Message
     
     init(message: Message) {
-        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id)
+        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index)
         self.message = message
     }
     
@@ -808,7 +808,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
-            let _ = markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: item.message.id).start()
+            let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).start()
         }
     }
 }

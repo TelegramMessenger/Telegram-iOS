@@ -9,6 +9,7 @@ import SwiftSignalKit
 import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ContextUI
 
 public enum StickerPreviewPeekItem: Equatable {
     case pack(StickerPackItem)
@@ -27,9 +28,9 @@ public enum StickerPreviewPeekItem: Equatable {
 public final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
     public let item: StickerPreviewPeekItem
-    let menu: [PeekControllerMenuItem]
+    let menu: [ContextMenuItem]
     
-    public init(account: Account, item: StickerPreviewPeekItem, menu: [PeekControllerMenuItem]) {
+    public init(account: Account, item: StickerPreviewPeekItem, menu: [ContextMenuItem]) {
         self.account = account
         self.item = item
         self.menu = menu
@@ -39,11 +40,11 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         return .freeform
     }
     
-    public func menuActivation() -> PeerkControllerMenuActivation {
+    public func menuActivation() -> PeerControllerMenuActivation {
         return .press
     }
     
-    public func menuItems() -> [PeekControllerMenuItem] {
+    public func menuItems() -> [ContextMenuItem] {
         return self.menu
     }
     
@@ -64,13 +65,13 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     }
 }
 
-private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
+public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
     private let account: Account
     private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
-    private var imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    public var imageNode: TransformImageNode
+    public var animationNode: AnimatedStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -114,7 +115,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
         
         if let dimensitons = self.item.file.dimensions {
@@ -123,7 +124,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0, y: textSize.height + textSpacing), size: imageSize)
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
                 animationNode.frame = imageFrame
@@ -132,7 +133,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0), y: -textSize.height - textSpacing), size: textSize)
             
-            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
+            return CGSize(width: imageFrame.width, height: imageFrame.height + textSize.height + textSpacing)
         } else {
             return CGSize(width: size.width, height: 10.0)
         }

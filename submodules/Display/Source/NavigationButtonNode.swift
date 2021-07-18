@@ -225,7 +225,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             return size
         } else if let imageNode = self.imageNode {
             let nodeSize = imageNode.image?.size ?? CGSize()
-            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+            let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(44.0, max(nodeSize.height, superSize.height)))
             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
             imageNode.frame = imageFrame
             self.imageRippleNode.frame = imageFrame
@@ -266,7 +266,11 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         let previousTouchCount = self.touchCount
         self.touchCount = max(0, self.touchCount - touches.count)
         
-        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled {
+        var touchInside = true
+        if let touch = touches.first {
+            touchInside = self.touchInsideApparentBounds(touch)
+        }
+        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && touchInside {
             self.pressed()
         }
     }

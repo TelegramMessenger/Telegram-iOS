@@ -733,9 +733,6 @@
   range.location = range.location + range.length - 1;
   range.length = 1;
   [self.textView scrollRangeToVisible:range];
-  
-  CGPoint bottomOffset = CGPointMake(0, self.textView.contentSize.height - self.textView.bounds.size.height);
-  //[self.textView setContentOffset:bottomOffset animated:NO];
 }
 
 #pragma mark - Keyboard
@@ -1045,7 +1042,7 @@
   CGFloat baselineNudge = (lineHeight - fontLineHeight) * 0.6f;
   
   CGRect rect = *lineFragmentRect;
-  rect.size.height = lineHeight;
+  rect.size.height = lineHeight + 2.0f;
   
   CGRect usedRect = *lineFragmentUsedRect;
   usedRect.size.height = MAX(lineHeight, usedRect.size.height);

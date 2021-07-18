@@ -16,6 +16,7 @@ import CallsEmoji
 import TooltipUI
 import AlertUI
 import PresentationDataUtils
+import DeviceAccess
 
 private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
     return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
@@ -130,6 +131,14 @@ private final class CallVideoNode: ASDisplayNode {
     
     deinit {
         self.isReadyTimer?.invalidate()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .continuous
+        }
     }
     
     func animateRadialMask(from fromRect: CGRect, to toRect: CGRect) {
@@ -551,25 +560,36 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             switch callState.state {
             case .active:
                 if strongSelf.outgoingVideoNodeValue == nil {
-                    let proceed = {
-                        strongSelf.displayedCameraConfirmation = true
-                        switch callState.videoState {
-                        case .inactive:
-                            strongSelf.isRequestingVideo = true
-                            strongSelf.updateButtonsMode()
-                        default:
-                            break
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: strongSelf.presentationData, present: { [weak self] c, a in
+                        if let strongSelf = self {
+                            strongSelf.present?(c)
                         }
-                        strongSelf.call.requestVideo()
-                    }
-                    
-                    if strongSelf.displayedCameraConfirmation {
-                        proceed()
-                    } else {
-                        strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
+                    }, openSettings: { [weak self] in
+                        self?.sharedContext.applicationBindings.openSettings()
+                    }, _: { [weak self] ready in
+                        guard let strongSelf = self, ready else {
+                            return
+                        }
+                        let proceed = {
+                            strongSelf.displayedCameraConfirmation = true
+                            switch callState.videoState {
+                            case .inactive:
+                                strongSelf.isRequestingVideo = true
+                                strongSelf.updateButtonsMode()
+                            default:
+                                break
+                            }
+                            strongSelf.call.requestVideo()
+                        }
+                        
+                        if strongSelf.displayedCameraConfirmation {
                             proceed()
-                        })]))
-                    }
+                        } else {
+                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
+                                proceed()
+                            })]))
+                        }
+                    })
                 } else {
                     strongSelf.call.disableVideo()
                     strongSelf.cancelScheduledUIHiding()

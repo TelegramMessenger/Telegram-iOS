@@ -695,7 +695,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     float additionalKeyboardHeight = [self _keyboardAdditionalDeltaHeightWhenRotatingFrom:_viewControllerRotatingFromOrientation toOrientation:toInterfaceOrientation];
     
-    CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:toInterfaceOrientation];
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
     [self _updateControllerInsetForOrientation:toInterfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:[self _currentKeyboardHeight:toInterfaceOrientation] + additionalKeyboardHeight force:false notify:true];
 }
 
@@ -767,9 +767,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     
     if ([self isViewLoaded] && !_viewControllerHasEverAppeared && ([self findFirstResponder:self.view] == nil && ![self willCaptureInputShortly]))
         return 0.0f;
-    
-    if ([TGHacks isKeyboardVisible])
-        return [TGHacks keyboardHeightForOrientation:orientation];
     
     return 0.0f;
 }
@@ -1264,7 +1261,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
             if (navigationBarHidden != self.navigationController.navigationBarHidden)
             {
                 CGFloat barHeight = [self navigationBarHeightForInterfaceOrientation:self.interfaceOrientation];
-                CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:self.interfaceOrientation];
+                CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
                 if ([self shouldIgnoreStatusBarInOrientation:self.interfaceOrientation])
                     statusBarHeight = 0.0f;
                 
@@ -1434,13 +1431,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     if (TGIsPad() && iosMajorVersion() >= 7)
         viewControllerToPresent.preferredContentSize = [self.navigationController preferredContentSize];
-    
-    if ([viewControllerToPresent isKindOfClass:[TGNavigationController class]])
-    {
-        TGNavigationController *navController = (TGNavigationController *)self.navigationController;
-        if (navController.showCallStatusBar)
-            [(TGNavigationController *)viewControllerToPresent setShowCallStatusBar:true];
-    }
     
     if (iosMajorVersion() >= 8 && self.presentedViewController != nil && [self.presentedViewController isKindOfClass:[UIAlertController class]])
     {

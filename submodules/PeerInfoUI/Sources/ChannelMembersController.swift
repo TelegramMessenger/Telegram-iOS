@@ -281,7 +281,13 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
             if let peer = view.peers[view.peerId] as? TelegramChannel, peer.addressName == nil {
                 entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
             }
-            entries.append(.addMemberInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Members_AddMembersHelp : presentationData.strings.Channel_Members_AddMembersHelp))
+            if let peer = view.peers[view.peerId] as? TelegramChannel {
+                if peer.flags.contains(.isGigagroup) {
+                    entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Group_Members_AddMembersHelp))
+                } else if case .broadcast = peer.info {
+                    entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Channel_Members_AddMembersHelp))
+                }
+            }
         }
 
         
@@ -353,7 +359,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                     contacts = peerIdsValue
                 }
                 
-                let signal = context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
+                let signal = context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
                     switch contact {
                         case let .peer(contactId):
                             return contactId
@@ -437,7 +443,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+        removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
         |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
@@ -456,7 +462,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     let peerView = context.account.viewTracker.peerView(peerId)
     
-    let (disposable, loadMoreControl) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+    let (disposable, loadMoreControl) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
         peersPromise.set(.single(state.list))
     })
     actionsDisposable.add(disposable)

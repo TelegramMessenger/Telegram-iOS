@@ -69,11 +69,35 @@ private func loadCountryCodes() -> [Country] {
 private var countryCodes: [Country] = loadCountryCodes()
 private var countryCodesByPrefix: [String: (Country, Country.CountryCode)] = [:]
 
-public func loadServerCountryCodes(accountManager: AccountManager, network: Network, completion: @escaping () -> Void) {
-    let _ = (getCountriesList(accountManager: accountManager, network: network, langCode: nil)
+public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
+    let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries
         
+        var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
+        for country in countries {
+            for code in country.countryCodes {
+                if !code.prefixes.isEmpty {
+                    for prefix in code.prefixes {
+                        countriesByPrefix["\(code.code)\(prefix)"] = (country, code)
+                    }
+                } else {
+                    countriesByPrefix[code.code] = (country, code)
+                }
+            }
+        }
+        countryCodesByPrefix = countriesByPrefix
+        Queue.mainQueue().async {
+            completion()
+        }
+    })
+}
+
+public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngine, completion: @escaping () -> Void) {
+    let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
+    |> deliverOnMainQueue).start(next: { countries in
+        countryCodes = countries
+
         var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
         for country in countries {
             for code in country.countryCodes {
@@ -315,7 +339,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func cancelPressed() {

@@ -123,7 +123,7 @@ public class ChatTitleActivityNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
-        return CGSize(width: 0.0, height: self.contentNode?.updateLayout(constrainedSize, alignment: alignment).height ?? 0.0)
+    public func updateLayout(_ constrainedSize: CGSize, offset: CGFloat = 0.0, alignment: NSTextAlignment) -> CGSize {
+        return CGSize(width: 0.0, height: self.contentNode?.updateLayout(constrainedSize, offset: offset, alignment: alignment).height ?? 0.0)
     }
 }

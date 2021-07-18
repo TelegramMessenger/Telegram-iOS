@@ -40,7 +40,7 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         
         super.init(nibName: nil, bundle: nil)
         
-        self.navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
+        self.navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationBar.tintColor = theme.rootController.navigationBar.accentTextColor
         self.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -51,8 +51,7 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
         
         let controller = QLPreviewController(nibName: nil, bundle: nil)
-        controller.navigation_setDismiss({ [weak self] in
-            //self?.cancelPressed()
+        controller.navigation_setDismiss({
         }, rootController: self)
         controller.delegate = self
         controller.dataSource = self
@@ -201,9 +200,9 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
 func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
-        navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
+        navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
         navigationBar.setBackgroundImage(generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+            context.setFillColor(theme.rootController.navigationBar.opaqueBackgroundColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
         }), for: .default)
         navigationBar.isTranslucent = true

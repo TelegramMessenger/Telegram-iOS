@@ -242,6 +242,14 @@ public final class TextNodeLayout: NSObject {
             return 0.0
         }
     }
+
+    public var trailingLineIsRTL: Bool {
+        if let lastLine = self.lines.last {
+            return lastLine.isRTL
+        } else {
+            return false
+        }
+    }
     
     public func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {
@@ -1017,7 +1025,14 @@ public class TextNode: ASDisplayNode {
                             layoutSize.height += fontLineSpacing
                         }
                         
-                        let lineRange = CFRangeMake(lastLineCharacterIndex, lineCharacterCount)
+                        var lineRange = CFRangeMake(lastLineCharacterIndex, lineCharacterCount)
+                        if lineRange.location + lineRange.length > attributedString.length {
+                            lineRange.length = attributedString.length - lineRange.location
+                        }
+                        if lineRange.length < 0 {
+                            break
+                        }
+
                         let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 100.0)
                         lastLineCharacterIndex += lineCharacterCount
                         

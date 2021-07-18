@@ -22,6 +22,8 @@ swift_library(
         "//submodules/CountrySelectionUI:CountrySelectionUI",
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

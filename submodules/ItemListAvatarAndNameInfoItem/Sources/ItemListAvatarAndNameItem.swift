@@ -531,7 +531,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
             }
             
             var updateAvatarOverlayImage: UIImage?
-            if item.updatingImage != nil && item.peer?.id.namespace != -1 && currentOverlayImage == nil {
+            if item.updatingImage != nil && item.peer?.id.namespace != .max && currentOverlayImage == nil {
                 updateAvatarOverlayImage = updatingAvatarOverlayImage
             }
             

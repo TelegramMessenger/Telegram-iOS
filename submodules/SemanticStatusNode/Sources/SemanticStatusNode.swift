@@ -3,6 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import RLottieBinding
+import GZip
+import AppBundle
+import ManagedAnimationNode
 
 public enum SemanticStatusNodeState: Equatable {
     public struct ProgressAppearance: Equatable {
@@ -38,6 +42,7 @@ private protocol SemanticStatusNodeStateDrawingState: NSObjectProtocol {
 
 private protocol SemanticStatusNodeStateContext: class {
     var isAnimating: Bool { get }
+    var requestUpdate: () -> Void { get set }
     
     func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeStateDrawingState
 }
@@ -87,10 +92,12 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
     final class DrawingState: NSObject, SemanticStatusNodeStateDrawingState {
         let transitionFraction: CGFloat
         let icon: SemanticStatusNodeIcon
-        
-        init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon) {
+        let iconImage: UIImage?
+                
+        init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon, iconImage: UIImage?) {
             self.transitionFraction = transitionFraction
             self.icon = icon
+            self.iconImage = iconImage
             
             super.init()
         }
@@ -116,38 +123,65 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 break
             case .play:
                 let diameter = size.width
-                
                 let factor = diameter / 50.0
-                
-                let size = CGSize(width: 15.0, height: 18.0)
-                context.translateBy(x: (diameter - size.width) / 2.0 + 1.5, y: (diameter - size.height) / 2.0)
+               
+
+                let size: CGSize
+                var offset: CGFloat = 0.0
+                if let iconImage = self.iconImage {
+                    size = iconImage.size
+                } else {
+                    offset = 1.5
+                    size = CGSize(width: 15.0, height: 18.0)
+                }
+                context.translateBy(x: (diameter - size.width) / 2.0 + offset, y: (diameter - size.height) / 2.0)
                 if (diameter < 40.0) {
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: factor, y: factor)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                 }
-                let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
-                context.fillPath()
+                if let iconImage = self.iconImage {
+                    context.saveGState()
+                    let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.clip(to: iconRect, mask: iconImage.cgImage!)
+                    context.fill(iconRect)
+                    context.restoreGState()
+                } else {
+                    let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
+                    context.fillPath()
+                }
                 if (diameter < 40.0) {
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                 }
-                context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
+                context.translateBy(x: -(diameter - size.width) / 2.0 - offset, y: -(diameter - size.height) / 2.0)
             case .pause:
                 let diameter = size.width
-                
                 let factor = diameter / 50.0
                 
-                let size = CGSize(width: 15.0, height: 16.0)
+                let size: CGSize
+                if let iconImage = self.iconImage {
+                    size = iconImage.size
+                } else {
+                    size = CGSize(width: 15.0, height: 16.0)
+                }
                 context.translateBy(x: (diameter - size.width) / 2.0, y: (diameter - size.height) / 2.0)
                 if (diameter < 40.0) {
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: factor, y: factor)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                 }
-                let _ = try? drawSvgPath(context, path: "M0,1.00087166 C0,0.448105505 0.443716645,0 0.999807492,0 L4.00019251,0 C4.55237094,0 5,0.444630861 5,1.00087166 L5,14.9991283 C5,15.5518945 4.55628335,16 4.00019251,16 L0.999807492,16 C0.447629061,16 0,15.5553691 0,14.9991283 L0,1.00087166 Z M10,1.00087166 C10,0.448105505 10.4437166,0 10.9998075,0 L14.0001925,0 C14.5523709,0 15,0.444630861 15,1.00087166 L15,14.9991283 C15,15.5518945 14.5562834,16 14.0001925,16 L10.9998075,16 C10.4476291,16 10,15.5553691 10,14.9991283 L10,1.00087166 ")
-                context.fillPath()
+                if let iconImage = self.iconImage {
+                    context.saveGState()
+                    let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.clip(to: iconRect, mask: iconImage.cgImage!)
+                    context.fill(iconRect)
+                    context.restoreGState()
+                } else {
+                    let _ = try? drawSvgPath(context, path: "M0,1.00087166 C0,0.448105505 0.443716645,0 0.999807492,0 L4.00019251,0 C4.55237094,0 5,0.444630861 5,1.00087166 L5,14.9991283 C5,15.5518945 4.55628335,16 4.00019251,16 L0.999807492,16 C0.447629061,16 0,15.5553691 0,14.9991283 L0,1.00087166 Z M10,1.00087166 C10,0.448105505 10.4437166,0 10.9998075,0 L14.0001925,0 C14.5523709,0 15,0.444630861 15,1.00087166 L15,14.9991283 C15,15.5518945 14.5562834,16 14.0001925,16 L10.9998075,16 C10.4476291,16 10,15.5553691 10,14.9991283 L10,1.00087166 ")
+                    context.fillPath()
+                }
                 if (diameter < 40.0) {
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
@@ -156,7 +190,6 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 context.translateBy(x: -(diameter - size.width) / 2.0, y: -(diameter - size.height) / 2.0)
             case let .custom(image):
                 let diameter = size.width
-                
                 let imageRect = CGRect(origin: CGPoint(x: floor((diameter - image.size.width) / 2.0), y: floor((diameter - image.size.height) / 2.0)), size: image.size)
                 
                 context.saveGState()
@@ -207,18 +240,36 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
         }
     }
     
-    let icon: SemanticStatusNodeIcon
+    var icon: SemanticStatusNodeIcon {
+        didSet {
+            self.animationNode?.enqueueState(self.icon == .play ? .play : .pause, animated: self.iconImage != nil)
+        }
+    }
+
+    var animationNode: PlayPauseIconNode?
+    var iconImage: UIImage?
     
     init(icon: SemanticStatusNodeIcon) {
         self.icon = icon
+        
+        if [.play, .pause].contains(icon) {
+            self.animationNode = PlayPauseIconNode()
+            self.animationNode?.imageUpdated = { [weak self] image in
+                self?.iconImage = image
+                self?.requestUpdate()
+            }
+            self.iconImage = self.animationNode?.image
+        }
     }
     
     var isAnimating: Bool {
         return false
     }
     
+    var requestUpdate: () -> Void = {}
+    
     func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeStateDrawingState {
-        return DrawingState(transitionFraction: transitionFraction, icon: self.icon)
+        return DrawingState(transitionFraction: transitionFraction, icon: self.icon, iconImage: self.iconImage)
     }
 }
 
@@ -231,11 +282,11 @@ private final class SemanticStatusNodeProgressTransition {
         self.initialValue = initialValue
     }
     
-    func valueAt(timestamp: Double, actualValue: CGFloat) -> CGFloat {
+    func valueAt(timestamp: Double, actualValue: CGFloat) -> (CGFloat, Bool) {
         let duration = 0.2
         var t = CGFloat((timestamp - self.beginTime) / duration)
         t = min(1.0, max(0.0, t))
-        return t * actualValue + (1.0 - t) * self.initialValue
+        return (t * actualValue + (1.0 - t) * self.initialValue, t >= 1.0 - 0.001)
     }
 }
 
@@ -373,6 +424,8 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         return true
     }
     
+    var requestUpdate: () -> Void = {}
+    
     init(value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?) {
         self.value = value
         self.displayCancel = displayCancel
@@ -385,7 +438,11 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         let resolvedValue: CGFloat?
         if let value = self.value {
             if let transition = self.transition {
-                resolvedValue = transition.valueAt(timestamp: timestamp, actualValue: value)
+                let (v, isCompleted) = transition.valueAt(timestamp: timestamp, actualValue: value)
+                resolvedValue = v
+                if isCompleted {
+                    self.transition = nil
+                }
             } else {
                 resolvedValue = value
             }
@@ -395,14 +452,18 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, appearance: self.appearance, timestamp: timestamp)
     }
     
+    func maskView() -> UIView? {
+        return nil
+    }
+    
     func updateValue(value: CGFloat?) {
         if value != self.value {
-            let previousValue = value
+            let previousValue = self.value
             self.value = value
             let timestamp = CACurrentMediaTime()
             if let _ = value, let previousValue = previousValue {
                 if let transition = self.transition {
-                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: previousValue))
+                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: previousValue).0)
                 } else {
                     self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: previousValue)
                 }
@@ -494,6 +555,8 @@ private final class SemanticStatusNodeCheckContext: SemanticStatusNodeStateConte
         return true
     }
     
+    var requestUpdate: () -> Void = {}
+    
     init(value: CGFloat, appearance: SemanticStatusNodeState.CheckAppearance?) {
         self.value = value
         self.appearance = appearance
@@ -506,11 +569,19 @@ private final class SemanticStatusNodeCheckContext: SemanticStatusNodeStateConte
         
         let resolvedValue: CGFloat
         if let transition = self.transition {
-            resolvedValue = transition.valueAt(timestamp: timestamp, actualValue: value)
+            let (v, isCompleted) = transition.valueAt(timestamp: timestamp, actualValue: value)
+            resolvedValue = v
+            if isCompleted {
+                self.transition = nil
+            }
         } else {
             resolvedValue = value
         }
         return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, appearance: self.appearance)
+    }
+    
+    func maskView() -> UIView? {
+        return nil
     }
     
     func animate() {
@@ -542,8 +613,15 @@ private extension SemanticStatusNodeState {
             default:
                 preconditionFailure()
             }
-            if let current = current as? SemanticStatusNodeIconContext, current.icon == icon {
-                return current
+            if let current = current as? SemanticStatusNodeIconContext {
+                if current.icon == icon {
+                    return current
+                } else if (current.icon == .play && icon == .pause) || (current.icon == .pause && icon == .play) {
+                    current.icon = icon
+                    return current
+                } else {
+                    return SemanticStatusNodeIconContext(icon: icon)
+                }
             } else {
                 return SemanticStatusNodeIconContext(icon: icon)
             }
@@ -774,6 +852,16 @@ public final class SemanticStatusNode: ASControlNode {
     private var disposable: Disposable?
     private var backgroundNodeImage: UIImage?
     
+    private let hasLayoutPromise = ValuePromise(false, ignoreRepeated: true)
+    
+    public override func layout() {
+        super.layout()
+        
+        if !self.bounds.width.isZero {
+            self.hasLayoutPromise.set(true)
+        }
+    }
+    
     public init(backgroundNodeColor: UIColor, foregroundNodeColor: UIColor, image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil, overlayForegroundNodeColor: UIColor? = nil, cutout: CGRect? = nil) {
         self.state = .none
         self.stateContext = self.state.context(current: nil)
@@ -786,9 +874,8 @@ public final class SemanticStatusNode: ASControlNode {
         
         if let image = image {
             let start = CACurrentMediaTime()
-            self.disposable = (image
-            |> deliverOnMainQueue).start(next: { [weak self] transform in
-                guard let strongSelf = self else {
+            self.disposable = combineLatest(queue: Queue.mainQueue(), image, self.hasLayoutPromise.get()).start(next: { [weak self] transform, ready in
+                guard let strongSelf = self, ready else {
                     return
                 }
                 let context = transform(TransformImageArguments(corners: ImageCorners(radius: strongSelf.bounds.width / 2.0), imageSize: strongSelf.bounds.size, boundingSize: strongSelf.bounds.size, intrinsicInsets: UIEdgeInsets()))
@@ -854,6 +941,9 @@ public final class SemanticStatusNode: ASControlNode {
             self.state = state
             let previousStateContext = self.stateContext
             self.stateContext = self.state.context(current: self.stateContext)
+            self.stateContext.requestUpdate = { [weak self] in
+                self?.setNeedsDisplay()
+            }
             
             if animated && previousStateContext !== self.stateContext {
                 self.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: previousStateContext, previousAppearanceContext: nil, completion: completion)
@@ -925,5 +1015,55 @@ public final class SemanticStatusNode: ASControlNode {
             transitionAppearanceState.drawForeground(context: context, size: bounds.size)
         }
         parameters.appearanceState.drawForeground(context: context, size: bounds.size)
+    }
+}
+
+private enum PlayPauseIconNodeState: Equatable {
+    case play
+    case pause
+}
+
+private final class PlayPauseIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.35
+    private var iconState: PlayPauseIconNodeState = .play
+    
+    init() {
+        super.init(size: CGSize(width: 36.0, height: 36.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: PlayPauseIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .pause:
+                switch state {
+                    case .play:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 83), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .pause:
+                        break
+                }
+            case .play:
+                switch state {
+                    case .pause:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 41), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
+                        }
+                    case .play:
+                        break
+                }
+        }
     }
 }

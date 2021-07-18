@@ -7,6 +7,7 @@ import SyncCore
 import MtProtoKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramNotices
 import AccountContext
 
 private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
@@ -15,7 +16,7 @@ private let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
-    case channelMessage(Int32)
+    case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
 }
@@ -23,7 +24,7 @@ public enum ParsedInternalPeerUrlParameter {
 public enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case peerId(PeerId)
-    case privateMessage(messageId: MessageId, threadId: Int32?)
+    case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
     case stickerPack(String)
     case join(String)
     case localization(String)
@@ -145,7 +146,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                 } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int32(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
-                    return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                    return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(idValue)))
                 } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
                     return .join(String(pathComponents[0].dropFirst()))
                 }
@@ -185,7 +186,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     let parameter: WallpaperUrlParameter
                     if [6, 8].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
-                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-~").inverted) == nil {
                         var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -196,17 +197,43 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             }
                         }
-                        let components = component.components(separatedBy: "-")
-                        if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
-                            parameter = .gradient(topColor, bottomColor, rotation)
+                        if component.contains("~") {
+                            let components = component.components(separatedBy: "~")
+
+                            var colors: [UInt32] = []
+                            if components.count >= 2 && components.count <= 4 {
+                                colors = components.compactMap { component in
+                                    return UIColor(hexString: component)?.rgb
+                                }
+                            }
+
+                            if !colors.isEmpty {
+                                parameter = .gradient(colors, rotation)
+                            } else {
+                                return nil
+                            }
                         } else {
-                            return nil
+                            let components = component.components(separatedBy: "-")
+                            if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
+                                parameter = .gradient([topColor.rgb, bottomColor.rgb], rotation)
+                            } else {
+                                return nil
+                            }
+                        }
+                    } else if component.contains("~") {
+                        let components = component.components(separatedBy: "~")
+                        if components.count >= 1 && components.count <= 4 {
+                            let colors = components.compactMap { component in
+                                return UIColor(hexString: component)?.rgb
+                            }
+                            parameter = .gradient(colors, nil)
+                        } else {
+                            parameter = .color(UIColor(rgb: 0xffffff))
                         }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
-                        var topColor: UIColor?
-                        var bottomColor: UIColor?
+                        var colors: [UInt32] = []
                         var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -224,12 +251,18 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                         }
                                     } else if queryItem.name == "bg_color" {
                                         if [6, 8].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
-                                            topColor = color
+                                            colors = [color.rgb]
                                         } else if [13, 15, 17].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
                                             let components = value.components(separatedBy: "-")
                                             if components.count == 2, let topColorValue = UIColor(hexString: components[0]), let bottomColorValue = UIColor(hexString: components[1]) {
-                                                topColor = topColorValue
-                                                bottomColor = bottomColorValue
+                                                colors = [topColorValue.rgb, bottomColorValue.rgb]
+                                            }
+                                        } else if value.contains("~") {
+                                            let components = value.components(separatedBy: "~")
+                                            if components.count >= 2 && components.count <= 4 {
+                                                colors = components.compactMap { component in
+                                                    return UIColor(hexString: component)?.rgb
+                                                }
                                             }
                                         }
                                     } else if queryItem.name == "intensity" {
@@ -240,7 +273,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             }
                         }
-                        parameter = .slug(component, options, topColor, bottomColor, intensity, rotation)
+                        parameter = .slug(component, options, colors, intensity, rotation)
                     }
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
@@ -248,48 +281,55 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int32(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
+                        var timecode: Double?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
                                     if queryItem.name == "thread" {
                                         if let intValue = Int32(value) {
                                             threadId = intValue
-                                            break
+                                        }
+                                    } else if queryItem.name == "t" {
+                                        if let doubleValue = Double(value) {
+                                            timecode = doubleValue
                                         }
                                     }
                                 }
                             }
                         }
-                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId)
+                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId, timecode: timecode)
                     } else {
                         return nil
                     }
-                } else if let value = Int(pathComponents[1]) {
+                } else if let value = Int32(pathComponents[1]) {
                     var threadId: Int32?
                     var commentId: Int32?
+                    var timecode: Double?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "thread" {
                                     if let intValue = Int32(value) {
                                         threadId = intValue
-                                        break
                                     }
                                 } else if queryItem.name == "comment" {
                                     if let intValue = Int32(value) {
                                         commentId = intValue
-                                        break
+                                    }
+                                } else if queryItem.name == "t" {
+                                    if let doubleValue = Double(value) {
+                                        timecode = doubleValue
                                     }
                                 }
                             }
                         }
                     }
                     if let threadId = threadId {
-                        return .peerName(peerName, .replyThread(threadId, Int32(value)))
+                        return .peerName(peerName, .replyThread(threadId, value))
                     } else if let commentId = commentId {
-                        return .peerName(peerName, .replyThread(Int32(value), commentId))
+                        return .peerName(peerName, .replyThread(value, commentId))
                     } else {
-                        return .peerName(peerName, .channelMessage(Int32(value)))
+                        return .peerName(peerName, .channelMessage(value, timecode))
                     }
                 } else {
                     return nil
@@ -302,13 +342,13 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
     return nil
 }
 
-private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
+private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
     switch url {
         case let .peerName(name, parameter):
-            return resolvePeerByName(account: account, name: name)
+            return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                return account.postbox.transaction { transaction -> Peer? in
+                return context.account.postbox.transaction { transaction -> Peer? in
                     if let peerId = peerId {
                         return transaction.getPeer(peerId)
                     } else {
@@ -324,18 +364,18 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                 return .single(.botStart(peerId: peer.id, payload: payload))
                             case let .groupBotStart(payload):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload))
-                            case let .channelMessage(id):
-                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
+                            case let .channelMessage(id, timecode):
+                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
+                                return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                     return .single(nil)
                                 }
                                 |> map { result -> ResolvedUrl? in
                                     guard let result = result else {
-                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
+                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId, timecode: nil)
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
@@ -354,7 +394,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 }
             }
         case let .peerId(peerId):
-            return account.postbox.transaction { transaction -> Peer? in
+            return context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peerId)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
@@ -364,8 +404,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     return .single(.inaccessiblePeer)
                 }
             }
-        case let .privateMessage(messageId, threadId):
-            return account.postbox.transaction { transaction -> Peer? in
+        case let .privateMessage(messageId, threadId, timecode):
+            return context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(messageId.peerId)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
@@ -373,26 +413,26 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
+                    foundPeer = TelegramEngine(account: context.account).peers.findChannelById(channelId: messageId.peerId.id._internalGetInt32Value())
                 }
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
                     if let foundPeer = foundPeer {
                         if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
+                            return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)
                             }
                             |> map { result -> ResolvedUrl? in
                                 guard let result = result else {
-                                    return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId)
+                                    return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId, timecode: timecode)
                                 }
                                 return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
-                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil)))
+                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true, timecode: timecode), peekData: nil)))
                         }
                     } else {
                         return .single(.inaccessiblePeer)
@@ -408,7 +448,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
         case let .proxy(host, port, username, password, secret):
             return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
         case let .internalInstantView(url):
-            return resolveInstantViewUrl(account: account, url: url)
+            return resolveInstantViewUrl(account: context.account, url: url)
             |> map(Optional.init)
         case let .confirmationCode(code):
             return .single(.confirmationCode(code))
@@ -525,60 +565,72 @@ private struct UrlHandlingConfiguration {
     }
 }
 
-public func resolveUrlImpl(account: Account, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
+public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     
-    return account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
-        let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
-        
-        var url = url
-        if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
-            if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-                url = "http://\(url)"
+    return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
+    |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
+        return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
+            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+            let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
+            
+            var skipUrlAuth = skipUrlAuth
+            if let peerId = peerId, peerId.namespace == Namespaces.Peer.SecretChat {
+                if let linkPreviews = linkPreviews, linkPreviews {
+                } else {
+                    skipUrlAuth = true
+                }
             }
-        }
-        if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
-            if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
-                components.scheme = "https"
-                var queryItems = components.queryItems ?? []
-                queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
-                components.queryItems = queryItems
-                url = components.url?.absoluteString ?? url
-            } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
-                return .single(.urlAuth(url))
+            
+            var url = url
+            if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
+                if !(url.hasPrefix("http") || url.hasPrefix("https")) {
+                    url = "http://\(url)"
+                }
             }
-        }
-        
-        for basePath in baseTelegramMePaths {
-            for scheme in schemes {
-                let basePrefix = scheme + basePath + "/"
-                if url.lowercased().hasPrefix(basePrefix) {
-                    if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
-                        return resolveInternalUrl(account: account, url: internalUrl)
-                        |> map { resolved -> ResolvedUrl in
-                            if let resolved = resolved {
-                                return resolved
-                            } else {
-                                return .externalUrl(url)
+            
+            if let urlValue = URL(string: url), let host = urlValue.host?.lowercased() {
+                if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
+                    components.scheme = "https"
+                    var queryItems = components.queryItems ?? []
+                    queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+                    components.queryItems = queryItems
+                    url = components.url?.absoluteString ?? url
+                } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
+                    return .single(.urlAuth(url))
+                }
+            }
+            
+            for basePath in baseTelegramMePaths {
+                for scheme in schemes {
+                    let basePrefix = scheme + basePath + "/"
+                    if url.lowercased().hasPrefix(basePrefix) {
+                        if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
+                            return resolveInternalUrl(context: context, url: internalUrl)
+                            |> map { resolved -> ResolvedUrl in
+                                if let resolved = resolved {
+                                    return resolved
+                                } else {
+                                    return .externalUrl(url)
+                                }
                             }
+                        } else {
+                            return .single(.externalUrl(url))
                         }
-                    } else {
-                        return .single(.externalUrl(url))
                     }
                 }
             }
-        }
-        for basePath in baseTelegraPhPaths {
-            for scheme in schemes {
-                let basePrefix = scheme + basePath
-                if url.lowercased().hasPrefix(basePrefix) {
-                    return resolveInstantViewUrl(account: account, url: url)
+            for basePath in baseTelegraPhPaths {
+                for scheme in schemes {
+                    let basePrefix = scheme + basePath
+                    if url.lowercased().hasPrefix(basePrefix) {
+                        return resolveInstantViewUrl(account: context.account, url: url)
+                    }
                 }
             }
-        }
-        return .single(.externalUrl(url))
-    } |> switchToLatest
+            return .single(.externalUrl(url))
+        } |> switchToLatest
+    }
 }
 
 public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {

@@ -904,20 +904,20 @@ public final class MessageHistoryView {
     public let isLoading: Bool
     public let isAddedToChatList: Bool
     
-    public init(tagMask: MessageTags?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool) {
+    public init(tagMask: MessageTags?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool, holeLater: Bool, isLoading: Bool) {
         self.tagMask = tagMask
         self.namespaces = namespaces
         self.anchorIndex = .lowerBound
         self.earlierId = nil
         self.laterId = nil
         self.holeEarlier = holeEarlier
-        self.holeLater = false
+        self.holeLater = holeLater
         self.entries = entries
         self.maxReadIndex = nil
         self.fixedReadStates = nil
         self.topTaggedMessages = []
         self.additionalData = []
-        self.isLoading = false
+        self.isLoading = isLoading
         self.isAddedToChatList = false
     }
     
@@ -1053,7 +1053,7 @@ public final class MessageHistoryView {
                                         index = 0
                                         for entry in entries {
                                             if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
-                                                maxNamespaceIndex = entry.index.predecessor()
+                                                maxNamespaceIndex = entry.index.peerLocalPredecessor()
                                                 break
                                             }
                                             index += 1
@@ -1109,7 +1109,7 @@ public final class MessageHistoryView {
                             index = 0
                             for entry in entries {
                                 if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
-                                    maxNamespaceIndex = entry.index.predecessor()
+                                    maxNamespaceIndex = entry.index.peerLocalPredecessor()
                                     break
                                 }
                                 index += 1

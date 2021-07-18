@@ -257,7 +257,10 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                     
                     strongSelf.listView.isHidden = false
@@ -337,7 +340,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         let geoPoint = currentProcessedResults.geoPoint.flatMap { geoPoint -> (Double, Double) in
             return (geoPoint.latitude, geoPoint.longitude)
         }
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((self.context.engine.messages.requestChatContextResults(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }
@@ -362,5 +365,15 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             strongSelf.currentProcessedResults = mergedResults
             strongSelf.updateInternalResults(mergedResults)
         }))
+    }
+    
+    override var topItemFrame: CGRect? {
+        var topItemFrame: CGRect?
+        self.listView.forEachItemNode { itemNode in
+            if topItemFrame == nil {
+                topItemFrame = itemNode.frame
+            }
+        }
+        return topItemFrame
     }
 }

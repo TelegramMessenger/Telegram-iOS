@@ -219,7 +219,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
             }
         })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

@@ -18,6 +18,7 @@ public final class AnimationNode : ASDisplayNode {
     
     public var didPlay = false
     public var completion: (() -> Void)?
+    private var internalCompletion: (() -> Void)?
     
     public var isPlaying: Bool {
         return self.animationView()?.isAnimationPlaying ?? false
@@ -79,10 +80,22 @@ public final class AnimationNode : ASDisplayNode {
         })
     }
     
-    public func setAnimation(name: String) {
+    public func seekToEnd() {
+        self.animationView()?.animationProgress = 1.0
+    }
+    
+    public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             self.didPlay = false
             self.animationView()?.sceneModel = composition
+            
+            if let colors = colors {
+                for (key, value) in colors {
+                    let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                    self.colorCallbacks.append(colorCallback)
+                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                }
+            }
         }
     }
     
@@ -95,6 +108,7 @@ public final class AnimationNode : ASDisplayNode {
     }
     
     public func setAnimation(json: [AnyHashable: Any]) {
+        self.didPlay = false
         self.animationView()?.setAnimation(json: json)
     }
     
@@ -103,7 +117,7 @@ public final class AnimationNode : ASDisplayNode {
     }
     
     public func play() {
-        if let animationView = animationView(), !animationView.isAnimationPlaying && !self.didPlay {
+        if let animationView = self.animationView(), !animationView.isAnimationPlaying && !self.didPlay {
             self.didPlay = true
             animationView.play { [weak self] _ in
                 self?.completion?()
@@ -111,8 +125,20 @@ public final class AnimationNode : ASDisplayNode {
         }
     }
     
+    public func playOnce() {
+        if let animationView = self.animationView(), !animationView.isAnimationPlaying && !self.didPlay {
+            self.didPlay = true
+            self.internalCompletion = { [weak self] in
+                self?.didPlay = false
+            }
+            animationView.play { [weak self] _ in
+                self?.internalCompletion?()
+            }
+        }
+    }
+    
     public func loop() {
-        if let animationView = animationView() {
+        if let animationView = self.animationView() {
             animationView.loopAnimation = true
             animationView.play()
         }

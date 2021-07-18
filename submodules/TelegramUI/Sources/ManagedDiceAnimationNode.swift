@@ -137,7 +137,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
             let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
         })
-        self.emojis.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice(emoji), forceActualized: false)
+        self.emojis.set(context.engine.stickers.loadedStickerPack(reference: .dice(emoji), forceActualized: false)
         |> mapToSignal { stickerPack -> Signal<[TelegramMediaFile], NoError> in
             switch stickerPack {
                 case let .result(_, items, _):
@@ -205,5 +205,12 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
     }
     
     func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    }
+
+    func setFrameIndex(_ frameIndex: Int) {
+    }
+
+    var currentFrameIndex: Int {
+        return 0
     }
 }

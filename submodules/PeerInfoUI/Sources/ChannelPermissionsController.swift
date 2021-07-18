@@ -536,7 +536,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             peersPromise.set(.single((peerId, nil)))
         } else {
             var loadCompletedCalled = false
-            let disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.restricted(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+            let disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.restricted(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
                 if case .loading(true) = state.loadingState, !updated {
                     peersPromise.set(.single((peerId, nil)))
                 } else {
@@ -594,7 +594,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 let state = stateValue.with { $0 }
                 if let modifiedRightsFlags = state.modifiedRightsFlags {
-                    updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: context.account, peerId: view.peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
+                    updateDefaultRightsDisposable.set((context.engine.peers.updateDefaultChannelMemberBannedRights(peerId: view.peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
                     |> deliverOnMainQueue).start())
                 }
             } else if let group = view.peers[view.peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
@@ -624,7 +624,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 let state = stateValue.with { $0 }
                 if let modifiedRightsFlags = state.modifiedRightsFlags {
-                    updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: context.account, peerId: view.peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
+                    updateDefaultRightsDisposable.set((context.engine.peers.updateDefaultChannelMemberBannedRights(peerId: view.peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
                         |> deliverOnMainQueue).start())
                 }
             }
@@ -679,7 +679,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 return state
             }
             
-            removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: memberId, bannedRights: nil)
+            removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: nil)
             |> deliverOnMainQueue).start(error: { _ in
                 updateState { state in
                     var state = state
@@ -762,7 +762,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {
-        resolveDisposable.set((resolvePeerByName(account: context.account, name: "durov") |> deliverOnMainQueue).start(next: { peerId in
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov") |> deliverOnMainQueue).start(next: { peerId in
             if let peerId = peerId {
                 navigateToChatControllerImpl?(peerId)
             }
@@ -779,7 +779,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 let state = stateValue.with { $0 }
                 if let modifiedSlowmodeTimeout = state.modifiedSlowmodeTimeout {
-                    updateDefaultRightsDisposable.set(updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: view.peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
+                    updateDefaultRightsDisposable.set(context.engine.peers.updateChannelSlowModeInteractively(peerId: view.peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
                 }
             } else if let _ = view.peers[view.peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
                 updateState { state in
@@ -797,7 +797,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 
-                let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)
+                let signal = context.engine.peers.convertGroupToSupergroup(peerId: view.peerId)
                 |> mapError { error -> UpdateChannelSlowModeError in
                     switch error {
                     case .tooManyChannels:
@@ -815,7 +815,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                     }
                 }
                 |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    return updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
+                    return context.engine.peers.updateChannelSlowModeInteractively(peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
                     |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
                         return .complete()
                     }

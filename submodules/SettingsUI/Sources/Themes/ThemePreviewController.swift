@@ -245,7 +245,7 @@ public final class ThemePreviewController: ViewController {
                 }
             case .media:
                 if let strings = encodePresentationTheme(previewTheme), let data = strings.data(using: .utf8) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                     theme = .single(.local(PresentationLocalTheme(title: previewTheme.name.string, resource: resource, resolvedWallpaper: nil)))
@@ -479,7 +479,7 @@ public final class ThemePreviewController: ViewController {
         
         self.validLayout = layout
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     @objc private func actionPressed() {

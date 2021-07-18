@@ -49,9 +49,8 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         
         self.tapAction = tapAction
         self.close = close
-        
+
         self.contentNode = ASDisplayNode()
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -101,7 +100,6 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
         self.iconNode.image = PresentationResourcesRootController.navigationLiveLocationIcon(self.theme)
         
         self.wavesNode.color = self.theme.rootController.navigationBar.accentTextColor
@@ -178,7 +176,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - rightInset, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
     func update(peers: [Peer], mode: LocationBroadcastNavigationAccessoryPanelMode, canClose: Bool) {
@@ -191,9 +189,16 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     func animateIn(_ transition: ContainedViewLayoutTransition) {
         self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
+
         transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.animatePositionAdditive(node: self.separatorNode, offset: CGPoint(x: 0.0, y: size.height))
     }
     
     func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -203,6 +208,12 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
             self?.clipsToBounds = false
             completion()
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
     }
     
     @objc func closePressed() {

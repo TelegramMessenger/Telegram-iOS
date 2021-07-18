@@ -252,7 +252,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     }
         
     if (_inputField.internalTextView.isFirstResponder)
-        [TGHacks applyCurrentKeyboardAutocorrectionVariant];
+        [TGHacks applyCurrentKeyboardAutocorrectionVariant:_inputField.internalTextView];
     
     NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:_inputField.text == nil ? [[NSAttributedString alloc] initWithString:@""] : _inputField.attributedText];
     NSMutableString *usualString = [text.string mutableCopy];
@@ -1028,13 +1028,19 @@ static void setViewFrame(UIView *view, CGRect frame)
             _associatedPanel.frame = associatedPanelFrame;
     }
     
-    UIEdgeInsets inputFieldInsets = [self _inputFieldInsets];
+    UIEdgeInsets visibleInputFieldInsets = [self _inputFieldInsets];
     if (self.isFirstResponder) {
-        inputFieldInsets.right += 41.0;
+        visibleInputFieldInsets.right += 41.0;
     }
+    UIEdgeInsets actualInputFieldInsets = [self _inputFieldInsets];
+    actualInputFieldInsets.right += 41.0;
     
     CGFloat inputContainerHeight = [self heightForInputFieldHeight:self.isFirstResponder ? _inputField.frame.size.height : 0];
-    setViewFrame(_fieldBackground, CGRectMake(inputFieldInsets.left, inputFieldInsets.top, frame.size.width - inputFieldInsets.left - inputFieldInsets.right, inputContainerHeight - inputFieldInsets.top - inputFieldInsets.bottom));
+    CGRect fieldBackgroundFrame = CGRectMake(visibleInputFieldInsets.left, visibleInputFieldInsets.top, frame.size.width - visibleInputFieldInsets.left - visibleInputFieldInsets.right, inputContainerHeight - visibleInputFieldInsets.top - visibleInputFieldInsets.bottom);
+    
+    CGRect actualFieldBackgroundFrame = CGRectMake(actualInputFieldInsets.left, actualInputFieldInsets.top, frame.size.width - actualInputFieldInsets.left - actualInputFieldInsets.right, inputContainerHeight - actualInputFieldInsets.top - actualInputFieldInsets.bottom);
+    
+    setViewFrame(_fieldBackground, fieldBackgroundFrame);
     
     UIEdgeInsets inputFieldInternalEdgeInsets = [self _inputFieldInternalEdgeInsets];
     CGRect onelineFrame = _fieldBackground.frame;
@@ -1049,7 +1055,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         placeholderFrame.origin.x = onelineFrame.origin.x;
     setViewFrame(_placeholderLabel, placeholderFrame);
     
-    CGRect inputFieldClippingFrame = _fieldBackground.frame;
+    CGRect inputFieldClippingFrame = actualFieldBackgroundFrame;
     setViewFrame(_inputFieldClippingContainer, inputFieldClippingFrame);
 
     CGFloat inputFieldWidth = _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 36;

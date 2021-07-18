@@ -29,6 +29,8 @@ typedef enum {
 
 @protocol LegacyComponentsGlobalsProvider <NSObject>
 
+- (void)makeViewDisableInteractiveKeyboardGestureRecognizer:(UIView *)view;
+
 - (TGLocalization *)effectiveLocalization;
 - (void)log:(NSString *)string;
 - (NSArray<UIWindow *> *)applicationWindows;
@@ -73,6 +75,7 @@ typedef enum {
 
 - (TGNavigationBarPallete *)navigationBarPallete;
 - (TGMenuSheetPallete *)menuSheetPallete;
+- (TGMenuSheetPallete *)darkMenuSheetPallete;
 - (TGMediaAssetsPallete *)mediaAssetsPallete;
 - (TGCheckButtonPallete *)checkButtonPallete;
 

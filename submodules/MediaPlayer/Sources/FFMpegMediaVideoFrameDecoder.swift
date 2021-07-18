@@ -1,10 +1,30 @@
+
+#if !os(macOS)
 import UIKit
+#else
+import AppKit
+#endif
 import CoreMedia
 import Accelerate
 import FFMpegBinding
 
 private let bufferCount = 32
 
+
+
+#if os(macOS)
+private let deviceColorSpace: CGColorSpace = {
+    if #available(OSX 10.11.2, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+#else
 private let deviceColorSpace: CGColorSpace = {
     if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
         if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
@@ -16,7 +36,7 @@ private let deviceColorSpace: CGColorSpace = {
         return CGColorSpaceCreateDeviceRGB()
     }
 }()
-
+#endif
 public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     public enum ReceiveResult {
         case error
@@ -202,7 +222,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var srcCb = vImage_Buffer(data: frame.data[1], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[1]))
         var srcCr = vImage_Buffer(data: frame.data[2], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[2]))
         
-        let argbBytesPerRow = (4 * Int(frame.width) + 15) & (~15)
+        let argbBytesPerRow = (4 * Int(frame.width) + 31) & (~31)
         let argbLength = argbBytesPerRow * Int(frame.height)
         let argb = malloc(argbLength)!
         guard let provider = CGDataProvider(dataInfo: argb, data: argb, size: argbLength, releaseData: { bytes, _, _ in

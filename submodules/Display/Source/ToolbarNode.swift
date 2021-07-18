@@ -8,7 +8,8 @@ public final class ToolbarNode: ASDisplayNode {
     public var left: () -> Void
     public var right: () -> Void
     public var middle: () -> Void
-    
+
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let leftTitle: ImmediateTextNode
     private let leftButton: HighlightTrackingButtonNode
@@ -23,6 +24,8 @@ public final class ToolbarNode: ASDisplayNode {
         self.left = left
         self.right = right
         self.middle = middle
+
+        self.backgroundNode = NavigationBackgroundNode(color: theme.tabBarBackgroundColor)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -40,6 +43,8 @@ public final class ToolbarNode: ASDisplayNode {
         super.init()
         
         self.isAccessibilityContainer = false
+
+        self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.leftTitle)
         self.addSubnode(self.leftButton)
@@ -47,6 +52,7 @@ public final class ToolbarNode: ASDisplayNode {
         self.addSubnode(self.rightButton)
         self.addSubnode(self.middleTitle)
         self.addSubnode(self.middleButton)
+
         if self.displaySeparator {
             self.addSubnode(self.separatorNode)
         }
@@ -96,10 +102,12 @@ public final class ToolbarNode: ASDisplayNode {
     
     public func updateTheme(_ theme: TabBarControllerTheme) {
         self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
-        self.backgroundColor = theme.tabBarBackgroundColor
+        self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.backgroundNode.update(size: size, transition: transition)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         var sideInset: CGFloat = 16.0

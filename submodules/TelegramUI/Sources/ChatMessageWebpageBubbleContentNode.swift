@@ -86,7 +86,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
-        return { item, layoutConstants, _, _, constrainedSize in
+        return { item, layoutConstants, preparePosition, _, constrainedSize in
             var webPage: TelegramMediaWebpage?
             var webPageContent: TelegramMediaWebpageLoadedContent?
             for media in item.message.media {
@@ -171,18 +171,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
                         }
                     } else if webpage.type == "telegram_background" {
-                        var topColor: UIColor?
-                        var bottomColor: UIColor?
+                        var colors: [UInt32] = []
                         var rotation: Int32?
-                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, firstColor, secondColor, intensity, rotationValue) = wallpaper {
-                            topColor = firstColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
-                            bottomColor = secondColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
+                        var intensity: Int32?
+                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, colorsValue, intensityValue, rotationValue) = wallpaper {
+                            colors = colorsValue
                             rotation = rotationValue
+                            intensity = intensityValue
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, topColor, bottomColor, rotation, false, false))
+                        let media = WallpaperPreviewMedia(content: .file(file: file, colors: colors, rotation: rotation, intensity: intensity, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
-                            badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                            badge = dataSizeString(fileSize, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                         }
                     } else {
                         mediaAndFlags = (file, [])
@@ -207,25 +207,24 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
-                        var topColor: UIColor?
+                        var colors: [UInt32] = []
                         var bottomColor: UIColor?
                         var rotation: Int32?
                         if let wallpaper = parseWallpaperUrl(webpage.url) {
                             if case let .color(color) = wallpaper {
-                                topColor = color
-                            } else if case let .gradient(topColorValue, bottomColorValue, rotationValue) = wallpaper {
-                                topColor = topColorValue
-                                bottomColor = bottomColorValue
+                                colors = [color.rgb]
+                            } else if case let .gradient(colorsValue, rotationValue) = wallpaper {
+                                colors = colorsValue
                                 rotation = rotationValue
                             }
                         }
                         
                         var content: WallpaperPreviewMediaContent?
-                        if let topColor = topColor {
-                            if let bottomColor = bottomColor {
-                                content = .gradient(topColor, bottomColor, rotation)
+                        if !colors.isEmpty {
+                            if colors.count >= 2 {
+                                content = .gradient(colors, rotation)
                             } else {
-                                content = .color(topColor)
+                                content = .color(UIColor(rgb: colors[0]))
                             }
                         }
                         if let content = content {
@@ -254,7 +253,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             file = contentFile
                         }
                         if let file = file {
-                            let media = WallpaperPreviewMedia(content: .file(file, nil, nil, nil, true, isSupported))
+                            let media = WallpaperPreviewMedia(content: .file(file: file, colors: [],  rotation: nil, intensity: nil, true, isSupported))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         } else if let settings = settings {
                             let media = WallpaperPreviewMedia(content: .themeSettings(settings))
@@ -301,7 +300,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, preparePosition, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

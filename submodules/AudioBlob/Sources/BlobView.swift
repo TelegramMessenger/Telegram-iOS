@@ -1,19 +1,51 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import LegacyComponents
 
+public final class VoiceBlobNode: ASDisplayNode {
+    public init(
+        maxLevel: CGFloat,
+        smallBlobRange: VoiceBlobView.BlobRange,
+        mediumBlobRange: VoiceBlobView.BlobRange,
+        bigBlobRange: VoiceBlobView.BlobRange
+    ) {
+        super.init()
+        
+        self.setViewBlock({
+            return VoiceBlobView(frame: CGRect(), maxLevel: maxLevel, smallBlobRange: smallBlobRange, mediumBlobRange: mediumBlobRange, bigBlobRange: bigBlobRange)
+        })
+    }
+    
+    public func startAnimating(immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.startAnimating(immediately: immediately)
+    }
+    
+    public func stopAnimating(duration: Double = 0.15) {
+        (self.view as? VoiceBlobView)?.stopAnimating(duration: duration)
+    }
+    
+    public func setColor(_ color: UIColor, animated: Bool = false) {
+        (self.view as? VoiceBlobView)?.setColor(color, animated: animated)
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.updateLevel(level, immediately: immediately)
+    }
+}
+
 public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
-    private let smallBlob: BlobView
-    private let mediumBlob: BlobView
-    private let bigBlob: BlobView
+    private let smallBlob: BlobNode
+    private let mediumBlob: BlobNode
+    private let bigBlob: BlobNode
     
     private let maxLevel: CGFloat
     
     private var displayLinkAnimator: ConstantDisplayLinkAnimator?
     
     private var audioLevel: CGFloat = 0
-    private var presentationAudioLevel: CGFloat = 0
+    public var presentationAudioLevel: CGFloat = 0
     
     private(set) var isAnimating = false
     
@@ -28,7 +60,7 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     ) {
         self.maxLevel = maxLevel
         
-        self.smallBlob = BlobView(
+        self.smallBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 0.1,
             maxRandomness: 0.5,
@@ -39,23 +71,23 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             scaleSpeed: 0.2,
             isCircle: true
         )
-        self.mediumBlob = BlobView(
+        self.mediumBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: mediumBlobRange.min,
             maxScale: mediumBlobRange.max,
             scaleSpeed: 0.2,
             isCircle: false
         )
-        self.bigBlob = BlobView(
+        self.bigBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: bigBlobRange.min,
             maxScale: bigBlobRange.max,
             scaleSpeed: 0.2,
@@ -64,9 +96,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         
         super.init(frame: frame)
         
-        addSubview(bigBlob)
-        addSubview(mediumBlob)
-        addSubview(smallBlob)
+        self.addSubnode(self.bigBlob)
+        self.addSubnode(self.mediumBlob)
+        self.addSubnode(self.smallBlob)
         
         displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
@@ -94,6 +126,10 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func updateLevel(_ level: CGFloat) {
+        self.updateLevel(level, immediately: false)
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool = false) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
         smallBlob.updateSpeedLevel(to: normalizedLevel)
@@ -101,14 +137,26 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         bigBlob.updateSpeedLevel(to: normalizedLevel)
         
         audioLevel = normalizedLevel
+        if immediately {
+            presentationAudioLevel = normalizedLevel
+        }
     }
     
     public func startAnimating() {
+        self.startAnimating(immediately: false)
+    }
+    
+    public func startAnimating(immediately: Bool = false) {
         guard !isAnimating else { return }
         isAnimating = true
         
-        mediumBlob.layer.animateScale(from: 0.5, to: 1, duration: 0.15, removeOnCompletion: false)
-        bigBlob.layer.animateScale(from: 0.5, to: 1, duration: 0.15, removeOnCompletion: false)
+        if !immediately {
+            mediumBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+            bigBlob.layer.animateScale(from: 0.75, to: 1, duration: 0.35, removeOnCompletion: false)
+        } else {
+            mediumBlob.layer.removeAllAnimations()
+            bigBlob.layer.removeAllAnimations()
+        }
         
         updateBlobsState()
         
@@ -123,8 +171,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         guard isAnimating else { return }
         isAnimating = false
         
-        mediumBlob.layer.animateScale(from: 1.0, to: 0.5, duration: duration, removeOnCompletion: false)
-        bigBlob.layer.animateScale(from: 1.0, to: 0.5, duration: duration, removeOnCompletion: false)
+        mediumBlob.layer.animateScale(from: 1.0, to: 0.75, duration: duration, removeOnCompletion: false)
+        bigBlob.layer.animateScale(from: 1.0, to: 0.75, duration: duration, removeOnCompletion: false)
         
         updateBlobsState()
         
@@ -132,8 +180,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     private func updateBlobsState() {
-        if isAnimating {
-            if smallBlob.frame.size != .zero {
+        if self.isAnimating {
+            if self.smallBlob.frame.size != .zero {
                 smallBlob.startAnimating()
                 mediumBlob.startAnimating()
                 bigBlob.startAnimating()
@@ -148,15 +196,15 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        smallBlob.frame = bounds
-        mediumBlob.frame = bounds
-        bigBlob.frame = bounds
+        self.smallBlob.frame = bounds
+        self.mediumBlob.frame = bounds
+        self.bigBlob.frame = bounds
         
-        updateBlobsState()
+        self.updateBlobsState()
     }
 }
 
-final class BlobView: UIView {
+final class BlobNode: ASDisplayNode {
     let pointsCount: Int
     let smoothness: CGFloat
     
@@ -170,17 +218,17 @@ final class BlobView: UIView {
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
     
-    var scaleLevelsToBalance = [CGFloat]()
-    
     let isCircle: Bool
     
     var level: CGFloat = 0 {
         didSet {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            let lv = minScale + (maxScale - minScale) * level
-            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
-            CATransaction.commit()
+            if abs(self.level - oldValue) > 0.01 {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                let lv = self.minScale + (self.maxScale - self.minScale) * self.level
+                self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+                CATransaction.commit()
+            }
         }
     }
     
@@ -243,11 +291,11 @@ final class BlobView: UIView {
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
         
-        super.init(frame: .zero)
+        super.init()
         
-        layer.addSublayer(shapeLayer)
+        self.layer.addSublayer(self.shapeLayer)
         
-        shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+        self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
     }
     
     required init?(coder: NSCoder) {
@@ -255,75 +303,55 @@ final class BlobView: UIView {
     }
     
     func setColor(_ color: UIColor, animated: Bool) {
-        let previousColor = shapeLayer.fillColor
-        shapeLayer.fillColor = color.cgColor
+        let previousColor = self.shapeLayer.fillColor
+        self.shapeLayer.fillColor = color.cgColor
         if animated, let previousColor = previousColor {
-            shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+            self.shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        speedLevel = max(speedLevel, newSpeedLevel)
-        
-        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
-            animateToNewShape()
-        }
+        self.speedLevel = max(self.speedLevel, newSpeedLevel)
     }
     
     func startAnimating() {
-        animateToNewShape()
+        self.animateToNewShape()
     }
     
     func stopAnimating() {
-        fromPoints = currentPoints
-        toPoints = nil
-        pop_removeAnimation(forKey: "blob")
+        self.shapeLayer.removeAnimation(forKey: "path")
     }
     
     private func animateToNewShape() {
         guard !isCircle else { return }
         
-        if pop_animation(forKey: "blob") != nil {
-            fromPoints = currentPoints
-            toPoints = nil
-            pop_removeAnimation(forKey: "blob")
+        if self.shapeLayer.path == nil {
+            let points = generateNextBlob(for: self.bounds.size)
+            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: smoothness).cgPath
         }
         
-        if fromPoints == nil {
-            fromPoints = generateNextBlob(for: bounds.size)
-        }
-        if toPoints == nil {
-            toPoints = generateNextBlob(for: bounds.size)
-        }
+        let nextPoints = generateNextBlob(for: self.bounds.size)
+        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: smoothness).cgPath
         
-        let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "blob.transition", initializer: { property in
-            property?.readBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                values.pointee = blobView.transition
-            }
-            property?.writeBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                blobView.transition = values.pointee
-            }
-        })  as? POPAnimatableProperty
-        animation.completionBlock = { [weak self] animation, finished in
+        let animation = CABasicAnimation(keyPath: "path")
+        let previousPath = self.shapeLayer.path
+        self.shapeLayer.path = nextPath
+        animation.duration = CFTimeInterval(1 / (self.minSpeed + (self.maxSpeed - self.minSpeed) * self.speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = previousPath
+        animation.toValue = nextPath
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .forwards
+        animation.completion = { [weak self] finished in
             if finished {
-                self?.fromPoints = self?.currentPoints
-                self?.toPoints = nil
                 self?.animateToNewShape()
             }
         }
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
-        animation.timingFunction = CAMediaTimingFunction(name: .linear)
-        animation.fromValue = 0
-        animation.toValue = 1
-        pop_add(animation, forKey: "blob")
-        
-        lastSpeedLevel = speedLevel
-        speedLevel = 0
+
+        self.shapeLayer.add(animation, forKey: "path")
+
+        self.lastSpeedLevel = self.speedLevel
+        self.speedLevel = 0
     }
     
     // MARK: Helpers
@@ -366,16 +394,16 @@ final class BlobView: UIView {
         return points
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
+    override func layout() {
+        super.layout()
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        if isCircle {
-            let halfWidth = bounds.width * 0.5
-            shapeLayer.path = UIBezierPath(
-                roundedRect: bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
+        self.shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if self.isCircle {
+            let halfWidth = self.bounds.width * 0.5
+            self.shapeLayer.path = UIBezierPath(
+                roundedRect: self.bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
                 cornerRadius: halfWidth
             ).cgPath
         }
@@ -384,7 +412,6 @@ final class BlobView: UIView {
 }
 
 private extension UIBezierPath {
-    
     static func smoothCurve(
         through points: [CGPoint],
         length: CGFloat,
@@ -437,7 +464,6 @@ private extension UIBezierPath {
     }
     
     struct SmoothPoint {
-        
         let point: CGPoint
         
         let inAngle: CGFloat
@@ -462,4 +488,3 @@ private extension UIBezierPath {
         }
     }
 }
-

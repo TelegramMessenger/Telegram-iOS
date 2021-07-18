@@ -9,6 +9,9 @@ import MusicAlbumArtResources
 import LocalMediaResources
 import LocationResources
 import ChatInterfaceState
+import WallpaperResources
+import AppBundle
+import SwiftSignalKit
 
 public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
     if interfaceState == nil {
@@ -36,9 +39,59 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
     } else if let resource = resource as? OpenInAppIconResource {
         return fetchOpenInAppIconResource(resource: resource)
     } else if let resource = resource as? EmojiSpriteResource {
-        return fetchEmojiSpriteResource(postbox: account.postbox, network: account.network, resource: resource)
+        return fetchEmojiSpriteResource(account: account, resource: resource)
     } else if let resource = resource as? VenueIconResource {
         return fetchVenueIconResource(account: account, resource: resource)
+    } else if let wallpaperResource = resource as? WallpaperDataResource {
+        let builtinWallpapers: [String] = [
+            "fqv01SQemVIBAAAApND8LDRUhRU"
+        ]
+        if builtinWallpapers.contains(wallpaperResource.slug) {
+            if let url = getAppBundle().url(forResource: wallpaperResource.slug, withExtension: "tgv") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+        return nil
+    } else if let cloudDocumentMediaResource = resource as? CloudDocumentMediaResource {
+        if cloudDocumentMediaResource.fileId == 5789658100176783156 {
+            if let url = getAppBundle().url(forResource: "fqv01SQemVIBAAAApND8LDRUhRU", withExtension: "tgv") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+    } else if let cloudDocumentSizeMediaResource = resource as? CloudDocumentSizeMediaResource {
+        if cloudDocumentSizeMediaResource.documentId == 5789658100176783156 && cloudDocumentSizeMediaResource.sizeSpec == "m" {
+            if let url = getAppBundle().url(forResource: "5789658100176783156-m", withExtension: "resource") {
+                return Signal { subscriber in
+                    subscriber.putNext(.reset)
+                    if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                    }
+
+                    return EmptyDisposable
+                }
+            } else {
+                return nil
+            }
+        }
+        return nil
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in

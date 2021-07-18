@@ -58,7 +58,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                let peer = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.toggleContact(id)
                 })
@@ -365,7 +365,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     return DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                 })))
             }
-            return deviceContactsImportedByCount(postbox: context.account.postbox, contacts: mappedContacts)
+            return context.engine.contacts.deviceContactsImportedByCount(contacts: mappedContacts)
             |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)]? in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]

@@ -10,8 +10,8 @@ import LegacyComponents
 import TelegramUIPreferences
 import AccountContext
 
-public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
-    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
+public func requestContextResults(context: AccountContext, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
+    return context.engine.messages.requestChatContextResults(botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
     |> `catch` { error -> Signal<RequestChatContextResultsResult?, NoError> in
         return .single(nil)
     }
@@ -40,7 +40,7 @@ public func requestContextResults(account: Account, botId: PeerId, query: String
             updated = true
         }
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset, updated {
-            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
+            let nextResults = requestContextResults(context: context, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
             if collection.results.count > 10 {
                 return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
                 |> then(nextResults)
@@ -172,7 +172,7 @@ public final class WebSearchController: ViewController {
             self.interfaceState = self.interfaceState.withUpdatedQuery(query)
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.opaqueBackgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
@@ -445,7 +445,8 @@ public final class WebSearchController: ViewController {
         }
         
         let account = self.context.account
-        let contextBot = resolvePeerByName(account: account, name: name)
+        let context = self.context
+        let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
         |> mapToSignal { peerId -> Signal<Peer?, NoError> in
             if let peerId = peerId {
                 return account.postbox.loadedPeerWithId(peerId)
@@ -459,7 +460,7 @@ public final class WebSearchController: ViewController {
         }
         |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
             if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                let results = requestContextResults(account: account, botId: user.id, query: query, peerId: peerId, limit: 64)
+                let results = requestContextResults(context: context, botId: user.id, query: query, peerId: peerId, limit: 64)
                 |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     return { _ in
                         return .contextRequestResult(user, results?.results)
@@ -509,6 +510,6 @@ public final class WebSearchController: ViewController {
         
         self.validLayout = layout
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }

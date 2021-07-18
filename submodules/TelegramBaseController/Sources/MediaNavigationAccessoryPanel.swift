@@ -16,8 +16,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
     
-    public init(context: AccountContext) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
+    public init(context: AccountContext, displayBackground: Bool = false) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, displayBackground: displayBackground)
         
         super.init()
         
@@ -61,6 +61,9 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public func animateIn(transition: ContainedViewLayoutTransition) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
+
+        self.containerNode.animateIn(transition: transition)
+        
         transition.animatePosition(node: self.containerNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
@@ -69,6 +72,9 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
+
+        self.containerNode.animateOut(transition: transition)
+
         transition.animatePosition(node: self.containerNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { [weak self] _ in
             self?.clipsToBounds = false
             completion()

@@ -104,9 +104,8 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
-"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
-"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
-"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_FILES_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_FILES_any" = "%1$@|sent you %2$d files";
 
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
@@ -2552,7 +2551,6 @@ Unused sets are archived when you add more.";
 "Message.ForwardedMessageShort" = "Forwarded From\n%@";
 
 "Checkout.LiabilityAlertTitle" = "Warning";
-"Checkout.LiabilityAlert" = "Neither Telegram, nor %1$@ will have access to your credit card information. Credit card details will be handled only by the payment system, %2$@.\n\nPayments will go directly to the developer of %1$@. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of %1$@ or your bank.";
 
 "Settings.AppLanguage" = "Language";
 "Settings.AppLanguage.Unofficial" = "UNOFFICIAL";
@@ -3950,6 +3948,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.Title" = "Background Preview";
 "WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
 "WallpaperPreview.PreviewBottomText" = "Enjoy the view";
+
 "WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
 "WallpaperPreview.SwipeBottomText" = "Backgrounds for the god of backgrounds!";
 "WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
@@ -4430,6 +4429,8 @@ Sorry for the inconvenience.";
 "Appearance.AppIconClassicX" = "Classic X";
 "Appearance.AppIconFilled" = "Filled";
 "Appearance.AppIconFilledX" = "Filled X";
+"Appearance.AppIconNew1" = "Sunset";
+"Appearance.AppIconNew2" = "Aqua";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
 "Appearance.ThemeCarouselDay" = "Day";
@@ -5742,6 +5743,7 @@ Sorry for the inconvenience.";
 
 "Notification.VoiceChatStarted" = "%1$@ started a voice chat";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
+"Notification.VoiceChatEndedGroup" = "%1$@ ended the voice chat (%2$@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";
 "VoiceChat.Panel.Members_0" = "%@ participants";
@@ -5774,10 +5776,13 @@ Sorry for the inconvenience.";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
 "VoiceChat.CreateNewVoiceChatStart" = "Start";
+"VoiceChat.CreateNewVoiceChatStartNow" = "Start Now";
+"VoiceChat.CreateNewVoiceChatSchedule" = "Schedule";
 
 "PUSH_CHAT_VOICECHAT_START" = "%2$@|%1$@ started a voice chat";
 "PUSH_CHAT_VOICECHAT_INVITE" = "%2$@|%1$@ invited %3$@ to the voice chat";
-"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$|@%1$@ invited you to the voice chat";
+"PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$@|%1$@ invited you to the voice chat";
+"PUSH_CHAT_VOICECHAT_END" = "%2$@|%1$@ has ended the voice chat";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
 "Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
@@ -6037,7 +6042,6 @@ Sorry for the inconvenience.";
 "Conversation.ForwardTooltip.TwoChats.Many" = "Messages forwarded to **%@** and **%@**";
 "Conversation.ForwardTooltip.ManyChats.One" = "Message forwarded to **%@** and %@ others";
 "Conversation.ForwardTooltip.ManyChats.Many" = "Messages forwarded to **%@** and %@ others";
-
 "Conversation.ForwardTooltip.SavedMessages.One" = "Message forwarded to **Saved Messages**";
 "Conversation.ForwardTooltip.SavedMessages.Many" = "Messages forwarded to **Saved Messages**";
 
@@ -6255,6 +6259,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.YouCanNowSpeak" = "You can now speak";
 "VoiceChat.YouCanNowSpeakIn" = "You can now speak in **%@**";
+"VoiceChat.UserCanNowSpeak" = "**%@** can now speak";
 
 "VoiceChat.MutedByAdmin" = "Muted by Admin";
 "VoiceChat.MutedByAdminHelp" = "Tap if you want to speak";
@@ -6292,7 +6297,277 @@ Sorry for the inconvenience.";
 "VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
 "VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
 "VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+"VoiceChat.LeaveAndCancelVoiceChat" = "Abort Voice Chat";
 
 "VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
 "VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
 "VoiceChat.ForwardTooltip.ManyChats" = "Invite link forwarded to **%@** and %@ others";
+
+"GroupRemoved.ViewChannelInfo" = "View Channel";
+
+"UserInfo.ContactForwardTooltip.Chat.One" = "Contact forwarded to **%@**";
+"UserInfo.ContactForwardTooltip.TwoChats.One" = "Contact forwarded to **%@** and **%@**";
+"UserInfo.ContactForwardTooltip.ManyChats.One" = "Contact forwarded to **%@** and %@ others";
+"UserInfo.ContactForwardTooltip.SavedMessages.One" = "Contact forwarded to **Saved Messages**";
+
+"UserInfo.LinkForwardTooltip.Chat.One" = "Link forwarded to **%@**";
+"UserInfo.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
+"UserInfo.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
+"UserInfo.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
+
+"VoiceChat.You" = "this is you";
+"VoiceChat.ChangePhoto" = "Change Photo";
+"VoiceChat.EditBio" = "Edit Bio";
+"VoiceChat.EditBioTitle" = "Bio";
+"VoiceChat.EditBioText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditBioPlaceholder" = "Bio";
+"VoiceChat.EditBioSave" = "Save";
+"VoiceChat.EditBioSuccess" = "Your bio is changed.";
+
+"VoiceChat.EditDescription" = "Edit Description";
+"VoiceChat.EditDescriptionTitle" = "Description";
+"VoiceChat.EditDescriptionText" = "Any details such as age, occupation or city.";
+"VoiceChat.EditDescriptionPlaceholder" = "Description";
+"VoiceChat.EditDescriptionSave" = "Save";
+"VoiceChat.EditDescriptionSuccess" = "Description is changed.";
+
+"VoiceChat.SendPublicLinkText" = "%1$@ isn't a member of \"%2$@\" yet. Send them a public invite link instead?";
+"VoiceChat.SendPublicLinkSend" = "Send";
+
+"VoiceChat.TapToAddPhotoOrBio" = "tap to add photo or bio";
+"VoiceChat.TapToAddPhoto" = "tap to add photo";
+"VoiceChat.TapToAddBio" = "tap to add bio";
+"VoiceChat.ImproveYourProfileText" = "You can improve your profile by adding missing information.";
+
+"VoiceChat.AddPhoto" = "Add Photo";
+"VoiceChat.AddBio" = "Add Bio";
+"VoiceChat.ChangeName" = "Change Name";
+"VoiceChat.ChangeNameTitle" = "Change Name";
+"VoiceChat.EditNameSuccess" = "Your name is changed.";
+
+"VoiceChat.Video" = "video";
+
+"VoiceChat.PinVideo" = "Pin Video";
+"VoiceChat.UnpinVideo" = "Unpin Video";
+
+"Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
+"Notification.VoiceChatScheduled" = "%1$@ scheduled a voice chat for %2$@";
+
+"Notification.VoiceChatScheduledTodayChannel" = "Voice chat scheduled for today at %@";
+"Notification.VoiceChatScheduledToday" = "%1$@ scheduled a voice chat for today at %2$@";
+
+"Notification.VoiceChatScheduledTomorrowChannel" = "Voice chat scheduled for tomorrow at %@";
+"Notification.VoiceChatScheduledTomorrow" = "%1$@ scheduled a voice chat for tomorrow at %2$@";
+
+"VoiceChat.StartsIn" = "Starts in";
+"VoiceChat.LateBy" = "Late by";
+
+"VoiceChat.StatusStartsIn" = "starts in %@";
+"VoiceChat.StatusLateBy" = "late by %@";
+
+"VoiceChat.Scheduled" = "Scheduled";
+
+"VoiceChat.StartNow" = "Start Now";
+"VoiceChat.SetReminder" = "Set Reminder";
+"VoiceChat.CancelReminder" = "Cancel Reminder";
+
+"VoiceChat.ShareShort" = "share";
+"VoiceChat.TapToEditTitle" = "Tap to edit title";
+
+"ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
+
+"ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
+"ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
+
+"ScheduleVoiceChat.ScheduleToday" = "Start today at %@";
+"ScheduleVoiceChat.ScheduleTomorrow" = "Start tomorrow at %@";
+"ScheduleVoiceChat.ScheduleOn" = "Start on %@ at %@";
+
+"Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
+
+"Conversation.ScheduledVoiceChatStartsOn" = "Voice chat starts on %@";
+"Conversation.ScheduledVoiceChatStartsOnShort" = "Starts on %@";
+"Conversation.ScheduledVoiceChatStartsToday" = "Voice chat starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTodayShort" = "Starts today at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrow" = "Voice chat starts tomorrow at %@";
+"Conversation.ScheduledVoiceChatStartsTomorrowShort" = "Starts tomorrow at %@";
+
+"VoiceChat.CancelVoiceChat" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationTitle" = "Abort Voice Chat";
+"VoiceChat.CancelConfirmationText" = "Do you want to abort the scheduled voice chat?";
+"VoiceChat.CancelConfirmationEnd" = "Abort";
+
+"ScheduledIn.Seconds_1" = "%@ second";
+"ScheduledIn.Seconds_2" = "%@ seconds";
+"ScheduledIn.Seconds_3_10" = "%@ seconds";
+"ScheduledIn.Seconds_any" = "%@ seconds";
+"ScheduledIn.Seconds_many" = "%@ seconds";
+"ScheduledIn.Seconds_0" = "%@ seconds";
+"ScheduledIn.Minutes_1" = "%@ minute";
+"ScheduledIn.Minutes_2" = "%@ minutes";
+"ScheduledIn.Minutes_3_10" = "%@ minutes";
+"ScheduledIn.Minutes_any" = "%@ minutes";
+"ScheduledIn.Minutes_many" = "%@ minutes";
+"ScheduledIn.Minutes_0" = "%@ minutes";
+"ScheduledIn.Hours_1" = "%@ hour";
+"ScheduledIn.Hours_2" = "%@ hours";
+"ScheduledIn.Hours_3_10" = "%@ hours";
+"ScheduledIn.Hours_any" = "%@ hours";
+"ScheduledIn.Hours_many" = "%@ hours";
+"ScheduledIn.Hours_0" = "%@ hours";
+"ScheduledIn.Days_1" = "%@ day";
+"ScheduledIn.Days_2" = "%@ days";
+"ScheduledIn.Days_3_10" = "%@ days";
+"ScheduledIn.Days_any" = "%@ days";
+"ScheduledIn.Days_many" = "%@ days";
+"ScheduledIn.Days_0" = "%@ days";
+"ScheduledIn.Weeks_1" = "%@ week";
+"ScheduledIn.Weeks_2" = "%@ weeks";
+"ScheduledIn.Weeks_3_10" = "%@ weeks";
+"ScheduledIn.Weeks_any" = "%@ weeks";
+"ScheduledIn.Weeks_many" = "%@ weeks";
+"ScheduledIn.Weeks_0" = "%@ weeks";
+"ScheduledIn.Months_1" = "%@ month";
+"ScheduledIn.Months_2" = "%@ months";
+"ScheduledIn.Months_3_10" = "%@ months";
+"ScheduledIn.Months_any" = "%@ months";
+"ScheduledIn.Months_many" = "%@ months";
+"ScheduledIn.Months_0" = "%@ months";
+"ScheduledIn.Years_1" = "%@ year";
+"ScheduledIn.Years_2" = "%@ years";
+"ScheduledIn.Years_3_10" = "%@ years";
+"ScheduledIn.Years_any" = "%@ years";
+"ScheduledIn.Months_many" = "%@ years";
+
+"Checkout.PaymentLiabilityAlert" = "Neither Telegram, nor {target} will have access to your credit card information. Credit card details will be handled only by the payment system, {payment_system}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
+
+"Checkout.OptionalTipItem" = "Tip (Optional)";
+"Checkout.TipItem" = "Tip";
+"Checkout.OptionalTipItemPlaceholder" = "Enter Custom";
+
+"VoiceChat.ReminderNotify" = "We will notify you when it starts.";
+
+"Checkout.SuccessfulTooltip" = "You paid %1$@ for %2$@.";
+
+"Privacy.ContactsReset.ContactsDeleted" = "All synced contacts deleted.";
+
+"Privacy.DeleteDrafts.DraftsDeleted" = "All cloud drafts deleted.";
+
+"Privacy.PaymentsClear.PaymentInfoCleared" = "Payment info cleared.";
+"Privacy.PaymentsClear.ShippingInfoCleared" = "Shipping info cleared.";
+"Privacy.PaymentsClear.AllInfoCleared" = "Payment and shipping info cleared.";
+
+"Settings.Tips" = "Telegram Features";
+"Settings.TipsUsername" = "TelegramTips";
+
+"Calls.NoVoiceAndVideoCallsPlaceholder" = "Your recent voice and video calls will appear here.";
+"Calls.StartNewCall" = "Start New Call";
+
+"VoiceChat.VideoPreviewTitle" = "Video Preview";
+"VoiceChat.VideoPreviewDescription" = "Are you sure you want to share your video?";
+"VoiceChat.VideoPreviewShareCamera" = "Share Camera Video";
+"VoiceChat.VideoPreviewShareScreen" = "Share Screen";
+"VoiceChat.VideoPreviewStopScreenSharing" = "Stop Screen Sharing";
+
+"VoiceChat.TapToViewCameraVideo" = "Tap to view camera video";
+"VoiceChat.TapToViewScreenVideo" = "Tap to view screen sharing";
+
+"VoiceChat.ShareScreen" = "Share Screen";
+"VoiceChat.StopScreenSharing" = "Stop Screen Sharing";
+"VoiceChat.ParticipantIsSpeaking" = "%1$@ is speaking";
+
+"WallpaperPreview.WallpaperColors" = "Colors";
+
+"VoiceChat.UnmuteSuggestion" = "You are on mute. Tap here to speak.";
+
+"VoiceChat.ContextAudio" = "Audio";
+
+"VoiceChat.VideoPaused" = "Video is paused";
+"VoiceChat.YouAreSharingScreen" = "You are sharing your screen";
+"VoiceChat.StopScreenSharingShort" = "Stop Sharing";
+
+"VoiceChat.OpenGroup" = "Open Group";
+
+"VoiceChat.NoiseSuppression" = "Noise Suppression";
+"VoiceChat.NoiseSuppressionEnabled" = "Enabled";
+"VoiceChat.NoiseSuppressionDisabled" = "Disabled";
+
+"VoiceChat.Unpin" = "Unpin";
+
+"VoiceChat.VideoParticipantsLimitExceeded" = "Video is only available\nfor the first %@ members";
+
+"ImportStickerPack.StickerCount_1" = "1 Sticker";
+"ImportStickerPack.StickerCount_2" = "2 Stickers";
+"ImportStickerPack.StickerCount_3_10" = "%@ Stickers";
+"ImportStickerPack.StickerCount_any" = "%@ Stickers";
+"ImportStickerPack.StickerCount_many" = "%@ Stickers";
+"ImportStickerPack.StickerCount_0" = "%@ Stickers";
+"ImportStickerPack.CreateStickerSet" = "Create Sticker Set";
+"ImportStickerPack.CreateNewStickerSet" = "Create a New Sticker Set";
+"ImportStickerPack.AddToExistingStickerSet" = "Add to an Existing Sticker Set";
+"ImportStickerPack.ChooseStickerSet" = "Choose Sticker Set";
+"ImportStickerPack.RemoveFromImport" = "Remove From Import";
+"ImportStickerPack.ChooseName" = "Choose Name";
+"ImportStickerPack.ChooseNameDescription" = "Please choose a name for your set.";
+"ImportStickerPack.NamePlaceholder" = "Name";
+"ImportStickerPack.GeneratingLink" = "generating link...";
+"ImportStickerPack.CheckingLink" = "checking availability...";
+"ImportStickerPack.ChooseLink" = "Choose Link";
+"ImportStickerPack.ChooseLinkDescription" = "You can use a-z, 0-9 and underscores.";
+"ImportStickerPack.LinkTaken" = "Sorry, this link is already taken.";
+"ImportStickerPack.LinkAvailable" = "Link is available.";
+"ImportStickerPack.ImportingStickers" = "Importing Stickers";
+"ImportStickerPack.Of" = "%1$@ of %2$@ Imported";
+"ImportStickerPack.InProgress" = "Please keep this window open\nuntil the import is completed.";
+"ImportStickerPack.Create" = "Create";
+
+"WallpaperPreview.PreviewBottomTextAnimatable" = "Tap the play button to view the background animation.";
+
+"Conversation.InputMenu" = "Menu";
+"Conversation.MessageDoesntExist" = "Message doesn't exist";
+
+"Settings.CheckPasswordTitle" = "Your Password";
+"Settings.CheckPasswordText" = "Your account is protected by 2-Step Verification. Do you still remember your password?";
+"Settings.KeepPassword" = "Yes, definitely";
+"Settings.TryEnterPassword" = "Not sure, let me try";
+
+"TwoFactorSetup.PasswordRecovery.Title" = "Create New Password";
+"TwoFactorSetup.PasswordRecovery.Text" = "You can now set a new password that will be used to log into your account.";
+"TwoFactorSetup.PasswordRecovery.PlaceholderPassword" = "New Password";
+"TwoFactorSetup.PasswordRecovery.PlaceholderConfirmPassword" = "Re-enter New Password";
+"TwoFactorSetup.PasswordRecovery.Action" = "Continue";
+"TwoFactorSetup.PasswordRecovery.Skip" = "Skip";
+"TwoFactorSetup.PasswordRecovery.SkipAlertTitle" = "Attention!";
+"TwoFactorSetup.PasswordRecovery.SkipAlertText" = "Skipping this step will disable 2-step verification for your account. Are you sure you want to skip?";
+"TwoFactorSetup.PasswordRecovery.SkipAlertAction" = "Skip";
+
+"TwoStepAuth.RecoveryUnavailableResetTitle" = "Reset Password";
+"TwoStepAuth.RecoveryUnavailableResetText" = "Since you didn’t provide a recovery email when setting up your password, your remaining options are either to remember your password or wait 7 days until your password is reset.";
+"TwoStepAuth.RecoveryEmailResetText" = "If you don't have access to your recovery email, your remaining options are either to remember your password or wait 7 days until your password resets.";
+"TwoStepAuth.RecoveryUnavailableResetAction" = "Reset";
+"TwoStepAuth.ResetPendingText" = "You can reset your password in %@.";
+"TwoStepAuth.CancelResetTitle" = "Cancel Reset";
+"TwoStepAuth.ResetAction" = "Reset Password";
+"TwoStepAuth.CancelResetText" = "Cancel the password reset process? If you request a new reset later, it will take another 7 days.";
+"TwoStepAuth.RecoveryEmailResetNoAccess" = "Can’t access your email?";
+
+"TwoFactorSetup.ResetDone.Title" = "New Password Set!";
+"TwoFactorSetup.ResetDone.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.ResetDone.Action" = "Continue";
+
+"TwoFactorSetup.ResetDone.TitleNoPassword" = "Password Removed";
+"TwoFactorSetup.ResetDone.TextNoPassword" = "You can always set a new password in\n\n\nSettings>Privacy & Security>Two-Step Verification";
+
+"TwoFactorSetup.ResetFloodWait" = "You recently requested a password reset that was cancelled. Please wait %@ before making a new request.";
+"TwoFactorSetup.ResetFloodWait" = "You have recently requested a password reset that was canceled. Please wait for %@ before making a new request.";
+
+"TwoFactorRemember.Title" = "Enter Your Password";
+"TwoFactorRemember.Text" = "Do you still remeber your password?";
+"TwoFactorRemember.Placeholder" = "Password";
+"TwoFactorRemember.Forgot" = "Forgot Password?";
+"TwoFactorRemember.CheckPassword" = "Check Password";
+"TwoFactorRemember.WrongPassword" = "This password is incorrect.";
+"TwoFactorRemember.Done.Title" = "Perfect!";
+"TwoFactorRemember.Done.Text" = "You still remember your password.";
+"TwoFactorRemember.Done.Action" = "Back to Settings";

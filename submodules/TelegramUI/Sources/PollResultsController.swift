@@ -252,7 +252,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     displayCount = Int(voterCount)
                 }
                 for peerIndex in 0 ..< displayCount {
-                    let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                    let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                     let peer = RenderedPeer(peer: fakeUser)
                     entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
@@ -323,7 +323,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     
     let actionsDisposable = DisposableSet()
     
-    let resultsContext = PollResultsContext(account: context.account, messageId: messageId, poll: poll)
+    let resultsContext = context.engine.messages.pollResults(messageId: messageId, poll: poll)
     
     let arguments = PollResultsControllerArguments(context: context,
     collapseOption: { optionId in

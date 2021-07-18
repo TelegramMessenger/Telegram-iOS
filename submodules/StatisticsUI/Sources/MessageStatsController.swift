@@ -215,13 +215,13 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
     
     let previousData = Atomic<MessageStats?>(value: nil)
     
-    let searchSignal = searchMessages(account: context.account, location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
+    let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
     |> map(Optional.init)
     |> afterNext { result in
         if let result = result {
             for message in result.0.messages {
                 if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
-                    let _ = updatedRemotePeer(postbox: context.account.postbox, network: context.account.network, peer: peerReference).start()
+                    let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
                 }
             }
         }
@@ -264,7 +264,7 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
     }
     navigateToMessageImpl = { [weak controller] messageId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
         }
     }
     return controller

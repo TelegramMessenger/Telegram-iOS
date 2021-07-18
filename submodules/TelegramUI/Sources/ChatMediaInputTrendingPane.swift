@@ -245,23 +245,22 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
-                let account = strongSelf.context.account
-                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                let context = strongSelf.context
+                var installSignal = context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
                         if installed {
                             return .complete()
                         } else {
-                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                            return preloadedStickerPackThumbnail(account: context.account, info: info, items: items)
                             |> filter { $0 }
                             |> ignoreValues
                             |> then(
-                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                                context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                                 |> ignoreValues
                             )
                             |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                return .complete()
                             }
                             |> then(.single((info, items)))
                         }
@@ -273,8 +272,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     return .complete()
                 }
                 |> deliverOnMainQueue
-                
-                let context = strongSelf.context
+
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -318,7 +316,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                     
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
                 }))
@@ -329,7 +327,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                     } else {
                         return false
                     }
@@ -340,6 +338,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         openSearch: { [weak self] in
             self?.inputNodeInteraction?.toggleSearch(true, .trending, "")
         })
+        interaction.itemContext.canPlayMedia = true
         
         let isPane = self.isPane
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)

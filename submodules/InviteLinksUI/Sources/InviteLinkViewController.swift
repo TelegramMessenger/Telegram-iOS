@@ -374,7 +374,7 @@ public final class InviteLinkViewController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
-            self.importersContext = importersContext ?? PeerInvitationImportersContext(account: context.account, peerId: peerId, invite: invite)
+            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, invite: invite)
             
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -483,7 +483,7 @@ public final class InviteLinkViewController: ViewController {
                                     dismissAction()
                                     self?.controller?.dismiss()
                                     
-                                    let _ = (deletePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
+                                    let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
                                     })
                                     
                                     self?.controller?.revokedInvitationsContext?.remove(invite)
@@ -537,7 +537,7 @@ public final class InviteLinkViewController: ViewController {
                                         dismissAction()
                                         self?.controller?.dismiss()
 
-                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
                                             if case let .replace(_, newInvite) = result {
                                                 self?.controller?.invitationsContext?.add(newInvite)
                                             }
@@ -598,7 +598,7 @@ public final class InviteLinkViewController: ViewController {
                     if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
-                        let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                         for i in 0 ..< count {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
                         }
@@ -839,7 +839,7 @@ public final class InviteLinkViewController: ViewController {
                 } else {
                     let elapsedTime = expireDate - currentTime
                     if elapsedTime >= 86400 {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(timeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
                     } else {
                         subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
                         if self.countdownTimer == nil {

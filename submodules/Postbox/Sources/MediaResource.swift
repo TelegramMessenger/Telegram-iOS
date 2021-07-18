@@ -22,7 +22,7 @@ public struct WrappedMediaResourceId: Hashable {
 //    }
     
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(id.hashValue)
+        hasher.combine(self.id.hashValue)
     }
 }
 

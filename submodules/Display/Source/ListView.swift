@@ -6,6 +6,11 @@ import UIKitRuntimeUtils
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 
+private struct VisibleHeaderNodeId: Hashable {
+    var id: ListViewItemNode.HeaderId
+    var affinity: Int
+}
+
 private final class ListViewBackingLayer: CALayer {
     override func setNeedsLayout() {
     }
@@ -214,6 +219,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)?
+    public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
     
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
@@ -274,7 +280,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private final var items: [ListViewItem] = []
     private final var itemNodes: [ListViewItemNode] = []
-    private final var itemHeaderNodes: [Int64: ListViewItemHeaderNode] = [:]
+    private final var itemHeaderNodes: [VisibleHeaderNodeId: ListViewItemHeaderNode] = [:]
     
     public final var itemHeaderNodesAlpha: CGFloat = 1.0
     
@@ -285,7 +291,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
-    public final var beganInteractiveDragging: () -> Void = { }
+    public final var beganInteractiveDragging: (CGPoint) -> Void = { _ in }
     public final var endedInteractiveDragging: () -> Void = { }
     public final var didEndScrolling: (() -> Void)?
     
@@ -682,7 +688,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.scrolledToItem = nil
         
-        self.beganInteractiveDragging()
+        self.beganInteractiveDragging(self.touchesPosition)
         
         for itemNode in self.itemNodes {
             if !itemNode.isLayerBacked {
@@ -845,7 +851,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.updateScroller(transition: .immediate)
         
-        self.updateItemHeaders(leftInset: self.insets.left, rightInset: self.insets.right)
+        self.updateItemHeaders(leftInset: self.insets.left, rightInset: self.insets.right, synchronousLoad: false)
         
         for (_, headerNode) in self.itemHeaderNodes {
             if self.dynamicBounceEnabled && headerNode.wantsScrollDynamics {
@@ -1027,6 +1033,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         transition = .animated(duration: duration, curve: .spring)
                     case let .Default(duration):
                         transition = .animated(duration: max(updateSizeAndInsets.duration, duration ?? 0.3), curve: .easeInOut)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        transition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                 }
             }
         } else if let scrollToItem = scrollToItem {
@@ -1040,6 +1048,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         } else {
                             transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
                         }
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        transition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                 }
             }
         }
@@ -1361,13 +1371,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         } else if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
             self.itemHighlightOverlayBackground = nil
-            for (_, _) in self.itemHeaderNodes {
-                //self.view.bringSubview(toFront: headerNode.view)
-            }
-            //self.view.bringSubview(toFront: itemHighlightOverlayBackground.view)
-            for _ in self.itemNodes {
-                //self.view.bringSubview(toFront: itemNode.view)
-            }
             transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
                 itemHighlightOverlayBackground?.removeFromSupernode()
             })
@@ -1864,7 +1867,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             let beginReplay = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateCrossfade: options.contains(.AnimateCrossfade), synchronous: options.contains(.Synchronous), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
+                                    strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateCrossfade: options.contains(.AnimateCrossfade), synchronous: options.contains(.Synchronous), synchronousLoads: options.contains(.PreferSynchronousResourceLoading), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
                                         if options.contains(.PreferSynchronousDrawing) {
                                             self?.recursivelyEnsureDisplaySynchronously(true)
                                         }
@@ -2125,6 +2128,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         offsetHeight = 0.0
                         
                         nextNode.updateFrame(nextNode.frame.offsetBy(dx: 0.0, dy: nextHeight), within: self.visibleSize)
+                        self.didScrollWithOffset?(nextHeight, .immediate, nextNode)
                         
                         nextNode.apparentHeight = 0.0
                         
@@ -2234,6 +2238,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y -= offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2245,6 +2250,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var frame = self.itemNodes[i].frame
                     frame.origin.y += offsetHeight
                     self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
+                    //self.didScrollWithOffset?(-offsetHeight, .immediate, self.itemNodes[i])
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2310,7 +2316,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, synchronous: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem originalScrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
+    private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, synchronous: Bool, synchronousLoads: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem originalScrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
         var scrollToItem: ListViewScrollToItem?
         var isExperimentalSnapToScrollToItem = false
         if let originalScrollToItem = originalScrollToItem {
@@ -2665,10 +2671,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 scrollToItemTransition = .animated(duration: duration, curve: .spring)
                             case let .Default(duration):
                                 scrollToItemTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                            case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                                scrollToItemTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                             }
                         }
                         
-                        self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
+                        //self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
                     }
                     
                     for itemNode in self.itemNodes {
@@ -2751,10 +2759,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         updateSizeAndInsetsTransition = .animated(duration: duration, curve: .spring)
                     case let .Default(duration):
                         updateSizeAndInsetsTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
                     }
                 }
-                
-                self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+
+                if !offsetFix.isZero {
+                    //self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
+                }
                 
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
@@ -2765,7 +2777,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
                     offsetFix += snappedTopInset
                     
-                    self.didScrollWithOffset?(-offsetFix, .immediate, nil)
+                    //self.didScrollWithOffset?(-snappedTopInset, .immediate, nil)
                     
                     for itemNode in self.itemNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
@@ -2806,6 +2818,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             springAnimation.isAdditive = true
                             animation = springAnimation
+                        case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                            headerNodesTransition = (.animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y)), false, -completeOffset)
+                            animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
+                            let springAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            springAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            springAnimation.duration = duration * UIView.animationDurationFactor()
+                            springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
+                            springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            springAnimation.isRemovedOnCompletion = true
+
+                            animationDuration = duration
+
+                            springAnimation.isAdditive = true
+                            animation = springAnimation
                         case let .Default(duration):
                             headerNodesTransition = (.animated(duration: max(duration ?? 0.3, updateSizeAndInsets.duration), curve: .easeInOut), false, -completeOffset)
                             animationCurve = .easeInOut
@@ -2825,9 +2851,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         self?.updateItemNodesVisibilities(onlyPositive: false)
                     }
                     self.layer.add(animation, forKey: nil)
-                    for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: animationCurve, duration: animationDuration)
+                    if !completeOffset.isZero {
+                        for itemNode in self.itemNodes {
+                            itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: animationCurve, duration: animationDuration)
+                        }
+                        self.didScrollWithOffset?(-completeOffset, ContainedViewLayoutTransition.animated(duration: animationDuration, curve: animationCurve), nil)
                     }
+                } else {
+                    self.didScrollWithOffset?(-completeOffset, .immediate, nil)
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size
@@ -2865,8 +2896,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 springAnimation.isAdditive = true
                 self.layer.add(springAnimation, forKey: nil)
-                for itemNode in self.itemNodes {
-                    itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: .spring, duration: duration)
+
+                if !completeOffset.isZero {
+                    for itemNode in self.itemNodes {
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -completeOffset), animationCurve: .spring, duration: duration)
+                    }
+                    self.didScrollWithOffset?(-completeOffset, .animated(duration: duration, curve: .spring), nil)
                 }
             } else {
                 if let snapshotView = snapshotView {
@@ -2975,7 +3010,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         
                         switch scrollToItem.directionHint {
                             case .Up:
-                                offset = updatedLowerBound - (previousUpperBound ?? 0.0)
+                                if let previousUpperBound = previousUpperBound {
+                                    offset = updatedLowerBound - previousUpperBound
+                                }
                             case .Down:
                                 offset = updatedUpperBound - (previousLowerBound ?? self.visibleSize.height)
                         }
@@ -2993,15 +3030,17 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         headerNodesTransition = (.animated(duration: duration, curve: .spring), headerNodesTransition.1, headerNodesTransition.2 - offsetOrZero)
                     case let .Default(duration):
                         headerNodesTransition = (.animated(duration: duration ?? 0.3, curve: .easeInOut), true, headerNodesTransition.2 - offsetOrZero)
+                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                        headerNodesTransition = (.animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y)), headerNodesTransition.1, headerNodesTransition.2 - offsetOrZero)
                 }
                 for (_, headerNode) in self.itemHeaderNodes {
                     previousItemHeaderNodes.append(headerNode)
                 }
                 
-                self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
+                self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
                 
                 if let offset = offset, !offset.isZero {
-                    self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
+                    //self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
                     let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
                     for itemNode in temporaryPreviousNodes {
                         itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)
@@ -3065,6 +3104,27 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             
                             animation = springAnimation
                             reverseAnimation = reverseSpringAnimation
+                        case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
+                            animationCurve = .custom(cp1x, cp1y, cp2x, cp2y)
+                            animationDuration = duration
+                            let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            basicAnimation.duration = duration * UIView.animationDurationFactor()
+                            basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
+                            basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            basicAnimation.isRemovedOnCompletion = true
+                            basicAnimation.isAdditive = true
+
+                            let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
+                            reverseBasicAnimation.duration = duration * UIView.animationDurationFactor()
+                            reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                            reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            reverseBasicAnimation.isRemovedOnCompletion = true
+                            reverseBasicAnimation.isAdditive = true
+
+                            animation = basicAnimation
+                            reverseAnimation = reverseBasicAnimation
                         case let .Default(duration):
                             if let duration = duration {
                                 animationCurve = .easeInOut
@@ -3122,11 +3182,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                     self.layer.add(animation, forKey: nil)
                     for itemNode in self.itemNodes {
-                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
                     for itemNode in temporaryPreviousNodes {
-                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                        itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
+                    self.didScrollWithOffset?(-offset, .animated(duration: animationDuration, curve: animationCurve), nil)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
                     }
@@ -3152,7 +3213,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             completion()
         } else {
-            self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
+            self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
             self.updateItemNodesVisibilities(onlyPositive: deferredUpdateVisible)
             
             if animated {
@@ -3199,15 +3260,88 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         node.headerAccessoryItemNode?.removeFromSupernode()
         node.headerAccessoryItemNode = nil
     }
+
+    private var nextHeaderSpaceAffinity: Int = 0
+
+    private func assignHeaderSpaceAffinities() {
+        var nextTempAffinity = 0
+
+        var existingAffinityIdByAffinity: [Int: Int] = [:]
+
+        for i in 0 ..< self.itemNodes.count {
+            let currentItemNode = self.itemNodes[i]
+
+            if let currentItemHeaders = currentItemNode.headers() {
+                currentHeadersLoop: for currentHeader in currentItemHeaders {
+                    let currentId = currentHeader.id
+                    if let currentAffinity = currentItemNode.tempHeaderSpaceAffinities[currentId] {
+                        if let existingAffinity = currentItemNode.headerSpaceAffinities[currentId] {
+                            existingAffinityIdByAffinity[currentAffinity] = existingAffinity
+                        }
+
+                        continue currentHeadersLoop
+                    }
+
+                    let currentAffinity = nextTempAffinity
+                    nextTempAffinity += 1
+
+                    currentItemNode.tempHeaderSpaceAffinities[currentId] = currentAffinity
+
+                    if let existingAffinity = currentItemNode.headerSpaceAffinities[currentId] {
+                        existingAffinityIdByAffinity[currentAffinity] = existingAffinity
+                    }
+
+                    groupSearch: for nextIndex in (i + 1) ..< self.itemNodes.count {
+                        let nextItemNode = self.itemNodes[nextIndex]
+
+                        var containsSameHeader = false
+                        if let nextHeaders = nextItemNode.headers() {
+                            nextHeaderSearch: for nextHeader in nextHeaders {
+                                if nextHeader.id == currentId {
+                                    containsSameHeader = true
+                                    break nextHeaderSearch
+                                }
+                            }
+                        }
+
+                        if containsSameHeader {
+                            nextItemNode.tempHeaderSpaceAffinities[currentId] = currentAffinity
+                        } else {
+                            break groupSearch
+                        }
+                    }
+                }
+            }
+        }
+
+        for i in 0 ..< self.itemNodes.count {
+            let itemNode = self.itemNodes[i]
+            for (headerId, tempAffinity) in itemNode.tempHeaderSpaceAffinities {
+                let affinity: Int
+                if let existing = existingAffinityIdByAffinity[tempAffinity] {
+                    affinity = existing
+                } else {
+                    affinity = self.nextHeaderSpaceAffinity
+                    existingAffinityIdByAffinity[tempAffinity] = affinity
+                    self.nextHeaderSpaceAffinity += 1
+                }
+
+                itemNode.headerSpaceAffinities[headerId] = affinity
+                itemNode.tempHeaderSpaceAffinities = [:]
+            }
+        }
+    }
     
-    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {
+    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {
+        self.assignHeaderSpaceAffinities()
+
         let upperDisplayBound = self.headerInsets.top
         let lowerDisplayBound = self.visibleSize.height - self.insets.bottom
-        var visibleHeaderNodes = Set<Int64>()
+        var visibleHeaderNodes = Set<VisibleHeaderNodeId>()
         
         let flashing = self.headerItemsAreFlashing()
         
-        func addHeader(id: Int64, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool) {
+        func addHeader(id: VisibleHeaderNodeId, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool) {
             let itemHeaderHeight: CGFloat = item.height
             
             let headerFrame: CGRect
@@ -3244,7 +3378,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         switch curve {
                             case .linear:
                                  headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
-                            case .spring:
+                            case .spring, .customSpring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
                             case let .custom(p1, p2, p3, p4):
                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))
@@ -3271,13 +3405,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 } else if hasValidNodes && headerNode.alpha.isZero {
                     headerNode.alpha = initialHeaderNodeAlpha
                     if animateInsertion {
-                        headerNode.layer.animateAlpha(from: 0.0, to: initialHeaderNodeAlpha, duration: 0.2)
-                        headerNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
+                        headerNode.animateAdded(duration: 0.2)
                     }
                 }
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: transition.0)
             } else {
-                let headerNode = item.node()
+                let headerNode = item.node(synchronousLoad: synchronousLoad)
                 headerNode.alpha = initialHeaderNodeAlpha
                 if headerNode.item !== item {
                     item.updateNode(headerNode, previous: nil, next: nil)
@@ -3294,39 +3427,70 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     self.addSubnode(headerNode)
                 }
                 if animateInsertion {
-                    headerNode.layer.animateAlpha(from: 0.0, to: initialHeaderNodeAlpha, duration: 0.3)
-                    headerNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.3)
+                    headerNode.alpha = initialHeaderNodeAlpha
+                    headerNode.animateAdded(duration: 0.2)
                 }
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
             }
         }
+
+        var previousHeaderBySpace: [AnyHashable: (id: VisibleHeaderNodeId, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool)] = [:]
         
-        var previousHeader: (id: Int64, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool)?
         for itemNode in self.itemNodes {
             let itemFrame = itemNode.apparentFrame
             let itemTopInset = itemNode.insets.top
-            if let itemHeader = itemNode.header() {
-                if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
-                    if previousHeaderId == itemHeader.id {
-                        previousHeader = (previousHeaderId, previousUpperBound, previousUpperBoundEdge, itemFrame.maxY, previousHeaderItem, hasValidNodes || itemNode.index != nil)
-                    } else {
-                        addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
-                        
-                        previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.minY + itemTopInset, itemFrame.maxY, itemHeader, itemNode.index != nil)
+            var validItemHeaderSpaces: [AnyHashable] = []
+            if let itemHeaders = itemNode.headers() {
+                for itemHeader in itemHeaders {
+                    guard let affinity = itemNode.headerSpaceAffinities[itemHeader.id] else {
+                        assertionFailure()
+                        continue
                     }
-                } else {
-                    previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.minY + itemTopInset, itemFrame.maxY, itemHeader, itemNode.index != nil)
+
+                    let headerId = VisibleHeaderNodeId(id: itemHeader.id, affinity: affinity)
+
+                    validItemHeaderSpaces.append(itemHeader.id.space)
+
+                    let itemMaxY: CGFloat
+                    if itemHeader.stickOverInsets {
+                        itemMaxY = itemFrame.maxY
+                    } else {
+                        itemMaxY = itemFrame.maxY - (self.rotated ? itemNode.insets.top : itemNode.insets.bottom)
+                    }
+
+                    if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeaderBySpace[itemHeader.id.space] {
+                        if previousHeaderId == headerId {
+                            previousHeaderBySpace[itemHeader.id.space] = (previousHeaderId, previousUpperBound, previousUpperBoundEdge, itemMaxY, previousHeaderItem, hasValidNodes || itemNode.index != nil)
+                        } else {
+                            addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+
+                            previousHeaderBySpace[itemHeader.id.space] = (headerId, itemFrame.minY, itemFrame.minY + itemTopInset, itemMaxY, itemHeader, itemNode.index != nil)
+                        }
+                    } else {
+                        previousHeaderBySpace[itemHeader.id.space] = (headerId, itemFrame.minY, itemFrame.minY + itemTopInset, itemMaxY, itemHeader, itemNode.index != nil)
+                    }
                 }
-            } else {
-                if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
-                    addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+            }
+
+            for (space, previousHeader) in previousHeaderBySpace {
+                if validItemHeaderSpaces.contains(space) {
+                    continue
                 }
-                previousHeader = nil
+
+                let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader
+
+                addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+
+                previousHeaderBySpace.removeValue(forKey: space)
             }
         }
-        
-        if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
+
+        for (space, previousHeader) in previousHeaderBySpace {
+            let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader
+
             addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+
+            previousHeaderBySpace.removeValue(forKey: space)
         }
         
         let currentIds = Set(self.itemHeaderNodes.keys)
@@ -3646,10 +3810,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 var updatedOperations = operations
                 updatedState.removeInvisibleNodes(&updatedOperations)
                 if synchronous {
-                    self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
+                    self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, synchronousLoads: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
                 } else {
                     self.dispatchOnVSync {
-                        self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
+                        self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, synchronousLoads: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
                     }
                 }
             }
@@ -3976,7 +4140,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.updateOverlayHighlight(transition: transition)
     }
     
-    private func itemIndexAtPoint(_ point: CGPoint) -> Int? {
+    public func itemIndexAtPoint(_ point: CGPoint) -> Int? {
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index
@@ -3989,6 +4153,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for itemNode in self.itemNodes {
             if itemNode.index == index {
                 return itemNode
+            }
+        }
+        return nil
+    }
+    
+    public func indexOf(itemNode: ListViewItemNode) -> Int? {
+        for listItemNode in self.itemNodes {
+            if itemNode === listItemNode {
+                return listItemNode.index
             }
         }
         return nil
@@ -4024,13 +4197,21 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    public func ensureItemNodeVisible(_ node: ListViewItemNode, animated: Bool = true, overflow: CGFloat = 0.0, allowIntersection: Bool = false, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
+    public func ensureItemNodeVisible(_ node: ListViewItemNode, animated: Bool = true, overflow: CGFloat = 0.0, allowIntersection: Bool = false, atTop: Bool = false, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
         if let index = node.index {
             if node.apparentHeight > self.visibleSize.height - self.insets.top - self.insets.bottom {
-                if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
-                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                } else if node.frame.minY < self.insets.top && overflow > 0.0 {
-                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                if atTop {
+                    if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    } else if node.frame.minY < self.insets.top && overflow > 0.0 {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    }
+                } else {
+                    if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    } else if node.frame.minY < self.insets.top && overflow > 0.0 {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    }
                 }
             } else {
                 if self.experimentalSnapScrollToItem {

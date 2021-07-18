@@ -279,7 +279,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             }
         }
         
-        let liveLocations = topPeerActiveLiveLocationMessages(viewTracker: context.account.viewTracker, accountPeerId: context.account.peerId, peerId: subject.id.peerId)
+        let liveLocations = context.engine.messages.topPeerActiveLiveLocationMessages(peerId: subject.id.peerId)
         |> map { _, messages -> [Message] in
             return messages
         }
@@ -537,7 +537,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, offset: 0.0, size: headerFrame.size, transition: listTransition)
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }

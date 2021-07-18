@@ -157,7 +157,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
         let supportPeer = Promise<PeerId?>()
-        supportPeer.set(supportPeerId(account: context.account))
+        supportPeer.set(context.engine.peers.supportPeerId())
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var faqUrl = presentationData.strings.Settings_FAQ_URL

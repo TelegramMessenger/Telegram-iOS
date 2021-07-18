@@ -10,6 +10,10 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/GZip:GZip",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
     ],
     visibility = [
         "//visibility:public",

@@ -88,7 +88,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, colors: [UInt32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, gradients: [[UInt32]], colors: [UInt32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.present = present
@@ -142,7 +142,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let wallpapers = colors.map { TelegramWallpaper.color($0) }
+        var wallpapers: [TelegramWallpaper] = []
+        wallpapers.append(contentsOf: gradients.map { TelegramWallpaper.gradient(nil, $0, WallpaperSettings()) })
+        wallpapers.append(contentsOf: colors.map { TelegramWallpaper.color($0) })
         let transition = context.sharedContext.presentationData
         |> map { presentationData -> (ThemeColorsGridEntryTransition, Bool) in
             var entries: [ThemeColorsGridControllerEntry] = []

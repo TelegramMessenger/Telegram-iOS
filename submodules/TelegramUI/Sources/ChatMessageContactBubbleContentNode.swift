@@ -90,6 +90,9 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     displayName = selectedContact.lastName
                 }
+                if displayName.isEmpty {
+                    displayName = item.presentationData.strings.Message_Contact
+                }
                 
                 let info: String
                 if let previousContact = previousContact, previousContact.isEqual(to: selectedContact), let contactInfo = previousContactInfo {

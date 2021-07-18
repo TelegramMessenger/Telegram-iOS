@@ -31,7 +31,11 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         set {
             self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputTextColor)
             self.placeholderNode.isHidden = !newValue.isEmpty
-            self.clearButton.isHidden = newValue.isEmpty
+            if self.textInputNode.isFirstResponder() {
+                self.clearButton.isHidden = newValue.isEmpty
+            } else {
+                self.clearButton.isHidden = true
+            }
         }
     }
     
@@ -41,8 +45,11 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         }
     }
     
-    init(theme: PresentationTheme, placeholder: String) {
+    private let maxLength: Int
+    
+    init(theme: PresentationTheme, placeholder: String, maxLength: Int, returnKeyType: UIReturnKeyType = .done) {
         self.theme = theme
+        self.maxLength = maxLength
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -58,7 +65,7 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = .default
         self.textInputNode.autocapitalizationType = .sentences
-        self.textInputNode.returnKeyType = .done
+        self.textInputNode.returnKeyType = returnKeyType
         self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
         
@@ -133,9 +140,17 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.clearButton.isHidden = !self.placeholderNode.isHidden
     }
     
+    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
+        self.clearButton.isHidden = (editableTextNode.textView.text ?? "").isEmpty
+    }
+    
+    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.clearButton.isHidden = true
+    }
+    
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
-        if updatedText.count > 40 {
+        if updatedText.count > maxLength {
             self.textInputNode.layer.addShakeAnimation()
             return false
         }
@@ -171,7 +186,6 @@ private final class VoiceChatTitleEditInputFieldNode: ASDisplayNode, ASEditableT
         self.clearButton.isHidden = true
         
         self.textInputNode.attributedText = nil
-        self.deactivateInput()
         self.updateHeight?()
     }
 }
@@ -205,7 +219,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int) {
         self.strings = strings
         self.title = title
         self.text = text
@@ -215,7 +229,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 8
         
-        self.inputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: placeholder)
+        self.inputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()
@@ -408,7 +422,7 @@ private final class VoiceChatTitleEditAlertContentNode: AlertContentNode {
     }
 }
 
-func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
+func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, text: String, placeholder: String, doneButtonTitle: String? = nil, value: String?, maxLength: Int, apply: @escaping (String?) -> Void) -> AlertController {
     var presentationData = sharedContext.currentPresentationData.with { $0 }
     if let forceTheme = forceTheme {
         presentationData = presentationData.withUpdated(theme: forceTheme)
@@ -419,11 +433,11 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
+    }), TextAlertAction(type: .defaultAction, title: doneButtonTitle ?? presentationData.strings.Common_Done, action: {
         applyImpl?()
     })]
     
-    let contentNode = VoiceChatTitleEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value)
+    let contentNode = VoiceChatTitleEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength)
     contentNode.complete = {
         applyImpl?()
     }
@@ -450,8 +464,307 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
     controller.dismissed = {
         presentationDataDisposable.dispose()
     }
-    dismissImpl = { [weak controller] animated in
-        contentNode.inputFieldNode.deactivateInput()
+    dismissImpl = { [weak controller, weak contentNode] animated in
+        contentNode?.inputFieldNode.deactivateInput()
+        if animated {
+            controller?.dismissAnimated()
+        } else {
+            controller?.dismiss()
+        }
+    }
+    return controller
+}
+
+private final class VoiceChatUserNameEditAlertContentNode: AlertContentNode {
+    private let strings: PresentationStrings
+    private let title: String
+    
+    private let titleNode: ASTextNode
+    let firstNameInputFieldNode: VoiceChatTitleEditInputFieldNode
+    let lastNameInputFieldNode: VoiceChatTitleEditInputFieldNode
+    
+    private let actionNodesSeparator: ASDisplayNode
+    private let actionNodes: [TextAlertContentActionNode]
+    private let actionVerticalSeparators: [ASDisplayNode]
+    
+    private let disposable = MetaDisposable()
+    
+    private var validLayout: CGSize?
+    
+    private let hapticFeedback = HapticFeedback()
+    
+    var complete: (() -> Void)? {
+        didSet {
+            self.lastNameInputFieldNode.complete = self.complete
+        }
+    }
+    
+    override var dismissOnOutsideTap: Bool {
+        return self.isUserInteractionEnabled
+    }
+    
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, firstNameValue: String?, lastNameValue: String?, maxLength: Int) {
+        self.strings = strings
+        self.title = title
+    
+        self.titleNode = ASTextNode()
+        self.titleNode.maximumNumberOfLines = 2
+        
+        self.firstNameInputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: firstNamePlaceholder, maxLength: maxLength, returnKeyType: .next)
+        self.firstNameInputFieldNode.text = firstNameValue ?? ""
+        
+        self.lastNameInputFieldNode = VoiceChatTitleEditInputFieldNode(theme: ptheme, placeholder: lastNamePlaceholder, maxLength: maxLength)
+        self.lastNameInputFieldNode.text = lastNameValue ?? ""
+        
+        self.actionNodesSeparator = ASDisplayNode()
+        self.actionNodesSeparator.isLayerBacked = true
+        
+        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
+            return TextAlertContentActionNode(theme: theme, action: action)
+        }
+        
+        var actionVerticalSeparators: [ASDisplayNode] = []
+        if actions.count > 1 {
+            for _ in 0 ..< actions.count - 1 {
+                let separatorNode = ASDisplayNode()
+                separatorNode.isLayerBacked = true
+                actionVerticalSeparators.append(separatorNode)
+            }
+        }
+        self.actionVerticalSeparators = actionVerticalSeparators
+        
+        super.init()
+        
+        self.addSubnode(self.titleNode)
+        
+        self.addSubnode(self.firstNameInputFieldNode)
+        self.addSubnode(self.lastNameInputFieldNode)
+
+        self.addSubnode(self.actionNodesSeparator)
+        
+        for actionNode in self.actionNodes {
+            self.addSubnode(actionNode)
+        }
+        
+        for separatorNode in self.actionVerticalSeparators {
+            self.addSubnode(separatorNode)
+        }
+        
+        self.updateTheme(theme)
+        
+        self.firstNameInputFieldNode.complete = { [weak self] in
+            self?.lastNameInputFieldNode.activateInput()
+        }
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    var firstName: String {
+        return self.firstNameInputFieldNode.text
+    }
+    
+    var lastName: String {
+        return self.lastNameInputFieldNode.text
+    }
+
+    override func updateTheme(_ theme: AlertControllerTheme) {
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+
+        self.actionNodesSeparator.backgroundColor = theme.separatorColor
+        for actionNode in self.actionNodes {
+            actionNode.updateTheme(theme)
+        }
+        for separatorNode in self.actionVerticalSeparators {
+            separatorNode.backgroundColor = theme.separatorColor
+        }
+        
+        if let size = self.validLayout {
+            _ = self.updateLayout(size: size, transition: .immediate)
+        }
+    }
+    
+    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        var size = size
+        size.width = min(size.width, 270.0)
+        let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
+        
+        let hadValidLayout = self.validLayout != nil
+        
+        self.validLayout = size
+        
+        var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
+        let spacing: CGFloat = 0.0
+        
+        let titleSize = self.titleNode.measure(measureSize)
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
+        origin.y += titleSize.height + 4.0
+                
+        let actionButtonHeight: CGFloat = 44.0
+        var minActionsWidth: CGFloat = 0.0
+        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
+        let actionTitleInsets: CGFloat = 8.0
+        
+        var effectiveActionLayout = TextAlertContentActionLayout.horizontal
+        for actionNode in self.actionNodes {
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
+            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
+                effectiveActionLayout = .vertical
+            }
+            switch effectiveActionLayout {
+                case .horizontal:
+                    minActionsWidth += actionTitleSize.width + actionTitleInsets
+                case .vertical:
+                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
+            }
+        }
+        
+        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 9.0, right: 18.0)
+        
+        var contentWidth = max(titleSize.width, minActionsWidth)
+        contentWidth = max(contentWidth, 234.0)
+        
+        var actionsHeight: CGFloat = 0.0
+        switch effectiveActionLayout {
+            case .horizontal:
+                actionsHeight = actionButtonHeight
+            case .vertical:
+                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
+        }
+        
+        let resultWidth = contentWidth + insets.left + insets.right
+        
+        let inputFieldWidth = resultWidth
+        let firstInputFieldHeight = self.firstNameInputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
+        transition.updateFrame(node: self.firstNameInputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: firstInputFieldHeight))
+        
+        origin.y += firstInputFieldHeight + spacing
+        
+        let lastInputFieldHeight = self.lastNameInputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
+        transition.updateFrame(node: self.lastNameInputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: lastInputFieldHeight))
+        
+        let resultSize = CGSize(width: resultWidth, height: titleSize.height + firstInputFieldHeight + spacing + lastInputFieldHeight + actionsHeight + insets.top + insets.bottom)
+        
+        transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
+        
+        var actionOffset: CGFloat = 0.0
+        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
+        var separatorIndex = -1
+        var nodeIndex = 0
+        for actionNode in self.actionNodes {
+            if separatorIndex >= 0 {
+                let separatorNode = self.actionVerticalSeparators[separatorIndex]
+                switch effectiveActionLayout {
+                    case .horizontal:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
+                    case .vertical:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
+                }
+            }
+            separatorIndex += 1
+            
+            let currentActionWidth: CGFloat
+            switch effectiveActionLayout {
+                case .horizontal:
+                    if nodeIndex == self.actionNodes.count - 1 {
+                        currentActionWidth = resultSize.width - actionOffset
+                    } else {
+                        currentActionWidth = actionWidth
+                    }
+                case .vertical:
+                    currentActionWidth = resultSize.width
+            }
+            
+            let actionNodeFrame: CGRect
+            switch effectiveActionLayout {
+                case .horizontal:
+                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionOffset += currentActionWidth
+                case .vertical:
+                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionOffset += actionButtonHeight
+            }
+            
+            transition.updateFrame(node: actionNode, frame: actionNodeFrame)
+            
+            nodeIndex += 1
+        }
+        
+        if !hadValidLayout {
+            self.firstNameInputFieldNode.activateInput()
+        }
+        
+        return resultSize
+    }
+    
+    func animateError() {
+        if self.firstNameInputFieldNode.text.isEmpty {
+            self.firstNameInputFieldNode.layer.addShakeAnimation()
+        }
+        self.hapticFeedback.error()
+    }
+}
+
+func voiceChatUserNameController(sharedContext: SharedAccountContext, account: Account, forceTheme: PresentationTheme?, title: String, firstNamePlaceholder: String, lastNamePlaceholder: String, doneButtonTitle: String? = nil, firstName: String?, lastName: String?, maxLength: Int, apply: @escaping ((String, String)?) -> Void) -> AlertController {
+    var presentationData = sharedContext.currentPresentationData.with { $0 }
+    if let forceTheme = forceTheme {
+        presentationData = presentationData.withUpdated(theme: forceTheme)
+    }
+    
+    var dismissImpl: ((Bool) -> Void)?
+    var applyImpl: (() -> Void)?
+    
+    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        dismissImpl?(true)
+    }), TextAlertAction(type: .defaultAction, title: doneButtonTitle ?? presentationData.strings.Common_Done, action: {
+        applyImpl?()
+    })]
+    
+    let contentNode = VoiceChatUserNameEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, firstNamePlaceholder: firstNamePlaceholder, lastNamePlaceholder: lastNamePlaceholder, firstNameValue: firstName, lastNameValue: lastName, maxLength: maxLength)
+    contentNode.complete = {
+        applyImpl?()
+    }
+    applyImpl = { [weak contentNode] in
+        guard let contentNode = contentNode else {
+            return
+        }
+        
+        let previousFirstName = firstName ?? ""
+        let previousLastName = lastName ?? ""
+        let newFirstName = contentNode.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newLastName = contentNode.lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if newFirstName.isEmpty {
+            contentNode.animateError()
+            return
+        }
+        
+        dismissImpl?(true)
+        
+        if previousFirstName != newFirstName || previousLastName != newLastName {
+            apply((newFirstName, newLastName))
+        } else {
+            apply(nil)
+        }
+    }
+    
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
+    let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+        var presentationData = presentationData
+        if let forceTheme = forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        controller?.theme = AlertControllerTheme(presentationData: presentationData)
+        contentNode?.firstNameInputFieldNode.updateTheme(presentationData.theme)
+        contentNode?.lastNameInputFieldNode.updateTheme(presentationData.theme)
+    })
+    controller.dismissed = {
+        presentationDataDisposable.dispose()
+    }
+    dismissImpl = { [weak controller, weak contentNode] animated in
+        contentNode?.firstNameInputFieldNode.deactivateInput()
+        contentNode?.lastNameInputFieldNode.deactivateInput()
         if animated {
             controller?.dismissAnimated()
         } else {

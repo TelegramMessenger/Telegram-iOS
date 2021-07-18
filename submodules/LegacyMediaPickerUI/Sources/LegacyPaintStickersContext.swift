@@ -21,7 +21,7 @@ protocol LegacyPaintEntity {
 }
 
 private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
-    let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
+    let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     assert(bytesPerRow == calculatedBytesPerRow)
     
     let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
@@ -328,7 +328,10 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             var result: Double
             let minDuration: Double = 3.0
             if durations.count > 1 {
-                result = min(6.0, Double(durations.reduce(1.0) { Double(lcm(Int32($0 * 10.0), Int32($1 * 10.0))) }) / 10.0)
+                let reduced = durations.reduce(1.0) { lhs, rhs -> Double in
+                    return Double(lcm(Int32(lhs * 10.0), Int32(rhs * 10.0)))
+                }
+                result = min(6.0, Double(reduced) / 10.0)
             } else if let duration = durations.first {
                 result = duration
             } else {

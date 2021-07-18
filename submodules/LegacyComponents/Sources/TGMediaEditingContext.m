@@ -185,7 +185,10 @@
 
 - (void)cleanup
 {
-    [_diskCache cleanup];
+    TGModernCache *diskCache = _diskCache;
+    TGDispatchAfter(10.0, dispatch_get_main_queue(), ^{
+        [diskCache cleanup];
+    });
     
     [[NSFileManager defaultManager] removeItemAtPath:_fullSizeResultsUrl.path error:nil];
     [[NSFileManager defaultManager] removeItemAtPath:_paintingImagesUrl.path error:nil];
@@ -991,7 +994,7 @@
 
 + (NSUInteger)diskMemoryLimit
 {
-    return 64 * 1024 * 1024;
+    return 512 * 1024 * 1024;
 }
 
 + (NSUInteger)imageSoftMemoryLimit

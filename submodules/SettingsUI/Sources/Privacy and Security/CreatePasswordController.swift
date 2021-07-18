@@ -274,7 +274,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
                         state.saving = true
                         return state
                     }
-                    saveDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: email))
+                    saveDisposable.set((context.engine.auth.updateTwoStepVerificationPassword(currentPassword: currentPassword, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: email))
                         |> deliverOnMainQueue).start(next: { update in
                             switch update {
                             case .none:
@@ -356,7 +356,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
             return state
         }
         
-        saveDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .none)
+        saveDisposable.set((context.engine.auth.updateTwoStepVerificationPassword(currentPassword: currentPassword, updatedPassword: .none)
             |> deliverOnMainQueue).start(next: { _ in
                 updateState { state in
                     var state = state

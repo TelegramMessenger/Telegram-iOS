@@ -31,7 +31,7 @@ public func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concea
     latin.insert(charactersIn: "a"..."z")
     latin.insert(charactersIn: "0"..."9")
     var punctuation = CharacterSet()
-    punctuation.insert(charactersIn: ".-/+_")
+    punctuation.insert(charactersIn: ".-/+_?=")
     var hasLatin = false
     var hasNonLatin = false
     for c in rawHost {

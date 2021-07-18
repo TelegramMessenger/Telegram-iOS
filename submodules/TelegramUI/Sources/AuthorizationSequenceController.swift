@@ -17,6 +17,7 @@ import SettingsUI
 import PhoneNumberFormat
 import LegacyComponents
 import LegacyMediaPickerUI
+import PasswordSetupUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -25,7 +26,7 @@ private enum InnerState: Equatable {
 
 public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate {
     static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: theme.intro.accentTextColor, disabledButtonColor: theme.intro.disabledTextColor, primaryTextColor: theme.intro.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
+        return NavigationBarTheme(buttonColor: theme.intro.accentTextColor, disabledButtonColor: theme.intro.disabledTextColor, primaryTextColor: theme.intro.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
     
     private let sharedContext: SharedAccountContext
@@ -110,7 +111,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.presentationData.theme)
+            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, account: self.account, theme: self.presentationData.theme)
             controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
                     if let strings = strings {
@@ -177,14 +178,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             controller.inProgress = false
                             
                             let text: String
-                            var actions: [TextAlertAction] = [
-                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
-                            ]
+                            var actions: [TextAlertAction] = []
                             switch error {
                                 case .limitExceeded:
                                     text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                 case .invalidPhoneNumber:
                                     text = strongSelf.presentationData.strings.Login_InvalidPhoneError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -200,8 +201,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case .phoneLimitExceeded:
                                     text = strongSelf.presentationData.strings.Login_PhoneFloodError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                 case .phoneBanned:
                                     text = strongSelf.presentationData.strings.Login_PhoneBannedError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -217,6 +220,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case let .generic(info):
                                     text = strongSelf.presentationData.strings.Login_UnknownError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -238,6 +242,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }))
                                 case .timeout:
                                     text = strongSelf.presentationData.strings.Login_NetworkError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                                     actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
@@ -481,26 +486,26 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         controller.forgot = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
                 strongController.inProgress = true
-                strongSelf.actionDisposable.set((requestPasswordRecovery(account: strongSelf.account)
-                |> deliverOnMainQueue).start(next: { option in
+                strongSelf.actionDisposable.set((TelegramEngineUnauthorized(account: strongSelf.account).auth.requestTwoStepVerificationPasswordRecoveryCode()
+                |> deliverOnMainQueue).start(next: { pattern in
                     if let strongSelf = self, let strongController = controller {
                         strongController.inProgress = false
-                        switch option {
-                            case let .email(pattern):
-                                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
-                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts)))
-                                    }
-                                }).start()
-                            case .none:
-                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                strongController.didForgotWithNoRecovery = true
-                        }
+
+                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                            if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
+                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts)))
+                            }
+                        }).start()
                     }
                 }, error: { error in
-                    if let strongController = controller {
-                        strongController.inProgress = false
+                    guard let strongController = controller else {
+                        return
                     }
+
+                    strongController.inProgress = false
+
+                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongController.didForgotWithNoRecovery = true
                 }))
             }
         }
@@ -537,66 +542,32 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func passwordRecoveryController(emailPattern: String, syncContacts: Bool) -> AuthorizationSequencePasswordRecoveryController {
-        var currentController: AuthorizationSequencePasswordRecoveryController?
+    private func passwordRecoveryController(emailPattern: String, syncContacts: Bool) -> TwoFactorDataInputScreen {
+        var currentController: TwoFactorDataInputScreen?
         for c in self.viewControllers {
-            if let c = c as? AuthorizationSequencePasswordRecoveryController {
+            if let c = c as? TwoFactorDataInputScreen {
                 currentController = c
                 break
             }
         }
-        let controller: AuthorizationSequencePasswordRecoveryController
+        let controller: TwoFactorDataInputScreen
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordRecoveryController(strings: self.presentationData.strings, theme: self.presentationData.theme, back: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let countryCode = defaultCountryCode()
-                
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
-            })
-            controller.recoverWithCode = { [weak self, weak controller] code in
-                if let strongSelf = self {
-                    controller?.inProgress = true
-                    
-                    strongSelf.actionDisposable.set((performPasswordRecovery(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, syncContacts: syncContacts) |> deliverOnMainQueue).start(error: { error in
-                        Queue.mainQueue().async {
-                            if let strongSelf = self, let controller = controller {
-                                controller.inProgress = false
-                                
-                                let text: String
-                                switch error {
-                                    case .limitExceeded:
-                                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
-                                    case .invalidCode:
-                                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                                    case .expired:
-                                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
-                                }
-                                
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            }
-                        }
-                    }))
-                }
-            }
-            controller.noAccess = { [weak self, weak controller] in
-                if let strongSelf = self, let controller = controller {
-                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    let account = strongSelf.account
-                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                        if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
-                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts)))
-                        }
-                    }).start()
-                }
-            }
+            controller = TwoFactorDataInputScreen(sharedContext: self.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: self.account)), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .notAuthorized(syncContacts: syncContacts)), stateUpdated: { _ in
+            }, presentation: .default)
         }
-        controller.updateData(emailPattern: emailPattern)
+        controller.passwordRecoveryFailed = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+
+            let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts)))
+                }
+            }).start()
+        }
         return controller
     }
     
@@ -714,7 +685,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     var value = stat()
                                     if stat(result.fileURL.path, &value) == 0 {
                                         if let data = try? Data(contentsOf: result.fileURL) {
-                                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
                                         }
@@ -734,7 +705,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                             if let resource = resource {
-                                return uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: nil, resource: resource) |> map(Optional.init)
+                                return TelegramEngineUnauthorized(account: account).auth.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                             } else {
                                 return .single(nil)
                             }
@@ -813,7 +784,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset, syncContacts: syncContacts))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                case let .passwordRecovery(_, _, _, emailPattern, syncContacts):
+                case let .passwordRecovery(hint, _, _, emailPattern, syncContacts):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())

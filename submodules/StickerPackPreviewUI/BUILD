@@ -28,6 +28,7 @@ swift_library(
         "//submodules/ArchivedStickerPacksNotice:ArchivedStickerPacksNotice",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

@@ -18,6 +18,7 @@ import TelegramStringFormatting
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
     let tapAction: () -> Bool
@@ -27,9 +28,10 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.context = context
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
         self.tapAction = tapAction
@@ -181,7 +183,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.context.account.peerId).0
+            messageText = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId).0
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -218,9 +220,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                 }
             } else if item.messages[0].groupingKey != nil {
-                var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId).key
+                var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId).key
                 for i in 1 ..< item.messages.count {
-                    let nextKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                    let nextKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
                     if kind != nextKind.key {
                         kind = .text
                         break
@@ -339,7 +341,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 messageText = rawText
                             }
                         case .file:
-                            let rawText = presentationData.strings.PUSH_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            let rawText = presentationData.strings.PUSH_MESSAGE_FILES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
                                 title = String(rawText[rawText.startIndex ..< index])
                                 messageText = String(rawText[rawText.index(after: index)...])

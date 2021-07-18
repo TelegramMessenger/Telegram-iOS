@@ -56,6 +56,7 @@ public enum AnimatedStickerPlaybackPosition {
     case start
     case end
     case timestamp(Double)
+    case frameIndex(Int)
 }
 
 public enum AnimatedStickerPlaybackMode {
@@ -94,6 +95,7 @@ public protocol AnimatedStickerFrameSource: class {
     
     func takeFrame(draw: Bool) -> AnimatedStickerFrame?
     func skipToEnd()
+    func skipToFrameIndex(_ index: Int)
 }
 
 private final class AnimatedStickerFrameSourceWrapper {
@@ -270,6 +272,9 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     }
     
     public func skipToEnd() {
+    }
+
+    public func skipToFrameIndex(_ index: Int) {
     }
 }
 
@@ -609,7 +614,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.data = data
         self.width = width
         self.height = height
-        self.bytesPerRow = (4 * Int(width) + 15) & (~15)
+        self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
         self.currentFrame = 0
         let rawData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         let decompressedData = transformedWithFitzModifier(data: rawData, fitzModifier: fitzModifier)
@@ -655,6 +660,10 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     
     func skipToEnd() {
         self.currentFrame = self.frameCount - 1
+    }
+
+    func skipToFrameIndex(_ index: Int) {
+        self.currentFrame = index
     }
 }
 
@@ -748,6 +757,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public var completed: (Bool) -> Void = { _ in }
     public var frameUpdated: (Int, Int) -> Void = { _, _ in }
+    public private(set) var currentFrameIndex: Int = 0
+    private var playFromIndex: Int?
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
@@ -842,7 +853,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         strongSelf.isSetUpForPlayback = false
                         strongSelf.isPlaying = true
                     }
-                    strongSelf.play()
+                    var fromIndex = strongSelf.playFromIndex
+                    strongSelf.playFromIndex = nil
+                    strongSelf.play(fromIndex: fromIndex)
                 } else if strongSelf.canDisplayFirstFrame {
                     strongSelf.play(firstFrame: true)
                 }
@@ -911,7 +924,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     private var isSetUpForPlayback = false
     
-    public func play(firstFrame: Bool = false) {
+    public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         switch self.playbackMode {
         case .once:
             self.isPlaying = true
@@ -949,6 +962,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 guard let frameSource = maybeFrameSource else {
                     return
                 }
+                if let fromIndex = fromIndex {
+                    frameSource.skipToFrameIndex(fromIndex)
+                }
                 let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
                     return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
                 })
@@ -978,6 +994,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             })
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
+                            strongSelf.currentFrameIndex = frame.index
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -1016,6 +1033,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
             self.isSetUpForPlayback = true
             let directData = self.directData
             let cachedData = self.cachedData
+            if directData == nil && cachedData == nil {
+                self.playFromIndex = fromIndex
+            }
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
@@ -1038,6 +1058,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 })
                 guard let frameSource = maybeFrameSource else {
                     return
+                }
+                if let fromIndex = fromIndex {
+                    frameSource.skipToFrameIndex(fromIndex)
                 }
                 let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
                     return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
@@ -1068,6 +1091,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             })
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
+                            strongSelf.currentFrameIndex = frame.index
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -1163,6 +1187,21 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     return
                 }
                 
+                var delta = targetFrame - frameSource.frameIndex
+                if delta < 0 {
+                    delta = frameSource.frameCount + delta
+                }
+                for i in 0 ..< delta {
+                    maybeFrame = frameQueue.syncWith { frameQueue in
+                        return frameQueue.take(draw: i == delta - 1)
+                    }
+                }
+            } else if case let .frameIndex(frameIndex) = position {
+                let targetFrame = frameIndex
+                if targetFrame == frameSource.frameIndex {
+                    return
+                }
+
                 var delta = targetFrame - frameSource.frameIndex
                 if delta < 0 {
                     delta = frameSource.frameCount + delta

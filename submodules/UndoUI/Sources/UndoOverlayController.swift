@@ -17,8 +17,8 @@ public enum UndoOverlayContent {
     case emoji(path: String, text: String)
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String, text: String, cancel: String)
-    case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, account: Account)
-    case dice(dice: TelegramMediaDice, account: Account, text: String, action: String?)
+    case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, context: AccountContext)
+    case dice(dice: TelegramMediaDice, context: AccountContext, text: String, action: String?)
     case chatAddedToFolder(chatTitle: String, folderTitle: String)
     case chatRemovedFromFolder(chatTitle: String, folderTitle: String)
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)
@@ -35,8 +35,10 @@ public enum UndoOverlayContent {
     case voiceChatRecording(text: String)
     case voiceChatFlag(text: String)
     case voiceChatCanSpeak(text: String)
-    case sticker(account: Account, file: TelegramMediaFile, text: String)
+    case sticker(context: AccountContext, file: TelegramMediaFile, text: String)
     case copy(text: String)
+    case mediaSaved(text: String)
+    case paymentSent(currencyValue: String, itemTitle: String)
 }
 
 public enum UndoOverlayAction {
@@ -54,6 +56,8 @@ public final class UndoOverlayController: ViewController {
     
     private var didPlayPresentationAnimation = false
     private var dismissed = false
+    
+    public var keepOnParentDismissal = false
     
     public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData

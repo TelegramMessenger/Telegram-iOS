@@ -96,7 +96,7 @@ public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {
                         return nil
                     }
                     
-                    return ParsedSecureIdUrl(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce)
+                    return ParsedSecureIdUrl(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce)
                 }
             }
         }
@@ -229,7 +229,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
         
         let handleInternalUrl: (String) -> Void = { url in
-            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url, skipUrlAuth: true)
+            let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: url, skipUrlAuth: true)
             |> deliverOnMainQueue).start(next: handleResolvedUrl)
         }
         
@@ -439,7 +439,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if valid {
-                            if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                            if let botId = botId, let scope = scope, let publicKey = publicKey {
                                 if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                     opaquePayload = Data()
                                     if opaqueNonce.isEmpty {
@@ -451,7 +451,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 if case .chat = urlContext {
                                     return
                                 }
-                                let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
+                                let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                                 
                                 if let navigationController = navigationController {
                                     context.sharedContext.applicationBindings.dismissNativeController()
@@ -478,7 +478,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         
                         if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
                             let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
+                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(idValue)))
                             }
                             |> deliverOnMainQueue).start(next: { peer in
                                 if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
@@ -678,7 +678,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }
             } else {
-                if parsedUrl.host == "settings" {
+                if parsedUrl.host == "importStickers" {
+                    handleResolvedUrl(.importStickers)
+                } else if parsedUrl.host == "settings" {
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
@@ -730,7 +732,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
+                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                     controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
                                 window.rootViewController?.present(controller, animated: true)

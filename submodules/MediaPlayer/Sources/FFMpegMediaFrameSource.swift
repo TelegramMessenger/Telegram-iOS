@@ -283,6 +283,9 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                 let _ = currentSemaphore.swap(nil)
                                 subscriber.putError(.generic)
                             }
+                        } else {
+                            let _ = currentSemaphore.swap(nil)
+                            subscriber.putError(.generic)
                         }
                     }
                 })

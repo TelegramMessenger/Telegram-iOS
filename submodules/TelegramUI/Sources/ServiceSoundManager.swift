@@ -20,8 +20,8 @@ public final class ServiceSoundManager {
     
     init() {
         self.queue.async {
-            self.messageDeliverySound = loadSystemSoundFromBundle(name: "MessageSent.caf")
-            self.incomingMessageSound = loadSystemSoundFromBundle(name: "notification.caf")
+            self.messageDeliverySound = loadSystemSoundFromBundle(name: "MessageSent.mp3")
+            self.incomingMessageSound = loadSystemSoundFromBundle(name: "notification.mp3")
         }
     }
     
