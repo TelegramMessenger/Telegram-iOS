@@ -1110,4 +1110,10 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ShareIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
         })
     }
+    
+    public static func chatTranslateButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTranslateButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "NGTranslateIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper), customSize: CGSize(width: 18.0, height: 18.0))
+        })
+    }
 }

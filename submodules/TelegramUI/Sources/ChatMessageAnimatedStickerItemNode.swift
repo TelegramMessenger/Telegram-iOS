@@ -75,7 +75,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account, disableComments: Bool = false) -> CGSize {
+    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account, disableComments: Bool = false, translateButton: Bool = false) -> CGSize {
         var isReplies = false
         var replyCount = 0
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -102,7 +102,9 @@ class ChatMessageShareButton: HighlightableButtonNode {
 
             var updatedIconImage: UIImage?
             var updatedIconOffset = CGPoint()
-            if case .pinnedMessages = subject {
+            if translateButton {
+                updatedIconImage = PresentationResourcesChat.chatTranslateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+            } else if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if isReplies {
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)

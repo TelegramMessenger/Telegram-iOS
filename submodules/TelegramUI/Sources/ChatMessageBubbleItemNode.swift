@@ -447,7 +447,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var shareButtonNode: ChatMessageShareButton?
-    private var trButtonNode: HighlightableButtonNode?
+    private var trButtonNode: ChatMessageShareButton?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
 
@@ -2346,7 +2346,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
-                needsShareButton: needShareButton
+                needsShareButton: needShareButton,
+                needsTrButton: needTrButton
             )
         })
     }
@@ -2386,7 +2387,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentContainerNodeFrames: [(UInt32, CGRect, Bool?, CGFloat)],
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (Bool) -> ChatMessageDateAndStatusNode)?,
-        needsShareButton: Bool
+        needsShareButton: Bool,
+        needsTrButton: Bool
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -2854,26 +2856,46 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
+        if needsTrButton {
+            if strongSelf.trButtonNode == nil {
+                let trButtonNode = ChatMessageShareButton()
+                strongSelf.trButtonNode = trButtonNode
+                strongSelf.insertSubnode(trButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                trButtonNode.addTarget(strongSelf, action: #selector(strongSelf.trButtonPressed), forControlEvents: .touchUpInside)
+            }
+            
+        } else if let trButtonNode = strongSelf.trButtonNode {
+            strongSelf.trButtonNode = nil
+            trButtonNode.removeFromSupernode()
+        }
+        
+        
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
             }
             var hasShareButton = false
+            var shareButtonWidth: CGFloat = 0.0
+            let shareButtonOffset: CGFloat = 4.0
             if let shareButtonNode = strongSelf.shareButtonNode {
                 hasShareButton = true
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                shareButtonWidth = buttonSize.width
             }
             
             if let trButtonNode = strongSelf.trButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
+                let buttonSize = trButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true, translateButton: true)
                 
-                var shareButtonSize: CGFloat = 0.0
+                var totalShareButtonOffset: CGFloat = 0.0
                 if hasShareButton {
-                    shareButtonSize = 29.0 + 4.0
+                    totalShareButtonOffset = shareButtonWidth + shareButtonOffset
                 }
-                trButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - 30.0 - shareButtonSize), size: CGSize(width: 29.0, height: 29.0))
+                
+                trButtonNode.frame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0 - totalShareButtonOffset), size: buttonSize)
+                
             }
         } else {
             if let _ = strongSelf.backgroundFrameTransition {
@@ -2881,11 +2903,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.backgroundFrameTransition = nil
             }
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
+            
             var hasShareButton = false
+            var shareButtonWidth: CGFloat = 0.0
+            let shareButtonOffset: CGFloat = 4.0
+
             if let shareButtonNode = strongSelf.shareButtonNode {
+                hasShareButton = true
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                shareButtonWidth = buttonSize.width
+            }
             
+            if let trButtonNode = strongSelf.trButtonNode {
+                let buttonSize = trButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true, translateButton: true)
+                
+                var totalShareButtonOffset: CGFloat = 0.0
+                if hasShareButton {
+                    totalShareButtonOffset = shareButtonWidth + shareButtonOffset
+                }
+
+                trButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0 - totalShareButtonOffset), size: buttonSize)
             }
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -3078,9 +3116,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             self.messageAccessibilityArea.frame = backgroundFrame
             
+            var hasShareButton = false
+            var shareButtonWidth: CGFloat = 0.0
+            let shareButtonOffset: CGFloat = 4.0
+
             if let item = self.item, let shareButtonNode = self.shareButtonNode {
+                hasShareButton = true
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                shareButtonWidth = buttonSize.width
+            }
+            
+            
+            if let item = self.item, let trButtonNode = self.trButtonNode {
+                let buttonSize = trButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true, translateButton: true)
+
+                var totalShareButtonOffset: CGFloat = 0.0
+                if hasShareButton {
+                    totalShareButtonOffset = shareButtonWidth + shareButtonOffset
+                }
+
+                trButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0 - totalShareButtonOffset), size: buttonSize)
             }
             
             if CGFloat(1.0).isLessThanOrEqualTo(progress) {
