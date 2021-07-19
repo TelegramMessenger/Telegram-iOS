@@ -8,6 +8,7 @@
 @class MTMessageTransaction;
 @class MTApiEnvironment;
 @class MTSessionInfo;
+@class MTTransportScheme;
 
 @protocol MTMessageService <NSObject>
 
@@ -17,7 +18,7 @@
 - (void)mtProtoDidAddService:(MTProto *)mtProto;
 - (void)mtProtoDidRemoveService:(MTProto *)mtProto;
 - (void)mtProtoPublicKeysUpdated:(MTProto *)mtProto datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo;
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo scheme:(MTTransportScheme *)scheme;
 - (void)mtProtoDidChangeSession:(MTProto *)mtProto;
 - (void)mtProtoServerDidChangeSession:(MTProto *)mtProto firstValidMessageId:(int64_t)firstValidMessageId otherValidMessageIds:(NSArray *)otherValidMessageIds;
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector;
