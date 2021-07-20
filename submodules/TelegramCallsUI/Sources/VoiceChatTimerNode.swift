@@ -156,7 +156,7 @@ final class VoiceChatTimerNode: ASDisplayNode {
             timer.start()
         }
         
-        let subtitle = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true).0
+        let subtitle = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true).string
         
         self.titleNode.attributedText = NSAttributedString(string: elapsedTime < 0 ?  self.strings.VoiceChat_LateBy :  self.strings.VoiceChat_StartsIn, font: Font.with(size: 23.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         let titleSize = self.titleNode.updateLayout(size)

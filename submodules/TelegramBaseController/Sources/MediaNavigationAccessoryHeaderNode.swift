@@ -80,7 +80,7 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     }
                     
                     if titleText == subtitleText {
-                        subtitleText = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: timestamp).0
+                        subtitleText = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: timestamp).string
                     }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)

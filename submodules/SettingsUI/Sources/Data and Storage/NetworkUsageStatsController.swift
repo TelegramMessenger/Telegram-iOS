@@ -341,7 +341,7 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetCellularTimestamp)))
                 
-                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_CellularUsageSince(dateStringPlain).0))
+                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_CellularUsageSince(dateStringPlain).string))
             }
         case .wifi:
             entries.append(.messagesHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_GeneralDataSection))
@@ -374,7 +374,7 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
                 formatter.dateFormat = "E, d MMM yyyy HH:mm"
                 let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(stats.resetWifiTimestamp)))
                 
-                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_WifiUsageSince(dateStringPlain).0))
+                entries.append(.resetTimestamp(presentationData.theme, presentationData.strings.NetworkUsageSettings_WifiUsageSince(dateStringPlain).string))
             }
     }
     

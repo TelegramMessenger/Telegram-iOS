@@ -277,9 +277,9 @@ public final class LocationViewController: ViewController {
                                 var text: String
                                 let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
                                 if let compactDisplayTitle = compactDisplayTitle {
-                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).string
                                 }
                                 
                                 strongSelf.dismissAllTooltips()
@@ -352,9 +352,9 @@ public final class LocationViewController: ViewController {
                         var text: String
                         let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
                         if let compactDisplayTitle = compactDisplayTitle {
-                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).string
                         } else {
-                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).string
                         }
                         
                         strongSelf.dismissAllTooltips()
@@ -380,7 +380,7 @@ public final class LocationViewController: ViewController {
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                         if let user = peer as? TelegramUser {
-                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).0
+                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).string
                         }
                         
                         let sendLiveLocationImpl: (Int32) -> Void = { [weak controller] period in

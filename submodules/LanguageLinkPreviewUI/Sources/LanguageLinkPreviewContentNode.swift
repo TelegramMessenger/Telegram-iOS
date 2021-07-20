@@ -36,13 +36,13 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         let text: String
         if localizationInfo.totalStringCount == 0 {
             self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_UnsufficientDataTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-            text = strings.ApplyLanguage_UnsufficientDataText(localizationInfo.title).0
+            text = strings.ApplyLanguage_UnsufficientDataText(localizationInfo.title).string
         } else {
             self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_ChangeLanguageTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
             if !localizationInfo.isOfficial {
-                text = strings.ApplyLanguage_ChangeLanguageUnofficialText(localizationInfo.title, "\(completionScore)").0
+                text = strings.ApplyLanguage_ChangeLanguageUnofficialText(localizationInfo.title, "\(completionScore)").string
             } else {
-                text = strings.ApplyLanguage_ChangeLanguageOfficialText(localizationInfo.title).0
+                text = strings.ApplyLanguage_ChangeLanguageOfficialText(localizationInfo.title).string
             }
         }
         let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: theme.actionSheet.primaryTextColor)

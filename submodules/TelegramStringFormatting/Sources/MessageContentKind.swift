@@ -198,7 +198,7 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         if text.isEmpty {
             return (strings.Message_Sticker, true)
         } else {
-            return (strings.Message_StickerText(text).0, true)
+            return (strings.Message_StickerText(text).string, true)
         }
     case .animation:
         return (strings.Message_Animation, true)

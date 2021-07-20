@@ -145,10 +145,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             if timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.Weekday_Today
             } else {
-                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").0
+                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").string
             }
         } else {
-            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
         }
         
         if scheduled {
@@ -157,7 +157,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             } else if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.ScheduledMessages_ScheduledToday
             } else {
-                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).string
             }
         }
         self.text = text

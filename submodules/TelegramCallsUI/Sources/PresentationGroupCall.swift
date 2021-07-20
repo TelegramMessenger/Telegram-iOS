@@ -1920,7 +1920,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         
                                         let text: String
                                         if let title = title {
-                                            text = presentationData.strings.VoiceChat_YouCanNowSpeakIn(title).0
+                                            text = presentationData.strings.VoiceChat_YouCanNowSpeakIn(title).string
                                         } else {
                                             text = presentationData.strings.VoiceChat_YouCanNowSpeak
                                         }

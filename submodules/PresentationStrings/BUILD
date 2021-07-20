@@ -1,3 +1,11 @@
+
+filegroup(
+    name = "PresentationStringsResources",
+    srcs = glob([
+        "Resources/**/*",
+    ], exclude = ["Resources/**/.*"]),
+    visibility = ["//visibility:public"],
+)
  
 objc_library(
     name = "PresentationStrings",

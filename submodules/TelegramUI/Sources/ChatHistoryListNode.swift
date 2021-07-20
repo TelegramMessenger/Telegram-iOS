@@ -581,7 +581,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.accessibilityPageScrolledString = { [weak self] row, count in
             if let strongSelf = self {
-                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).0
+                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).string
             } else {
                 return ""
             }

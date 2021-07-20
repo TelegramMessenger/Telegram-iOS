@@ -44,7 +44,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         
         node.setResource(secureIdContext: self.secureIdContext, resource: self.resource)
         
-        node._title.set(.single(self.strings.Items_NOfM("\(self.location.position + 1)", "\(self.location.totalCount)").0))
+        node._title.set(.single(self.strings.Items_NOfM("\(self.location.position + 1)", "\(self.location.totalCount)").string))
         
         node.setCaption(self.caption)
         node.delete = self.delete
@@ -54,7 +54,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? SecureIdDocumentGalleryItemNode {
-            node._title.set(.single(self.strings.Items_NOfM("\(self.location.position + 1)", "\(self.location.totalCount)").0))
+            node._title.set(.single(self.strings.Items_NOfM("\(self.location.position + 1)", "\(self.location.totalCount)").string))
             
             node.setCaption(self.caption)
             node.delete = self.delete

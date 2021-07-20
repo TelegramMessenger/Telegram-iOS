@@ -714,7 +714,7 @@ public final class ChatListNode: ListView {
                         if chatListFilter != nil {
                             text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
                         } else {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0
+                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
                         }
                         strongSelf.presentAlert?(text)
                     }

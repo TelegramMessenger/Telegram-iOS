@@ -170,18 +170,22 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 commentsPart = commentsPart.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
                             }
                             
-                            let rawTextAndRanges: (String, [(Int, NSRange)])
+                            let rawTextAndRanges: PresentationStrings.FormattedString
                             switch type {
                             case .comments:
                                 rawTextAndRanges = self.strings.Conversation_TitleCommentsFormat("\(count)", commentsPart)
                             case .replies:
                                 rawTextAndRanges = self.strings.Conversation_TitleRepliesFormat("\(count)", commentsPart)
                             }
-                            
-                            let (rawText, ranges) = rawTextAndRanges
+
+                            let rawText = rawTextAndRanges.string
+
                             var textIndex = 0
                             var latestIndex = 0
-                            for (index, range) in ranges {
+                            for indexAndRange in rawTextAndRanges.ranges {
+                                let index = indexAndRange.index
+                                let range = indexAndRange.range
+
                                 var lowerSegmentIndex = range.lowerBound
                                 if index != 0 {
                                     lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)

@@ -119,7 +119,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self?.textInputPanelNode?.updateSendButtonEnabled(count > 0, animated: true)
         }
         self.chatListNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.chatListNode.activateSearch = { [weak self] in

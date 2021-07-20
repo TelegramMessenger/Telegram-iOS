@@ -189,7 +189,7 @@ class ContactsAddItemNode: ListViewItemNode {
             let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
 
-            let titleAttributedString = NSAttributedString(string: item.strings.Contacts_AddPhoneNumber(formatPhoneNumber(item.phoneNumber)).0, font: titleFont, textColor: item.theme.list.itemAccentColor)
+            let titleAttributedString = NSAttributedString(string: item.strings.Contacts_AddPhoneNumber(formatPhoneNumber(item.phoneNumber)).string, font: titleFont, textColor: item.theme.list.itemAccentColor)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

@@ -220,6 +220,7 @@ swift_library(
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
+        "//submodules/PresentationStrings:PresentationStringsResources",
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",

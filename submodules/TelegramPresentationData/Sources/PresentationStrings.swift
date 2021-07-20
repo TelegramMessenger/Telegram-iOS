@@ -1,3 +1,5 @@
+#if false
+
 import Foundation
 import AppBundle
 import StringPluralization
@@ -6604,3 +6606,4 @@ public final class PresentationStrings: Equatable {
     }
 }
 
+#endif

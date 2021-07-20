@@ -141,7 +141,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             let theme: PresentationTheme = strongSelf.presentationData.theme
             let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: strongSelf.presentationData.strings.Login_TermsOfService_ProceedBot(mention).0),
+                ActionSheetTextItem(title: strongSelf.presentationData.strings.Login_TermsOfService_ProceedBot(mention).string),
                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.PrivacyPolicy_Accept, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     setToProcceedBot(mention)

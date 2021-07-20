@@ -173,7 +173,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusText: String
                 if let callDuration = callDuration, callDuration > 1 {
-                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).0
+                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).string
                 } else {
                     statusText = dateText
                 }

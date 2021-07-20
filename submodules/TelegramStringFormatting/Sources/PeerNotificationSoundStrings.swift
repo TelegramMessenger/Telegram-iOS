@@ -59,7 +59,7 @@ public func localizedPeerNotificationSoundString(strings: PresentationStrings, s
                 } else {
                     actualName = name
                 }
-                return strings.UserInfo_NotificationsDefaultSound(actualName).0
+                return strings.UserInfo_NotificationsDefaultSound(actualName).string
             } else {
                 return strings.UserInfo_NotificationsDefault
             }

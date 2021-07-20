@@ -18,6 +18,7 @@ swift_library(
         "//submodules/StringPluralization:StringPluralization",
         "//submodules/Sunrise:Sunrise",
         "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/PresentationStrings:PresentationStrings",
     ],
     visibility = [
         "//visibility:public",

@@ -413,7 +413,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             
             var showPlaceholder = false
             if item.isVideoLimit {
-                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded(String(item.videoLimit)).0, font: Font.semibold(13.0), textColor: .white)
+                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded(String(item.videoLimit)).string, font: Font.semibold(13.0), textColor: .white)
                 self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/VideoUnavailable"), color: .white)
                 showPlaceholder = true
             } else if item.isOwnScreencast {

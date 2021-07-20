@@ -311,7 +311,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     entries.append(.mainLink(presentationData.theme, mainInvite, importers?.importers.prefix(3).compactMap { $0.peer.peer } ?? [], importersCount, isPublic))
     if let adminPeer = admin?.peer.peer, let peer = peerViewMainPeer(view) {
         let string = presentationData.strings.InviteLink_OtherPermanentLinkInfo(adminPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
-        entries.append(.mainLinkOtherInfo(presentationData.theme, string.0))
+        entries.append(.mainLinkOtherInfo(presentationData.theme, string.string))
     }
     
     var additionalInvites: [ExportedInvitation]?

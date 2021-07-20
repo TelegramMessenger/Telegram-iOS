@@ -117,13 +117,13 @@ final class CallControllerToastContainerNode: ASDisplayNode {
                     toastContent = CallControllerToastItemNode.Content(
                         key: .camera,
                         image: .camera,
-                        text: strings.Call_CameraOff(self.title).0
+                        text: strings.Call_CameraOff(self.title).string
                     )
                 case .microphone:
                     toastContent = CallControllerToastItemNode.Content(
                         key: .microphone,
                         image: .microphone,
-                        text: strings.Call_MicrophoneOff(self.title).0
+                        text: strings.Call_MicrophoneOff(self.title).string
                     )
                 case .mute:
                     toastContent = CallControllerToastItemNode.Content(
@@ -135,7 +135,7 @@ final class CallControllerToastContainerNode: ASDisplayNode {
                     toastContent = CallControllerToastItemNode.Content(
                         key: .battery,
                         image: .battery,
-                        text: strings.Call_BatteryLow(self.title).0
+                        text: strings.Call_BatteryLow(self.title).string
                     )
             }
             let toastHeight = toastNode.update(width: width, content: toastContent, transition: toastTransition)

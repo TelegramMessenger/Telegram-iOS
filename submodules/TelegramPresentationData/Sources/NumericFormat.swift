@@ -1,4 +1,5 @@
 import Foundation
+import PresentationStrings
 
 public func compactNumericCountString(_ count: Int, decimalSeparator: String = ".") -> String {
     if count >= 1000 * 1000 {

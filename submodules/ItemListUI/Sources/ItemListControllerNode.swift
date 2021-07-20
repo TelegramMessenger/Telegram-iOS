@@ -705,7 +705,7 @@ open class ItemListControllerNode: ASDisplayNode {
             }
             
             self.listNode.accessibilityPageScrolledString = { row, count in
-                return transition.strings.VoiceOver_ScrollStatus(row, count).0
+                return transition.strings.VoiceOver_ScrollStatus(row, count).string
             }
             
             var updateToolbarItem = false

@@ -159,7 +159,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         processed = true
                                         break inner
                                     } else {
-                                        messageText = strings.Message_StickerText(displayText).0
+                                        messageText = strings.Message_StickerText(displayText).string
                                         processed = true
                                         break inner
                                     }
@@ -288,16 +288,16 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     case .active:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").string
                             case .participant:
-                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").string
                         }
                     case .terminated:
                         messageText = strings.DialogList_EncryptionRejected
                     case .handshake:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").string
                             case .participant:
                                 messageText = strings.DialogList_EncryptionProcessing
                         }

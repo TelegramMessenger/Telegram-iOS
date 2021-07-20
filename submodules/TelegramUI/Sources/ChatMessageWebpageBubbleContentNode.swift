@@ -13,6 +13,7 @@ import WebsiteType
 import InstantPageUI
 import UrlHandling
 import GalleryData
+import TelegramPresentationData
 
 private let titleFont: UIFont = Font.semibold(15.0)
 

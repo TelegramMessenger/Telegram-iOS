@@ -1489,5 +1489,5 @@ private func stringForRemainingTime(_ duration: Int32, strings: PresentationStri
     } else {
         durationString = String(format: "%d:%02d", minutes, seconds)
     }
-    return strings.Conversation_AutoremoveRemainingTime(durationString).0
+    return strings.Conversation_AutoremoveRemainingTime(durationString).string
 }
