@@ -166,7 +166,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var seekRate: Double = 1.0
     
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
-    var openActionOptions: ((GalleryControllerInteractionTapAction) -> Void)?
+    var openActionOptions: ((GalleryControllerInteractionTapAction, Message) -> Void)?
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
@@ -363,8 +363,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
         }
         self.textNode.longTapAttributeAction = { [weak self] attributes, index in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
-                strongSelf.openActionOptions?(action)
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index), let message = strongSelf.currentMessage {
+                strongSelf.openActionOptions?(action, message)
             }
         }
         

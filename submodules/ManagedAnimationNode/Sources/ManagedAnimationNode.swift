@@ -20,6 +20,13 @@ public final class ManagedAnimationState {
     
     var relativeTime: Double = 0.0
     public var frameIndex: Int?
+    public var position: CGFloat {
+        if let frameIndex = frameIndex {
+            return CGFloat(frameIndex) / CGFloat(frameCount)
+        } else {
+            return 0.0
+        }
+    }
     
     public var executedCallbacks = Set<Int>()
     
