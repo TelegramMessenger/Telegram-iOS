@@ -868,7 +868,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer === self.seekRecognizer {
             let velocity = panGestureRecognizer.velocity(in: self.interactiveVideoNode.view)
-            return velocity.x > velocity.y
+            return abs(velocity.x) > abs(velocity.y)
         }
         return true
     }

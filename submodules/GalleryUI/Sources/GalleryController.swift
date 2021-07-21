@@ -145,7 +145,7 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double = 1.0, displayInfoOnTop: Bool = false, configuration: GalleryConfiguration? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void = { _, _, _ in }, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
+public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double = 1.0, displayInfoOnTop: Bool = false, configuration: GalleryConfiguration? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void = { _, _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void = { _, _, _ in }, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
     let message = entry.message
     let location = entry.location
     if let (media, mediaImage) = mediaForMessage(message: message) {
@@ -379,7 +379,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     
     private let actionInteraction: GalleryControllerActionInteraction?
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
-    private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
+    private var openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
     
     private let updateVisibleDisposable = MetaDisposable()
     
@@ -409,9 +409,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
             performActionImpl?(action)
         }
         
-        var openActionOptionsImpl: ((GalleryControllerInteractionTapAction) -> Void)?
-        self.openActionOptions = { action in
-            openActionOptionsImpl?(action)
+        var openActionOptionsImpl: ((GalleryControllerInteractionTapAction, Message) -> Void)?
+        self.openActionOptions = { action, message in
+            openActionOptionsImpl?(action, message)
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -669,7 +669,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             }
         }
         
-        openActionOptionsImpl = { [weak self] action in
+        openActionOptionsImpl = { [weak self] action, message in
             if let strongSelf = self {
                 var presentationData = strongSelf.presentationData
                 if !presentationData.theme.overallDarkAppearance {
@@ -849,6 +849,13 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .timecode(timecode, text):
+                        let isCopyLink: Bool
+                        if message.id.namespace == Namespaces.Message.Cloud, let _ = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction) {
+                            isCopyLink = true
+                        } else {
+                            isCopyLink = false
+                        }
+                        
                         let actionSheet = ActionSheetController(presentationData: presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: text),
@@ -859,12 +866,50 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     strongSelf.galleryNode.pager.centralItemNode()?.processAction(.timecode(timecode))
                                 }
                             }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
+                            ActionSheetButtonItem(title: isCopyLink ? strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink : strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
-                                UIPasteboard.general.string = text
+                                if isCopyLink, let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                                    var threadMessageId: MessageId?
+//                                    if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
+//                                        threadMessageId = replyThreadMessage.messageId
+//                                    }
+                                    let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
+                                    |> map { result -> String? in
+                                        return result
+                                    }
+                                    |> deliverOnMainQueue).start(next: { link in
+                                        if let link = link {
+                                            UIPasteboard.general.string = link + "?t=\(Int32(timecode))"
+                                            
+                                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                            
+                                            var warnAboutPrivate = false
+                                            if channel.addressName == nil {
+                                                warnAboutPrivate = true
+                                            }
+                                            
+                                            Queue.mainQueue().after(0.2, {
+                                                let content: UndoOverlayContent
+                                                if warnAboutPrivate {
+                                                    content = .linkCopied(text: presentationData.strings.Conversation_PrivateMessageLinkCopiedLong)
+                                                } else {
+                                                    content = .linkCopied(text: presentationData.strings.Conversation_LinkCopied)
+                                                }
+                                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                            })
+                                        } else {
+                                            UIPasteboard.general.string = text
+                                            
+                                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                            self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                        }
+                                    })
+                                } else {
+                                    UIPasteboard.general.string = text
                                 
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
-                                self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                    let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
+                                    self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                }
                             })
                         ]), ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
