@@ -783,7 +783,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset, syncContacts: syncContacts))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                case let .passwordRecovery(hint, _, _, emailPattern, syncContacts):
+                case let .passwordRecovery(_, _, _, emailPattern, syncContacts):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())

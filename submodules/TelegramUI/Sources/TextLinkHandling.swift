@@ -90,8 +90,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     }
     
     let openPeerMentionImpl: (String) -> Void = { mention in
-        navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-            openResolvedPeerImpl(peerId, .default)
+        navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            openResolvedPeerImpl(peer?.id, .default)
         }))
     }
     

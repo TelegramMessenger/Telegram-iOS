@@ -72,8 +72,8 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.resolveDisposable.set((self.context.engine.peers.resolvePeerByName(name: "previews") |> deliverOnMainQueue).start(next: { [weak self] peerId in
-            if let strongSelf = self, let _ = peerId, let webPageId = strongSelf.webPage.id?.id {
+        self.resolveDisposable.set((self.context.engine.peers.resolvePeerByName(name: "previews") |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self, let _ = peer, let webPageId = strongSelf.webPage.id?.id {
                 strongSelf.openUrl(InstantPageUrlItem(url: "https://t.me/previews?start=webpage\(webPageId)", webpageId: nil))
             }
         }))

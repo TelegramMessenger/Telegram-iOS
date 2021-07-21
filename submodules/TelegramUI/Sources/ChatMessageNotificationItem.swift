@@ -153,13 +153,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
-        var titleIcon: UIImage?
         var updatedMedia: Media?
         var imageDimensions: CGSize?
         var isRound = false
         var messageText: String
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
-            titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
             messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").string
         } else if item.messages.count == 1 {
             let message = item.messages[0]

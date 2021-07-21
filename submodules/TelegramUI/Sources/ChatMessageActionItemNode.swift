@@ -176,8 +176,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     labelRects[i].size.height = 20.0
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
-            
-                let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 
                 let backgroundMaskImage: (CGPoint, UIImage)?
                 var backgroundMaskUpdated = false

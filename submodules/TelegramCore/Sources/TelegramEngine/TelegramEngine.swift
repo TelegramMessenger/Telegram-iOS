@@ -67,6 +67,10 @@ public final class TelegramEngine {
     public lazy var resolve: Resolve = {
         return Resolve(account: self.account)
     }()
+
+    public lazy var data: EngineData = {
+        return EngineData(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {

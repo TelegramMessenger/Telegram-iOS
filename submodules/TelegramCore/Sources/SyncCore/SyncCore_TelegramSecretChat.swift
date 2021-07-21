@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public final class TelegramSecretChat: Peer {
+public final class TelegramSecretChat: Peer, Equatable {
     public let id: PeerId
     public let regularPeerId: PeerId
     public let accessHash: Int64
@@ -57,10 +57,14 @@ public final class TelegramSecretChat: Peer {
     
     public func isEqual(_ other: Peer) -> Bool {
         if let other = other as? TelegramSecretChat {
-            return self.id == other.id && self.regularPeerId == other.regularPeerId && self.accessHash == other.accessHash && self.embeddedState == other.embeddedState && self.messageAutoremoveTimeout == other.messageAutoremoveTimeout && self.creationDate == other.creationDate && self.role == other.role
+            return self == other
         } else {
             return false
         }
+    }
+
+    public static func ==(lhs: TelegramSecretChat, rhs: TelegramSecretChat) -> Bool {
+        return lhs.id == rhs.id && lhs.regularPeerId == rhs.regularPeerId && lhs.accessHash == rhs.accessHash && lhs.embeddedState == rhs.embeddedState && lhs.messageAutoremoveTimeout == rhs.messageAutoremoveTimeout && lhs.creationDate == rhs.creationDate && lhs.role == rhs.role
     }
     
     public func withUpdatedEmbeddedState(_ embeddedState: SecretChatEmbeddedPeerState) -> TelegramSecretChat {

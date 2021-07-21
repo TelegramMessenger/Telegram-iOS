@@ -401,10 +401,10 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     }, updateSearchText: { text in
         searchText.set(text)
     }, openStickersBot: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer {
                 dismissImpl?()
-                navigateToChatControllerImpl?(peerId)
+                navigateToChatControllerImpl?(peer.id)
             }
         }))
     })

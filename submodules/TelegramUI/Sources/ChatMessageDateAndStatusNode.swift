@@ -214,7 +214,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         var currentRepliesIcon = self.repliesIcon
-        var currentSelfExpiringIcon = self.selfExpiringIcon
         
         let currentType = self.type
         let currentTheme = self.theme

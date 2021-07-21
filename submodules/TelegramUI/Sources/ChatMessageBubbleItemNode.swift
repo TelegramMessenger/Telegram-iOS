@@ -1560,8 +1560,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     authorNameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
-                
-                var isScam = effectiveAuthor.isScam
+
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
                     
                 } else if effectiveAuthor.isScam {
@@ -1860,7 +1859,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         for i in 0 ..< contentPropertiesAndLayouts.count {
-            let (_, contentNodeProperties, preparePosition, attributes, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
+            let (_, contentNodeProperties, preparePosition, _, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -2516,19 +2515,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 contextSourceNode.updateAbsoluteRect = { [weak strongSelf, weak container, weak contextSourceNode] rect, size in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.updateAbsoluteRect(relativeFrame.offsetBy(dx: rect.minX, dy: rect.minY), within: size)
                 }
                 contextSourceNode.applyAbsoluteOffset = { [weak strongSelf, weak container, weak contextSourceNode] value, animationCurve, duration in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.applyAbsoluteOffset(value: value, animationCurve: animationCurve, duration: duration)
                 }
                 contextSourceNode.applyAbsoluteOffsetSpring = { [weak strongSelf, weak container, weak contextSourceNode] value, duration, damping in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.applyAbsoluteOffsetSpring(value: value, duration: duration, damping: damping)

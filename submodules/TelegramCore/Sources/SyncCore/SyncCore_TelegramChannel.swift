@@ -147,7 +147,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let isGigagroup = TelegramChannelFlags(rawValue: 1 << 7)
 }
 
-public final class TelegramChannel: Peer {
+public final class TelegramChannel: Peer, Equatable {
     public let id: PeerId
     public let accessHash: TelegramPeerAccessHash?
     public let title: String
@@ -267,30 +267,34 @@ public final class TelegramChannel: Peer {
             return false
         }
         
-        if self.id != other.id || self.accessHash != other.accessHash || self.title != other.title || self.username != other.username || self.photo != other.photo {
+        return self == other
+    }
+
+    public static func ==(lhs: TelegramChannel, rhs: TelegramChannel) -> Bool {
+        if lhs.id != rhs.id || lhs.accessHash != rhs.accessHash || lhs.title != rhs.title || lhs.username != rhs.username || lhs.photo != rhs.photo {
             return false
         }
-        
-        if self.creationDate != other.creationDate || self.version != other.version || self.participationStatus != other.participationStatus {
+
+        if lhs.creationDate != rhs.creationDate || lhs.version != rhs.version || lhs.participationStatus != rhs.participationStatus {
             return false
         }
-        
-        if self.info != other.info || self.flags != other.flags || self.restrictionInfo != other.restrictionInfo {
+
+        if lhs.info != rhs.info || lhs.flags != rhs.flags || lhs.restrictionInfo != rhs.restrictionInfo {
             return false
         }
-        
-        if self.adminRights != other.adminRights {
+
+        if lhs.adminRights != rhs.adminRights {
             return false
         }
-        
-        if self.bannedRights != other.bannedRights {
+
+        if lhs.bannedRights != rhs.bannedRights {
             return false
         }
-        
-        if self.defaultBannedRights != other.defaultBannedRights {
+
+        if lhs.defaultBannedRights != rhs.defaultBannedRights {
             return false
         }
-        
+
         return true
     }
     
