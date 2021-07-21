@@ -219,7 +219,7 @@ def generate(header_path: str, implementation_path: str, data_path: str, entries
                     arguments_string += ', id arg{}'.format(i)
                     if i != 0:
                         arguments_array += ', '
-                    arguments_array += 'arg{}'.format(i)
+                    arguments_array += '[[NSString alloc] initWithFormat:@"%@", arg{}]'.format(i)
                 formatted_accessors += '''
 static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStrings * _Nonnull strings,
     uint32_t keyId{arguments_string}) {{
