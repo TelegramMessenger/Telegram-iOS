@@ -208,7 +208,6 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
-                        var bottomColor: UIColor?
                         var rotation: Int32?
                         if let wallpaper = parseWallpaperUrl(webpage.url) {
                             if case let .color(color) = wallpaper {

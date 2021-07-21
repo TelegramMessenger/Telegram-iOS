@@ -101,7 +101,6 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         
         let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let noAccessSize = self.noAccessNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
-        let resetSize = self.noAccessNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         var items: [AuthorizationLayoutItem] = []
         items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))

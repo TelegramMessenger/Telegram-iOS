@@ -7068,7 +7068,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings, fontSize: self.presentationInterfaceState.fontSize)
         
         self.recentlyUsedInlineBotsDisposable = (self.context.engine.peers.recentlyUsedInlineBots() |> deliverOnMainQueue).start(next: { [weak self] peers in
-            self?.recentlyUsedInlineBotsValue = peers.filter({ $0.1 >= 0.14 }).map({ $0.0 })
+            self?.recentlyUsedInlineBotsValue = peers.filter({ $0.1 >= 0.14 }).map({ $0.0._asPeer() })
         })
         
         if case .standard(false) = self.presentationInterfaceState.mode, self.raiseToListen == nil {
@@ -11283,14 +11283,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let account = self.context.account
             disposable.set((resolveSignal
             |> take(1)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                return account.postbox.transaction { transaction -> Peer? in
-                    if let peerId = peerId {
-                        return transaction.getPeer(peerId)
-                    } else {
-                        return nil
-                    }
-                }
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                return .single(peer?._asPeer())
             }
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
@@ -11319,10 +11313,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
-                |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                    if let peerId = peerId {
-                        return account.postbox.loadedPeerWithId(peerId)
-                        |> map(Optional.init)
+                |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                    if let peer = peer {
+                        return .single(peer._asPeer())
                     } else {
                         return .single(nil)
                     }

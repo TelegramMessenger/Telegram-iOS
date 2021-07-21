@@ -63,8 +63,16 @@ public extension TelegramEngine {
             return _internal_inactiveChannelList(network: self.account.network)
         }
 
-        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
+        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<EnginePeer?, NoError> {
             return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
+            |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
+                guard let peerId = peerId else {
+                    return .single(nil)
+                }
+                return self.account.postbox.transaction { transaction -> EnginePeer? in
+                    return transaction.getPeer(peerId).flatMap(EnginePeer.init)
+                }
+            }
         }
 
         public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
@@ -320,8 +328,13 @@ public extension TelegramEngine {
             return _internal_addRecentlyUsedInlineBot(postbox: self.account.postbox, peerId: peerId)
         }
 
-        public func recentlyUsedInlineBots() -> Signal<[(Peer, Double)], NoError> {
+        public func recentlyUsedInlineBots() -> Signal<[(EnginePeer, Double)], NoError> {
             return _internal_recentlyUsedInlineBots(postbox: self.account.postbox)
+            |> map { list -> [(EnginePeer, Double)] in
+                return list.map { peer, rating in
+                    return (EnginePeer(peer), rating)
+                }
+            }
         }
 
         public func removeRecentlyUsedInlineBot(peerId: PeerId) -> Signal<Void, NoError> {

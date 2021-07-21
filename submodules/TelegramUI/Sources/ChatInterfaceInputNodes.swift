@@ -49,5 +49,4 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
         case .none, .text:
             return nil
     }
-    return nil
 }

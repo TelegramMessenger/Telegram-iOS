@@ -74,7 +74,7 @@ public struct TelegramGroupToChannelMigrationReference: Equatable {
     }
 }
 
-public final class TelegramGroup: Peer {
+public final class TelegramGroup: Peer, Equatable {
     public let id: PeerId
     public let title: String
     public let photo: [TelegramMediaImageRepresentation]
@@ -159,43 +159,47 @@ public final class TelegramGroup: Peer {
     
     public func isEqual(_ other: Peer) -> Bool {
         if let other = other as? TelegramGroup {
-            if self.id != other.id {
-                return false
-            }
-            if self.title != other.title {
-                return false
-            }
-            if self.photo != other.photo {
-                return false
-            }
-            if self.membership != other.membership {
-                return false
-            }
-            if self.version != other.version {
-                return false
-            }
-            if self.participantCount != other.participantCount {
-                return false
-            }
-            if self.role != other.role {
-                return false
-            }
-            if self.defaultBannedRights != other.defaultBannedRights {
-                return false
-            }
-            if self.migrationReference != other.migrationReference {
-                return false
-            }
-            if self.creationDate != other.creationDate {
-                return false
-            }
-            if self.flags != other.flags {
-                return false
-            }
-            return true
+            return self == other
         } else {
             return false
         }
+    }
+
+    public static func ==(lhs: TelegramGroup, rhs: TelegramGroup) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.photo != rhs.photo {
+            return false
+        }
+        if lhs.membership != rhs.membership {
+            return false
+        }
+        if lhs.version != rhs.version {
+            return false
+        }
+        if lhs.participantCount != rhs.participantCount {
+            return false
+        }
+        if lhs.role != rhs.role {
+            return false
+        }
+        if lhs.defaultBannedRights != rhs.defaultBannedRights {
+            return false
+        }
+        if lhs.migrationReference != rhs.migrationReference {
+            return false
+        }
+        if lhs.creationDate != rhs.creationDate {
+            return false
+        }
+        if lhs.flags != rhs.flags {
+            return false
+        }
+        return true
     }
 
     public func updateFlags(flags: TelegramGroupFlags, version: Int) -> TelegramGroup {

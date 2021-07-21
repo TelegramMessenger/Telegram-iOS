@@ -282,13 +282,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             let resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = strongSelf.context.engine.peers.resolvePeerByName(name: peerName)
-                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                        if let peerId = peerId {
-                            return context.account.postbox.loadedPeerWithId(peerId)
-                            |> map(Optional.init)
-                        } else {
-                            return .single(nil)
-                        }
+                |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                    return .single(peer?._asPeer())
                 }
             } else {
                 resolveSignal = context.account.postbox.loadedPeerWithId(strongSelf.peer.id)
@@ -789,17 +784,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let postbox = self.context.account.postbox
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         |> take(1)
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            if let peerId = peerId {
-                return postbox.loadedPeerWithId(peerId) |> map(Optional.init)
-            } else {
-                return .single(nil)
-            }
-        }
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }

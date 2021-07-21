@@ -1057,7 +1057,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             if visibility {
                                                 return fetchSignal
                                                 |> mapToSignal { _ -> Signal<Void, NoError> in
-                                                    return .complete()
                                                 }
                                             } else {
                                                 return .complete()

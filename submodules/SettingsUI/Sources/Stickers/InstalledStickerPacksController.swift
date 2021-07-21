@@ -580,9 +580,9 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openStickersBot: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
-                navigateToChatControllerImpl?(peerId)
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer {
+                navigateToChatControllerImpl?(peer.id)
             }
         }))
     }, openMasks: {

@@ -829,11 +829,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     var items: [ActionSheetItem] = []
                     var personalPeerName: String?
                     var isChannel = false
-//                    if let user = peer as? TelegramUser {
-//                        personalPeerName = user.compactDisplayTitle
-//                    } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-//                        isChannel = true
-//                    }
                     
                     if actions.options.contains(.deleteGlobally) {
                         let globalTitle: String

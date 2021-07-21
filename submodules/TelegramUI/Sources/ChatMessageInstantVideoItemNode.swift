@@ -440,8 +440,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
             }
             
-            var updatedShareButtonBackground: UIImage?
-            
             var updatedShareButtonNode: ChatMessageShareButton?
             if needShareButton {
                 if currentShareButtonNode != nil {
@@ -874,7 +872,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
 
     private var wasPlaying = false
     @objc func seekGesture(_ recognizer: UIPanGestureRecognizer) {
-        var location = recognizer.location(in: self.interactiveVideoNode.view)
+        let location = recognizer.location(in: self.interactiveVideoNode.view)
         switch recognizer.state {
             case .began:
                 self.interactiveVideoNode.pause()

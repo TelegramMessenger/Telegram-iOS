@@ -57,7 +57,7 @@ public struct BotUserInfo: PostboxCoding, Equatable {
     }
 }
 
-public final class TelegramUser: Peer {
+public final class TelegramUser: Peer, Equatable {
     public let id: PeerId
     public let accessHash: TelegramPeerAccessHash?
     public let firstName: String?
@@ -198,44 +198,48 @@ public final class TelegramUser: Peer {
     
     public func isEqual(_ other: Peer) -> Bool {
         if let other = other as? TelegramUser {
-            if self.id != other.id {
-                return false
-            }
-            if self.accessHash != other.accessHash {
-                return false
-            }
-            if self.firstName != other.firstName {
-                return false
-            }
-            if self.lastName != other.lastName {
-                return false
-            }
-            if self.phone != other.phone {
-                return false
-            }
-            if self.photo.count != other.photo.count {
-                return false
-            }
-            for i in 0 ..< self.photo.count {
-                if self.photo[i] != other.photo[i] {
-                    return false
-                }
-            }
-            if self.botInfo != other.botInfo {
-                return false
-            }
-            if self.restrictionInfo != other.restrictionInfo {
-                return false
-            }
-            
-            if self.flags != other.flags {
-                return false
-            }
-            
-            return true
+            return self == other
         } else {
             return false
         }
+    }
+
+    public static func ==(lhs: TelegramUser, rhs: TelegramUser) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.accessHash != rhs.accessHash {
+            return false
+        }
+        if lhs.firstName != rhs.firstName {
+            return false
+        }
+        if lhs.lastName != rhs.lastName {
+            return false
+        }
+        if lhs.phone != rhs.phone {
+            return false
+        }
+        if lhs.photo.count != rhs.photo.count {
+            return false
+        }
+        for i in 0 ..< lhs.photo.count {
+            if lhs.photo[i] != rhs.photo[i] {
+                return false
+            }
+        }
+        if lhs.botInfo != rhs.botInfo {
+            return false
+        }
+        if lhs.restrictionInfo != rhs.restrictionInfo {
+            return false
+        }
+
+        if lhs.flags != rhs.flags {
+            return false
+        }
+
+        return true
     }
     
     public func withUpdatedUsername(_ username:String?) -> TelegramUser {

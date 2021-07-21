@@ -60,3 +60,13 @@ public extension Peer {
         }
     }
 }
+
+public extension EnginePeer {
+    var compactDisplayTitle: String {
+        return self._asPeer().compactDisplayTitle
+    }
+
+    func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {
+        return self._asPeer().displayTitle(strings: strings, displayOrder: displayOrder)
+    }
+}

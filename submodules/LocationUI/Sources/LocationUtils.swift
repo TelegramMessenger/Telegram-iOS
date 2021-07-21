@@ -38,11 +38,11 @@ public func nearbyVenues(context: AccountContext, latitude: Double, longitude: D
     } |> mapToSignal { searchBotsConfiguration in
         return context.engine.peers.resolvePeerByName(name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
         |> take(1)
-        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-            guard let peerId = peerId else {
+        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+            guard let peer = peer else {
                 return .single(nil)
             }
-            return context.engine.messages.requestChatContextResults(botId: peerId, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
             |> map { results -> ChatContextResultCollection? in
                 return results?.results
             }

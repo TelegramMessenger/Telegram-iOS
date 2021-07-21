@@ -242,13 +242,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             if let to = to {
                 if to.hasPrefix("@") {
                     let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
-                    |> deliverOnMainQueue).start(next: { peerId in
-                        if let peerId = peerId {
-                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                            |> deliverOnMainQueue).start(next: { peer in
-                                context.sharedContext.applicationBindings.dismissNativeController()
-                                continueWithPeer(peer.id)
-                            })
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if let peer = peer {
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            continueWithPeer(peer.id)
                         }
                     })
                 } else {

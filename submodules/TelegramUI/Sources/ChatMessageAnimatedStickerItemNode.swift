@@ -854,7 +854,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var ignoreForward = self.telegramDice == nil
-            var ignoreSource = false
             
             let availableContentWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
@@ -864,8 +863,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if attribute.messageId.peerId == forwardInfo.author?.id {
                                 ignoreForward = true
-                            } else {
-                                ignoreSource = true
                             }
                             break
                         }
@@ -1348,16 +1345,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     })
                 } else if let _ = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode, let _ = recognizer {
-                        var startTime: Signal<Double, NoError>
                         var shouldPlay = false
                         if !animationNode.isPlaying {
                             shouldPlay = true
-                            startTime = .single(0.0)
-                        } else {
-                            startTime = animationNode.status
-                            |> map { $0.timestamp }
-                            |> take(1)
-                            |> deliverOnMainQueue
                         }
                         
                         let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]

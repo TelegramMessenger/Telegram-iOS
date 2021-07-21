@@ -3273,14 +3273,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let account = self.context.account
         disposable.set((resolveSignal
         |> take(1)
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            return account.postbox.transaction { transaction -> Peer? in
-                if let peerId = peerId {
-                    return transaction.getPeer(peerId)
-                } else {
-                    return nil
-                }
-            }
+        |> mapToSignal { peer -> Signal<Peer?, NoError> in
+            return .single(peer?._asPeer())
         }
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
@@ -3307,13 +3301,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
             resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                if let peerId = peerId {
-                    return account.postbox.loadedPeerWithId(peerId)
-                    |> map(Optional.init)
-                } else {
-                    return .single(nil)
-                }
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                return .single(peer?._asPeer())
             }
         } else {
             resolveSignal = self.context.account.postbox.loadedPeerWithId(self.peerId)
@@ -5505,10 +5494,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let context = self.context
         let navigationController = self.controller?.navigationController as? NavigationController
-        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername) |> deliverOnMainQueue).start(next: { [weak controller] peerId in
+        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername) |> deliverOnMainQueue).start(next: { [weak controller] peer in
             controller?.dismiss()
-            if let peerId = peerId, let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+            if let peer = peer, let navigationController = navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id)))
             }
         }))
     }

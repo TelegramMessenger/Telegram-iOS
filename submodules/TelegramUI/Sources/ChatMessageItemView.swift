@@ -231,7 +231,7 @@ final class ChatMessageAccessibilityData {
                         var isSpecialFile = false
                         for attribute in file.attributes {
                             switch attribute {
-                                case let .Sticker(displayText, packReference, _):
+                                case let .Sticker(displayText, _, _):
                                     isSpecialFile = true
                                     text = displayText
                                     if file.mimeType == "application/x-tgsticker" {

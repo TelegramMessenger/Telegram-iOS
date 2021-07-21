@@ -497,13 +497,9 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         return .single(nil)
                     }
                     return context.engine.peers.resolvePeerByName(name: name)
-                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                        if let peerId = peerId {
-                            return context.account.postbox.loadedPeerWithId(peerId)
-                            |> map { peer -> Peer? in
-                                return peer
-                            }
-                            |> take(1)
+                    |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                        if let peer = peer {
+                            return .single(peer._asPeer())
                         } else {
                             return .single(nil)
                         }
