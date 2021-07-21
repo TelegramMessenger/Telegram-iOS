@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting

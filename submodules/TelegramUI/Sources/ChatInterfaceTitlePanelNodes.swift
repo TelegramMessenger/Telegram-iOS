@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import AccountContext
 
 func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {

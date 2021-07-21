@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 public extension TelegramMediaWebFile {
     var dimensions: PixelDimensions? {

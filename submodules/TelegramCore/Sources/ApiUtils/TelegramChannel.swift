@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-import SyncCore
 
 public enum TelegramChannelPermission {
     case sendMessages

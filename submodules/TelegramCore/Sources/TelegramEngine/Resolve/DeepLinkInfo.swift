@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public struct DeepLinkInfo {
     public let message: String

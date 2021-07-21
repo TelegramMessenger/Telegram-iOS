@@ -4,7 +4,6 @@ import MapKit
 import Display
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import AvatarNode
 import AppBundle

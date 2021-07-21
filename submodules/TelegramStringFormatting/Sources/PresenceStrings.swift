@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 
 public func stringForTimestamp(day: Int32, month: Int32, year: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {

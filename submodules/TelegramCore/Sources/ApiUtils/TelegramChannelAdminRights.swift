@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 extension TelegramChatAdminRights {
     init?(apiAdminRights: Api.ChatAdminRights) {

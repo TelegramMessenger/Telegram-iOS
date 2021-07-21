@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import SwiftSignalKit
 

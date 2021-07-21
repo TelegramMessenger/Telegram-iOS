@@ -3,10 +3,10 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ContextUI
+import TelegramCore
 
 final class ChatSendMessageActionSheetController: ViewController {
     var controllerNode: ChatSendMessageActionSheetControllerNode {

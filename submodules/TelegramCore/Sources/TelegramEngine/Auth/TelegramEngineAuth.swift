@@ -2,7 +2,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public extension TelegramEngineUnauthorized {
     final class Auth {

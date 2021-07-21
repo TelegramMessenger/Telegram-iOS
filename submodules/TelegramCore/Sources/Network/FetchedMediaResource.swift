@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 extension MediaResourceReference {
     var apiFileReference: Data? {

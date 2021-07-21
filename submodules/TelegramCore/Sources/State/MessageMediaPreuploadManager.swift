@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private func localIdForResource(_ resource: MediaResource) -> Int64? {
     if let resource = resource as? LocalFileMediaResource {

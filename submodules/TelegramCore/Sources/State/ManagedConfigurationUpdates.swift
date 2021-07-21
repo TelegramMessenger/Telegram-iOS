@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in

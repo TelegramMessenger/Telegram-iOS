@@ -11,7 +11,6 @@ import TelegramAudio
 import AccountContext
 import Postbox
 import TelegramCore
-import SyncCore
 import AppBundle
 import PresentationDataUtils
 import AvatarNode

@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import SyncCore
 
 public enum AddressNameValidationStatus: Equatable {
     case checking

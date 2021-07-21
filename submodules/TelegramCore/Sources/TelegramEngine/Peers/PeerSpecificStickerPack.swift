@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private struct WrappedStickerPackCollectionInfo: Equatable {
     let info: StickerPackCollectionInfo?

@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 
 private final class ThreadTaskQueue: NSObject {
     private var mutex: pthread_mutex_t

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 func _internal_markSuggestedLocalizationAsSeenInteractively(postbox: Postbox, languageCode: String) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in

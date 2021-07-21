@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode

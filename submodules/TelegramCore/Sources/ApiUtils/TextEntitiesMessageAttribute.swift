@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associatedPeers: SimpleDictionary<PeerId, Peer>) -> [Api.MessageEntity] {
     var apiEntities: [Api.MessageEntity] = []

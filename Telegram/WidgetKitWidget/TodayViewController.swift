@@ -12,7 +12,6 @@ import Intents
 import OpenSSLEncryptionProvider
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import OpenSSLEncryptionProvider
 import WidgetItemsUtils

@@ -1,6 +1,5 @@
 import Foundation
 import Postbox
-import SyncCore
 
 public final class ChatUpdatingMessageMedia: Equatable {
     public let text: String

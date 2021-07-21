@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import MurMurHash32
 
-import SyncCore
 
 func addSynchronizeEmojiKeywordsOperation(transaction: Transaction, inputLanguageCode: String, languageCode: String?, fromVersion: Int32?) {
     let tag = OperationLogTags.SynchronizeEmojiKeywords

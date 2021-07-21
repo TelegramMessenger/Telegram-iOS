@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func _internal_requestStartBot(account: Account, botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
     if let payload = payload, !payload.isEmpty {

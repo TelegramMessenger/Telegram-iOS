@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 private func keyFingerprintFromBytes(_ bytes: Buffer) -> Int64 {
     if let memory = bytes.data, bytes.size >= 4 {

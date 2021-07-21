@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 
 public func mapResourceToAvatarSizes(postbox: Postbox, resource: MediaResource, representations: [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError> {

@@ -4,7 +4,6 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 public struct TermsOfServiceUpdate: Equatable {
     public let id: String

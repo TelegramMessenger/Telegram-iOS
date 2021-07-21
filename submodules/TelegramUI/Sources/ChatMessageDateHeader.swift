@@ -4,9 +4,9 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import Postbox
-import SyncCore
 import AccountContext
 import AvatarNode
+import TelegramCore
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)

@@ -3,7 +3,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public typealias AdminLogEventId = Int64
 

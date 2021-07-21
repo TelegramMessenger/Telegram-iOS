@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
-import SyncCore
+import TelegramCore
 
 public func stringForFullAuthorName(message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> String {
     var authorString = ""

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 
 public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
     var nsString: NSString?

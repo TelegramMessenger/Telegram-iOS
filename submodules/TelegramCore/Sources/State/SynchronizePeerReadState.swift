@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 private enum PeerReadStateMarker: Equatable {
     case Global(Int32)

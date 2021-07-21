@@ -822,49 +822,6 @@ ios_framework(
 )
 
 plist_fragment(
-    name = "SyncCoreInfoPlist",
-    extension = "plist",
-    template =
-    """
-    <key>CFBundleIdentifier</key>
-    <string>{telegram_bundle_id}.SyncCore</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleName</key>
-    <string>SyncCore</string>
-    <key>CFBundlePackageType</key>
-    <string>FMWK</string>
-    """.format(
-        telegram_bundle_id = telegram_bundle_id,
-    )
-)
-
-ios_framework(
-    name = "SyncCoreFramework",
-    bundle_id = "{telegram_bundle_id}.SyncCore".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":SyncCoreInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-    ],
-    frameworks = [
-        ":SwiftSignalKitFramework",
-        ":PostboxFramework",
-    ],
-    minimum_os_version = "9.0",
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/SyncCore:SyncCore",
-    ],
-)
-
-plist_fragment(
     name = "TelegramCoreInfoPlist",
     extension = "plist",
     template =
@@ -900,7 +857,6 @@ ios_framework(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":SyncCoreFramework",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -1070,7 +1026,6 @@ ios_framework(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
         ":DisplayFramework",
@@ -1322,7 +1277,6 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//Telegram:GeneratedSources",
     ],
@@ -1375,7 +1329,6 @@ ios_extension(
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":SyncCoreFramework",
         ":TelegramCoreFramework",
     ],
 )
@@ -1450,7 +1403,6 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramApi:TelegramApi",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
@@ -1505,7 +1457,6 @@ ios_extension(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        ":SyncCoreFramework",
     ],
 )
 
@@ -1872,7 +1823,6 @@ ios_application(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
         ":DisplayFramework",

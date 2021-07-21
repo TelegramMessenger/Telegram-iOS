@@ -12,7 +12,6 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Postbox:Postbox",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AppBundle:AppBundle",
         "//third-party/ZipArchive:ZipArchive",

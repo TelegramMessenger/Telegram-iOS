@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)

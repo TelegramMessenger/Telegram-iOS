@@ -2,10 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 
-private func accountRecordIdPathName(_ id: AccountRecordId) -> String {
-    return "account-\(UInt64(bitPattern: id.int64))"
-}
-
 public let telegramPostboxSeedConfiguration: SeedConfiguration = {
     var messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [:]
     for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {

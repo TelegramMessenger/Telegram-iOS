@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import MergeLists
