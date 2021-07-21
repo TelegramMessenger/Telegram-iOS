@@ -91,6 +91,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",
         "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
+        "//third-party/libyuv:LibYuvBinding",
     ],
     visibility = [
         "//visibility:public",

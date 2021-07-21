@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AccountContext
 import TelegramVoip
 import AVFoundation
+import LibYuvBinding
 
 private func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {
     var maybeFormat: CMVideoFormatDescription?
@@ -38,6 +39,68 @@ private func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSample
     dict[kCMSampleAttachmentKey_DisplayImmediately as NSString] = true as NSNumber
 
     return sampleBuffer
+}
+
+private func copyI420BufferToNV12Buffer(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer, pixelBuffer: CVPixelBuffer) -> Bool {
+    guard CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange else {
+        return false
+    }
+    guard CVPixelBufferGetWidthOfPlane(pixelBuffer, 0) == buffer.width else {
+        return false
+    }
+    guard CVPixelBufferGetHeightOfPlane(pixelBuffer, 0) == buffer.height else {
+        return false
+    }
+
+    let cvRet = CVPixelBufferLockBaseAddress(pixelBuffer, [])
+    if cvRet != kCVReturnSuccess {
+        return false
+    }
+    defer {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+    }
+
+    guard let dstY = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0) else {
+        return false
+    }
+    let dstStrideY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
+
+    guard let dstUV = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1) else {
+        return false
+    }
+    let dstStrideUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
+
+    buffer.y.withUnsafeBytes { srcYBuffer in
+        guard let srcY = srcYBuffer.baseAddress else {
+            return
+        }
+        buffer.u.withUnsafeBytes { srcUBuffer in
+            guard let srcU = srcUBuffer.baseAddress else {
+                return
+            }
+            buffer.v.withUnsafeBytes { srcVBuffer in
+                guard let srcV = srcVBuffer.baseAddress else {
+                    return
+                }
+                libyuv_I420ToNV12(
+                    srcY.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideY),
+                    srcU.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideU),
+                    srcV.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideV),
+                    dstY.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideY),
+                    dstUV.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideUV),
+                    Int32(buffer.width),
+                    Int32(buffer.height)
+                )
+            }
+        }
+    }
+
+    return true
 }
 
 final class SampleBufferVideoRenderingView: UIView, VideoRenderingView {
@@ -110,6 +173,28 @@ final class SampleBufferVideoRenderingView: UIView, VideoRenderingView {
             case let .native(buffer):
                 if let sampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: buffer.pixelBuffer) {
                     self.sampleBufferLayer.enqueue(sampleBuffer)
+                }
+            case let .i420(buffer):
+                let ioSurfaceProperties = NSMutableDictionary()
+                let options = NSMutableDictionary()
+                options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+
+                var pixelBuffer: CVPixelBuffer?
+                CVPixelBufferCreate(
+                    kCFAllocatorDefault,
+                    buffer.width,
+                    buffer.height,
+                    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                    options,
+                    &pixelBuffer
+                )
+
+                if let pixelBuffer = pixelBuffer {
+                    if copyI420BufferToNV12Buffer(buffer: buffer, pixelBuffer: pixelBuffer) {
+                        if let sampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: pixelBuffer) {
+                            self.sampleBufferLayer.enqueue(sampleBuffer)
+                        }
+                    }
                 }
             default:
                 break

@@ -35,11 +35,17 @@ class VideoRenderingContext {
 
     func makeView(input: Signal<OngoingGroupCallContext.VideoFrameData, NoError>, blur: Bool) -> VideoRenderingView? {
         #if targetEnvironment(simulator)
+        if blur {
+            return nil
+        }
         return SampleBufferVideoRenderingView(input: input)
         #else
         if #available(iOS 13.0, *) {
             return MetalVideoRenderingView(renderingContext: self.metalContext, input: input, blur: blur)
         } else {
+            if blur {
+                return nil
+            }
             return SampleBufferVideoRenderingView(input: input)
         }
         #endif

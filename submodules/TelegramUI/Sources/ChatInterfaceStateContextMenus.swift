@@ -843,12 +843,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             if !hasAutoremove {
                 for media in message.media {
-                    if media is TelegramMediaAction {
+                    if let action = media as? TelegramMediaAction {
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel {
                             if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canDeleteMessages) == true) {
                             } else {
                                 isUnremovableAction = true
                             }
+                        }
+
+                        switch action.action {
+                        case .historyScreenshot:
+                            isUnremovableAction = true
+                        default:
+                            break
                         }
                     }
                     if let file = media as? TelegramMediaFile {
