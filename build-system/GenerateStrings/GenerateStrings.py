@@ -287,7 +287,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
         write_string(source_file, '''// Automatically-generated file, do not edit
 
 #import <PresentationStrings/PresentationStrings.h>
-#import <PresentationStrings/StringPluralization.h>
+#import <NumberPluralizationForm/NumberPluralizationForm.h>
 
 @implementation _FormattedStringRange
 
@@ -364,8 +364,6 @@ static NSArray<_FormattedStringRange *> * _Nonnull extractArgumentRanges(NSStrin
         index += 1;
     }
     
-    //sort?
-    
     return result;
 }
 
@@ -397,21 +395,21 @@ static _FormattedString * _Nonnull formatWithArgumentRanges(
 }
 
 static NSString * _Nonnull getPluralizationSuffix(_PresentationStrings * _Nonnull strings, int32_t value) {
-    StringPluralizationForm pluralizationForm = getStringPluralizationForm(strings.lc, value);
+    NumberPluralizationForm pluralizationForm = numberPluralizationForm(strings.lc, value);
     switch (pluralizationForm) {
-        case StringPluralizationFormZero: {
+        case NumberPluralizationFormZero: {
             return @"_0";
         }
-        case StringPluralizationFormOne: {
+        case NumberPluralizationFormOne: {
             return @"_1";
         }
-        case StringPluralizationFormTwo: {
+        case NumberPluralizationFormTwo: {
             return @"_2";
         }
-        case StringPluralizationFormFew: {
+        case NumberPluralizationFormFew: {
             return @"_3_10";
         }
-        case StringPluralizationFormMany: {
+        case NumberPluralizationFormMany: {
             return @"_many";
         }
         default: {
@@ -459,7 +457,7 @@ static NSString * _Nonnull getPluralized(_PresentationStrings * _Nonnull strings
     int32_t value) {
     NSString *parsedKey = [[NSString alloc] initWithFormat:@"%@%@", key, getPluralizationSuffix(strings, value)];
     NSString *formatString = getSingle(strings, parsedKey);
-    NSString *stringValue =  [[NSString alloc] initWithFormat:@"%d", (int)value];
+    NSString *stringValue = formatNumberWithGroupingSeparator(strings.groupingSeparator, value);
     NSString *result = [[NSString alloc] initWithFormat:formatString, stringValue];
     return result;
 }

@@ -78,6 +78,79 @@ genrule(
     cmd = "touch $(OUTS)",
 )
 
+genrule(
+    name = "GeneratedPresentationStrings",
+    srcs = [
+        "//build-system:GenerateStrings/GenerateStrings.py",
+        "Telegram-iOS/en.lproj/Localizable.strings",
+    ],
+    cmd = '''
+        python3 $(location //build-system:GenerateStrings/GenerateStrings.py) \\
+            --source=$(location Telegram-iOS/en.lproj/Localizable.strings) \\
+            --outImplementation=$(location GeneratedPresentationStrings/Sources/PresentationStrings.m) \\
+            --outHeader=$(location GeneratedPresentationStrings/PublicHeaders/PresentationStrings/PresentationStrings.h) \\
+            --outData=$(location GeneratedPresentationStrings/Resources/PresentationStrings.data) \\
+    ''',
+    outs = [
+        "GeneratedPresentationStrings/PublicHeaders/PresentationStrings/PresentationStrings.h",
+        "GeneratedPresentationStrings/Sources/PresentationStrings.m",
+        "GeneratedPresentationStrings/Resources/PresentationStrings.data",
+    ],
+)
+
+empty_languages = [
+    "ar",
+    "be",
+    "ca",
+    "de",
+    "es",
+    "fa",
+    "fr",
+    "id",
+    "it",
+    "ko",
+    "ms",
+    "nl",
+    "pl",
+    "pt",
+    "ru",
+    "tr",
+    "uk",
+    "uz",
+]
+
+[
+    genrule(
+        name = "Localizable_{}.strings".format(language),
+        outs = ["{}.lproj/Localizable.strings".format(language)],
+        cmd = "touch $(OUTS)",
+    ) for language in empty_languages
+]
+
+objc_library(
+    name = "PresentationStrings",
+    enable_modules = True,
+    module_name = "PresentationStrings",
+    srcs = [
+        "GeneratedPresentationStrings/Sources/PresentationStrings.m",
+    ],
+    hdrs = [
+        "GeneratedPresentationStrings/PublicHeaders/PresentationStrings/PresentationStrings.h",
+    ],
+    includes = [
+        "GeneratedPresentationStrings/PublicHeaders",
+    ],
+    sdk_frameworks = [
+        "Foundation",
+    ],
+    deps = [
+        "//submodules/NumberPluralizationForm:NumberPluralizationForm",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
 swift_library(
     name = "_LocalDebugOptions",
     srcs = [":empty"],
@@ -122,9 +195,11 @@ filegroup(
 
 filegroup(
     name = "AppStringResources",
-    srcs = glob([
-        "Telegram-iOS/*.lproj/Localizable.strings",
-    ], exclude = ["Telegram-iOS/*.lproj/**/.*"]),
+    srcs = [
+        "Telegram-iOS/en.lproj/Localizable.strings",
+    ] + [
+        "{}.lproj/Localizable.strings".format(language) for language in empty_languages
+    ],
 )
 
 filegroup(
@@ -220,7 +295,7 @@ swift_library(
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
-        "//submodules/PresentationStrings:PresentationStringsResources",
+        ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
