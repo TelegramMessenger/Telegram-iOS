@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 func addSynchronizeConsumeMessageContentsOperation(transaction: Transaction, messageIds: [MessageId]) {
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(messageIds)) {

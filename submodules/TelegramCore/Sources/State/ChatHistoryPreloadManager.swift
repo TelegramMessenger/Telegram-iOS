@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 public struct HistoryPreloadIndex: Hashable, Comparable, CustomStringConvertible {
     public let index: ChatListIndex?

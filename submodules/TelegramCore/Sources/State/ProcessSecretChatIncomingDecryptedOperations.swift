@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 import EncryptionProvider
 
 private enum MessageParsingError: Error {

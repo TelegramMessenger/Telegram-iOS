@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public struct PeerActivitySpace: Hashable {
     public enum Category: Equatable, Hashable {

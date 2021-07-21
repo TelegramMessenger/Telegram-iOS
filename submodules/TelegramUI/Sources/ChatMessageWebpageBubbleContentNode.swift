@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
@@ -13,6 +12,7 @@ import WebsiteType
 import InstantPageUI
 import UrlHandling
 import GalleryData
+import TelegramPresentationData
 
 private let titleFont: UIFont = Font.semibold(15.0)
 

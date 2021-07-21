@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 extension TelegramMediaWebFile {
     convenience init(_ document: Api.WebDocument) {

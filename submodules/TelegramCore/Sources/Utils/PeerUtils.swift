@@ -1,6 +1,5 @@
 import Foundation
 import Postbox
-import SyncCore
 
 public extension Peer {
     var debugDisplayTitle: String {

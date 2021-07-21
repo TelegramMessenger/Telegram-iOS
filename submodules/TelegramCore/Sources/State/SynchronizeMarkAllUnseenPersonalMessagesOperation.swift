@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 func addSynchronizeMarkAllUnseenPersonalMessagesOperation(transaction: Transaction, peerId: PeerId, maxId: MessageId.Id) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkAllUnseenPersonalMessages

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -112,7 +111,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.listNode.dynamicBounceEnabled = false
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
@@ -732,7 +731,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if displayEmptyNode {
                                 var text: String = ""
                                 if let query = strongSelf.filter.query, hasFilter {
-                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
+                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).string
                                 } else {
                                     text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Broadcast_AdminLog_EmptyText
                                 }
@@ -971,7 +970,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 var isOn: Bool = true
                 var text: String?
                 if let myValue = value.value {
-                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").string
                 } else {
                     isOn = false
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff

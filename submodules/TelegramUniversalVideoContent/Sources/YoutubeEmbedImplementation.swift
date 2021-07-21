@@ -1,7 +1,6 @@
 import Foundation
 import Display
 import Postbox
-import SyncCore
 import TelegramCore
 import AccountContext
 import WebKit

@@ -5,7 +5,6 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -219,7 +218,7 @@ class WebSearchControllerNode: ASDisplayNode {
         self.recentQueriesNode = ListView()
         self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
         self.recentQueriesNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()

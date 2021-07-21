@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MobileCoreServices
 import TelegramPresentationData
 import TextFormat
@@ -103,7 +102,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 }
             case let .messageAutoremoveTimeout(timeout):
                 if let timeout = timeout {
-                    return (nil, shortTimeIntervalString(strings: strings, value: timeout), strings.VoiceOver_SelfDestructTimerOn(timeIntervalString(strings: strings, value: timeout)).0, 1.0, UIEdgeInsets())
+                    return (nil, shortTimeIntervalString(strings: strings, value: timeout), strings.VoiceOver_SelfDestructTimerOn(timeIntervalString(strings: strings, value: timeout)).string, 1.0, UIEdgeInsets())
                 } else {
                     return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, strings.VoiceOver_SelfDestructTimerOff, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
                 }

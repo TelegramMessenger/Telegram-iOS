@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 import AccountContext
@@ -384,7 +383,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.gridNode = GridNode()
@@ -782,7 +781,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     strongSelf.dimNode.isHidden = displayingResults
                     strongSelf.backgroundColor = strongSelf.presentationData.theme.chatList.backgroundColor
                     
-                    strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.WebSearch_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                    strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.WebSearch_SearchNoResultsDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                     
                     let emptyResults = displayingResults && transition.isEmpty
                     strongSelf.emptyResultsTitleNode.isHidden = !emptyResults

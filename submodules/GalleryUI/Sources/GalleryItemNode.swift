@@ -27,6 +27,7 @@ open class GalleryItemNode: ASDisplayNode {
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var galleryController: () -> ViewController? = { return nil }
     public var alternativeDismiss: () -> Bool = { return false }
     
     override public init() {

@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -87,7 +86,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> St
         } else {
             string = strings.Map_ETAMinutes(minutes)
         }
-        return strings.Map_DirectionsDriveEta(string).0
+        return strings.Map_DirectionsDriveEta(string).string
     } else {
         return nil
     }

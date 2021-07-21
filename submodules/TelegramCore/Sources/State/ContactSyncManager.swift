@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 private func normalizedPhoneNumber(_ value: String) -> String {
     var result = ""

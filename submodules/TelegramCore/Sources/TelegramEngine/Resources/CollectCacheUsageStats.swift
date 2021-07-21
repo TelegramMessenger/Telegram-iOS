@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0

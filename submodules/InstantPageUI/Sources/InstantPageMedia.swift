@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 
 public struct InstantPageMedia: Equatable {
     public let index: Int

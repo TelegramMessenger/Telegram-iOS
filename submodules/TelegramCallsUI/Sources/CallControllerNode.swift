@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -26,7 +25,7 @@ private func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat 
     return (1.0 - value) * from + value * to
 }
 
-private final class CallVideoNode: ASDisplayNode {
+private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     private let videoTransformContainer: ASDisplayNode
     private let videoView: PresentationCallVideoView
     
@@ -39,6 +38,11 @@ private final class CallVideoNode: ASDisplayNode {
     private let isReadyUpdated: () -> Void
     private(set) var isReady: Bool = false
     private var isReadyTimer: SwiftSignalKit.Timer?
+    
+    private let readyPromise = ValuePromise(false)
+    var ready: Signal<Bool, NoError> {
+        return self.readyPromise.get()
+    }
     
     private let isFlippedUpdated: (CallVideoNode) -> Void
     
@@ -87,6 +91,7 @@ private final class CallVideoNode: ASDisplayNode {
                 }
                 if !strongSelf.isReady {
                     strongSelf.isReady = true
+                    strongSelf.readyPromise.set(true)
                     strongSelf.isReadyTimer?.invalidate()
                     strongSelf.isReadyUpdated()
                 }
@@ -122,6 +127,7 @@ private final class CallVideoNode: ASDisplayNode {
                 }
                 if !strongSelf.isReady {
                     strongSelf.isReady = true
+                    strongSelf.readyPromise.set(true)
                     strongSelf.isReadyUpdated()
                 }
             }, queue: .mainQueue())
@@ -175,6 +181,10 @@ private final class CallVideoNode: ASDisplayNode {
         transition.updateTransformScale(layer: maskLayer, scale: maxRadius * 2.0 / fromRect.width, completion: { [weak self] _ in
             self?.layer.mask = nil
         })
+    }
+    
+    func updateLayout(size: CGSize, layoutMode: VideoNodeLayoutMode, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, cornerRadius: self.currentCornerRadius, isOutgoing: true, deviceOrientation: .portrait, isCompactLayout: false, transition: transition)
     }
     
     func updateLayout(size: CGSize, cornerRadius: CGFloat, isOutgoing: Bool, deviceOrientation: UIDeviceOrientation, isCompactLayout: Bool, transition: ContainedViewLayoutTransition) {
@@ -582,13 +592,58 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.call.requestVideo()
                         }
                         
-                        if strongSelf.displayedCameraConfirmation {
-                            proceed()
-                        } else {
-                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
-                                proceed()
-                            })]))
-                        }
+                        strongSelf.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if let outgoingVideoView = outgoingVideoView {
+                                outgoingVideoView.view.backgroundColor = .black
+                                outgoingVideoView.view.clipsToBounds = true
+                                
+                                var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
+                                
+                                let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                }, orientationUpdated: {
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                }, isFlippedUpdated: { _ in
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                })
+                                
+                                let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { [weak self] _, _ in
+                                    if let strongSelf = self {
+                                        proceed()
+                                    }
+                                }, switchCamera: { [weak self] in
+                                    Queue.mainQueue().after(0.1) {
+                                        self?.call.switchVideoCamera()
+                                    }
+                                })
+                                strongSelf.present?(controller)
+                                
+                                updateLayoutImpl = { [weak controller] layout, navigationBarHeight in
+                                    controller?.containerLayoutUpdated(layout, transition: .immediate)
+                                }
+                            }
+                        })
+                        
+//                        if strongSelf.displayedCameraConfirmation {
+//                            proceed()
+//                        } else {
+//                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
+//                                proceed()
+//                            })]))
+//                        }
                     })
                 } else {
                     strongSelf.call.disableVideo()
@@ -700,7 +755,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             self.toastNode.title = peer.compactDisplayTitle
             self.statusNode.title = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
             if hasOther {
-                self.statusNode.subtitle = self.presentationData.strings.Call_AnsweringWithAccount(accountPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                self.statusNode.subtitle = self.presentationData.strings.Call_AnsweringWithAccount(accountPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).string
                 
                 if let callState = self.callState {
                     self.updateCallState(callState)
@@ -776,7 +831,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.maybeScheduleUIHidingForActiveVideoCall()
                         }
                         
-                        let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, disabledText: strongSelf.presentationData.strings.Call_RemoteVideoPaused(strongSelf.peer?.compactDisplayTitle ?? "").0, assumeReadyAfterTimeout: false, isReadyUpdated: {
+                        let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, disabledText: strongSelf.presentationData.strings.Call_RemoteVideoPaused(strongSelf.peer?.compactDisplayTitle ?? "").string, assumeReadyAfterTimeout: false, isReadyUpdated: {
                             if delayUntilInitialized {
                                 Queue.mainQueue().after(0.1, {
                                     applyNode()
@@ -971,9 +1026,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                                     
                                     let text: String
                                     if isVideo {
-                                        text = self.presentationData.strings.Call_ParticipantVideoVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                                        text = self.presentationData.strings.Call_ParticipantVideoVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).string
                                     } else {
-                                        text = self.presentationData.strings.Call_ParticipantVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                                        text = self.presentationData.strings.Call_ParticipantVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).string
                                     }
                                     
                                     self.present?(textAlertController(sharedContext: self.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
@@ -1647,7 +1702,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     @objc func keyPressed() {
         if self.keyPreviewNode == nil, let keyText = self.keyTextData?.1, let peer = self.peer {
-            let keyPreviewNode = CallControllerKeyPreviewNode(keyText: keyText, infoText: self.presentationData.strings.Call_EmojiDescription(peer.compactDisplayTitle).0.replacingOccurrences(of: "%%", with: "%"), dismiss: { [weak self] in
+            let keyPreviewNode = CallControllerKeyPreviewNode(keyText: keyText, infoText: self.presentationData.strings.Call_EmojiDescription(peer.compactDisplayTitle).string.replacingOccurrences(of: "%%", with: "%"), dismiss: { [weak self] in
                 if let _ = self?.keyPreviewNode {
                     self?.backPressed()
                 }

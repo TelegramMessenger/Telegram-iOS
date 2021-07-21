@@ -3,7 +3,6 @@
 import TelegramApi
 import SwiftSignalKit
 import Postbox
-import SyncCore
 
 public enum InternalUpdaterError {
     case generic

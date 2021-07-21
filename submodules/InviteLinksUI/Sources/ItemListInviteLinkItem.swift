@@ -3,10 +3,10 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import ShimmerEffect
+import TelegramCore
 
 func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
     if invite.isRevoked {
@@ -392,9 +392,9 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             }
                             let elapsedTime = expireDate - currentTime
                             if elapsedTime >= 86400 {
-                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: item.presentationData.strings, value: elapsedTime)).0
+                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: item.presentationData.strings, value: elapsedTime)).string
                             } else {
-                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
+                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).string
                             }
                             if timerValue == nil {
                                 timerValue = .timestamp(creation: invite.startDate ?? invite.date, deadline: expireDate)

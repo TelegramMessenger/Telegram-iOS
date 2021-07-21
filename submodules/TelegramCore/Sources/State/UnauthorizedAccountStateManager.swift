@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 private final class UnauthorizedUpdateMessageService: NSObject, MTMessageService {
     let pipe: ValuePipe<[Api.Update]> = ValuePipe()

@@ -8,7 +8,6 @@ swift_library(
     ]),
     deps = [
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
     ],
     visibility = [
         "//visibility:public",

@@ -2,7 +2,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import UserNotifications
 import Intents
 import Postbox

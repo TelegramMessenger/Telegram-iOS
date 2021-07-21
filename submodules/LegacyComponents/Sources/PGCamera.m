@@ -843,4 +843,14 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     }
 }
 
++ (bool)isPhotoCameraMode:(PGCameraMode)mode
+{
+    return mode == PGCameraModePhoto || mode == PGCameraModeSquarePhoto || mode == PGCameraModePhotoScan;
+}
+
++ (bool)isVideoCameraMode:(PGCameraMode)mode
+{
+    return mode == PGCameraModeVideo || mode == PGCameraModeSquareVideo;
+}
+
 @end

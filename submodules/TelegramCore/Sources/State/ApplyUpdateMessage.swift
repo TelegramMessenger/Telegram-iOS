@@ -3,7 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private func copyOrMoveResourceData(from fromResource: MediaResource, to toResource: MediaResource, mediaBox: MediaBox) {
     if fromResource is CloudFileMediaResource || fromResource is CloudDocumentMediaResource || fromResource is SecretFileMediaResource {

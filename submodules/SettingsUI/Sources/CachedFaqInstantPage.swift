@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AccountContext
 import InstantPageUI
 import InstantPageCache

@@ -4,7 +4,6 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 import CryptoUtils
-import SyncCore
 import EncryptionProvider
 
 private let accountRecordToActiveKeychainId = Atomic<[AccountRecordId: Int]>(value: [:])

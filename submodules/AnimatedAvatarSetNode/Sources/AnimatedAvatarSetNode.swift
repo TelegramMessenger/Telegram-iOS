@@ -6,7 +6,6 @@ import AvatarNode
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AccountContext
 import AudioBlob
 

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 public final class SelectivePrivacyPeer: Equatable {
     public let peer: Peer

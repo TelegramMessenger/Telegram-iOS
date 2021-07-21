@@ -2,7 +2,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public struct GroupCallInfo: Equatable {
     public var id: Int64

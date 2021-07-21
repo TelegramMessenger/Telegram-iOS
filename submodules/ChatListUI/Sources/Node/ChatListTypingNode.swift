@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -85,21 +84,21 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                             let peerTitle = activities[0].0.compactDisplayTitle
                             switch activities[0].1 {
                                 case .uploadingVideo:
-                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).string
                                 case .uploadingInstantVideo:
-                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).string
                                 case .uploadingPhoto:
-                                    text = strings.DialogList_SingleUploadingPhotoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingPhotoSuffix(peerTitle).string
                                 case .uploadingFile:
-                                    text = strings.DialogList_SingleUploadingFileSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingFileSuffix(peerTitle).string
                                 case .recordingVoice:
-                                    text = strings.DialogList_SingleRecordingAudioSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleRecordingAudioSuffix(peerTitle).string
                                 case .recordingInstantVideo:
-                                    text = strings.DialogList_SingleRecordingVideoMessageSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleRecordingVideoMessageSuffix(peerTitle).string
                                 case .playingGame:
-                                    text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).0
+                                    text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).string
                                 case .typingText:
-                                    text = strings.DialogList_SingleTypingSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleTypingSuffix(peerTitle).string
                                 case .speakingInGroupCall:
                                     text = ""
                             }
@@ -129,12 +128,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         let peerTitle = activities[0].0.compactDisplayTitle
                         if activities.count == 2 {
                             let secondPeerTitle = activities[1].0.compactDisplayTitle
-                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).0, font: textFont, textColor: color)
+                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).string, font: textFont, textColor: color)
                         } else {
-                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).string).string, font: textFont, textColor: color)
                         }
                     } else {
-                        string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
+                        string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).string, font: textFont, textColor: color)
                     }
                     state = .typingText(string, lightColor)
                 }

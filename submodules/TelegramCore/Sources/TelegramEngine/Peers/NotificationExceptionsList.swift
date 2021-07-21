@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 public final class NotificationExceptionsList: Equatable {
     public let peers: [PeerId: Peer]

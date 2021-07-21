@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import UniversalMediaPlayer
 import TelegramPresentationData
 import AccountContext
@@ -317,7 +316,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.videoFrame = displayVideoFrame
                     strongSelf.secretProgressIcon = secretProgressIcon
                     strongSelf.automaticDownload = automaticDownload
-                    
+                                        
                     if let updatedInfoBackgroundImage = updatedInfoBackgroundImage {
                         strongSelf.infoBackgroundNode.image = updatedInfoBackgroundImage
                     }
@@ -830,6 +829,20 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             })
         }
+    }
+    
+    func seekTo(_ position: Double) {
+        if let duration = self.playbackStatusNode?.duration {
+            self.videoNode?.seek(position * duration)
+        }
+    }
+    
+    func play() {
+        self.videoNode?.play()
+    }
+    
+    func pause() {
+        self.videoNode?.pause()
     }
     
     func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {

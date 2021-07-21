@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import SyncCore
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences

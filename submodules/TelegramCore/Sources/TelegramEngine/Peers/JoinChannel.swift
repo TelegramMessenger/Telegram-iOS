@@ -4,7 +4,6 @@ import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 public enum JoinChannelError {
     case generic

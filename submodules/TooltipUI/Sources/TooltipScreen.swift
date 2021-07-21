@@ -5,7 +5,6 @@ import Display
 import TelegramPresentationData
 import AnimatedStickerNode
 import AppBundle
-import SyncCore
 import TelegramCore
 import TextFormat
 import Postbox

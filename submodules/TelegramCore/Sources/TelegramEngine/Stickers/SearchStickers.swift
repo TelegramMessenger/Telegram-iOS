@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 private struct SearchStickersConfiguration {
     static var defaultValue: SearchStickersConfiguration {

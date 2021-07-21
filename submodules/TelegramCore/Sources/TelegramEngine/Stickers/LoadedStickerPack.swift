@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 extension StickerPackReference {
     init(_ stickerPackInfo: StickerPackCollectionInfo) {

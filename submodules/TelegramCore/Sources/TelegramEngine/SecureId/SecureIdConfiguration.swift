@@ -4,7 +4,6 @@ import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public func secureIdConfiguration(postbox: Postbox, network: Network) -> Signal<SecureIdConfiguration, NoError> {
     let cached: Signal<CachedSecureIdConfiguration?, NoError> = postbox.transaction { transaction -> CachedSecureIdConfiguration? in

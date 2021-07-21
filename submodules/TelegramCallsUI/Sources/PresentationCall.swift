@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import AVFoundation
@@ -13,6 +12,7 @@ import TelegramPresentationData
 import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
+import DeviceProximity
 
 final class PresentationCallToneRenderer {
     let queue: Queue
@@ -287,6 +287,8 @@ public final class PresentationCallImpl: PresentationCall {
     private var useFrontCamera: Bool = true
     private var videoCapturer: OngoingCallVideoCapturer?
     
+    private var proximityManagerIndex: Int?
+    
     init(
         account: Account,
         audioSession: ManagedAudioSession,
@@ -455,6 +457,11 @@ public final class PresentationCallImpl: PresentationCall {
                 strongSelf.updateIsAudioSessionActive(value)
             }
         })
+        
+        if callKitIntegration == nil {
+            self.proximityManagerIndex = DeviceProximityManager.shared().add { _ in
+            }
+        }
     }
     
     deinit {
@@ -472,6 +479,10 @@ public final class PresentationCallImpl: PresentationCall {
             if !self.droppedCall {
                 self.callKitIntegration?.dropCall(uuid: self.internalId)
             }
+        }
+        
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
         }
     }
     

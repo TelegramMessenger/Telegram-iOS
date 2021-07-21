@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import WidgetItems
 import TelegramPresentationData
 import NotificationsPresentationData
@@ -298,7 +297,7 @@ final class WidgetDataContext {
         
         self.notificationPresentationDataDisposable = (presentationData
         |> map { presentationData -> NotificationsPresentationData in
-            return NotificationsPresentationData(applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").0)
+            return NotificationsPresentationData(applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").string)
         }
         |> distinctUntilChanged).start(next: { value in
             let path = notificationsPresentationDataPath(rootPath: basePath)

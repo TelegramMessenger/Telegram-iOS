@@ -3,7 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0

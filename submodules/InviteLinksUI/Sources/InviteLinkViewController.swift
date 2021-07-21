@@ -5,7 +5,6 @@ import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
 import Postbox
-import SyncCore
 import TelegramCore
 import Display
 import AccountContext
@@ -417,7 +416,7 @@ public final class InviteLinkViewController: ViewController {
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
             self.listNode.verticalScrollIndicatorFollowsOverscroll = true
             self.listNode.accessibilityPageScrolledString = { row, count in
-                return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
             }
             
             super.init()
@@ -839,9 +838,9 @@ public final class InviteLinkViewController: ViewController {
                 } else {
                     let elapsedTime = expireDate - currentTime
                     if elapsedTime >= 86400 {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).0
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).string
                     } else {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).string
                         if self.countdownTimer == nil {
                             let countdownTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
                                 if let strongSelf = self, let layout = strongSelf.validLayout {

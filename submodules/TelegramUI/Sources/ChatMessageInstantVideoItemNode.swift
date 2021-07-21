@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -19,7 +18,7 @@ private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
-class ChatMessageInstantVideoItemNode: ChatMessageItemView {
+class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerDelegate {
     let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
@@ -52,6 +51,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    
+    private var seekRecognizer: UIPanGestureRecognizer?
     
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
@@ -171,6 +172,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             return false
         }
         self.view.addGestureRecognizer(replyRecognizer)
+        
+        let seekRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.seekGesture(_:)))
+        seekRecognizer.isEnabled = false
+        seekRecognizer.delegate = self
+        self.seekRecognizer = seekRecognizer
+        self.interactiveVideoNode.view.addGestureRecognizer(seekRecognizer)
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -326,9 +333,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var isPlaying = false
             var displaySize = layoutConstants.instantVideo.dimensions
             let maximumDisplaySize = CGSize(width: params.width - 20.0, height: params.width - 20.0)
+            var effectiveAvatarInset = avatarInset
             if item.associatedData.currentlyPlayingMessageId == item.message.index {
                 isPlaying = true
                 displaySize = maximumDisplaySize
+                effectiveAvatarInset = 0.0
             }
             
             var automaticDownload = true
@@ -345,7 +354,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, maximumDisplaySize, isPlaying ? 1.0 : 0.0, .free, automaticDownload)
             
-            let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
+            let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + effectiveAvatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -389,7 +398,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         
                         let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
                         let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
-                        let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                        let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                         
                         viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     }
@@ -526,8 +535,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     strongSelf.updateAccessibilityData(accessibilityData)
                                         
-                    
-                    
                     let videoLayoutData: ChatMessageInstantVideoItemLayoutData
                     if incoming {
                         videoLayoutData = .constrained(left: 0.0, right: max(0.0, availableContentWidth - videoFrame.width))
@@ -540,6 +547,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         strongSelf.interactiveVideoNode.frame = videoFrame
                         videoApply(videoLayoutData, transition)
                     }
+                    
+                    strongSelf.interactiveVideoNode.view.disablesInteractiveTransitionGestureRecognizer = isPlaying
+                    strongSelf.seekRecognizer?.isEnabled = isPlaying
                     
                     strongSelf.contextSourceNode.contentRect = videoFrame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -854,6 +864,30 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         }
     }
     
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer === self.seekRecognizer {
+            let velocity = panGestureRecognizer.velocity(in: self.interactiveVideoNode.view)
+            return abs(velocity.x) > abs(velocity.y)
+        }
+        return true
+    }
+
+    private var wasPlaying = false
+    @objc func seekGesture(_ recognizer: UIPanGestureRecognizer) {
+        var location = recognizer.location(in: self.interactiveVideoNode.view)
+        switch recognizer.state {
+            case .began:
+                self.interactiveVideoNode.pause()
+            case .changed:
+                self.interactiveVideoNode.seekTo(Double(location.x / self.interactiveVideoNode.bounds.size.width))
+            case .ended, .cancelled:
+                self.interactiveVideoNode.seekTo(Double(location.x / self.interactiveVideoNode.bounds.size.width))
+                self.interactiveVideoNode.play()
+            default:
+                break
+        }
+    }
+    
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         switch recognizer.state {
         case .began:
@@ -1087,6 +1121,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         let targetSize: CGSize
         let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
         let scaleProgress: CGFloat
+        var effectiveAvatarInset = avatarInset
         if currentValue < targetHeight {
             initialSize = displaySize
             targetSize = maximumDisplaySize
@@ -1100,12 +1135,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             targetSize = initialSize
             scaleProgress = isPlaying ? 1.0 : 0.0
         }
+        effectiveAvatarInset *= (1.0 - scaleProgress)
         displaySize = CGSize(width: initialSize.width + (targetSize.width - initialSize.width) * animationProgress, height: initialSize.height + (targetSize.height - initialSize.height) * animationProgress)
         
         let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, maximumDisplaySize, scaleProgress, .free, self.appliedAutomaticDownload)
         
         let availableContentWidth = params.width - params.leftInset - params.rightInset - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left
-        let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
+        let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + effectiveAvatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
         self.interactiveVideoNode.frame = videoFrame
         
         let videoLayoutData: ChatMessageInstantVideoItemLayoutData

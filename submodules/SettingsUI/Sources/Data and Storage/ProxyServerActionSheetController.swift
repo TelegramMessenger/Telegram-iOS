@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import AsyncDisplayKit
 import UIKit
@@ -222,7 +221,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                         statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusChecking)
                     case let .available(rtt):
                         let pingTime = Int(rtt * 1000.0)
-                        statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)
+                        statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string)
                     case .notAvailable:
                         statusType = .failed(strongSelf.strings.SocksProxySetup_ProxyStatusUnavailable)
                 }

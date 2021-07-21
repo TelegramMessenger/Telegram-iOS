@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -58,9 +57,9 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
             let titleData = self.strings.Passport_RequestHeader(formData.servicePeer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder))
             
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: titleData.0, font: textFont, textColor: self.theme.list.freeTextColor))
-            for (_, range) in titleData.1 {
-                titleString.addAttribute(.font, value: titleFont, range: range)
+            titleString.append(NSAttributedString(string: titleData.string, font: textFont, textColor: self.theme.list.freeTextColor))
+            for range in titleData.ranges {
+                titleString.addAttribute(.font, value: titleFont, range: range.range)
             }
             self.titleNode.attributedText = titleString
             self.iconNode.isHidden = true
