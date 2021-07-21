@@ -100,7 +100,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
         };
         [_panelView addSubview:_timecodeView];
         
-        _flipButton = [[TGCameraFlipButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44) large:true];
+        _flipButton = [[TGCameraFlipButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44)];
         [_flipButton addTarget:self action:@selector(flipButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_panelView addSubview:_flipButton];
         

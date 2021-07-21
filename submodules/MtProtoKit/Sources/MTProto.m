@@ -952,9 +952,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSMutableArray *messageServiceTransactions = [[NSMutableArray alloc] init];
             for (id<MTMessageService> messageService in _messageServices)
             {
-                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:sessionInfo:)])
+                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:sessionInfo:scheme:)])
                 {
-                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector sessionInfo:transactionSessionInfo];
+                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector sessionInfo:transactionSessionInfo scheme:scheme];
                     if (messageTransaction != nil)
                     {
                         for (MTOutgoingMessage *message in messageTransaction.messagePayload)

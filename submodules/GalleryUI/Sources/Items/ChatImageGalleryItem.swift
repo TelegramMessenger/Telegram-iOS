@@ -106,10 +106,10 @@ class ChatImageGalleryItem: GalleryItem {
     let location: MessageHistoryEntryLocation?
     let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
-    let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
+    let openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -206,7 +206,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let dataDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()

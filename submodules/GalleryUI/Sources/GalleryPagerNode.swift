@@ -112,6 +112,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var galleryController: () -> ViewController? = { return nil }
     
     public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
@@ -480,6 +481,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
         node.baseNavigationController = self.baseNavigationController
+        node.galleryController = self.galleryController
         node.index = index
         return node
     }

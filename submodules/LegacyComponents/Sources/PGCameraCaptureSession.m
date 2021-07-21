@@ -1,5 +1,6 @@
 #import "PGCameraCaptureSession.h"
 #import "PGCameraMovieWriter.h"
+#import "PGRectangleDetector.h"
 
 #import <LegacyComponents/LegacyComponentsGlobals.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
@@ -261,10 +262,15 @@ const NSInteger PGCameraFrameRate = 30;
     {
         case PGCameraModePhoto:
         case PGCameraModeSquarePhoto:
+        case PGCameraModePhotoScan:
         {
             [self _removeAudioInputEndAudioSession:true];
             self.sessionPreset = AVCaptureSessionPresetPhoto;
             [self setFrameRate:0 forDevice:_videoDevice];
+            
+            if (mode == PGCameraModePhotoScan) {
+                [self setCurrentCameraPosition:PGCameraPositionRear];
+            }
         }
             break;
             
@@ -287,6 +293,14 @@ const NSInteger PGCameraFrameRate = 30;
     [self _enableVideoStabilization];
     
     [self commitConfiguration];
+    
+    if (mode == PGCameraModePhotoScan) {
+        if (_rectangleDetector == nil) {
+            _rectangleDetector = [[PGRectangleDetector alloc] init];
+        }
+    } else {
+        _rectangleDetector = nil;
+    }
 }
 
 - (void)switchToBestVideoFormatForDevice:(AVCaptureDevice *)device
@@ -630,9 +644,11 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)setCurrentCameraPosition:(PGCameraPosition)position
 {
-    NSError *error;
-    
     AVCaptureDevice *deviceForTargetPosition = [PGCameraCaptureSession _deviceWithCameraPosition:position];
+    if ([_videoDevice isEqual:deviceForTargetPosition])
+        return;
+ 
+    NSError *error;
     AVCaptureDeviceInput *newVideoInput = [[AVCaptureDeviceInput alloc] initWithDevice:deviceForTargetPosition error:&error];
     
     if (newVideoInput != nil)
@@ -923,6 +939,11 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
     
     if (_movieWriter.isRecording)
         [_movieWriter _processSampleBuffer:sampleBuffer];
+    
+    if (_rectangleDetector != nil) {
+        CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+        [_rectangleDetector detectRectangle:imageBuffer];
+    }
     
     if (!_captureNextFrame || captureOutput != _videoOutput)
         return;

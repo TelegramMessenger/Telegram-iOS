@@ -32,6 +32,23 @@
     return self;
 }
 
+- (instancetype)initWithImage:(UIImage *)image rectangle:(PGRectangle *)rectangle
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _identifier = [NSString stringWithFormat:@"%ld", lrand48()];
+        _dimensions = CGSizeMake(image.size.width * image.scale, image.size.height * image.scale);
+        PGCameraShotMetadata *metadata = [[PGCameraShotMetadata alloc] init];
+        metadata.rectangle = rectangle;
+        _metadata = metadata;
+        _thumbnail = [[SVariable alloc] init];
+        
+        [self _saveToDisk:image];
+    }
+    return self;
+}
+
 - (instancetype)initWithExistingImage:(UIImage *)image
 {
     self = [super init];
@@ -108,6 +125,11 @@
 - (NSString *)filePath
 {
     return [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"camphoto_%@.jpg", _identifier]];
+}
+
+- (PGRectangle *)rectangle
+{
+    return _metadata.rectangle;
 }
 
 - (NSURL *)url

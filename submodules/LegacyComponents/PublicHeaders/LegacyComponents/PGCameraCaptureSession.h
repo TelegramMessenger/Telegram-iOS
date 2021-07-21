@@ -3,6 +3,7 @@
 #import <LegacyComponents/PGCamera.h>
 
 @class PGCameraMovieWriter;
+@class PGRectangleDetector;
 
 @interface PGCameraCaptureSession : AVCaptureSession
 
@@ -12,6 +13,7 @@
 @property (nonatomic, readonly) AVCaptureAudioDataOutput *audioOutput;
 @property (nonatomic, readonly) AVCaptureMetadataOutput *metadataOutput;
 @property (nonatomic, readonly) PGCameraMovieWriter *movieWriter;
+@property (nonatomic, readonly) PGRectangleDetector *rectangleDetector;
 
 @property (nonatomic, assign) bool alwaysSetFlash;
 @property (nonatomic, assign) PGCameraMode currentMode;

@@ -40,6 +40,14 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
     private var statusDisposable: Disposable?
     private var statusValuePromise = Promise<MediaPlayerStatus?>()
     
+    var duration: Double? {
+        if let statusValue = self.statusValue {
+            return statusValue.duration
+        } else {
+            return nil
+        }
+    }
+    
     var status: Signal<MediaPlayerStatus, NoError>? {
         didSet {
             if let status = self.status {

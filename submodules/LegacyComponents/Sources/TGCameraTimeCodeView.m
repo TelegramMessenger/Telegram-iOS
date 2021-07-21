@@ -7,7 +7,7 @@
 
 @interface TGCameraTimeCodeView ()
 {
-    UIImageView *_dotView;
+    UIView *_backgroundView;
     UILabel *_timeLabel;
     
     NSUInteger _recordingDurationSeconds;
@@ -22,29 +22,17 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        static UIImage *dotImage = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(6, 6), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-
-            CGContextSetFillColorWithColor(context, [TGCameraInterfaceAssets redColor].CGColor);
-            CGContextFillEllipseInRect(context, CGRectMake(0, 0, 6, 6));
-
-            dotImage = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-        });
-        
-        _dotView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 7, 6, 6)];
-        _dotView.layer.opacity = 0.0f;
-        _dotView.image = dotImage;
-        [self addSubview:_dotView];
+        _backgroundView = [[UIView alloc] init];
+        _backgroundView.clipsToBounds = true;
+        _backgroundView.layer.cornerRadius = 4.0;
+        _backgroundView.backgroundColor = [TGCameraInterfaceAssets redColor];
+        _backgroundView.alpha = 0.0;
+        [self addSubview:_backgroundView];
         
         _timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
         _timeLabel.backgroundColor = [UIColor clearColor];
-        _timeLabel.font = [TGCameraInterfaceAssets normalFontOfSize:21];
-        _timeLabel.text = @"00:00:00";
+        _timeLabel.font = [TGCameraInterfaceAssets regularFontOfSize:21];
+        _timeLabel.text = @"00:00";
         _timeLabel.textAlignment = NSTextAlignmentCenter;
         _timeLabel.textColor = [TGCameraInterfaceAssets normalColor];
         [self addSubview:_timeLabel];
@@ -59,7 +47,18 @@
 
 - (void)_updateRecordingTime
 {
-    _timeLabel.text = [NSString stringWithFormat:@"%02d:%02d:%02d", (int)(_recordingDurationSeconds / 3600), (int)(_recordingDurationSeconds / 60) % 60, (int)(_recordingDurationSeconds % 60)];
+    if (_recordingDurationSeconds > 60 * 60) {
+        _timeLabel.text = [NSString stringWithFormat:@"%02d:%02d:%02d", (int)(_recordingDurationSeconds / 3600), (int)(_recordingDurationSeconds / 60) % 60, (int)(_recordingDurationSeconds % 60)];
+    } else {
+        _timeLabel.text = [NSString stringWithFormat:@"%02d:%02d", (int)(_recordingDurationSeconds / 60) % 60, (int)(_recordingDurationSeconds % 60)];
+    }
+    [_timeLabel sizeToFit];
+    
+    CGFloat inset = 8.0f;
+    CGFloat backgroundWidth = _timeLabel.frame.size.width + inset * 2.0;
+    _backgroundView.frame = CGRectMake(floor((self.frame.size.width - backgroundWidth) / 2.0), 0.0, backgroundWidth, 28.0);
+    
+    _timeLabel.frame = CGRectMake(floor((self.frame.size.width - _timeLabel.frame.size.width) / 2.0), floor((28 - _timeLabel.frame.size.height) / 2.0), _timeLabel.frame.size.width, _timeLabel.frame.size.height);
 }
 
 - (void)startRecording
@@ -67,22 +66,18 @@
     [self reset];
     
     _recordingTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(recordingTimerEvent) interval:1.0 repeat:false];
-    
-    [self playBlinkAnimation];
 }
 
 - (void)stopRecording
 {
     [_recordingTimer invalidate];
     _recordingTimer = nil;
-    
-    [self stopBlinkAnimation];
 }
 
 - (void)reset
 {
-    _timeLabel.text = @"00:00:00";
     _recordingDurationSeconds = 0;
+    [self _updateRecordingTime];
 }
 
 - (void)recordingTimerEvent
@@ -106,24 +101,6 @@
         [self _updateRecordingTime];
         _recordingTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(recordingTimerEvent) interval:1.0 repeat:false];
     }
-}
-
-- (void)playBlinkAnimation
-{
-    CAKeyframeAnimation *blinkAnim = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
-    blinkAnim.duration = 0.75f;
-    blinkAnim.autoreverses = false;
-    blinkAnim.fillMode = kCAFillModeForwards;
-    blinkAnim.repeatCount = HUGE_VALF;
-    blinkAnim.keyTimes = @[ @0.0f, @0.4f, @0.5f, @0.9f, @1.0f ];
-    blinkAnim.values = @[ @1.0f, @1.0f, @0.0f, @0.0f, @1.0f ];
-    
-    [_dotView.layer addAnimation:blinkAnim forKey:@"opacity"];
-}
-
-- (void)stopBlinkAnimation
-{
-    [_dotView.layer removeAllAnimations];
 }
 
 - (void)setHidden:(BOOL)hidden
@@ -156,7 +133,7 @@
 
 - (void)layoutSubviews
 {
-    _dotView.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - 48), 7, 6, 6);
+    [self _updateRecordingTime];
 }
 
 @end

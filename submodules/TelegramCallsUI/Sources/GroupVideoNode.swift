@@ -6,20 +6,18 @@ import SwiftSignalKit
 import AccountContext
 import ContextUI
 
-final class GroupVideoNode: ASDisplayNode {
-    static let useBlurTransparency: Bool = !UIAccessibility.isReduceTransparencyEnabled
+enum VideoNodeLayoutMode {
+    case fillOrFitToSquare
+    case fillHorizontal
+    case fillVertical
+    case fit
+}
 
+final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
     enum Position {
         case tile
         case list
         case mainstage
-    }
-    
-    enum LayoutMode {
-        case fillOrFitToSquare
-        case fillHorizontal
-        case fillVertical
-        case fit
     }
     
     let sourceContainerNode: PinchSourceContainerNode
@@ -29,15 +27,14 @@ final class GroupVideoNode: ASDisplayNode {
     
     private let backdropVideoViewContainer: UIView
     private let backdropVideoView: VideoRenderingView?
-    private var backdropEffectView: UIVisualEffectView?
-    
+
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
 
     private var isEnabled: Bool = false
     private var isBlurEnabled: Bool = false
         
-    private var validLayout: (CGSize, LayoutMode)?
+    private var validLayout: (CGSize, VideoNodeLayoutMode)?
     
     var tapped: (() -> Void)?
     
@@ -61,21 +58,6 @@ final class GroupVideoNode: ASDisplayNode {
                 
         super.init()
                 
-        if let backdropVideoView = backdropVideoView {
-            self.backdropVideoViewContainer.addSubview(backdropVideoView)
-            self.view.addSubview(self.backdropVideoViewContainer)
-            
-            let effect: UIVisualEffect
-            if #available(iOS 13.0, *) {
-                effect = UIBlurEffect(style: .systemThinMaterialDark)
-            } else {
-                effect = UIBlurEffect(style: .dark)
-            }
-            //let backdropEffectView = UIVisualEffectView(effect: effect)
-            //self.view.addSubview(backdropEffectView)
-            //self.backdropEffectView = backdropEffectView
-        }
-        
         self.videoViewContainer.addSubview(self.videoView)
         self.addSubnode(self.sourceContainerNode)
         self.containerNode.view.addSubview(self.videoViewContainer)
@@ -204,7 +186,7 @@ final class GroupVideoNode: ASDisplayNode {
         return rotatedAspect
     }
     
-    func updateLayout(size: CGSize, layoutMode: LayoutMode, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, layoutMode: VideoNodeLayoutMode, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, layoutMode)
         let bounds = CGRect(origin: CGPoint(), size: size)
         self.sourceContainerNode.update(size: size, transition: .immediate)
@@ -310,20 +292,6 @@ final class GroupVideoNode: ASDisplayNode {
 
             self.backdropVideoView?.updateIsEnabled(self.isEnabled && self.isBlurEnabled)
 
-            if self.isBlurEnabled {
-                self.backdropVideoView?.isHidden = false
-                self.backdropEffectView?.isHidden = false
-            }
-            transition.updatePosition(layer: backdropVideoView.layer, position: rotatedVideoFrame.center, force: true, completion: { [weak self] value in
-                guard let strongSelf = self, value else {
-                    return
-                }
-                if !strongSelf.isBlurEnabled {
-                    strongSelf.backdropVideoView?.updateIsEnabled(false)
-                    strongSelf.backdropVideoView?.isHidden = true
-                    strongSelf.backdropEffectView?.isHidden = false
-                }
-            })
             transition.updateBounds(layer: backdropVideoView.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
             
             let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
@@ -332,21 +300,6 @@ final class GroupVideoNode: ASDisplayNode {
             
             let transition: ContainedViewLayoutTransition = .immediate
             transition.updateTransformRotation(view: backdropVideoView, angle: angle)
-        }
-        
-        if let backdropEffectView = self.backdropEffectView {
-            let maxSide = max(bounds.width, bounds.height) + 32.0
-            let squareBounds = CGRect(x: (bounds.width - maxSide) / 2.0, y: (bounds.height - maxSide) / 2.0, width: maxSide, height: maxSide)
-            
-            if case let .animated(duration, .spring) = transition {
-                UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 500.0, initialSpringVelocity: 0.0, options: .layoutSubviews, animations: {
-                    backdropEffectView.frame = squareBounds
-                })
-            } else {
-                transition.animateView {
-                    backdropEffectView.frame = squareBounds
-                }
-            }
         }
         
         if let effectView = self.effectView {
