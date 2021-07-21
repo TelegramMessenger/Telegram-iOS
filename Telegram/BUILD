@@ -1692,6 +1692,8 @@ plist_fragment(
     <key>UIAppFonts</key>
     <array>
         <string>SFCompactRounded-Semibold.otf</string>
+        <string>AremacFS-Regular.otf</string>
+        <string>AremacFS-Semibold.otf</string>
     </array>
     <key>UIBackgroundModes</key>
     <array>

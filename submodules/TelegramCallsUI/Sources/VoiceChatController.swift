@@ -3495,7 +3495,7 @@ public final class VoiceChatController: ViewController {
                     let input = videoCapturer.video()
                     if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
-                        let controller = VoiceChatCameraPreviewController(context: strongSelf.context, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
+                        let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.context.sharedContext, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
                             if let strongSelf = self {
                                 strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
                                 (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer)
@@ -3512,29 +3512,6 @@ public final class VoiceChatController: ViewController {
                         })
                         strongSelf.controller?.present(controller, in: .window(.root))
                     }
-
-                    /*strongSelf.call.makeOutgoingVideoView(requestClone: false, completion: { [weak self] view, _ in
-                        guard let strongSelf = self, let view = view else {
-                            return
-                        }
-                        let cameraNode = GroupVideoNode(videoView: view, backdropVideoView: nil)
-                        let controller = VoiceChatCameraPreviewController(context: strongSelf.context, cameraNode: cameraNode, shareCamera: { [weak self] videoNode, unmuted in
-                            if let strongSelf = self {
-                                strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
-                                strongSelf.call.requestVideo()
-                                
-                                if let (layout, navigationHeight) = strongSelf.validLayout {
-                                    strongSelf.animatingButtonsSwap = true
-                                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
-                                }
-                            }
-                        }, switchCamera: { [weak self] in
-                            Queue.mainQueue().after(0.1) {
-                                self?.call.switchVideoCamera()
-                            }
-                        })
-                        strongSelf.controller?.present(controller, in: .window(.root))
-                    })*/
                 })
             }
         }

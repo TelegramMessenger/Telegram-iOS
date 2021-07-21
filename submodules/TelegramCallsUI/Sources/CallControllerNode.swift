@@ -26,7 +26,7 @@ private func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat 
     return (1.0 - value) * from + value * to
 }
 
-private final class CallVideoNode: ASDisplayNode {
+private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     private let videoTransformContainer: ASDisplayNode
     private let videoView: PresentationCallVideoView
     
@@ -39,6 +39,11 @@ private final class CallVideoNode: ASDisplayNode {
     private let isReadyUpdated: () -> Void
     private(set) var isReady: Bool = false
     private var isReadyTimer: SwiftSignalKit.Timer?
+    
+    private let readyPromise = ValuePromise(false)
+    var ready: Signal<Bool, NoError> {
+        return self.readyPromise.get()
+    }
     
     private let isFlippedUpdated: (CallVideoNode) -> Void
     
@@ -87,6 +92,7 @@ private final class CallVideoNode: ASDisplayNode {
                 }
                 if !strongSelf.isReady {
                     strongSelf.isReady = true
+                    strongSelf.readyPromise.set(true)
                     strongSelf.isReadyTimer?.invalidate()
                     strongSelf.isReadyUpdated()
                 }
@@ -122,6 +128,7 @@ private final class CallVideoNode: ASDisplayNode {
                 }
                 if !strongSelf.isReady {
                     strongSelf.isReady = true
+                    strongSelf.readyPromise.set(true)
                     strongSelf.isReadyUpdated()
                 }
             }, queue: .mainQueue())
@@ -175,6 +182,10 @@ private final class CallVideoNode: ASDisplayNode {
         transition.updateTransformScale(layer: maskLayer, scale: maxRadius * 2.0 / fromRect.width, completion: { [weak self] _ in
             self?.layer.mask = nil
         })
+    }
+    
+    func updateLayout(size: CGSize, layoutMode: VideoNodeLayoutMode, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, cornerRadius: self.currentCornerRadius, isOutgoing: true, deviceOrientation: .portrait, isCompactLayout: false, transition: transition)
     }
     
     func updateLayout(size: CGSize, cornerRadius: CGFloat, isOutgoing: Bool, deviceOrientation: UIDeviceOrientation, isCompactLayout: Bool, transition: ContainedViewLayoutTransition) {
@@ -582,13 +593,58 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.call.requestVideo()
                         }
                         
-                        if strongSelf.displayedCameraConfirmation {
-                            proceed()
-                        } else {
-                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
-                                proceed()
-                            })]))
-                        }
+                        strongSelf.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if let outgoingVideoView = outgoingVideoView {
+                                outgoingVideoView.view.backgroundColor = .black
+                                outgoingVideoView.view.clipsToBounds = true
+                                
+                                var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
+                                
+                                let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                }, orientationUpdated: {
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                }, isFlippedUpdated: { _ in
+                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+                                        return
+                                    }
+                                    updateLayoutImpl?(layout, navigationBarHeight)
+                                })
+                                
+                                let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { [weak self] _, _ in
+                                    if let strongSelf = self {
+                                        proceed()
+                                    }
+                                }, switchCamera: { [weak self] in
+                                    Queue.mainQueue().after(0.1) {
+                                        self?.call.switchVideoCamera()
+                                    }
+                                })
+                                strongSelf.present?(controller)
+                                
+                                updateLayoutImpl = { [weak controller] layout, navigationBarHeight in
+                                    controller?.containerLayoutUpdated(layout, transition: .immediate)
+                                }
+                            }
+                        })
+                        
+//                        if strongSelf.displayedCameraConfirmation {
+//                            proceed()
+//                        } else {
+//                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
+//                                proceed()
+//                            })]))
+//                        }
                     })
                 } else {
                     strongSelf.call.disableVideo()

@@ -93,11 +93,13 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
         let transitionFraction: CGFloat
         let icon: SemanticStatusNodeIcon
         let iconImage: UIImage?
-                
-        init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon, iconImage: UIImage?) {
+        let iconOffset: CGFloat
+        
+        init(transitionFraction: CGFloat, icon: SemanticStatusNodeIcon, iconImage: UIImage?, iconOffset: CGFloat) {
             self.transitionFraction = transitionFraction
             self.icon = icon
             self.iconImage = iconImage
+            self.iconOffset = iconOffset
             
             super.init()
         }
@@ -125,11 +127,11 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 let diameter = size.width
                 let factor = diameter / 50.0
                
-
                 let size: CGSize
                 var offset: CGFloat = 0.0
                 if let iconImage = self.iconImage {
                     size = iconImage.size
+                    offset = self.iconOffset
                 } else {
                     offset = 1.5
                     size = CGSize(width: 15.0, height: 18.0)
@@ -161,12 +163,15 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 let factor = diameter / 50.0
                 
                 let size: CGSize
+                let offset: CGFloat
                 if let iconImage = self.iconImage {
                     size = iconImage.size
+                    offset = self.iconOffset
                 } else {
                     size = CGSize(width: 15.0, height: 16.0)
+                    offset = 0.0
                 }
-                context.translateBy(x: (diameter - size.width) / 2.0, y: (diameter - size.height) / 2.0)
+                context.translateBy(x: (diameter - size.width) / 2.0 + offset, y: (diameter - size.height) / 2.0)
                 if (diameter < 40.0) {
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: factor, y: factor)
@@ -248,6 +253,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
 
     var animationNode: PlayPauseIconNode?
     var iconImage: UIImage?
+    var iconOffset: CGFloat = 0.0
     
     init(icon: SemanticStatusNodeIcon) {
         self.icon = icon
@@ -255,10 +261,20 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
         if [.play, .pause].contains(icon) {
             self.animationNode = PlayPauseIconNode()
             self.animationNode?.imageUpdated = { [weak self] image in
-                self?.iconImage = image
-                self?.requestUpdate()
+                if let strongSelf = self {
+                    strongSelf.iconImage = image
+                    if var position = strongSelf.animationNode?.state?.position {
+                        position = position * 2.0
+                        if position > 1.0 {
+                            position = 2.0 - position
+                        }
+                        strongSelf.iconOffset = (1.0 - position) * 1.5
+                    }
+                    strongSelf.requestUpdate()
+                }
             }
             self.iconImage = self.animationNode?.image
+            self.iconOffset = 1.5
         }
     }
     
@@ -269,7 +285,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
     var requestUpdate: () -> Void = {}
     
     func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeStateDrawingState {
-        return DrawingState(transitionFraction: transitionFraction, icon: self.icon, iconImage: self.iconImage)
+        return DrawingState(transitionFraction: transitionFraction, icon: self.icon, iconImage: self.iconImage, iconOffset: self.iconOffset)
     }
 }
 
