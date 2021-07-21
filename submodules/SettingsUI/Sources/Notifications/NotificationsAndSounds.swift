@@ -1008,7 +1008,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
-    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(postbox: context.account.postbox, network: context.account.network) |> map(Optional.init))
+    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(context.engine.peers.notificationExceptionsList() |> map(Optional.init))
     
     notificationExceptions.set(exceptionsSignal |> map { list -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         var users:[PeerId : NotificationExceptionWrapper] = [:]

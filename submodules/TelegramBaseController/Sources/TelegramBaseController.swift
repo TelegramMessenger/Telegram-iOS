@@ -289,7 +289,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             let disposable = MetaDisposable()
                             
                             callContextCache.impl.syncWith { impl in
-                                let callContext = impl.get(account: context.account, peerId: peerId, call: activeCall)
+                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, call: activeCall)
                                 disposable.set((callContext.context.panelData
                                 |> deliverOnMainQueue).start(next: { panelData in
                                     callContext.keep()
@@ -863,7 +863,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 return transaction.getPeerCachedData(peerId: peerId)
             }
             
-            let _ = (combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId), cachedData)
+            let _ = (combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId), cachedData)
             |> map { currentAccountPeer, availablePeers, cachedData -> ([FoundPeer], CachedPeerData?) in
                 var result = currentAccountPeer
                 result.append(contentsOf: availablePeers)

@@ -30,7 +30,7 @@ func addRecentlyUsedHashtag(transaction: Transaction, string: String) {
     }
 }
 
-public func removeRecentlyUsedHashtag(postbox: Postbox, string: String) -> Signal<Void, NoError> {
+func _internal_removeRecentlyUsedHashtag(postbox: Postbox, string: String) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let itemId = RecentHashtagItemId(string) {
             transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, itemId: itemId.rawValue)
@@ -38,7 +38,7 @@ public func removeRecentlyUsedHashtag(postbox: Postbox, string: String) -> Signa
     }
 }
 
-public func recentlyUsedHashtags(postbox: Postbox) -> Signal<[String], NoError> {
+func _internal_recentlyUsedHashtags(postbox: Postbox) -> Signal<[String], NoError> {
     return postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.RecentlyUsedHashtags)])
         |> mapToSignal { view -> Signal<[String], NoError> in
             return postbox.transaction { transaction -> [String] in

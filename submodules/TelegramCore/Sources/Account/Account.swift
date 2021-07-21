@@ -852,7 +852,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
-    public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
+    private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!

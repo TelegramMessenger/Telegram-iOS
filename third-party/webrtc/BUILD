@@ -3239,12 +3239,14 @@ arm_specific_flags = [
     "-DWEBRTC_ARCH_ARM",
     "-DWEBRTC_ARCH_ARM_V7",
     "-DWEBRTC_HAS_NEON",
+    "-DLIBYUV_NEON",
 ]
 
 arm64_specific_flags = [
     "-DWEBRTC_ARCH_ARM64",
     "-DWEBRTC_HAS_NEON",
     "-mfpu=neon",
+    "-DLIBYUV_NEON",
 ]
 
 x86_64_specific_flags = [
@@ -3513,7 +3515,6 @@ cc_library(
     copts = [
         "-ffp-contract=fast",
         "-Ithird-party/webrtc/dependencies/third_party/libyuv/include",
-        "-DLIBYUV_NEON",
     ] + arch_specific_cflags + optimization_flags,
     visibility = ["//visibility:public"],
 )

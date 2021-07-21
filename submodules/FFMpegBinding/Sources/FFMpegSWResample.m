@@ -6,11 +6,16 @@
 #import "libswresample/swresample.h"
 
 @interface FFMpegSWResample () {
-    int _sourceChannelCount;
+    int _sourceSampleRate;
+    FFMpegAVSampleFormat _sourceSampleFormat;
+    int _destinationChannelCount;
+    int _destinationSampleRate;
+    FFMpegAVSampleFormat _destinationSampleFormat;
+
+    int _currentSourceChannelCount;
+
     SwrContext *_context;
     NSUInteger _ratio;
-    NSInteger _destinationChannelCount;
-    enum FFMpegAVSampleFormat _destinationSampleFormat;
     void *_buffer;
     int _bufferSize;
 }
@@ -22,28 +27,45 @@
 - (instancetype)initWithSourceChannelCount:(NSInteger)sourceChannelCount sourceSampleRate:(NSInteger)sourceSampleRate sourceSampleFormat:(enum FFMpegAVSampleFormat)sourceSampleFormat destinationChannelCount:(NSInteger)destinationChannelCount destinationSampleRate:(NSInteger)destinationSampleRate destinationSampleFormat:(enum FFMpegAVSampleFormat)destinationSampleFormat {
     self = [super init];
     if (self != nil) {
-        _sourceChannelCount = sourceChannelCount;
-        _destinationChannelCount = destinationChannelCount;
+        _sourceSampleRate = (int)sourceSampleRate;
+        _sourceSampleFormat = sourceSampleFormat;
+        _destinationChannelCount = (int)destinationChannelCount;
+        _destinationSampleRate = (int)destinationSampleRate;
         _destinationSampleFormat = destinationSampleFormat;
-        _context = swr_alloc_set_opts(NULL,
-                                      av_get_default_channel_layout((int)destinationChannelCount),
-                                      (enum AVSampleFormat)destinationSampleFormat,
-                                      (int)destinationSampleRate,
-                                      av_get_default_channel_layout((int)sourceChannelCount),
-                                      (enum AVSampleFormat)sourceSampleFormat,
-                                      (int)sourceSampleRate,
-                                      0,
-                                      NULL);
-        _ratio = MAX(1, destinationSampleRate / MAX(sourceSampleRate, 1)) * MAX(1, destinationChannelCount / sourceChannelCount) * 2;
-        swr_init(_context);
+
+        _currentSourceChannelCount = -1;
     }
     return self;
 }
 
 - (void)dealloc {
-    swr_free(&_context);
+    if (_context) {
+        swr_free(&_context);
+    }
     if (_buffer) {
         free(_buffer);
+    }
+}
+
+- (void)resetContextForChannelCount:(int)channelCount {
+    if (_context) {
+        swr_free(&_context);
+        _context = NULL;
+    }
+
+    _context = swr_alloc_set_opts(NULL,
+                                  av_get_default_channel_layout((int)_destinationChannelCount),
+                                  (enum AVSampleFormat)_destinationSampleFormat,
+                                  (int)_destinationSampleRate,
+                                  av_get_default_channel_layout(channelCount),
+                                  (enum AVSampleFormat)_sourceSampleFormat,
+                                  (int)_sourceSampleRate,
+                                  0,
+                                  NULL);
+    _currentSourceChannelCount = channelCount;
+    _ratio = MAX(1, _destinationSampleRate / MAX(_sourceSampleRate, 1)) * MAX(1, _destinationChannelCount / channelCount) * 2;
+    if (_context) {
+        swr_init(_context);
     }
 }
 
@@ -51,7 +73,11 @@
     AVFrame *frameImpl = (AVFrame *)[frame impl];
 
     int numChannels = frameImpl->channels;
-    if (numChannels != _sourceChannelCount) {
+    if (numChannels != _currentSourceChannelCount) {
+        [self resetContextForChannelCount:numChannels];
+    }
+
+    if (!_context) {
         return nil;
     }
 

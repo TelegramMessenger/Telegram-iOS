@@ -1,3 +1,6 @@
+#if targetEnvironment(simulator)
+#else
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -650,3 +653,5 @@ class MetalVideoRenderingContext {
         commandBuffer.commit()
     }
 }
+
+#endif

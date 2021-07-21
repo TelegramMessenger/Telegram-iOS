@@ -367,7 +367,7 @@ public enum RequestUpdateChatListFilterError {
     case generic
 }
 
-public func requestUpdateChatListFilter(postbox: Postbox, network: Network, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
+func _internal_requestUpdateChatListFilter(postbox: Postbox, network: Network, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
     return postbox.transaction { transaction -> Api.DialogFilter? in
         return filter?.apiFilter(transaction: transaction)
     }
@@ -391,7 +391,7 @@ public enum RequestUpdateChatListFilterOrderError {
     case generic
 }
 
-public func requestUpdateChatListFilterOrder(account: Account, ids: [Int32]) -> Signal<Never, RequestUpdateChatListFilterOrderError> {
+func _internal_requestUpdateChatListFilterOrder(account: Account, ids: [Int32]) -> Signal<Never, RequestUpdateChatListFilterOrderError> {
     return account.network.request(Api.functions.messages.updateDialogFiltersOrder(order: ids))
     |> mapError { _ -> RequestUpdateChatListFilterOrderError in
         return .generic
@@ -781,7 +781,7 @@ struct ChatListFiltersState: PreferencesEntry, Equatable {
     }
 }
 
-public func generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
+func _internal_generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
     while true {
         let id = Int32(2 + arc4random_uniform(255 - 2))
         if !filters.contains(where: { $0.id == id }) {
@@ -790,7 +790,7 @@ public func generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
     }
 }
 
-public func updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
+func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
     return postbox.transaction { transaction -> [ChatListFilter] in
         var updated: [ChatListFilter] = []
         var hasUpdates = false
@@ -811,7 +811,7 @@ public func updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping 
     }
 }
 
-public func updateChatListFiltersInteractively(transaction: Transaction, _ f: ([ChatListFilter]) -> [ChatListFilter]) {
+func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f: ([ChatListFilter]) -> [ChatListFilter]) {
     var hasUpdates = false
     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
         var state = entry as? ChatListFiltersState ?? ChatListFiltersState.default
@@ -828,7 +828,7 @@ public func updateChatListFiltersInteractively(transaction: Transaction, _ f: ([
 }
 
 
-public func updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
+func _internal_updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
     |> map { preferences -> [ChatListFilter] in
         let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
@@ -837,7 +837,7 @@ public func updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter],
     |> distinctUntilChanged
 }
 
-public func updatedChatListFiltersInfo(postbox: Postbox) -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {
+func _internal_updatedChatListFiltersInfo(postbox: Postbox) -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
     |> map { preferences -> (filters: [ChatListFilter], synchronized: Bool) in
         let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
@@ -854,7 +854,7 @@ public func updatedChatListFiltersInfo(postbox: Postbox) -> Signal<(filters: [Ch
     })
 }
 
-public func currentChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
+func _internal_currentChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
     return postbox.transaction { transaction -> [ChatListFilter] in
         let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
         return settings.filters
@@ -941,7 +941,7 @@ public struct ChatListFiltersFeaturedState: PreferencesEntry, Equatable {
     }
 }
 
-public func markChatListFeaturedFiltersAsSeen(postbox: Postbox) -> Signal<Never, NoError> {
+func _internal_markChatListFeaturedFiltersAsSeen(postbox: Postbox) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
             guard var state = entry as? ChatListFiltersFeaturedState else {
@@ -954,7 +954,7 @@ public func markChatListFeaturedFiltersAsSeen(postbox: Postbox) -> Signal<Never,
     |> ignoreValues
 }
 
-public func unmarkChatListFeaturedFiltersAsSeen(transaction: Transaction) {
+func _internal_unmarkChatListFeaturedFiltersAsSeen(transaction: Transaction) {
     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
         guard var state = entry as? ChatListFiltersFeaturedState else {
             return entry
@@ -964,7 +964,7 @@ public func unmarkChatListFeaturedFiltersAsSeen(transaction: Transaction) {
     })
 }
 
-public func updateChatListFeaturedFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+func _internal_updateChatListFeaturedFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     return network.request(Api.functions.messages.getSuggestedDialogFilters())
     |> `catch` { _ -> Signal<[Api.DialogFilterSuggested], NoError> in
         return .single([])
@@ -1111,7 +1111,7 @@ func requestChatListFiltersSync(transaction: Transaction) {
 
 func managedChatListFilters(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { _ in
-        let updateFeaturedDisposable = updateChatListFeaturedFilters(postbox: postbox, network: network).start()
+        let updateFeaturedDisposable = _internal_updateChatListFeaturedFilters(postbox: postbox, network: network).start()
         let _ = postbox.transaction({ transaction in
             requestChatListFiltersSync(transaction: transaction)
         }).start()
@@ -1218,7 +1218,7 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
                 if !mergedFilterIds.contains(where: { $0 == filter.id }) {
                     deleteSignals = deleteSignals
                     |> then(
-                        requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: nil)
+                        _internal_requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: nil)
                         |> `catch` { _ -> Signal<Never, NoError> in
                             return .complete()
                         }
@@ -1238,7 +1238,7 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
                 if updated {
                     addSignals = addSignals
                     |> then(
-                        requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: filter)
+                        _internal_requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: filter)
                         |> `catch` { _ -> Signal<Never, NoError> in
                             return .complete()
                         }

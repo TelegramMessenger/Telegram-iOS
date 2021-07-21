@@ -2609,7 +2609,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             var hasProgress = false
                             if title != group.title {
                                 updateDataSignals.append(
-                                    updatePeerTitle(account: strongSelf.context.account, peerId: group.id, title: title)
+                                    strongSelf.context.engine.peers.updatePeerTitle(peerId: group.id, title: title)
                                     |> ignoreValues
                                     |> mapError { _ in return Void() }
                                 )
@@ -2617,7 +2617,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             }
                             if description != (data.cachedData as? CachedGroupData)?.about {
                                 updateDataSignals.append(
-                                    updatePeerDescription(account: strongSelf.context.account, peerId: group.id, description: description.isEmpty ? nil : description)
+                                    strongSelf.context.engine.peers.updatePeerDescription(peerId: group.id, description: description.isEmpty ? nil : description)
                                     |> ignoreValues
                                     |> mapError { _ in return Void() }
                                 )
@@ -2667,7 +2667,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 var hasProgress = false
                                 if title != channel.title {
                                     updateDataSignals.append(
-                                        updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
+                                        strongSelf.context.engine.peers.updatePeerTitle(peerId: channel.id, title: title)
                                         |> ignoreValues
                                         |> mapError { _ in return Void() }
                                     )
@@ -2675,7 +2675,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 }
                                 if description != (data.cachedData as? CachedChannelData)?.about {
                                     updateDataSignals.append(
-                                        updatePeerDescription(account: strongSelf.context.account, peerId: channel.id, description: description.isEmpty ? nil : description)
+                                        strongSelf.context.engine.peers.updatePeerDescription(peerId: channel.id, description: description.isEmpty ? nil : description)
                                         |> ignoreValues
                                         |> mapError { _ in return Void() }
                                     )
@@ -2752,7 +2752,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if self.isSettings {
             self.notificationExceptions.set(.single(NotificationExceptionsList(peers: [:], settings: [:]))
             |> then(
-                notificationExceptionsList(postbox: context.account.postbox, network: context.account.network)
+                context.engine.peers.notificationExceptionsList()
                 |> map(Optional.init)
             ))
             self.privacySettings.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
@@ -2837,7 +2837,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {
-                self.displayAsPeersPromise.set(cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId))
+                self.displayAsPeersPromise.set(context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId))
             }
         }
         
@@ -3072,13 +3072,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }, completed: {})
             }
-        }, storeMediaPlaybackState: { [weak self] messageId, timestamp in
+        }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
             guard let strongSelf = self else {
                 return
             }
             var storedState: MediaPlaybackStoredState?
             if let timestamp = timestamp {
-                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
+                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate) ?? .x1)
             }
             let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
         }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
@@ -3995,13 +3995,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func scheduleGroupCall() {
         self.context.scheduleGroupCall(peerId: self.peerId)
-//        
-//        
-//        let time = Int32(Date().timeIntervalSince1970 + 86400)
-//        self.activeActionDisposable.set((createGroupCall(account: self.context.account, peerId: self.peerId, title: nil, scheduleDate: time)
-//        |> deliverOnMainQueue).start(next: { [weak self] info in
-//            
-//        }))
     }
     
     private func createAndJoinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?) {
@@ -4027,7 +4020,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> runOn(Queue.mainQueue())
                 |> delay(0.15, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
-                let createSignal = createGroupCall(account: strongSelf.context.account, peerId: peerId, title: nil, scheduleDate: nil)
+                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil)
                 |> afterDisposed {
                     Queue.mainQueue().async {
                         progressDisposable.dispose()
@@ -4389,7 +4382,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                         
                         strongSelf.openVoiceChatDisplayAsPeerSelection(completion: { joinAsPeerId in
-                            let _ = updateGroupCallJoinAsPeer(account: context.account, peerId: peerId, joinAs: joinAsPeerId).start()
+                            let _ = context.engine.calls.updateGroupCallJoinAsPeer(peerId: peerId, joinAs: joinAsPeerId).start()
                             self?.openVoiceChatOptions(defaultJoinAsPeerId: joinAsPeerId, gesture: nil, contextController: c)
                         }, gesture: gesture, contextController: c, result: f, backAction: { [weak self] c in
                             self?.openVoiceChatOptions(defaultJoinAsPeerId: defaultJoinAsPeerId, gesture: nil, contextController: c)
@@ -5005,7 +4998,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if case let .image(reference, _, _, _) = item {
                 if let reference = reference {
                     if remove {
-                        let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
+                        let _ = self.context.engine.accountData.removeAccountPhoto(reference: reference).start()
                     }
                     let dismiss = self.headerNode.avatarListNode.listContainerNode.deleteItem(item)
                     if dismiss {
@@ -5046,9 +5039,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.headerNode.ignoreCollapse = false
         
         let postbox = self.context.account.postbox
-        let signal = self.isSettings ? updateAccountPhoto(account: self.context.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+        let signal = self.isSettings ? self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
             return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-        }) : updatePeerPhoto(postbox: postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peerId, photo: uploadedPeerPhoto(postbox: postbox, network: self.context.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+        }) : self.context.engine.peers.updatePeerPhoto(peerId: self.peerId, photo: self.context.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
             return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
         })
         self.updateAvatarDisposable.set((signal
@@ -5096,6 +5089,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         let account = self.context.account
+        let context = self.context
         let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
             let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
@@ -5104,7 +5098,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return nil
                 }
             }
-            let uploadInterface = LegacyLiveUploadInterface(account: account)
+            let uploadInterface = LegacyLiveUploadInterface(context: context)
             let signal: SSignal
             if let asset = asset as? AVAsset {
                 signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
@@ -5180,11 +5174,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.updateAvatarDisposable.set((signal
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
             if isSettings {
-                return updateAccountPhoto(account: account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             } else {
-                return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             }
@@ -5305,7 +5299,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     }
                     let postbox = strongSelf.context.account.postbox
-                    strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                    strongSelf.updateAvatarDisposable.set((strongSelf.context.engine.peers.updatePeerPhoto(peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                     })
                     |> deliverOnMainQueue).start(next: { result in

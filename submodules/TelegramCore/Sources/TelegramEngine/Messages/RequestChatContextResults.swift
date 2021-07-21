@@ -51,7 +51,7 @@ public struct RequestChatContextResultsResult {
     }
 }
 
-public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
+func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
     return account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
         if let bot = transaction.getPeer(botId), let peer = transaction.getPeer(peerId) {
             return (bot, peer)

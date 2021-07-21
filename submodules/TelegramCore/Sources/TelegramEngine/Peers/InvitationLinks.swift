@@ -3,11 +3,9 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-
 import SyncCore
 
-
-public func revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
+func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
@@ -58,7 +56,7 @@ public enum CreatePeerExportedInvitationError {
     case generic
 }
 
-public func createPeerExportedInvitation(account: Account, peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -85,7 +83,7 @@ public enum EditPeerExportedInvitationError {
     case generic
 }
 
-public func editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
+func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -131,7 +129,7 @@ public enum RevokeExportedInvitationResult {
     case replace(ExportedInvitation, ExportedInvitation)
 }
 
-public func revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
+func _internal_revokePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
@@ -197,7 +195,7 @@ public struct ExportedInvitations : Equatable {
     public let totalCount: Int32
 }
 
-public func peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+func _internal_peerExportedInvitations(account: Account, peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId ?? account.peerId), let adminId = apiInputUser(adminPeer) {
             var flags: Int32 = 0
@@ -244,7 +242,7 @@ public enum DeletePeerExportedInvitationError {
     case generic
 }
 
-public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<Never, DeletePeerExportedInvitationError> {
+func _internal_deletePeerExportedInvitation(account: Account, peerId: PeerId, link: String) -> Signal<Never, DeletePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<Never, DeletePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.deleteExportedChatInvite(peer: inputPeer, link: link))
@@ -258,7 +256,7 @@ public func deletePeerExportedInvitation(account: Account, peerId: PeerId, link:
     |> switchToLatest
 }
 
-public func deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Never, NoError> {
+func _internal_deleteAllRevokedPeerExportedInvitations(account: Account, peerId: PeerId, adminId: PeerId) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId), let inputAdminId = apiInputUser(adminPeer) {
             return account.network.request(Api.functions.messages.deleteRevokedExportedChatInvites(peer: inputPeer, adminId: inputAdminId))
@@ -304,7 +302,7 @@ final class CachedPeerExportedInvitations: PostboxCoding {
     let canLoadMore: Bool
     let count: Int32
     
-    public static func key(peerId: PeerId, revoked: Bool) -> ValueBoxKey {
+    static func key(peerId: PeerId, revoked: Bool) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setInt32(8, value: revoked ? 1 : 0)
@@ -317,13 +315,13 @@ final class CachedPeerExportedInvitations: PostboxCoding {
         self.count = count
     }
     
-    public init(decoder: PostboxDecoder) {
+    init(decoder: PostboxDecoder) {
         self.invitations = decoder.decodeObjectArrayForKey("invitations")
         self.canLoadMore = decoder.decodeBoolForKey("canLoadMore", orElse: false)
         self.count = decoder.decodeInt32ForKey("count", orElse: 0)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.invitations, forKey: "invitations")
         encoder.encodeBool(self.canLoadMore, forKey: "canLoadMore")
         encoder.encodeInt32(self.count, forKey: "count")
@@ -494,7 +492,7 @@ private final class PeerExportedInvitationsContextImpl {
         self.updateState()
     }
     
-    public func add(_ invite: ExportedInvitation) {
+    func add(_ invite: ExportedInvitation) {
         var results = self.results
         results.removeAll(where: { $0.link == invite.link})
         results.insert(invite, at: 0)
@@ -503,7 +501,7 @@ private final class PeerExportedInvitationsContextImpl {
         self.updateCache()
     }
     
-    public func update(_ invite: ExportedInvitation) {
+    func update(_ invite: ExportedInvitation) {
         var results = self.results
         if let index = self.results.firstIndex(where: { $0.link == invite.link }) {
             results[index] = invite
@@ -513,7 +511,7 @@ private final class PeerExportedInvitationsContextImpl {
         self.updateCache()
     }
     
-    public func remove(_ invite: ExportedInvitation) {
+    func remove(_ invite: ExportedInvitation) {
         var results = self.results
         results.removeAll(where: { $0.link == invite.link})
         self.results = results
@@ -521,7 +519,7 @@ private final class PeerExportedInvitationsContextImpl {
         self.updateCache()
     }
     
-    public func clear() {
+    func clear() {
         self.results = []
         self.count = 0
         self.updateState()
@@ -564,7 +562,7 @@ public final class PeerExportedInvitationsContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) {
+    init(account: Account, peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return PeerExportedInvitationsContextImpl(queue: queue, account: account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
@@ -629,7 +627,7 @@ final class CachedPeerInvitationImporters: PostboxCoding {
     let dates: [PeerId: Int32]
     let count: Int32
     
-    public static func key(peerId: PeerId, link: String) -> ValueBoxKey {
+    static func key(peerId: PeerId, link: String) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setInt32(8, value: Int32(HashFunctions.murMurHash32(link)))
@@ -644,13 +642,13 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         self.count = count
     }
     
-    public init(peerIds: [PeerId], dates: [PeerId: Int32], count: Int32) {
+    init(peerIds: [PeerId], dates: [PeerId: Int32], count: Int32) {
         self.peerIds = peerIds
         self.dates = dates
         self.count = count
     }
     
-    public init(decoder: PostboxDecoder) {
+    init(decoder: PostboxDecoder) {
         self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
         
         var dates: [PeerId: Int32] = [:]
@@ -666,7 +664,7 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         self.count = decoder.decodeInt32ForKey("count", orElse: 0)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
         
         var dates: [Int32] = []
@@ -859,7 +857,7 @@ public final class PeerInvitationImportersContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId, invite: ExportedInvitation) {
+    init(account: Account, peerId: PeerId, invite: ExportedInvitation) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return PeerInvitationImportersContextImpl(queue: queue, account: account, peerId: peerId, invite: invite)
@@ -879,7 +877,7 @@ public struct ExportedInvitationCreator : Equatable {
     public let revokedCount: Int32
 }
 
-public func peerExportedInvitationsCreators(account: Account, peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
+func _internal_peerExportedInvitationsCreators(account: Account, peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
     return account.postbox.transaction { transaction -> Signal<[ExportedInvitationCreator], NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var isCreator = false

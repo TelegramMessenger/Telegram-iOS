@@ -255,8 +255,6 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesMoved(touches, with: event)
-        
-        //self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
     }
     
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -272,6 +270,15 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
         if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && touchInside {
             self.pressed()
+        }
+    }
+
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let node = self.node as? HighlightableButtonNode {
+            let result = node.view.hitTest(self.view.convert(point, to: node.view), with: event)
+            return result
+        } else {
+            return super.hitTest(point, with: event)
         }
     }
     
@@ -453,7 +460,7 @@ public final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(constrainedSize: CGSize) -> CGSize {
+    public func updateLayout(constrainedSize: CGSize, isLandscape: Bool) -> CGSize {
         var nodeOrigin = CGPoint()
         var totalSize = CGSize()
         for node in self.nodes {
@@ -468,6 +475,9 @@ public final class NavigationButtonNode: ASDisplayNode {
             totalSize.height = max(totalSize.height, nodeSize.height)
             node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalSize.height - nodeSize.height) / 2.0)), size: nodeSize)
             nodeOrigin.x += node.bounds.width
+            if isLandscape {
+                nodeOrigin.x += 16.0
+            }
         }
         return totalSize
     }

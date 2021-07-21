@@ -46,7 +46,7 @@ func paneGifSearchForQuery(context: AccountContext, query: String, offset: Strin
     }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
         if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-            let results = requestContextResults(account: context.account, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
+            let results = requestContextResults(context: context, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
             |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
                 return (.contextRequestResult(user, results?.results), results != nil, results?.isStale ?? false)
             }

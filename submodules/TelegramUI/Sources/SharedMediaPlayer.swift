@@ -442,19 +442,7 @@ final class SharedMediaPlayer {
             case let .setBaseRate(baseRate):
                 self.playbackRate = baseRate
                 if let playbackItem = self.playbackItem {
-                    let rateValue: Double
-                    switch baseRate {
-                        case .x1:
-                            rateValue = 1.0
-                        case .x2:
-                            rateValue = 1.8
-                        case .x4:
-                            rateValue = 4.0
-                        case .x8:
-                            rateValue = 8.0
-                        case .x16:
-                            rateValue = 16.0
-                    }
+                    let rateValue: Double = baseRate.doubleValue
                     switch playbackItem {
                         case let .audio(player):
                             player.setBaseRate(rateValue)

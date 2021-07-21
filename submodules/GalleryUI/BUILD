@@ -28,7 +28,10 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UrlEscaping:UrlEscaping",
-        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",
