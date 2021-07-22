@@ -8,6 +8,8 @@ import re
 import codecs
 import struct
 
+from typing import Dict, List
+
 
 def _unescape_key(s):
     return s.replace('\\\n', '')
@@ -106,7 +108,7 @@ def parse_positional_arguments(string: str) -> [PositionalArgument]:
 
 
 def parse_entries(strings: [dict]) -> [Entry]:
-    entries = []
+    entries: List[Entry] = []
     pluralized = re.compile(r'^(.*?)_(0|1|2|3_10|many|any)$', re.U)
     processed_entries = set()
     for string in strings:
@@ -115,14 +117,20 @@ def parse_entries(strings: [dict]) -> [Entry]:
         if m is not None:
             raw_key = m.group(1)
 
+            positional_arguments = parse_positional_arguments(string['value'])
+
             if raw_key in processed_entries:
+                for i in range(0, len(entries)):
+                    if entries[i].name == raw_key:
+                        if len(entries[i].positional_arguments) < len(positional_arguments):
+                            entries[i].positional_arguments = positional_arguments
                 continue
             processed_entries.add(raw_key)
 
             entries.append(Entry(
                 name=raw_key,
                 is_pluralized=True,
-                positional_arguments=[]
+                positional_arguments=positional_arguments
             ))
         else:
             if key in processed_entries:
@@ -134,6 +142,18 @@ def parse_entries(strings: [dict]) -> [Entry]:
                 is_pluralized=False,
                 positional_arguments=parse_positional_arguments(string['value'])
             ))
+
+    had_error = False
+    for entry in entries:
+        if entry.is_pluralized:
+            if len(entry.positional_arguments) > 1:
+                print('Pluralized key "{}" needs to contain at most 1 positional argument, {} were provided'
+                      .format(entry.name, len(entry.positional_arguments)))
+                had_error = True
+
+    if had_error:
+        sys.exit(1)
+
     entries.sort(key=lambda x: x.name)
     return entries
 
@@ -216,7 +236,7 @@ def generate(header_path: str, implementation_path: str, data_path: str, entries
                 arguments_string = ''
                 arguments_array = ''
                 for i in range(0, num_arguments):
-                    arguments_string += ', id arg{}'.format(i)
+                    arguments_string += ', id _Nonnull arg{}'.format(i)
                     if i != 0:
                         arguments_array += ', '
                     arguments_array += '[[NSString alloc] initWithFormat:@"%@", arg{}]'.format(i)
@@ -458,8 +478,8 @@ static NSString * _Nonnull getPluralized(_PresentationStrings * _Nonnull strings
     NSString *parsedKey = [[NSString alloc] initWithFormat:@"%@%@", key, getPluralizationSuffix(strings, value)];
     NSString *formatString = getSingle(strings, parsedKey);
     NSString *stringValue = formatNumberWithGroupingSeparator(strings.groupingSeparator, value);
-    NSString *result = [[NSString alloc] initWithFormat:formatString, stringValue];
-    return result;
+    NSArray<_FormattedStringRange *> *argumentRanges = extractArgumentRanges(formatString);
+    return formatWithArgumentRanges(formatString, argumentRanges, @[stringValue]).string;
 }
 
 static NSString * _Nonnull getPluralizedIndirect(_PresentationStrings * _Nonnull strings, uint32_t keyId,
@@ -581,8 +601,7 @@ static NSString * _Nonnull getPluralizedIndirect(_PresentationStrings * _Nonnull
                     format_arguments_array += ', '
                     if argument.kind == 'd':
                         function_arguments += ', NSInteger _{}'.format(argument_index)
-                        format_arguments_array += '@(_{})'\
-                            .format(argument_index)
+                        format_arguments_array += '@(_{})'.format(argument_index)
                     elif argument.kind == '@':
                         function_arguments += ', NSString * _Nonnull _{}'.format(argument_index)
                         format_arguments_array += '_{}'.format(argument_index)
@@ -602,6 +621,13 @@ static NSString * _Nonnull getPluralizedIndirect(_PresentationStrings * _Nonnull
                 function_spec=function_spec, swift_spec=swift_spec))
 
             if entry.is_pluralized:
+                argument_format_type = ''
+                if entry.positional_arguments[0].kind == 'd':
+                    argument_format_type = '0'
+                elif entry.positional_arguments[0].kind == '@':
+                    argument_format_type = '1'
+                else:
+                    raise Exception('Unsupported argument type {}'.format(argument.kind))
                 write_string(source_file, function_spec + ''' {{
     return getPluralizedIndirect(_self, {entry_key_id}, value);
 }}'''.format(key=entry.name, entry_key_id=entry_key_id))
