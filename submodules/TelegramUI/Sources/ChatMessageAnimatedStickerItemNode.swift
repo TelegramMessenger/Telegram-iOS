@@ -1497,6 +1497,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var bounds = self.bounds
             bounds.origin.x = -translation.x
             self.bounds = bounds
+
+            self.updateAttachedAvatarNodeOffset(offset: translation.x, transition: .immediate)
             
             if let swipeToReplyNode = self.swipeToReplyNode {
                 swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
@@ -1532,6 +1534,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             bounds.origin.x = 0.0
             self.bounds = bounds
             self.layer.animateBounds(from: previousBounds, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+
+            self.updateAttachedAvatarNodeOffset(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
+
             if let swipeToReplyNode = self.swipeToReplyNode {
                 self.swipeToReplyNode = nil
                 swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in

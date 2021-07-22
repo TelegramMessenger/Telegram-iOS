@@ -18,6 +18,14 @@ final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
         self.letter = letter
         self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(letter))
     }
+
+    func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ContactListNameIndexHeader, self.id == other.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ContactListNameIndexHeaderNode(theme: self.theme, letter: self.letter)

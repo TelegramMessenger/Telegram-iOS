@@ -874,4 +874,18 @@ public class ChatMessageItemView: ListViewItemNode {
     func getStatusNode() -> ASDisplayNode? {
         return nil
     }
+
+    private var attachedAvatarNodeOffset: CGFloat = 0.0
+
+    override public func attachedHeaderNodesUpdated() {
+        self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
+    }
+
+    func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))
+            }
+        }
+    }
 }

@@ -129,6 +129,11 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
 
     final var tempHeaderSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
     final var headerSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
+
+    public internal(set) var attachedHeaderNodes: [ListViewItemHeaderNode] = []
+
+    open func attachedHeaderNodesUpdated() {
+    }
     
     final let wantsScrollDynamics: Bool
     

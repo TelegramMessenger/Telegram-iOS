@@ -42,6 +42,14 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let stickOverInsets: Bool = true
     
     let height: CGFloat = 34.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageDateHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
@@ -316,14 +324,22 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let peerId: PeerId
     let peer: Peer?
     let messageReference: MessageReference?
+    let effectiveTimestamp: Int32
     let presentationData: ChatPresentationData
     let context: AccountContext
     let controllerInteraction: ChatControllerInteraction
 
-    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
+
+        var effectiveTimestamp = message.timestamp
+        if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+            effectiveTimestamp = forwardInfo.date
+        }
+        self.effectiveTimestamp = effectiveTimestamp
+
         self.presentationData = presentationData
         self.context = context
         self.controllerInteraction = controllerInteraction
@@ -334,6 +350,17 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let stickOverInsets: Bool = false
 
     let height: CGFloat = 38.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageAvatarHeader, other.id == self.id {
+            if abs(self.effectiveTimestamp - other.effectiveTimestamp) >= 10 * 60 {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)

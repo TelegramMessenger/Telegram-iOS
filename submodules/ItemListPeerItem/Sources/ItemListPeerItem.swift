@@ -1374,6 +1374,14 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ItemListPeerItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
