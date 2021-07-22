@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import SyncCore
 import TelegramAudio
 
 private let traceEvents = false

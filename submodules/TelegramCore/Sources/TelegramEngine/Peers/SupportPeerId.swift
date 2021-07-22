@@ -3,7 +3,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func _internal_supportPeerId(account: Account) -> Signal<PeerId?, NoError> {
     return account.network.request(Api.functions.help.getSupport())

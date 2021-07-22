@@ -5,7 +5,6 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MediaResources
@@ -581,7 +580,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.accessibilityPageScrolledString = { [weak self] row, count in
             if let strongSelf = self {
-                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).0
+                return strongSelf.currentPresentationData.strings.VoiceOver_ScrollStatus(row, count).string
             } else {
                 return ""
             }

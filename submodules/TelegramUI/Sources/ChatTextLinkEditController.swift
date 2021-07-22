@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import UrlEscaping
@@ -251,7 +250,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
 
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).0, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {

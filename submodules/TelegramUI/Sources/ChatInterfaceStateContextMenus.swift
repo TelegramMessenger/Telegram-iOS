@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AsyncDisplayKit
 import Display
 import UIKit
@@ -843,12 +842,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             if !hasAutoremove {
                 for media in message.media {
-                    if media is TelegramMediaAction {
+                    if let action = media as? TelegramMediaAction {
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel {
                             if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canDeleteMessages) == true) {
                             } else {
                                 isUnremovableAction = true
                             }
+                        }
+
+                        switch action.action {
+                        case .historyScreenshot:
+                            isUnremovableAction = true
+                        default:
+                            break
                         }
                     }
                     if let file = media as? TelegramMediaFile {
@@ -1489,5 +1495,5 @@ private func stringForRemainingTime(_ duration: Int32, strings: PresentationStri
     } else {
         durationString = String(format: "%d:%02d", minutes, seconds)
     }
-    return strings.Conversation_AutoremoveRemainingTime(durationString).0
+    return strings.Conversation_AutoremoveRemainingTime(durationString).string
 }

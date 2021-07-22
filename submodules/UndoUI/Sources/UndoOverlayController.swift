@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
-import SyncCore
 import Postbox
 import TelegramCore
 import AccountContext

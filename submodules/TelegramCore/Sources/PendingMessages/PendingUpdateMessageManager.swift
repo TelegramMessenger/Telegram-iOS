@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import SyncCore
 import Postbox
 
 private final class PendingUpdateMessageContext {

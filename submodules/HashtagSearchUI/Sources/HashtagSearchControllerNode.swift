@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ChatListUI
@@ -33,7 +32,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.query = query
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.toolbarBackgroundNode = NavigationBackgroundNode(color: theme.rootController.navigationBar.blurredBackgroundColor)

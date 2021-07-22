@@ -13,6 +13,8 @@ public protocol ListViewItemHeader: AnyObject {
     var stickDirection: ListViewItemHeaderStickDirection { get }
     var height: CGFloat { get }
     var stickOverInsets: Bool { get }
+
+    func combinesWith(other: ListViewItemHeader) -> Bool
     
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?)
@@ -25,6 +27,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     final private(set) var internalStickLocationDistanceFactor: CGFloat = 0.0
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
+    weak var attachedToItemNode: ListViewItemNode?
     
     var item: ListViewItemHeader?
     

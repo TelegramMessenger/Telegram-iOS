@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MtProtoKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -347,14 +346,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
         case let .peerName(name, parameter):
             return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                return context.account.postbox.transaction { transaction -> Peer? in
-                    if let peerId = peerId {
-                        return transaction.getPeer(peerId)
-                    } else {
-                        return nil
-                    }
-                }
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                return .single(peer?._asPeer())
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {

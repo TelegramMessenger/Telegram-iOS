@@ -4,9 +4,9 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import Postbox
-import SyncCore
 import AccountContext
 import AvatarNode
+import TelegramCore
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -42,6 +42,14 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let stickOverInsets: Bool = true
     
     let height: CGFloat = 34.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageDateHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
@@ -145,10 +153,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             if timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.Weekday_Today
             } else {
-                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").0
+                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").string
             }
         } else {
-            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
         }
         
         if scheduled {
@@ -157,7 +165,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             } else if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.ScheduledMessages_ScheduledToday
             } else {
-                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).string
             }
         }
         self.text = text
@@ -316,14 +324,22 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let peerId: PeerId
     let peer: Peer?
     let messageReference: MessageReference?
+    let effectiveTimestamp: Int32
     let presentationData: ChatPresentationData
     let context: AccountContext
     let controllerInteraction: ChatControllerInteraction
 
-    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
+
+        var effectiveTimestamp = message.timestamp
+        if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+            effectiveTimestamp = forwardInfo.date
+        }
+        self.effectiveTimestamp = effectiveTimestamp
+
         self.presentationData = presentationData
         self.context = context
         self.controllerInteraction = controllerInteraction
@@ -334,6 +350,17 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let stickOverInsets: Bool = false
 
     let height: CGFloat = 38.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageAvatarHeader, other.id == self.id {
+            if abs(self.effectiveTimestamp - other.effectiveTimestamp) >= 10 * 60 {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)

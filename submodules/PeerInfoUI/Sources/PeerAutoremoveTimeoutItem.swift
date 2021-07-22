@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
@@ -196,7 +195,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                 if item.availableValues[index] == Int32.max {
                     text = item.presentationData.strings.AutoremoveSetup_TimerValueNever
                 } else {
-                    text = item.presentationData.strings.AutoremoveSetup_TimerValueAfter(timeIntervalString(strings: item.presentationData.strings, value: item.availableValues[index])).0
+                    text = item.presentationData.strings.AutoremoveSetup_TimerValueAfter(timeIntervalString(strings: item.presentationData.strings, value: item.availableValues[index])).string
                 }
                 return makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
             }

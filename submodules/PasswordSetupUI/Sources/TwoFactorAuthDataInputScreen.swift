@@ -639,7 +639,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                                     case let .limitExceeded(retryAtTimestamp):
                                                         if let retryAtTimestamp = retryAtTimestamp {
                                                             let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string
                                                         } else {
                                                             text = presentationData.strings.TwoStepAuth_FloodError
                                                         }
@@ -679,7 +679,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                                     case let .limitExceeded(retryAtTimestamp):
                                                         if let retryAtTimestamp = retryAtTimestamp {
                                                             let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string
                                                         } else {
                                                             text = presentationData.strings.TwoStepAuth_FloodError
                                                         }
@@ -743,7 +743,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                                 case let .limitExceeded(retryAtTimestamp):
                                     if let retryAtTimestamp = retryAtTimestamp {
                                         let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                                        text = strongSelf.presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: strongSelf.presentationData.strings, value: remainingSeconds)).0
+                                        text = strongSelf.presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: strongSelf.presentationData.strings, value: remainingSeconds)).string
                                     } else {
                                         text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
                                     }
@@ -1378,12 +1378,12 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             ]
         case let .passwordRecoveryEmail(emailPattern, _):
             title = presentationData.strings.TwoFactorSetup_EmailVerification_Title
-            let (rawText, ranges) = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
+            let formattedString = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
 
             let string = NSMutableAttributedString()
-            string.append(NSAttributedString(string: rawText, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
-            for (_, range) in ranges {
-                string.addAttribute(.font, value: Font.semibold(16.0), range: range)
+            string.append(NSAttributedString(string: formattedString.string, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+            for range in formattedString.ranges {
+                string.addAttribute(.font, value: Font.semibold(16.0), range: range.range)
             }
 
             text = string
@@ -1405,12 +1405,12 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             ]
         case let .emailConfirmation(_, emailPattern, _):
             title = presentationData.strings.TwoFactorSetup_EmailVerification_Title
-            let (rawText, ranges) = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
+            let formattedString = presentationData.strings.TwoFactorSetup_EmailVerification_Text(emailPattern)
 
             let string = NSMutableAttributedString()
-            string.append(NSAttributedString(string: rawText, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
-            for (_, range) in ranges {
-                string.addAttribute(.font, value: Font.semibold(16.0), range: range)
+            string.append(NSAttributedString(string: formattedString.string, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+            for range in formattedString.ranges {
+                string.addAttribute(.font, value: Font.semibold(16.0), range: range.range)
             }
             
             text = string

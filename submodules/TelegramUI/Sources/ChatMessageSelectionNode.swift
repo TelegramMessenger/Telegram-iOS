@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
 import CheckNode
-import SyncCore
+import TelegramCore
 
 final class ChatMessageSelectionNode: ASDisplayNode {
     private let toggle: (Bool) -> Void

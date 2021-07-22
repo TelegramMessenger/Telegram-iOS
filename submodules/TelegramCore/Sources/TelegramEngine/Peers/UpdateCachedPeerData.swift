@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-import SyncCore
 
 func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Bool, NoError> {
     return postbox.combinedView(keys: [.basicPeer(rawPeerId)])

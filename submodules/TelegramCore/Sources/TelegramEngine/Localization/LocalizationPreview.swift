@@ -3,7 +3,6 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 
-import SyncCore
 
 public enum RequestLocalizationPreviewError {
     case generic

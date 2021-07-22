@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MtProtoKit
 import ItemListUI
@@ -259,7 +258,7 @@ private func proxySettingsControllerEntries(theme: PresentationTheme, strings: P
                     var text = strings.SocksProxySetup_ProxyStatusConnected
                     if case let .available(rtt) = status {
                         let pingTime: Int = Int(rtt * 1000.0)
-                        text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
+                        text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string)"
                     }
                     displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: true)
             }
@@ -280,7 +279,7 @@ private func proxySettingsControllerEntries(theme: PresentationTheme, strings: P
                     displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: false)
                 case let .available(rtt):
                     let pingTime: Int = Int(rtt * 1000.0)
-                    text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)"
+                    text = text + ", \(strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string)"
                     displayStatus = DisplayProxyServerStatus(activity: false, text: text, textActive: false)
             }
         }

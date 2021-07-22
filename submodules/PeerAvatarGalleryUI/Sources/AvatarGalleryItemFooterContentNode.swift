@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
@@ -110,7 +109,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 if let date = date {
-                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).0
+                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).string
                 }
                 
                 if (!videoRepresentations.isEmpty) {

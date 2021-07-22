@@ -4,7 +4,6 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 
 private func hasFirstResponder(_ view: UIView) -> Bool {

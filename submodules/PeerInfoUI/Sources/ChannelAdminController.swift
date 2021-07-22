@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -736,7 +735,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             let rankEnabled = !state.updating && canEdit
             entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
-            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
+            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string))
         }
         
         if canDismiss {
@@ -1059,9 +1058,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         if let admin = adminView.peers[adminView.peerId] {
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
                                             }
                                         }
                                     case .notMutualContact:
@@ -1143,9 +1142,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         case .restricted:
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
                                             }
                                         case .notMutualContact:
                                             if case .broadcast = channel.info {
@@ -1204,7 +1203,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateRightsDisposable.set((context.engine.peers.addGroupAdmin(peerId: peerId, adminId: adminId)
                             |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
@@ -1264,7 +1263,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     if case let .addMemberError(error) = error {
                                         var text = presentationData.strings.Login_UnknownError
                                         if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
                                         } else if case .tooMuchJoined = error {
                                             text = presentationData.strings.Invite_ChannelsTooMuch
                                         }

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private let phoneNumberKeyPrefix: ValueBoxKey = {
     let result = ValueBoxKey(length: 1)

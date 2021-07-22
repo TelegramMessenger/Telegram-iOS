@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramNotices
@@ -172,7 +171,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 let adjustedIndex = results.messageIndices.count - 1 - index
                 resultIndex = index
-                resultsText = interfaceState.strings.Items_NOfM("\(adjustedIndex + 1)", "\(displayTotalCount)").0
+                resultsText = interfaceState.strings.Items_NOfM("\(adjustedIndex + 1)", "\(displayTotalCount)").string
             } else {
                 resultsText = interfaceState.strings.Conversation_SearchNoResults
             }

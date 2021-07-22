@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Display
 import Postbox
 import AsyncDisplayKit

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import GradientBackground
 import TelegramPresentationData
-import SyncCore
 import TelegramCore
 import AccountContext
 import SwiftSignalKit

@@ -3,7 +3,6 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import AppBundle
 
 private func generateLineImage(color: UIColor) -> UIImage? {

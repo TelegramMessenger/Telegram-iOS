@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import MtProtoKit
 
-import SyncCore
 
 private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: SecretChatEncryptionMode) -> (aesKey: Data, aesIv: Data) {
     switch mode {

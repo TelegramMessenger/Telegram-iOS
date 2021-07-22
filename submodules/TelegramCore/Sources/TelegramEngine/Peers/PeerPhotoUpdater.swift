@@ -4,7 +4,6 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 
-import SyncCore
 
 public enum UpdatePeerPhotoStatus {
     case progress(Float)

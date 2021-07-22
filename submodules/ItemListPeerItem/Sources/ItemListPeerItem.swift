@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -1374,6 +1373,14 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
+    }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ItemListPeerItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
     }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {

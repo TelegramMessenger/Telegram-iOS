@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramApi
-import SyncCore
 
 public enum ServerProvidedSuggestion: String {
     case autoarchivePopular = "AUTOARCHIVE_POPULAR"

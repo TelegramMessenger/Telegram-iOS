@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -314,12 +313,12 @@ public final class SecretMediaPreviewController: ViewController {
                                 let text: String
                                 if let file = media as? TelegramMediaFile {
                                     if file.isAnimated {
-                                        text = strongSelf.presentationData.strings.SecretGIF_NotViewedYet(peerTitle).0
+                                        text = strongSelf.presentationData.strings.SecretGIF_NotViewedYet(peerTitle).string
                                     } else {
-                                        text = strongSelf.presentationData.strings.SecretVideo_NotViewedYet(peerTitle).0
+                                        text = strongSelf.presentationData.strings.SecretVideo_NotViewedYet(peerTitle).string
                                     }
                                 } else {
-                                    text = strongSelf.presentationData.strings.SecretImage_NotViewedYet(peerTitle).0
+                                    text = strongSelf.presentationData.strings.SecretImage_NotViewedYet(peerTitle).string
                                 }
                                 contentNode.setText(text)
                                 strongSelf.controllerNode.updatePresentationState({

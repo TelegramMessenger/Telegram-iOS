@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import AVFoundation
@@ -1920,7 +1919,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         
                                         let text: String
                                         if let title = title {
-                                            text = presentationData.strings.VoiceChat_YouCanNowSpeakIn(title).0
+                                            text = presentationData.strings.VoiceChat_YouCanNowSpeakIn(title).string
                                         } else {
                                             text = presentationData.strings.VoiceChat_YouCanNowSpeak
                                         }

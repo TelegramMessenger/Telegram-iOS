@@ -8,7 +8,6 @@ swift_library(
     ]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/AccountContext:AccountContext",

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Postbox
-import SyncCore
 import TelegramCore
 import SwiftSignalKit
 import AccountContext

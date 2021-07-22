@@ -1,6 +1,5 @@
 import UIKit
 import Display
-import SyncCore
 import TelegramCore
 import AccountContext
 import SwiftSignalKit

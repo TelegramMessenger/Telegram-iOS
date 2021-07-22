@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 
 enum SecureIdVerificationLocalDocumentState: Equatable {
     case uploading(Float)

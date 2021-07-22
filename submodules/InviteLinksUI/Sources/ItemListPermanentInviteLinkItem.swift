@@ -4,13 +4,13 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import AccountContext
 import TelegramPresentationData
 import ItemListUI
 import SolidRoundedButtonNode
 import AnimatedAvatarSetNode
 import ShimmerEffect
+import TelegramCore
 
 private func actionButtonImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in

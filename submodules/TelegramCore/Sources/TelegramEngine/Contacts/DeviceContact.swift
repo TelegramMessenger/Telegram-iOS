@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-import SyncCore
 
 public struct DeviceContactNormalizedPhoneNumber: Hashable, RawRepresentable {
     public let rawValue: String

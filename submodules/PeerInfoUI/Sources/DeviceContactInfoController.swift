@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MessageUI
 import TelegramPresentationData
 import ItemListUI
@@ -690,11 +689,11 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             }
             
             if contactData.basicData.phoneNumbers.isEmpty {
-                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(personCompactName).0))
+                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(personCompactName).string))
             }
             if shareViaException {
                 entries.append(.phoneNumberShareViaException(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactException, state.addToPrivacyExceptions))
-                entries.append(.phoneNumberShareViaExceptionInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactExceptionInfo(personCompactName).0))
+                entries.append(.phoneNumberShareViaExceptionInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactExceptionInfo(personCompactName).string))
             }
         }
     } else {
@@ -798,7 +797,7 @@ private final class DeviceContactInfoController: ItemListController, MFMessageCo
             composer.messageComposeDelegate = self
             composer.recipients = Array(Set(numbers))
             let url = presentationData.strings.InviteText_URL
-            let body = presentationData.strings.InviteText_SingleContact(url).0
+            let body = presentationData.strings.InviteText_SingleContact(url).string
             composer.body = body
             self.composer = composer
             if let window = self.view.window {

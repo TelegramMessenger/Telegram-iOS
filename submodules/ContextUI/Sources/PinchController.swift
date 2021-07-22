@@ -6,7 +6,6 @@ import TelegramPresentationData
 import TextSelectionNode
 import ReactionSelectionNode
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 
 private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {

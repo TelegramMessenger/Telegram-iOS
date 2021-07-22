@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -337,12 +336,12 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         
         self.emptyQueryListNode = ListView()
         self.emptyQueryListNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.emptyResultsTitleNode = ImmediateTextNode()
@@ -817,7 +816,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                                     if peer.id == participant.peer.id {
                                                         label = presentationData.strings.Channel_Management_LabelAdministrator
                                                     } else {
-                                                        label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                        label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                     }
                                                 }
                                             }
@@ -844,7 +843,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                                label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             }
                                         default:
                                             break
@@ -1121,7 +1120,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                                 if peer.id == participant.peer.id {
                                                     label = presentationData.strings.Channel_Management_LabelAdministrator
                                                 } else {
-                                                    label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                    label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                 }
                                             }
                                         }
@@ -1148,7 +1147,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                     case let .member(_, _, _, banInfo, _):
                                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                            label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                            label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                         }
                                     default:
                                         break
@@ -1351,7 +1350,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 strongSelf.listNode.isHidden = !isSearching
                 strongSelf.emptyQueryListNode.isHidden = isSearching
                                 
-                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.ChatList_Search_NoResultsQueryDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.ChatList_Search_NoResultsQueryDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                 
                 let emptyResults = transition.isSearching && transition.isEmpty
                 strongSelf.emptyResultsTitleNode.isHidden = !emptyResults

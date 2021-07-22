@@ -2,7 +2,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import UserNotifications
 import Intents
 import Postbox
@@ -414,8 +413,7 @@ final class SharedApplicationContext {
         }, appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
-            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
-                //Logger.shared.log("data", "\(jsonString)")
+            if let data = data, let _ = String(data: data, encoding: .utf8) {
             } else {
                 Logger.shared.log("data", "can't deserialize")
             }
@@ -632,6 +630,8 @@ final class SharedApplicationContext {
                     case .denied, .restricted:
                         return .denied
                     case .notDetermined:
+                        return .notDetermined
+                    @unknown default:
                         return .notDetermined
                 }
             } else {
@@ -2156,7 +2156,6 @@ final class SharedApplicationContext {
             let muteMediaMessageCategory = UIMutableUserNotificationCategory()
             muteMediaMessageCategory.identifier = "withMuteMedia"
             
-            let categories = [unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory]
             let settings = UIUserNotificationSettings(types: [.badge, .sound, .alert], categories: [])
             UIApplication.shared.registerUserNotificationSettings(settings)
             UIApplication.shared.registerForRemoteNotifications()
@@ -2190,9 +2189,7 @@ final class SharedApplicationContext {
     
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
-        return;
-        #endif
-        
+        #else
         guard let buildConfig = self.buildConfig, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
             return
         }
@@ -2237,6 +2234,7 @@ final class SharedApplicationContext {
                 }))
             }
         }
+        #endif
     }
     
     override var next: UIResponder? {

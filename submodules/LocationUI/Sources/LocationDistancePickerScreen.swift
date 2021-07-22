@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import SolidRoundedButtonNode
@@ -394,10 +393,10 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             let distance = self.usesMetricSystem ? "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceKM)" : "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceMI)"
             
-            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).string
             var longTitle: String?
             if let displayTitle = self.compactDisplayTitle, let (layout, _) = self.containerLayout {
-                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).0
+                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).string
                 let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
                 
                 self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .black)
@@ -408,7 +407,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             self.doneButton.title = longTitle ?? shortTitle
     
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).0, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).string, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
             if let (layout, navigationBarHeight) = self.containerLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }

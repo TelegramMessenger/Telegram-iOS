@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public func removeSavedLocalization(transaction: Transaction, languageCode: String) {
     updateLocalizationListStateInteractively(transaction: transaction, { state in

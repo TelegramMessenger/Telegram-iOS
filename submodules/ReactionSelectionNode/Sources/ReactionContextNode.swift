@@ -3,7 +3,6 @@ import AsyncDisplayKit
 import Display
 import AnimatedStickerNode
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 
 public final class ReactionContextItem {

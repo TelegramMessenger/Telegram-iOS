@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import LegacyComponents
@@ -17,7 +16,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                 let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query, scope: .mention).start(next: { peers in
                     let users = NSMutableArray()
                     for peer in peers {
-                        if let peer = peer as? TelegramUser {
+                        if case let .user(peer) = peer {
                             let user = TGUser()
                             user.uid = peer.id.id._internalGetInt32Value()
                             user.firstName = peer.firstName
