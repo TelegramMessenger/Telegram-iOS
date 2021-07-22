@@ -88,6 +88,9 @@ final class TwitchEmbedImplementation: WebEmbedImplementation {
     func seek(timestamp: Double) {
     }
     
+    func setBaseRate(_ baseRate: Double) {
+    }
+    
     func pageReady() {
 //        Queue.mainQueue().after(delay: 0.5) {
 //            if let onPlaybackStarted = self.onPlaybackStarted {

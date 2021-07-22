@@ -282,17 +282,7 @@
             } completion:nil];
         };
         [self addSubview:_zoomView];
-    
-        _flashControl.becameActive = ^
-        {
-            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
             
-            if (strongSelf->_modeControl.cameraMode == PGCameraModeVideo)
-                [strongSelf->_timecodeView setHidden:true animated:true];
-        };
-        
         _flashControl.modeChanged = ^(PGCameraFlashMode mode)
         {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
@@ -301,9 +291,6 @@
             
             if (strongSelf.flashModeChanged != nil)
                 strongSelf.flashModeChanged(mode);
-            
-            if (strongSelf->_modeControl.cameraMode == PGCameraModeVideo)
-                [strongSelf->_timecodeView setHidden:false animated:true];
         };
         
         _modeControl.modeChanged = ^(PGCameraMode mode, PGCameraMode previousMode)

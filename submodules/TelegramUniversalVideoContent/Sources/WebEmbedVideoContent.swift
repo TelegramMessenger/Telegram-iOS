@@ -172,6 +172,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     }
     
     func setBaseRate(_ baseRate: Double) {
+        self.playerNode.setBaseRate(baseRate)
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

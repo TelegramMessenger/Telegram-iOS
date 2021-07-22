@@ -21,6 +21,7 @@ import TextSelectionNode
 import UrlEscaping
 import UndoUI
 import ManagedAnimationNode
+import TelegramUniversalVideoContent
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -592,6 +593,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     default:
                         break
                     }
+                }
+            } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
+                let type = webEmbedType(content: content)
+                switch type {
+                    case .youtube, .vimeo:
+                        canFullscreen = true
+                    default:
+                        break
                 }
             }
         }
