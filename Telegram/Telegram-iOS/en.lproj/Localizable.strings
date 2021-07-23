@@ -6556,7 +6556,9 @@ Sorry for the inconvenience.";
 "TwoFactorRemember.Done.Text" = "You still remember your password.";
 "TwoFactorRemember.Done.Action" = "Back to Settings";
 
+"VoiceChat.VideoPreviewPhoneScreen" = "Phone Screen";
+"VoiceChat.VideoPreviewTabletScreen" = "Phone Screen";
 "VoiceChat.VideoPreviewFrontCamera" = "Front Camera";
 "VoiceChat.VideoPreviewBackCamera" = "Back Camera";
 "VoiceChat.VideoPreviewContinue" = "Continue";
-"VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen, including notifications, will be shared.";
+"VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen\nwill be shared";

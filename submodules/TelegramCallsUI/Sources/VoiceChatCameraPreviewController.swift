@@ -121,7 +121,6 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
-    private let effectNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
@@ -129,18 +128,13 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     private let shimmerNode: ShimmerEffectForegroundNode
     private let doneButton: SolidRoundedButtonNode
     private var broadcastPickerView: UIView?
-    private let cancelButton: SolidRoundedButtonNode
+    private let cancelButton: HighlightableButtonNode
     
-    private let microphoneButton: HighlightTrackingButtonNode
-    private let microphoneEffectView: UIVisualEffectView
-    private let microphoneIconNode: VoiceChatMicrophoneNode
-        
     private let placeholderTextNode: ImmediateTextNode
     private let placeholderIconNode: ASImageNode
     
-    private let tabsNode: TabsSegmentedControlNode
-    private var selectedTabIndex: Int = 0
-    
+    private var wheelNode: WheelControlNode
+    private var selectedTabIndex: Int = 1
     private var containerLayout: (ContainerViewLayout, CGFloat)?
 
     private var applicationStateDisposable: Disposable?
@@ -176,25 +170,17 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.backgroundNode.clipsToBounds = true
         self.backgroundNode.cornerRadius = 16.0
         
-        let backgroundColor = UIColor(rgb: 0x1c1c1e)
-        let textColor: UIColor = .white
-        let buttonColor: UIColor = UIColor(rgb: 0x2b2b2f)
-        let buttonTextColor: UIColor = .white
-        let blurStyle: UIBlurEffect.Style = .dark
-        
-        self.effectNode = ASDisplayNode(viewBlock: {
-            return UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
-        })
-        
+        let backgroundColor = UIColor(rgb: 0x000000)
+    
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         let title =  self.presentationData.strings.VoiceChat_VideoPreviewTitle
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: UIColor(rgb: 0xffffff))
                 
-        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: accentColor, foregroundColor: .white), font: .bold, height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0xffffff), foregroundColor: UIColor(rgb: 0x4f5352)), font: .bold, height: 48.0, cornerRadius: 24.0, gloss: false)
         self.doneButton.title = self.presentationData.strings.VoiceChat_VideoPreviewContinue
         
         if #available(iOS 12.0, *) {
@@ -206,8 +192,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
             self.broadcastPickerView = broadcastPickerView
         }
         
-        self.cancelButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .regular, height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.cancelButton.title = self.presentationData.strings.Common_Cancel
+        self.cancelButton = HighlightableButtonNode()
+        self.cancelButton.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: UIColor(rgb: 0xffffff)), for: [])
         
         self.previewContainerNode = ASDisplayNode()
         self.previewContainerNode.clipsToBounds = true
@@ -217,19 +203,6 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.shimmerNode = ShimmerEffectForegroundNode(size: 200.0)
         self.previewContainerNode.addSubnode(self.shimmerNode)
                 
-        self.microphoneButton = HighlightTrackingButtonNode()
-        self.microphoneButton.isSelected = true
-        self.microphoneEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
-        self.microphoneEffectView.clipsToBounds = true
-        self.microphoneEffectView.layer.cornerRadius = 24.0
-        self.microphoneEffectView.isUserInteractionEnabled = false
-        
-        self.microphoneIconNode = VoiceChatMicrophoneNode()
-//        self.microphoneIconNode.alpha = 0.75
-        self.microphoneIconNode.update(state: .init(muted: false, filled: true, color: .white), animated: false)
-        
-        self.tabsNode = TabsSegmentedControlNode(items: [TabsSegmentedControlNode.Item(title: "Front Camera"), TabsSegmentedControlNode.Item(title: "Back Camera"), TabsSegmentedControlNode.Item(title: "Share Screen")], selectedIndex: 0)
-        
         self.placeholderTextNode = ImmediateTextNode()
         self.placeholderTextNode.alpha = 0.0
         self.placeholderTextNode.maximumNumberOfLines = 3
@@ -239,6 +212,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.placeholderIconNode.alpha = 0.0
         self.placeholderIconNode.contentMode = .scaleAspectFit
         self.placeholderIconNode.displaysAsynchronously = false
+        
+        self.wheelNode = WheelControlNode(items: [WheelControlNode.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewPhoneScreen), WheelControlNode.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewFrontCamera), WheelControlNode.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewBackCamera)], selectedIndex: self.selectedTabIndex)
         
         super.init()
         
@@ -254,41 +229,34 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.wrappingScrollNode.addSubnode(self.backgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         
-        self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
+        self.contentContainerNode.addSubnode(self.previewContainerNode)
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.doneButton)
         if let broadcastPickerView = self.broadcastPickerView {
             self.contentContainerNode.view.addSubview(broadcastPickerView)
         }
         self.contentContainerNode.addSubnode(self.cancelButton)
-        
-        self.contentContainerNode.addSubnode(self.previewContainerNode)
-        
+                
         self.previewContainerNode.addSubnode(self.cameraNode)
         
         self.previewContainerNode.addSubnode(self.placeholderIconNode)
         self.previewContainerNode.addSubnode(self.placeholderTextNode)
         
-        if self.cameraNode is GroupVideoNode {
-            self.previewContainerNode.addSubnode(self.microphoneButton)
-            self.microphoneButton.view.addSubview(self.microphoneEffectView)
-            self.microphoneButton.addSubnode(self.microphoneIconNode)
-        }
-        self.previewContainerNode.addSubnode(self.tabsNode)
-        
-        self.tabsNode.selectedIndexChanged = { [weak self] index in
+        self.previewContainerNode.addSubnode(self.wheelNode)
+
+        self.wheelNode.selectedIndexChanged = { [weak self] index in
             if let strongSelf = self {
-                if (index == 0 && strongSelf.selectedTabIndex == 1) || (index == 1 && strongSelf.selectedTabIndex == 0) {
+                if (index == 1 && strongSelf.selectedTabIndex == 2) || (index == 2 && strongSelf.selectedTabIndex == 1) {
                     strongSelf.switchCamera?()
                 }
-                if index == 2 && [0, 1].contains(strongSelf.selectedTabIndex) {
+                if index == 0 && [1, 2].contains(strongSelf.selectedTabIndex) {
                     strongSelf.broadcastPickerView?.isHidden = false
                     strongSelf.cameraNode.updateIsBlurred(isBlurred: true, light: false, animated: true)
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
                     transition.updateAlpha(node: strongSelf.placeholderTextNode, alpha: 1.0)
                     transition.updateAlpha(node: strongSelf.placeholderIconNode, alpha: 1.0)
-                } else if [0, 1].contains(index) && strongSelf.selectedTabIndex == 2 {
+                } else if [1, 2].contains(index) && strongSelf.selectedTabIndex == 0 {
                     strongSelf.broadcastPickerView?.isHidden = true
                     strongSelf.cameraNode.updateIsBlurred(isBlurred: false, light: false, animated: true)
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
@@ -301,27 +269,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.shareCamera?(strongSelf.microphoneButton.isSelected)
+                strongSelf.shareCamera?(true)
             }
         }
-        self.cancelButton.pressed = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.cancel?()
-            }
-        }
-        
-        self.microphoneButton.addTarget(self, action: #selector(self.microphonePressed), forControlEvents: .touchUpInside)
-        self.microphoneButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
-                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 0.9)
-                } else {
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
-                    transition.updateSublayerTransformScale(node: strongSelf.microphoneButton, scale: 1.0)
-                }
-            }
-        }
+        self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         
         self.readyDisposable.set(self.cameraNode.ready.start(next: { [weak self] ready in
             if let strongSelf = self, ready {
@@ -337,13 +288,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.readyDisposable.dispose()
         self.applicationStateDisposable?.dispose()
     }
-    
-    @objc private func microphonePressed() {
-        self.hapticFeedback.impact(.light)
-        self.microphoneButton.isSelected = !self.microphoneButton.isSelected
-        self.microphoneIconNode.update(state: .init(muted: !self.microphoneButton.isSelected, filled: true, color: .white), animated: true)
-    }
-            
+       
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
     }
@@ -351,9 +296,35 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
     override func didLoad() {
         super.didLoad()
         
+        let leftSwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.leftSwipeGesture))
+        leftSwipeGestureRecognizer.direction = .left
+        let rightSwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.rightSwipeGesture))
+        rightSwipeGestureRecognizer.direction = .right
+        
+        self.view.addGestureRecognizer(leftSwipeGestureRecognizer)
+        self.view.addGestureRecognizer(rightSwipeGestureRecognizer)
+        
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+    }
+    
+    @objc func leftSwipeGesture() {
+        if self.selectedTabIndex < 2 {
+            self.wheelNode.setSelectedIndex(self.selectedTabIndex + 1, animated: true)
+            self.wheelNode.selectedIndexChanged(self.wheelNode.selectedIndex)
+        }
+    }
+    
+    @objc func rightSwipeGesture() {
+        if self.selectedTabIndex > 0 {
+            self.wheelNode.setSelectedIndex(self.selectedTabIndex - 1, animated: true)
+            self.wheelNode.selectedIndexChanged(self.wheelNode.selectedIndex)
+        }
+    }
+    
+    @objc func cancelPressed() {
+        self.cancel?()
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -448,77 +419,60 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         }
         
         var insets = layout.insets(options: [.statusBar, .input])
-        let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
-        
-        var buttonOffset: CGFloat = 60.0
-        let bottomInset: CGFloat = isTablet ? 31.0 : 10.0 + cleanInsets.bottom
-        let titleHeight: CGFloat = 54.0
-        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
-        let innerContentHeight: CGFloat = layout.size.height - contentHeight - 160.0
-        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+    
+        let contentSize: CGSize
         if isLandscape {
             if isTablet {
-                width = 870.0
-                contentHeight = 690.0
+                contentSize = CGSize(width: 870.0, height: 690.0)
             } else {
-                contentHeight = layout.size.height
-                width = layout.size.width
+                contentSize = CGSize(width: layout.size.width, height: layout.size.height)
             }
         } else {
             if isTablet {
-                width = 600.0
-                contentHeight = 960.0
+                contentSize = CGSize(width: 600.0, height: 960.0)
             } else {
-                contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + innerContentHeight + buttonOffset
+                contentSize = CGSize(width: layout.size.width, height: layout.size.height - insets.top - 8.0)
             }
         }
         
-        let previewInset: CGFloat = 16.0
-        let sideInset = floor((layout.size.width - width) / 2.0)
+        let sideInset = floor((layout.size.width - contentSize.width) / 2.0)
         let contentFrame: CGRect
         if isTablet {
-            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((layout.size.height - contentHeight) / 2.0)), size: CGSize(width: width, height: contentHeight))
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
         } else {
-            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
+            contentFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentSize.height), size: contentSize)
         }
-        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height))
+        var backgroundFrame = contentFrame
         if !isTablet {
             backgroundFrame.size.height += 2000.0
         }
         if backgroundFrame.minY < contentFrame.minY {
             backgroundFrame.origin.y = contentFrame.minY
         }
-        transition.updateAlpha(node: self.titleNode, alpha: isLandscape && !isTablet ? 0.0 : 1.0)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
-        transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let titleSize = self.titleNode.measure(CGSize(width: width, height: titleHeight))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
+        let titleSize = self.titleNode.measure(CGSize(width: contentFrame.width, height: .greatestFiniteMagnitude))
+        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 20.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        let cancelButtonSize = self.cancelButton.measure(CGSize(width: (contentFrame.width - titleSize.width) / 2.0, height: .greatestFiniteMagnitude))
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 17.0, y: 20.0), size: cancelButtonSize)
+        transition.updateFrame(node: self.cancelButton, frame: cancelButtonFrame)
         
         var previewSize: CGSize
         var previewFrame: CGRect
+        let previewAspectRatio: CGFloat = 1.85
         if isLandscape {
-            let previewHeight = contentHeight - 21.0 - 52.0 - 10.0
-            previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, previewHeight * 1.7778), height: previewHeight)
-            if isTablet {
-                previewSize.width -= previewInset * 2.0
-                previewSize.height -= 46.0
-            }
+            let previewHeight = contentFrame.height
+            previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, ceil(previewHeight * previewAspectRatio)), height: previewHeight)
             previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
-            if isTablet {
-                previewFrame.origin.y += 56.0
-            }
         } else {
-            previewSize = CGSize(width: contentFrame.width - previewInset * 2.0, height: contentHeight - 243.0 - bottomInset + (120.0 - buttonOffset))
-            if isTablet {
-                previewSize.height += 17.0
-            }
-            previewFrame = CGRect(origin: CGPoint(x: previewInset, y: 56.0), size: previewSize)
+            previewSize = CGSize(width: contentFrame.width, height: min(contentFrame.height, ceil(contentFrame.width * previewAspectRatio)))
+            previewFrame = CGRect(origin: CGPoint(), size: previewSize)
         }
         transition.updateFrame(node: self.previewContainerNode, frame: previewFrame)
         transition.updateFrame(node: self.shimmerNode, frame: CGRect(origin: CGPoint(), size: previewFrame.size))
@@ -527,18 +481,8 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
         self.cameraNode.updateLayout(size: previewSize, layoutMode: isLandscape ? .fillHorizontal : .fillVertical, transition: .immediate)
-        
-        let microphoneFrame = CGRect(x: 8.0, y: previewSize.height - 48.0 - 8.0 - 48.0, width: 48.0, height: 48.0)
-        transition.updateFrame(node: self.microphoneButton, frame: microphoneFrame)
-        transition.updateFrame(view: self.microphoneEffectView, frame: CGRect(origin: CGPoint(), size: microphoneFrame.size))
-        transition.updateFrameAsPositionAndBounds(node: self.microphoneIconNode, frame: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: microphoneFrame.size).insetBy(dx: 6.0, dy: 6.0))
-        self.microphoneIconNode.transform = CATransform3DMakeScale(1.2, 1.2, 1.0)
-        
-        let tabsFrame = CGRect(x: 8.0, y: previewSize.height - 40.0 - 8.0, width: previewSize.width - 16.0, height: 40.0)
-        self.tabsNode.updateLayout(size: tabsFrame.size, transition: transition)
-        transition.updateFrame(node: self.tabsNode, frame: tabsFrame)
-        
-        self.placeholderTextNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_VideoPreviewShareScreenInfo, font: Font.semibold(14.0), textColor: .white)
+      
+        self.placeholderTextNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_VideoPreviewShareScreenInfo, font: Font.semibold(16.0), textColor: .white)
         self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: isTablet ? "Call/ScreenShareTablet" : "Call/ScreenSharePhone"), color: .white)
         
         let placeholderTextSize = self.placeholderTextNode.updateLayout(CGSize(width: previewSize.width - 80.0, height: 100.0))
@@ -546,45 +490,27 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         if let imageSize = self.placeholderIconNode.image?.size {
             transition.updateFrame(node: self.placeholderIconNode, frame: CGRect(origin: CGPoint(x: floor((previewSize.width - imageSize.width) / 2.0), y: floorToScreenPixels(previewSize.height / 2.0) - imageSize.height - 8.0), size: imageSize))
         }
-        
-        if isLandscape {
-            var buttonsCount: Int = 2
-            
-            let buttonInset: CGFloat = 6.0
-            var leftButtonInset = buttonInset
-            let availableWidth: CGFloat
-            if isTablet {
-                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right - previewInset * 2.0
-                leftButtonInset += previewInset
-            } else {
-                availableWidth = contentFrame.width - layout.safeInsets.left - layout.safeInsets.right
-            }
-            let buttonWidth = floorToScreenPixels((availableWidth - CGFloat(buttonsCount + 1) * buttonInset) / CGFloat(buttonsCount))
-            
-            let cameraButtonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: transition)
-            let cancelButtonHeight = self.cancelButton.updateLayout(width: buttonWidth, transition: transition)
-            
-            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cancelButtonHeight))
-            transition.updateFrame(node: self.doneButton, frame: CGRect(x: layout.safeInsets.left + leftButtonInset + buttonWidth + buttonInset, y: previewFrame.maxY + 10.0, width: buttonWidth, height: cameraButtonHeight))
-            self.broadcastPickerView?.frame = self.doneButton.frame
-        } else {
-            let bottomInset = isTablet ? 21.0 : insets.bottom + 16.0
-            let buttonInset: CGFloat = 16.0
-            let cameraButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - cameraButtonHeight - bottomInset - buttonOffset, width: contentFrame.width, height: cameraButtonHeight))
-            self.broadcastPickerView?.frame = self.doneButton.frame
 
-            let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - bottomInset, width: contentFrame.width, height: cancelButtonHeight))
-        }
+        let buttonInset: CGFloat = 16.0
+        let buttonMaxWidth: CGFloat = 360.0
+        
+        let buttonWidth = min(buttonMaxWidth, contentFrame.width - buttonInset * 2.0)
+        let doneButtonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: transition)
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: floorToScreenPixels((contentFrame.width - buttonWidth) / 2.0), y: previewFrame.maxY - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
+        self.broadcastPickerView?.frame = self.doneButton.frame
+        
+        let wheelFrame = CGRect(origin: CGPoint(x: 16.0, y: previewFrame.maxY - doneButtonHeight - buttonInset - 36.0 - 20.0), size: CGSize(width: contentFrame.width - 32.0, height: 36.0))
+        self.wheelNode.updateLayout(size: wheelFrame.size, transition: transition)
+        transition.updateFrame(node: self.wheelNode, frame: wheelFrame)
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentFrame)
     }
 }
 
-private let textFont = Font.medium(14.0)
+private let textFont = Font.with(size: 14.0, design: .camera, weight: .regular)
+private let selectedTextFont = Font.with(size: 14.0, design: .camera, weight: .semibold)
 
-class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
+private class WheelControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
     struct Item: Equatable {
         public let title: String
         
@@ -592,13 +518,10 @@ class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.title = title
         }
     }
-    
-    private var blurEffectView: UIVisualEffectView?
-    private var vibrancyEffectView: UIVisualEffectView?
-    
-    private let selectionNode: ASDisplayNode
+
+    private let maskNode: ASDisplayNode
+    private let containerNode: ASDisplayNode
     private var itemNodes: [HighlightTrackingButtonNode]
-    private var highlightedItemNodes: [HighlightTrackingButtonNode]
     
     private var validLayout: CGSize?
 
@@ -631,85 +554,57 @@ class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     public var selectedIndexChanged: (Int) -> Void = { _ in }
-    
-    private var gestureRecognizer: UIPanGestureRecognizer?
-    private var gestureSelectedIndex: Int?
-    
+        
     public init(items: [Item], selectedIndex: Int) {
         self._items = items
         self._selectedIndex = selectedIndex
         
-        self.selectionNode = ASDisplayNode()
-        self.selectionNode.clipsToBounds = true
-        self.selectionNode.backgroundColor = .black
-        self.selectionNode.alpha = 0.75
+        self.maskNode = ASDisplayNode()
+        self.maskNode.setLayerBlock({
+            let maskLayer = CAGradientLayer()
+            maskLayer.colors = [UIColor.clear.cgColor, UIColor.white.cgColor, UIColor.white.cgColor, UIColor.clear.cgColor]
+            maskLayer.locations = [0.0, 0.15, 0.85, 1.0]
+            maskLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            maskLayer.endPoint = CGPoint(x: 1.0, y: 0.0)
+            return maskLayer
+        })
+        self.containerNode = ASDisplayNode()
         
         self.itemNodes = items.map { item in
             let itemNode = HighlightTrackingButtonNode()
             itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
-            itemNode.imageNode.isHidden = true
             itemNode.titleNode.maximumNumberOfLines = 1
             itemNode.titleNode.truncationMode = .byTruncatingTail
-            itemNode.titleNode.alpha = 0.75
             itemNode.accessibilityLabel = item.title
             itemNode.accessibilityTraits = [.button]
-            itemNode.setTitle(item.title, with: textFont, with: .black, for: .normal)
-            return itemNode
-        }
-        
-        self.highlightedItemNodes = items.map { item in
-            let itemNode = HighlightTrackingButtonNode()
-            itemNode.isUserInteractionEnabled = false
-            itemNode.isHidden = true
-            itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
-            itemNode.imageNode.isHidden = true
-            itemNode.titleNode.maximumNumberOfLines = 1
-            itemNode.titleNode.truncationMode = .byTruncatingTail
-            itemNode.setTitle(item.title, with: textFont, with: .white, for: .normal)
+            itemNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -5.0, bottom: -10.0, right: -5.0)
+            itemNode.setTitle(item.title.uppercased(), with: textFont, with: .white, for: .normal)
+            itemNode.titleNode.shadowColor = UIColor.black.cgColor
+            itemNode.titleNode.shadowOffset = CGSize()
+            itemNode.titleNode.layer.shadowRadius = 2.0
+            itemNode.titleNode.layer.shadowOpacity = 0.3
+            itemNode.titleNode.layer.masksToBounds = false
+            itemNode.titleNode.layer.shouldRasterize = true
+            itemNode.titleNode.layer.rasterizationScale = UIScreen.main.scale
             return itemNode
         }
         
         super.init()
         
         self.clipsToBounds = true
-        if #available(iOS 13.0, *) {
-            self.layer.cornerCurve = .continuous
-            self.selectionNode.layer.cornerCurve = .continuous
-        }
         
+        self.addSubnode(self.containerNode)
+        
+        self.itemNodes.forEach(self.containerNode.addSubnode(_:))
         self.setupButtons()
     }
     
     override func didLoad() {
         super.didLoad()
         
+        self.view.layer.mask = self.maskNode.layer
+        
         self.view.disablesInteractiveTransitionGestureRecognizer = true
-       
-        let gestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        gestureRecognizer.delegate = self
-        self.view.addGestureRecognizer(gestureRecognizer)
-        self.gestureRecognizer = gestureRecognizer
-        
-        let blurEffect = UIBlurEffect(style: .light)
-        let blurEffectView = UIVisualEffectView(effect: blurEffect)
-        self.blurEffectView = blurEffectView
-        self.view.addSubview(blurEffectView)
-        
-        let vibrancyEffect: UIVibrancyEffect
-        if #available(iOS 13.0, *) {
-            vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect, style: .label)
-        } else {
-            vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-        }
-        let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
-        self.vibrancyEffectView = vibrancyEffectView
-        
-        blurEffectView.contentView.addSubview(vibrancyEffectView)
-        
-        self.itemNodes.forEach(vibrancyEffectView.contentView.addSubnode(_:))
-        vibrancyEffectView.contentView.addSubnode(self.selectionNode)
-        
-        self.highlightedItemNodes.forEach(self.addSubnode(_:))
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -717,52 +612,52 @@ class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
         
         let bounds = CGRect(origin: CGPoint(), size: size)
         
-        self.cornerRadius = size.height / 2.0
+        transition.updateFrame(node: self.maskNode, frame: bounds)
         
-        if let blurEffectView = self.blurEffectView {
-            transition.updateFrame(view: blurEffectView, frame: bounds)
-        }
-        
-        if let vibrancyEffectView = self.vibrancyEffectView {
-            transition.updateFrame(view: vibrancyEffectView, frame: bounds)
-        }
-        
-        let selectedIndex: Int
-        if let gestureSelectedIndex = self.gestureSelectedIndex {
-            selectedIndex = gestureSelectedIndex
-        } else {
-            selectedIndex = self.selectedIndex
-        }
-        
+        let spacing: CGFloat = 15.0
         if !self.itemNodes.isEmpty {
-            let itemSize = CGSize(width: floorToScreenPixels(size.width / CGFloat(self.itemNodes.count)), height: size.height)
-            
-            let selectionFrame = CGRect(origin: CGPoint(x: itemSize.width * CGFloat(selectedIndex), y: 0.0), size: itemSize).insetBy(dx: 4.0, dy: 4.0)
-            transition.updateFrameAsPositionAndBounds(node: self.selectionNode, frame: selectionFrame)
-            self.selectionNode.cornerRadius = selectionFrame.height / 2.0
-            
+            var leftOffset: CGFloat = 0.0
+            var selectedItemNode: ASDisplayNode?
             for i in 0 ..< self.itemNodes.count {
                 let itemNode = self.itemNodes[i]
-                let highlightedItemNode = self.highlightedItemNodes[i]
-                let _ = itemNode.measure(itemSize)
-                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: itemSize.width * CGFloat(i), y: (size.height - itemSize.height) / 2.0), size: itemSize))
-                transition.updateFrame(node: highlightedItemNode, frame: CGRect(origin: CGPoint(x: itemSize.width * CGFloat(i), y: (size.height - itemSize.height) / 2.0), size: itemSize))
+                let itemSize = itemNode.measure(size)
+                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: leftOffset, y: (size.height - itemSize.height) / 2.0), size: itemSize))
                 
-                let isSelected = selectedIndex == i
+                leftOffset += itemSize.width + spacing
+                
+                let isSelected = self.selectedIndex == i
+                if isSelected {
+                    selectedItemNode = itemNode
+                }
                 if itemNode.isSelected != isSelected {
-                    if case .animated = transition {
-                        UIView.transition(with: itemNode.view, duration: 0.2, options: .transitionCrossDissolve, animations: {
-                            itemNode.isSelected = isSelected
-                            highlightedItemNode.isHidden = !isSelected
-                        }, completion: nil)
-                    } else {
-                        itemNode.isSelected = isSelected
-                        highlightedItemNode.isHidden = !isSelected
-                    }
+                    itemNode.isSelected = isSelected
+                    let title = itemNode.attributedTitle(for: .normal)?.string ?? ""
+                    itemNode.setTitle(title, with: isSelected ? selectedTextFont : textFont, with: isSelected ? UIColor(rgb: 0xffd60a) : .white, for: .normal)
                     if isSelected {
                         itemNode.accessibilityTraits.insert(.selected)
                     } else {
                         itemNode.accessibilityTraits.remove(.selected)
+                    }
+                }
+            }
+            
+            let totalWidth = leftOffset - spacing
+            if let selectedItemNode = selectedItemNode {
+                let itemCenter = selectedItemNode.frame.center
+                transition.updateFrame(node: self.containerNode, frame: CGRect(x: bounds.width / 2.0 - itemCenter.x, y: 0.0, width: totalWidth, height: bounds.height))
+                
+                for i in 0 ..< self.itemNodes.count {
+                    let itemNode = self.itemNodes[i]
+                    let convertedBounds = itemNode.view.convert(itemNode.bounds, to: self.view)
+                    let position = convertedBounds.center
+                    let offset = position.x - bounds.width / 2.0
+                    let angle = abs(offset / bounds.width * 0.99)
+                    let sign: CGFloat = offset > 0 ? 1.0 : -1.0
+                    
+                    var transform = CATransform3DMakeTranslation(-22.0 * angle * angle * sign, 0.0, 0.0)
+                    transform = CATransform3DRotate(transform, angle, 0.0, sign, 0.0)
+                    transition.animateView {
+                        itemNode.transform = transform
                     }
                 }
             }
@@ -773,61 +668,6 @@ class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
         for i in 0 ..< self.itemNodes.count {
             let itemNode = self.itemNodes[i]
             itemNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
-            itemNode.highligthedChanged = { [weak self, weak itemNode] highlighted in
-                if let strongSelf = self, let itemNode = itemNode {
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-                    if strongSelf.selectedIndex == i {
-                        if let gestureRecognizer = strongSelf.gestureRecognizer, case .began = gestureRecognizer.state {
-                        } else {
-                            strongSelf.updateButtonsHighlights(highlightedIndex: highlighted ? i : nil, gestureSelectedIndex: strongSelf.gestureSelectedIndex)
-                        }
-                    } else if highlighted {
-                        transition.updateAlpha(node: itemNode, alpha: 0.4)
-                    }
-                    if !highlighted {
-                        transition.updateAlpha(node: itemNode, alpha: 1.0)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func updateButtonsHighlights(highlightedIndex: Int?, gestureSelectedIndex: Int?) {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-        if highlightedIndex == nil && gestureSelectedIndex == nil {
-            transition.updateTransformScale(node: self.selectionNode, scale: 1.0)
-        } else {
-            transition.updateTransformScale(node: self.selectionNode, scale: 0.96)
-        }
-        for i in 0 ..< self.itemNodes.count {
-            let itemNode = self.itemNodes[i]
-            let highlightedItemNode = self.highlightedItemNodes[i]
-            if i == highlightedIndex || i == gestureSelectedIndex {
-                transition.updateTransformScale(node: itemNode, scale: 0.96)
-                transition.updateTransformScale(node: highlightedItemNode, scale: 0.96)
-            } else {
-                transition.updateTransformScale(node: itemNode, scale: 1.0)
-                transition.updateTransformScale(node: highlightedItemNode, scale: 1.0)
-            }
-        }
-    }
-    
-    private func updateButtonsHighlights() {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
-        if let gestureSelectedIndex = self.gestureSelectedIndex {
-            for i in 0 ..< self.itemNodes.count {
-                let itemNode = self.itemNodes[i]
-                let highlightedItemNode = self.highlightedItemNodes[i]
-                transition.updateTransformScale(node: itemNode, scale: i == gestureSelectedIndex ? 0.96 : 1.0)
-                transition.updateTransformScale(node: highlightedItemNode, scale: i == gestureSelectedIndex ? 0.96 : 1.0)
-            }
-        } else {
-            for itemNode in self.itemNodes {
-                transition.updateTransformScale(node: itemNode, scale: 1.0)
-            }
-            for itemNode in self.highlightedItemNodes {
-                transition.updateTransformScale(node: itemNode, scale: 1.0)
-            }
         }
     }
     
@@ -840,44 +680,6 @@ class TabsSegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.selectedIndexChanged(index)
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: .animated(duration: 0.2, curve: .slide))
-        }
-    }
-    
-    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return self.selectionNode.frame.contains(gestureRecognizer.location(in: self.view))
-    }
-    
-    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
-        let location = recognizer.location(in: self.view)
-        switch recognizer.state {
-            case .changed:
-                if !self.selectionNode.frame.contains(location) {
-                    let point = CGPoint(x: max(0.0, min(self.bounds.width, location.x)), y: 1.0)
-                    for i in 0 ..< self.itemNodes.count {
-                        let itemNode = self.itemNodes[i]
-                        if itemNode.frame.contains(point) {
-                            if i != self.gestureSelectedIndex {
-                                self.gestureSelectedIndex = i
-                                self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: i)
-                                if let size = self.validLayout {
-                                    self.updateLayout(size: size, transition: .animated(duration: 0.35, curve: .slide))
-                                }
-                            }
-                            break
-                        }
-                    }
-                }
-            case .ended:
-                if let gestureSelectedIndex = self.gestureSelectedIndex {
-                    if gestureSelectedIndex != self.selectedIndex  {
-                        self._selectedIndex = gestureSelectedIndex
-                        self.selectedIndexChanged(gestureSelectedIndex)
-                    }
-                    self.gestureSelectedIndex = nil
-                }
-                self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: nil)
-            default:
-                break
         }
     }
 }

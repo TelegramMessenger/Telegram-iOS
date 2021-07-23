@@ -190,7 +190,7 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
     CGFloat angle = ABS(offset / _wrapperView.frame.size.width * 0.99f);
     CGFloat sign = offset > 0 ? 1.0f : -1.0f;
     
-    CATransform3D transform = CATransform3DTranslate(CATransform3DIdentity, -2 * angle * angle * sign, 0.0f, 0.0f);
+    CATransform3D transform = CATransform3DTranslate(CATransform3DIdentity, -28 * angle * angle * sign, 0.0f, 0.0f);
     transform = CATransform3DRotate(transform, angle, 0.0f, sign, 0.0f);
     return transform;
 }
