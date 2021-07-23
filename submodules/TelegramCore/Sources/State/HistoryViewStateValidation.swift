@@ -383,12 +383,12 @@ final class HistoryViewStateValidationContexts {
 }
 
 private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
-    var acc: UInt32 = 0
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.timestamp > $1.timestamp })
     
     for message in sorted {
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        acc = (acc &* 20261) &+ UInt64(message.id.id)
         var editTimestamp: Int32 = 0
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -396,29 +396,23 @@ private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
                 break inner
             }
         }
-        acc = (acc &* 20261) &+ UInt32(editTimestamp)
-        acc = (acc &* 20261) &+ UInt32(message.timestamp)
+        acc = (acc &* 20261) &+ UInt64(editTimestamp)
+        acc = (acc &* 20261) &+ UInt64(message.timestamp)
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0xFFFFFFFF)))
 }
 
-public func combineInt32Hash(_ acc: inout UInt32, with value: UInt32) {
+public func combineInt32Hash(_ acc: inout UInt64, with value: UInt64) {
     acc = (acc &* 20261) &+ value
 }
 
-public func combineInt32Hash(_ acc: inout UInt32, with peerId: PeerId) {
+public func combineInt32Hash(_ acc: inout UInt64, with peerId: PeerId) {
     let value = UInt64(bitPattern: peerId.id._internalGetInt64Value())
-    let highBits = value >> 32
-    let lowBits = value & 0xffffffff
-    var acc = acc
-    if highBits != 0 {
-        combineInt32Hash(&acc, with: UInt32(highBits))
-    }
-    combineInt32Hash(&acc, with: UInt32(lowBits))
+    combineInt32Hash(&acc, with: value)
 }
 
 private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.index > $1.index })
     
@@ -427,7 +421,7 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
             combineInt32Hash(&acc, with: message.id.peerId)
         }
         
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        acc = (acc &* 20261) &+ UInt64(message.id.id)
         var timestamp = message.timestamp
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -436,22 +430,22 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
             }
         }
         if message.tags.contains(.pinned) {
-            acc = (acc &* 20261) &+ UInt32(1)
+            acc = (acc &* 20261) &+ UInt64(1)
         }
-        acc = (acc &* 20261) &+ UInt32(timestamp)
+        acc = (acc &* 20261) &+ UInt64(timestamp)
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0xFFFFFFFF)))
 }
 
 private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+    var acc: UInt64 = 0
     
     for message in messages {
         if case let .Id(id) = message.id {
             if withChannelIds {
                 combineInt32Hash(&acc, with: id.peerId)
             }
-            acc = (acc &* 20261) &+ UInt32(id.id)
+            acc = (acc &* 20261) &+ UInt64(id.id)
             var timestamp = message.timestamp
             inner: for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
@@ -459,10 +453,10 @@ private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -
                     break inner
                 }
             }
-            acc = (acc &* 20261) &+ UInt32(timestamp)
+            acc = (acc &* 20261) &+ UInt64(timestamp)
         }
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0xFFFFFFFF)))
 }
 
 private enum ValidatedMessages {

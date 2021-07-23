@@ -205,13 +205,11 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
         let id: Int32
         
         func themeId(for id: Int64) -> Int32 {
-            var acc: UInt32 = 0
-            let low = UInt32(UInt64(bitPattern: id) & (0xffffffff as UInt64))
-            let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
-            acc = (acc &* 20261) &+ high
-            acc = (acc &* 20261) &+ low
+            var acc: UInt64 = 0
+
+            acc = (acc &* 20261) &+ UInt64(bitPattern: id)
             
-            return Int32(bitPattern: acc & UInt32(0x7fffffff))
+            return Int32(bitPattern: UInt32(clamping: acc & UInt64(0xFFFFFFFF)))
         }
         
         switch self {

@@ -2325,7 +2325,7 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
                 |> take(1)
                 |> map { _, contexts, _ -> AccountRecordId? in
                     for (_, context, _) in contexts {
-                        if Int(context.account.peerId.id. _internalGetInt64Value()) == userId {
+                        if Int(context.account.peerId.id._internalGetInt64Value()) == userId {
                             return context.account.id
                         }
                     }
