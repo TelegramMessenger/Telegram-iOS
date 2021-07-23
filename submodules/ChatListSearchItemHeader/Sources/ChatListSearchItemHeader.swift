@@ -170,6 +170,14 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatListSearchItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatListSearchItemHeaderNode(type: self.type, theme: self.theme, strings: self.strings, actionTitle: self.actionTitle, action: self.action)

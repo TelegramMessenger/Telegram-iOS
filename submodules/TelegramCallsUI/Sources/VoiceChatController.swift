@@ -2496,8 +2496,19 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let isScheduled = strongSelf.isScheduled
+
+                let canSpeak: Bool
+                if let callState = strongSelf.callState {
+                    if let muteState = callState.muteState {
+                        canSpeak = muteState.canUnmute
+                    } else {
+                        canSpeak = true
+                    }
+                } else {
+                    canSpeak = false
+                }
                 
-                if !isScheduled {
+                if !isScheduled && canSpeak {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_NoiseSuppression, textColor: .primary, textLayout: .secondLineWithValue(strongSelf.isNoiseSuppressionEnabled ? strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionEnabled : strongSelf.presentationData.strings.VoiceChat_NoiseSuppressionDisabled), icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Noise"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in

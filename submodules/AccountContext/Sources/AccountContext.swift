@@ -568,7 +568,7 @@ public protocol SharedAccountContext: class {
     var callManager: PresentationCallManager? { get }
     var contactDataManager: DeviceContactDataManager? { get }
     
-    var activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
+    var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
     
     var presentGlobalController: (ViewController, Any?) -> Void { get }

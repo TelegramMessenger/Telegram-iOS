@@ -203,9 +203,9 @@ public final class NotificationViewControllerImpl {
                 return
             }
             
-            self.applyDisposable.set((sharedAccountContext.activeAccounts
+            self.applyDisposable.set((sharedAccountContext.activeAccountContexts
             |> map { _, accounts, _ -> Account? in
-                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1.account
             }
             |> filter { account in
                 return account != nil
@@ -254,16 +254,16 @@ public final class NotificationViewControllerImpl {
             self.imageInfo = (true, dimensions.cgSize)
             self.updateImageLayout(boundingSize: view.bounds.size)
             
-            self.applyDisposable.set((sharedAccountContext.activeAccounts
-            |> map { _, accounts, _ -> Account? in
-                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+            self.applyDisposable.set((sharedAccountContext.activeAccountContexts
+            |> map { _, contexts, _ -> AccountContext? in
+                return contexts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
             }
-            |> filter { account in
-                return account != nil
+            |> filter { context in
+                return context != nil
             }
             |> take(1)
-            |> mapToSignal { account -> Signal<(Account, FileMediaReference?), NoError> in
-                guard let account = account else {
+            |> mapToSignal { context -> Signal<(Account, FileMediaReference?), NoError> in
+                guard let account = context?.account else {
                     return .complete()
                 }
                 return account.postbox.messageAtId(messageId)

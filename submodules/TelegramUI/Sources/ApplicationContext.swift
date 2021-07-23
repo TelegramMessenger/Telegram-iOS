@@ -870,21 +870,21 @@ final class AuthorizedApplicationContext {
     func switchAccount() {
         let _ = (activeAccountsAndPeers(context: self.context)
         |> take(1)
-        |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+        |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
             return primaryAndAccounts.1.first
         }
-        |> map { accountAndPeer -> Account? in
-            if let (account, _, _) = accountAndPeer {
-                return account
+        |> map { accountAndPeer -> AccountContext? in
+            if let (context, _, _) = accountAndPeer {
+                return context
             } else {
                 return nil
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] account in
-            guard let strongSelf = self, let account = account else {
+        |> deliverOnMainQueue).start(next: { [weak self] context in
+            guard let strongSelf = self, let context = context else {
                 return
             }
-            strongSelf.context.sharedContext.switchToAccount(id: account.id, fromSettingsController: nil, withChatListController: nil)
+            strongSelf.context.sharedContext.switchToAccount(id: context.account.id, fromSettingsController: nil, withChatListController: nil)
         })
     }
     

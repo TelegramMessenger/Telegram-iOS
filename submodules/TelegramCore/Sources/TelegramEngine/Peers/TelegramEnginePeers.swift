@@ -423,9 +423,16 @@ public extension TelegramEngine {
         public func peerExportedInvitationsCreators(peerId: PeerId) -> Signal<[ExportedInvitationCreator], NoError> {
             return _internal_peerExportedInvitationsCreators(account: self.account, peerId: peerId)
         }
+        public func direct_peerExportedInvitations(peerId: PeerId, revoked: Bool, adminId: PeerId? = nil, offsetLink: ExportedInvitation? = nil) -> Signal<ExportedInvitations?, NoError> {
+            return _internal_peerExportedInvitations(account: self.account, peerId: peerId, revoked: revoked, adminId: adminId, offsetLink: offsetLink)
+        }
 
         public func peerExportedInvitations(peerId: PeerId, adminId: PeerId?, revoked: Bool, forceUpdate: Bool) -> PeerExportedInvitationsContext {
             return PeerExportedInvitationsContext(account: self.account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
+        }
+        
+        public func revokePersistentPeerExportedInvitation(peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
+            return _internal_revokePersistentPeerExportedInvitation(account: self.account, peerId: peerId)
         }
 
         public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation) -> PeerInvitationImportersContext {
