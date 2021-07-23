@@ -145,6 +145,7 @@ objc_library(
     ],
     deps = [
         "//submodules/NumberPluralizationForm:NumberPluralizationForm",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",
