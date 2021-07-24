@@ -37,6 +37,7 @@ private extension CGPoint {
 
 final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let color: UIColor
+    private let hasSeek: Bool
     private let hapticFeedback = HapticFeedback()
     
     private var effectiveProgress: CGFloat = 0.0 {
@@ -99,8 +100,9 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     
     var seekTo: ((Double, Bool) -> Void)?
     
-    init(color: UIColor) {
+    init(color: UIColor, hasSeek: Bool) {
         self.color = color
+        self.hasSeek = hasSeek
         
         super.init()
         
@@ -120,6 +122,10 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     
     override func didLoad() {
         super.didLoad()
+        
+        guard self.hasSeek else {
+            return
+        }
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         tapGestureRecognizer.delegate = self
@@ -142,15 +148,6 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         } else {
             return true
         }
-    }
-    
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer === self.panGestureRecognizer, let otherGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
-            otherGestureRecognizer.isEnabled = false
-            otherGestureRecognizer.isEnabled = true
-            return true
-        }
-        return true
     }
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -299,6 +296,11 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         if self.seeking {
             dimmed = true
         }
+        
+        if !self.hasSeek {
+            dimmed = false
+        }
+        
         if dimmed != self.dimmed {
             self.dimmed = dimmed
             

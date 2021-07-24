@@ -77,6 +77,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         
         super.init(layerBacked: false)
         
+        self.interactiveVideoNode.shouldOpen = { [weak self] in
+            return !(self?.animatingHeight ?? false)
+        }
+        
         self.containerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {
                 return false
@@ -125,7 +129,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         self.addSubnode(self.messageAccessibilityArea)
         
         self.messageAccessibilityArea.activate = { [weak self] in
-            guard let strongSelf = self, let accessibilityData = strongSelf.accessibilityData else {
+            guard let strongSelf = self, let _ = strongSelf.accessibilityData else {
                 return false
             }
             
@@ -334,7 +338,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             var isPlaying = false
             var displaySize = layoutConstants.instantVideo.dimensions
-            let maximumDisplaySize = CGSize(width: params.width - 20.0, height: params.width - 20.0)
+            let maximumDisplaySize = CGSize(width: min(404, params.width - 20.0), height: min(404, params.width - 20.0))
             var effectiveAvatarInset = avatarInset
             if item.associatedData.currentlyPlayingMessageId == item.message.index {
                 isPlaying = true
@@ -1077,7 +1081,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         
         var isPlaying = false
         var displaySize = layoutConstants.instantVideo.dimensions
-        let maximumDisplaySize = CGSize(width: params.width - 20.0, height: params.width - 20.0)
+        let maximumDisplaySize = CGSize(width: min(404, params.width - 20.0), height: min(404, params.width - 20.0))
         if item.associatedData.currentlyPlayingMessageId == item.message.index {
             isPlaying = true
         }

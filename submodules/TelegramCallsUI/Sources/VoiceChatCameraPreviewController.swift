@@ -418,7 +418,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
             isTablet = false
         }
         
-        var insets = layout.insets(options: [.statusBar, .input])
+        var insets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
     
         let contentSize: CGSize
@@ -458,11 +458,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         let titleSize = self.titleNode.measure(CGSize(width: contentFrame.width, height: .greatestFiniteMagnitude))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 20.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        
-        let cancelButtonSize = self.cancelButton.measure(CGSize(width: (contentFrame.width - titleSize.width) / 2.0, height: .greatestFiniteMagnitude))
-        let cancelButtonFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 17.0, y: 20.0), size: cancelButtonSize)
-        transition.updateFrame(node: self.cancelButton, frame: cancelButtonFrame)
-        
+                
         var previewSize: CGSize
         var previewFrame: CGRect
         let previewAspectRatio: CGFloat = 1.85
@@ -478,6 +474,10 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.shimmerNode, frame: CGRect(origin: CGPoint(), size: previewFrame.size))
         self.shimmerNode.update(foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.07))
         self.shimmerNode.updateAbsoluteRect(previewFrame, within: layout.size)
+        
+        let cancelButtonSize = self.cancelButton.measure(CGSize(width: (previewFrame.width - titleSize.width) / 2.0, height: .greatestFiniteMagnitude))
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: previewFrame.minX + 17.0, y: 20.0), size: cancelButtonSize)
+        transition.updateFrame(node: self.cancelButton, frame: cancelButtonFrame)
         
         self.cameraNode.frame =  CGRect(origin: CGPoint(), size: previewSize)
         self.cameraNode.updateLayout(size: previewSize, layoutMode: isLandscape ? .fillHorizontal : .fillVertical, transition: .immediate)
@@ -499,7 +499,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: floorToScreenPixels((contentFrame.width - buttonWidth) / 2.0), y: previewFrame.maxY - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
         self.broadcastPickerView?.frame = self.doneButton.frame
         
-        let wheelFrame = CGRect(origin: CGPoint(x: 16.0, y: previewFrame.maxY - doneButtonHeight - buttonInset - 36.0 - 20.0), size: CGSize(width: contentFrame.width - 32.0, height: 36.0))
+        let wheelFrame = CGRect(origin: CGPoint(x: 16.0 + previewFrame.minX, y: previewFrame.maxY - doneButtonHeight - buttonInset - 36.0 - 20.0), size: CGSize(width: previewFrame.width - 32.0, height: 36.0))
         self.wheelNode.updateLayout(size: wheelFrame.size, transition: transition)
         transition.updateFrame(node: self.wheelNode, frame: wheelFrame)
         

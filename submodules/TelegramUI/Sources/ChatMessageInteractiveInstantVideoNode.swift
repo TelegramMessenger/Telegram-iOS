@@ -82,7 +82,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    private var animating = false
+    var shouldOpen: () -> Bool = { return true }
     
     override init() {
         self.secretVideoPlaceholderBackground = ASImageNode()
@@ -680,7 +680,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if let current = self.playbackStatusNode {
                 playbackStatusNode = current
             } else {
-                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6))
+                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6), hasSeek: true)
                 playbackStatusNode.seekTo = { [weak self] position, play in
                     guard let strongSelf = self else {
                         return
@@ -748,7 +748,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func activateVideoPlayback() {
-        guard let item = self.item else {
+        guard let item = self.item, self.shouldOpen() else {
             return
         }
         if self.infoBackgroundNode.alpha.isZero {
