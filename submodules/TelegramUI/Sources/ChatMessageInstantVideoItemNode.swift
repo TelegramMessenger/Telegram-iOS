@@ -1135,5 +1135,48 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
         }
         videoApply(videoLayoutData, .immediate)
+        
+        
+        
+        if let shareButtonNode = self.shareButtonNode {
+            let buttonSize = shareButtonNode.frame.size
+            shareButtonNode.frame = CGRect(origin: CGPoint(x: videoFrame.maxX - 7.0, y: videoFrame.maxY - 24.0 - buttonSize.height), size: buttonSize)
+        }
+        
+        if let viaBotNode = self.viaBotNode {
+            let viaBotLayout = viaBotNode.frame
+            let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0), size: viaBotLayout.size)
+            viaBotNode.frame = viaBotFrame
+            self.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 4.0, y: viaBotFrame.minY - 2.0), size: CGSize(width: viaBotFrame.size.width + 8.0, height: viaBotFrame.size.height + 5.0))
+        }
+        
+        if let replyInfoNode = self.replyInfoNode {
+            var viaBotSize = CGSize()
+            if let viaBotNode = self.viaBotNode {
+                viaBotSize = viaBotNode.frame.size
+            }
+            let replyInfoSize = replyInfoNode.frame.size
+            let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - max(replyInfoSize.width, viaBotSize.width) - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0 + viaBotSize.height), size: replyInfoSize)
+            if let viaBotNode = self.viaBotNode {
+                if replyInfoFrame.minX < viaBotNode.frame.minX {
+                    viaBotNode.frame = viaBotNode.frame.offsetBy(dx: replyInfoFrame.minX - viaBotNode.frame.minX, dy: 0.0)
+                }
+            }
+            replyInfoNode.frame = replyInfoFrame
+            self.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+        }
+        
+        if let deliveryFailedNode = self.deliveryFailedNode {
+            let deliveryFailedSize = deliveryFailedNode.frame.size
+            let deliveryFailedFrame = CGRect(origin: CGPoint(x: videoFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: videoFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
+            deliveryFailedNode.frame = deliveryFailedFrame
+        }
+        
+        if let forwardInfoNode = self.forwardInfoNode {
+            let forwardInfoSize = forwardInfoNode.frame.size
+            let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
+            forwardInfoNode.frame = forwardInfoFrame
+            self.forwardBackgroundNode?.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+        }
     }
 }
