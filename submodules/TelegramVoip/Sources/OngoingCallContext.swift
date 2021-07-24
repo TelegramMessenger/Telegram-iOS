@@ -252,20 +252,7 @@ private func ongoingDataSavingForTypeWebrtc(_ type: VoiceCallDataSaving) -> Ongo
     }
 }
 
-/*private func ongoingDataSavingForTypeWebrtcCustom(_ type: VoiceCallDataSaving) -> OngoingCallDataSavingWebrtcCustom {
-    switch type {
-        case .never:
-            return .never
-        case .cellular:
-            return .cellular
-        case .always:
-            return .always
-        default:
-            return .never
-    }
-}*/
-
-private protocol OngoingCallThreadLocalContextProtocol: class {
+private protocol OngoingCallThreadLocalContextProtocol: AnyObject {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
     func nativeSetIsLowBatteryLevel(_ value: Bool)
@@ -277,6 +264,7 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
     func nativeGetDerivedState() -> Data
+    func addExternalAudioData(data: Data)
 }
 
 private final class OngoingCallThreadLocalContextHolder {
@@ -328,6 +316,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     
     func nativeGetDerivedState() -> Data {
         return self.getDerivedState()
+    }
+
+    func addExternalAudioData(data: Data) {
     }
 }
 
@@ -517,6 +508,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     func nativeGetDerivedState() -> Data {
         return self.getDerivedState()
     }
+
+    func addExternalAudioData(data: Data) {
+        self.addExternalAudioData(data)
+    }
 }
 
 private extension OngoingCallContextState.State {
@@ -586,8 +581,6 @@ extension OngoingCallVideoOrientation {
             return .orientation180
         case  .rotation270:
             return .orientation270
-        @unknown default:
-            return .orientation0
         }
     }
 }
@@ -1024,6 +1017,12 @@ public final class OngoingCallContext {
             } else {
                 completion(nil)
             }
+        }
+    }
+
+    public func addExternalAudioData(data: Data) {
+        self.withContext { context in
+            context.addExternalAudioData(data: data)
         }
     }
 }

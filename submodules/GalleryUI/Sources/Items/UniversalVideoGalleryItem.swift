@@ -44,7 +44,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let isSecret: Bool
     let landscape: Bool
     let timecode: Double?
-    let playbackRate: Double
+    let playbackRate: Double?
     let configuration: GalleryConfiguration?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
@@ -52,7 +52,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double = 1.0, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -1314,7 +1314,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var isAnimated = false
             var seek = MediaPlayerSeek.start
-            var playbackRate: Double = 1.0
+            var playbackRate: Double? = nil
             if let item = self.item {
                 if let content = item.content as? NativeVideoContent {
                     isAnimated = content.fileReference.media.isAnimated
@@ -1329,7 +1329,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     playbackRate = item.playbackRate
                 }
             }
-            videoNode.setBaseRate(playbackRate)
+            if let playbackRate = playbackRate {
+                videoNode.setBaseRate(playbackRate)
+            }
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
@@ -2056,17 +2058,27 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     f(.default)
 
                     if let strongSelf = self {
-                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
-                        |> deliverOnMainQueue).start(completed: {
-                            guard let strongSelf = self else {
-                                return
-                            }
+                        switch strongSelf.fetchStatus {
+                        case .Local:
+                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
+                            |> deliverOnMainQueue).start(completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                guard let controller = strongSelf.galleryController() else {
+                                    return
+                                }
+                                //TODO:localize
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            })
+                        default:
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
                             //TODO:localize
-                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                        })
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: "Please wait for the video to be fully downloaded.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
                     }
                 })))
             }

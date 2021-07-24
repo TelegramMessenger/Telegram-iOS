@@ -5509,6 +5509,7 @@ Sorry for the inconvenience.";
 "Stats.MessagePublicForwardsTitle" = "Public Shares";
 
 "Call.CameraTooltip" = "Tap here to turn on your camera";
+"Call.CameraOrScreenTooltip" = "Turn on your camera or screensharing";
 "Call.CameraConfirmationText" = "Switch to video call?";
 "Call.CameraConfirmationConfirm" = "Switch";
 

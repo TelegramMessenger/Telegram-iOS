@@ -129,7 +129,7 @@ public final class SharedWakeupManager {
                 
                 let hasActiveCalls = (callManager?.currentCallSignal ?? .single(nil))
                 |> map { call in
-                    return call?.account.id == account.id
+                    return call?.context.account.id == account.id
                 }
                 |> distinctUntilChanged
                 

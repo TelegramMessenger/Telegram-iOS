@@ -57,8 +57,8 @@ public struct PresentationCallState: Equatable {
     public enum VideoState: Equatable {
         case notAvailable
         case inactive
-        case active
-        case paused
+        case active(isScreencast: Bool)
+        case paused(isScreencast: Bool)
     }
     
     public enum RemoteVideoState: Equatable {
@@ -132,7 +132,7 @@ public final class PresentationCallVideoView {
 }
 
 public protocol PresentationCall: class {
-    var account: Account { get }
+    var context: AccountContext { get }
     var isIntegratedWithCallKit: Bool { get }
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }

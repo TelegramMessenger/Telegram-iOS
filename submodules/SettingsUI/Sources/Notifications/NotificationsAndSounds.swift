@@ -1067,9 +1067,9 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }))
     }
     
-    let hasMoreThanOneAccount = context.sharedContext.activeAccounts
-    |> map { _, accounts, _ -> Bool in
-        return accounts.count > 1
+    let hasMoreThanOneAccount = context.sharedContext.activeAccountContexts
+    |> map { _, contexts, _ -> Bool in
+        return contexts.count > 1
     }
     |> distinctUntilChanged
     
