@@ -68,6 +68,9 @@
     
     TGCameraFlipButton *_topFlipButton;
     
+    TGCameraZoomModeView *_zoomModeView;
+    TGCameraZoomWheelView *_zoomWheelView;
+    
     bool _hasResults;
     
     CGFloat _topPanelOffset;
@@ -267,6 +270,7 @@
 //        [self addSubview:_flashActiveView];
         
         _toastView = [[TGCameraToastView alloc] initWithFrame:CGRectMake(0, frame.size.height - _bottomPanelHeight - 42, frame.size.width, 32)];
+        _toastView.userInteractionEnabled = false;
         [self addSubview:_toastView];
         
         _zoomView = [[TGCameraZoomView alloc] initWithFrame:CGRectMake(10, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18, frame.size.width - 20, 1.5f)];
@@ -281,7 +285,33 @@
                 [strongSelf _layoutFlashActiveViewForInterfaceOrientation:strongSelf->_interfaceOrientation zoomViewHidden:!active];
             } completion:nil];
         };
-        [self addSubview:_zoomView];
+//        [self addSubview:_zoomView];
+        
+        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43)];
+        _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done) {
+            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (!done) {
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
+                [strongSelf->_zoomModeView setHidden:true animated:true];
+                [strongSelf->_zoomWheelView setHidden:false animated:true];
+            } else {
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
+                [strongSelf->_zoomModeView setZoomLevel:zoomLevel animated:false];
+                [strongSelf->_zoomModeView setHidden:false animated:true];
+                [strongSelf->_zoomWheelView setHidden:true animated:true];
+            }
+        };
+        [_zoomModeView setZoomLevel:1.0];
+        [self addSubview:_zoomModeView];
+        
+        _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132)];
+        [_zoomWheelView setHidden:true animated:false];
+        [_zoomWheelView setZoomLevel:1.0];
+        _zoomWheelView.userInteractionEnabled = false;
+        [self addSubview:_zoomWheelView];
             
         _flashControl.modeChanged = ^(PGCameraFlashMode mode)
         {
@@ -427,7 +457,7 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
-    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView])
+    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView)
         return view;
     
     return nil;

@@ -37,6 +37,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     private var appliedCurrentlyPlaying = false
     private var appliedAutomaticDownload = false
     
+    private var animatingHeight: Bool {
+        return self.apparentHeightTransition != nil
+    }
+
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var forwardBackgroundNode: ASImageNode?
     
@@ -51,9 +55,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
-    
-    private var seekRecognizer: UIPanGestureRecognizer?
-    
+        
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
     override var visibility: ListViewItemNodeVisibility {
@@ -80,6 +82,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 return false
             }
             if !strongSelf.interactiveVideoNode.frame.contains(location) {
+                return false
+            }
+            if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
                 return false
             }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
@@ -161,6 +166,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if strongSelf.selectionNode != nil {
                     return false
                 }
+                if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
+                    return false
+                }
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {
@@ -172,12 +180,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             return false
         }
         self.view.addGestureRecognizer(replyRecognizer)
-        
-        let seekRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.seekGesture(_:)))
-        seekRecognizer.isEnabled = false
-        seekRecognizer.delegate = self
-        self.seekRecognizer = seekRecognizer
-        self.interactiveVideoNode.view.addGestureRecognizer(seekRecognizer)
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -540,14 +542,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
                     
-                    if currentItem != nil && currentPlaying != isPlaying {
-                    } else {
+                    let animating = (currentItem != nil && currentPlaying != isPlaying) || strongSelf.animatingHeight
+                    if !animating {
                         strongSelf.interactiveVideoNode.frame = videoFrame
                         videoApply(videoLayoutData, transition)
                     }
                     
                     strongSelf.interactiveVideoNode.view.disablesInteractiveTransitionGestureRecognizer = isPlaying
-                    strongSelf.seekRecognizer?.isEnabled = isPlaying
                     
                     strongSelf.contextSourceNode.contentRect = videoFrame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -861,31 +862,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
         }
     }
-    
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer === self.seekRecognizer {
-            let velocity = panGestureRecognizer.velocity(in: self.interactiveVideoNode.view)
-            return abs(velocity.x) > abs(velocity.y)
-        }
-        return true
-    }
-
-    private var wasPlaying = false
-    @objc func seekGesture(_ recognizer: UIPanGestureRecognizer) {
-        let location = recognizer.location(in: self.interactiveVideoNode.view)
-        switch recognizer.state {
-            case .began:
-                self.interactiveVideoNode.pause()
-            case .changed:
-                self.interactiveVideoNode.seekTo(Double(location.x / self.interactiveVideoNode.bounds.size.width))
-            case .ended, .cancelled:
-                self.interactiveVideoNode.seekTo(Double(location.x / self.interactiveVideoNode.bounds.size.width))
-                self.interactiveVideoNode.play()
-            default:
-                break
-        }
-    }
-    
+        
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         switch recognizer.state {
         case .began:
@@ -1082,7 +1059,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
-    
+        
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
         

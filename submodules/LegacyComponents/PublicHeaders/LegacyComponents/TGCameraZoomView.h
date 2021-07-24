@@ -14,3 +14,24 @@
 - (void)hideAnimated:(bool)animated;
 
 @end
+
+
+@interface TGCameraZoomModeView : UIView
+
+@property (copy, nonatomic) void(^zoomChanged)(CGFloat zoomLevel, bool done);
+
+@property (nonatomic, assign) CGFloat zoomLevel;
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
+@end
+
+
+@interface TGCameraZoomWheelView : UIView
+
+@property (nonatomic, assign) CGFloat zoomLevel;
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
+@end

@@ -10,6 +10,8 @@
 @class TGCameraFlipButton;
 @class TGCameraTimeCodeView;
 @class TGCameraZoomView;
+@class TGCameraZoomModeView;
+@class TGCameraZoomWheelView;
 @class TGCameraToastView;
 @class TGMediaPickerPhotoCounterButton;
 @class TGMediaPickerPhotoStripView;
@@ -32,6 +34,8 @@
     TGMediaPickerPhotoStripView *_selectedPhotosView;
     
     TGCameraZoomView *_zoomView;
+    TGCameraZoomModeView *_zoomModeView;
+    TGCameraZoomWheelView *_zoomWheelView;
     
 @public
     TGModernButton *_cancelButton;

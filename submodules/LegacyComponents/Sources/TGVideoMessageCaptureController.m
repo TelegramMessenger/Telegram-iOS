@@ -300,8 +300,8 @@ typedef enum
     }
     
     CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
-    CGFloat diameter = minSide > 320.0f ? 240.0f : 216.0f;
-    CGFloat shadowSize = minSide > 320.0f ? 21.0f : 19.0f;
+    CGFloat diameter = minSide - 24.0f;
+    CGFloat shadowSize = 21.0f;
     
     CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
     _circleWrapperView = [[UIView alloc] initWithFrame:(CGRect){
