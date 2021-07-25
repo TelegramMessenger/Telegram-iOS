@@ -707,9 +707,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if let playbackStatusNode = self.playbackStatusNode {
                 self.playbackStatusNode = nil
                 playbackStatusNode.removeFromSupernode()
-//                playbackStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackStatusNode] _ in
-//                    playbackStatusNode?.removeFromSupernode()
-//                })
             }
             
             self.durationNode?.status = .single(nil)

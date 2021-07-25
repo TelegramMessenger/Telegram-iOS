@@ -55,9 +55,15 @@ public final class PeerSelectionControllerParams {
     }
 }
 
+public enum PeerSelectionControllerSendMode {
+    case generic
+    case silent
+    case schedule
+}
+
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

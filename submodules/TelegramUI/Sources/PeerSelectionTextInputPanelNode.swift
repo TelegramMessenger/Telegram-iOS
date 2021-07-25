@@ -109,7 +109,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
 
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
-    var sendMessage: () -> Void = { }
+    var sendMessage: (PeerSelectionControllerSendMode) -> Void = { _ in }
     var updateHeight: (Bool) -> Void = { _ in }
 
     private var updatingInputState = false
@@ -896,7 +896,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
             }
         }
     
-        self.sendMessage()
+        self.sendMessage(.generic)
     }
     
     @objc func textInputBackgroundViewTap(_ recognizer: UITapGestureRecognizer) {
