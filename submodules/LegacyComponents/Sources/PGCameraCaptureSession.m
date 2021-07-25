@@ -700,14 +700,25 @@ const NSInteger PGCameraFrameRate = 30;
 
 + (AVCaptureDevice *)_deviceWithPosition:(AVCaptureDevicePosition)position
 {
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    if (iosMajorVersion() >= 10 && position == AVCaptureDevicePositionBack) {
+        AVCaptureDevice *device = nil;
+        if (iosMajorVersion() >= 13) {
+            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
+        }
+        if (device == nil) {
+            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
+        }
+        if (device != nil) {
+            return  device;
+        }
+    }
     
+    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     for (AVCaptureDevice *device in devices)
     {
         if (device.position == position)
             return device;
     }
-    
     return nil;
 }
 

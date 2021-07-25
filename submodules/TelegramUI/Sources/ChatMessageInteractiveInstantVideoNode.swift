@@ -37,6 +37,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let secretVideoPlaceholder: TransformImageNode
     
     private var statusNode: RadialStatusNode?
+    private var disappearingStatusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
     private(set) var videoFrame: CGRect?
     
@@ -82,7 +83,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    private var animating = false
+    var shouldOpen: () -> Bool = { return true }
     
     override init() {
         self.secretVideoPlaceholderBackground = ASImageNode()
@@ -494,8 +495,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     strongSelf.secretVideoPlaceholderBackground.frame = displayVideoFrame
                     
-                    let placeholderFrame = displayVideoFrame.insetBy(dx: 2.0, dy: 2.0)
-                    strongSelf.secretVideoPlaceholder.frame = placeholderFrame
+                    let placeholderFrame = videoFrame.insetBy(dx: 2.0, dy: 2.0)
+                    strongSelf.secretVideoPlaceholder.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+                    strongSelf.secretVideoPlaceholder.transform = CATransform3DMakeScale(imageScale, imageScale, 1.0)
+                    strongSelf.secretVideoPlaceholder.position = displayVideoFrame.center
                     let makeSecretPlaceholderLayout = strongSelf.secretVideoPlaceholder.asyncLayout()
                     let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderFrame.size.width / 2.0), imageSize: placeholderFrame.size, boundingSize: placeholderFrame.size, intrinsicInsets: UIEdgeInsets())
                     let applySecretPlaceholder = makeSecretPlaceholderLayout(arguments)
@@ -607,18 +610,25 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if self.statusNode == nil {
                 let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor)
                 self.isUserInteractionEnabled = false
-                statusNode.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
                 self.statusNode = statusNode
                 self.addSubnode(statusNode)
             }
         } else {
             if let statusNode = self.statusNode {
-                statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                self.disappearingStatusNode = statusNode
+                statusNode.transitionToState(.none, completion: { [weak statusNode, weak self] in
                     statusNode?.removeFromSupernode()
+                    if self?.disappearingStatusNode === statusNode {
+                        self?.disappearingStatusNode = nil
+                    }
                 })
                 self.statusNode = nil
             }
         }
+        
+        let statusFrame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+        self.statusNode?.frame = statusFrame
+        self.disappearingStatusNode?.frame = statusFrame
         
         var state: RadialStatusNodeState
         switch status.mediaStatus {
@@ -679,7 +689,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if let current = self.playbackStatusNode {
                 playbackStatusNode = current
             } else {
-                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6))
+                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6), hasSeek: true)
+                playbackStatusNode.seekTo = { [weak self] position, play in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.seekTo(position)
+                    if play {
+                        strongSelf.play()
+                    }
+                }
                 self.addSubnode(playbackStatusNode)
                 self.playbackStatusNode = playbackStatusNode
             }
@@ -696,9 +715,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         } else {
             if let playbackStatusNode = self.playbackStatusNode {
                 self.playbackStatusNode = nil
-                playbackStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackStatusNode] _ in
-                    playbackStatusNode?.removeFromSupernode()
-                })
+                playbackStatusNode.removeFromSupernode()
             }
             
             self.durationNode?.status = .single(nil)
@@ -737,7 +754,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func activateVideoPlayback() {
-        guard let item = self.item else {
+        guard let item = self.item, self.shouldOpen() else {
             return
         }
         if self.infoBackgroundNode.alpha.isZero {
@@ -756,6 +773,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
+        }
+        if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.15 * playbackNode.frame.width, dy: 0.15 * playbackNode.frame.height).contains(point) {
+            let distanceFromCenter = point.distanceTo(playbackNode.position)
+            if distanceFromCenter < 0.15 * playbackNode.frame.width {
+                return self.view
+            } else {
+                return playbackNode.view
+            }
         }
         if let statusNode = self.statusNode, statusNode.supernode != nil, !statusNode.isHidden, statusNode.frame.contains(point) {
             return self.view
@@ -831,6 +856,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
+    var isPlaying: Bool {
+        if let status = self.status, case let .playbackStatus(playbackStatus) = status.mediaStatus, case .playing = playbackStatus {
+            return true
+        } else {
+            return false
+        }
+    }
+
     func seekTo(_ position: Double) {
         if let duration = self.playbackStatusNode?.duration {
             self.videoNode?.seek(position * duration)

@@ -221,6 +221,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)addSignalingData:(NSData * _Nonnull)data;
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+- (void)addExternalAudioData:(NSData * _Nonnull)data;
+
 @end
 
 typedef struct {

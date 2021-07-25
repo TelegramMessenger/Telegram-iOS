@@ -957,7 +957,11 @@ public final class PresentationCallImpl: PresentationCall {
             screencastCapturer.injectPixelBuffer(screencastFrame.0, rotation: screencastFrame.1)
         }))
         self.screencastAudioDataDisposable.set((screencastBufferServerContext.audioData
-        |> deliverOnMainQueue).start(next: { _ in
+        |> deliverOnMainQueue).start(next: { [weak self] data in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.ongoingContext?.addExternalAudioData(data: data)
         }))
         self.screencastStateDisposable.set((screencastBufferServerContext.isActive
         |> distinctUntilChanged

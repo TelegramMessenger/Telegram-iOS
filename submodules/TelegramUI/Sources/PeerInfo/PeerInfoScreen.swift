@@ -5649,32 +5649,32 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     func forwardMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, messageText in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, messageText, mode in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }
                 strongController.dismiss()
-                
-                for peer in peers {
-                    var result: [EnqueueMessage] = []
-                    if messageText.string.count > 0 {
-                        let inputText = convertMarkdownToAttributes(messageText)
-                        for text in breakChatInputText(trimChatInputText(inputText)) {
-                            if text.length != 0 {
-                                var attributes: [MessageAttribute] = []
-                                let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
-                                if !entities.isEmpty {
-                                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
-                                }
-                                result.append(.message(text: text.string, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+
+                var result: [EnqueueMessage] = []
+                if messageText.string.count > 0 {
+                    let inputText = convertMarkdownToAttributes(messageText)
+                    for text in breakChatInputText(trimChatInputText(inputText)) {
+                        if text.length != 0 {
+                            var attributes: [MessageAttribute] = []
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
+                            result.append(.message(text: text.string, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                         }
                     }
-                    
-                    result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
-                        return .forward(source: messageId, grouping: .auto, attributes: [], correlationId: nil)
-                    })
-                    
+                }
+                
+                result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
+                    return .forward(source: messageId, grouping: .auto, attributes: [], correlationId: nil)
+                })
+                
+                for peer in peers {
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
                     |> deliverOnMainQueue).start(next: { messageIds in
                         if let strongSelf = self {

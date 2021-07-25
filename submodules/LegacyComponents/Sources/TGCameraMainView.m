@@ -182,6 +182,7 @@
 - (void)setZoomLevel:(CGFloat)zoomLevel displayNeeded:(bool)displayNeeded
 {
     [_zoomView setZoomLevel:zoomLevel displayNeeded:displayNeeded];
+    [_zoomModeView setZoomLevel:zoomLevel];
 }
 
 - (void)zoomChangingEnded

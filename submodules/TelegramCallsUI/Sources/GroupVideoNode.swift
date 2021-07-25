@@ -99,6 +99,9 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
     }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
+        if self.hasScheduledUnblur {
+            self.hasScheduledUnblur = false
+        }
         if self.isBlurred == isBlurred {
             return
         }
@@ -128,6 +131,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         }
     }
     
+    private var hasScheduledUnblur = false
     func flip(withBackground: Bool) {
         if withBackground {
             self.backgroundColor = .black
@@ -145,16 +149,21 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
             }
         }) { finished in
             self.backgroundColor = nil
+            self.hasScheduledUnblur = true
             if let snapshotView = snapshotView {
                 Queue.mainQueue().after(0.3) {
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     })
-                    self.updateIsBlurred(isBlurred: false)
+                    if self.hasScheduledUnblur {
+                        self.updateIsBlurred(isBlurred: false)
+                    }
                 }
             } else {
                 Queue.mainQueue().after(0.4) {
-                    self.updateIsBlurred(isBlurred: false)
+                    if self.hasScheduledUnblur {
+                        self.updateIsBlurred(isBlurred: false)
+                    }
                 }
             }
         }

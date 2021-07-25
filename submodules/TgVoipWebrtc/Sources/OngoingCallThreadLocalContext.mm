@@ -1264,6 +1264,15 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     _tgVoip->setAudioInputDevice(deviceId.UTF8String);
 }
 
+- (void)addExternalAudioData:(NSData * _Nonnull)data {
+    if (_tgVoip) {
+        std::vector<uint8_t> samples;
+        samples.resize(data.length);
+        [data getBytes:samples.data() length:data.length];
+        _tgVoip->addExternalAudioSamples(std::move(samples));
+    }
+}
+
 @end
 
 namespace {

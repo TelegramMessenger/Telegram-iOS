@@ -6603,9 +6603,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.supportedOrientations = previousSupportedOrientations
+                    }
+                }, sendMessage: { [weak self] silently in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.sendCurrentMessage(silently)
+                    }
+                }, schedule: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.scheduleCurrentMessage()
                     }
                 })
                 strongSelf.sendMessageActionsController = controller
@@ -10917,80 +10925,97 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
-            controller.multiplePeersSelected = { [weak self, weak controller] peers, messageText in
+            controller.multiplePeersSelected = { [weak self, weak controller] peers, messageText, mode in
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
                 strongController.dismiss()
                 
-                for peer in peers {
-                    var result: [EnqueueMessage] = []
-                    if messageText.string.count > 0 {
-                        let inputText = convertMarkdownToAttributes(messageText)
-                        for text in breakChatInputText(trimChatInputText(inputText)) {
-                            if text.length != 0 {
-                                var attributes: [MessageAttribute] = []
-                                let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
-                                if !entities.isEmpty {
-                                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
-                                }
-                                result.append(.message(text: text.string, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                var result: [EnqueueMessage] = []
+                if messageText.string.count > 0 {
+                    let inputText = convertMarkdownToAttributes(messageText)
+                    for text in breakChatInputText(trimChatInputText(inputText)) {
+                        if text.length != 0 {
+                            var attributes: [MessageAttribute] = []
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
+                            result.append(.message(text: text.string, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                         }
                     }
-                    
-                    result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                        return .forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil)
-                    })
-                    
-                    let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
-                    |> deliverOnMainQueue).start(next: { messageIds in
-                        if let strongSelf = self {
-                            let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
-                                guard let id = id else {
-                                    return nil
-                                }
-                                return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                                |> mapToSignal { status, _ -> Signal<Bool, NoError> in
-                                    if status != nil {
-                                        return .never()
-                                    } else {
-                                        return .single(true)
+                }
+                
+                result.append(contentsOf: messages.map { message -> EnqueueMessage in
+                    return .forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil)
+                })
+                
+                let commit: ([EnqueueMessage]) -> Void = { result in
+                    for peer in peers {
+                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
+                        |> deliverOnMainQueue).start(next: { messageIds in
+                            if let strongSelf = self {
+                                let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                    guard let id = id else {
+                                        return nil
                                     }
+                                    return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                    |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                        if status != nil {
+                                            return .never()
+                                        } else {
+                                            return .single(true)
+                                        }
+                                    }
+                                    |> take(1)
+                                })
+                                if strongSelf.shareStatusDisposable == nil {
+                                    strongSelf.shareStatusDisposable = MetaDisposable()
                                 }
-                                |> take(1)
-                            })
-                            if strongSelf.shareStatusDisposable == nil {
-                                strongSelf.shareStatusDisposable = MetaDisposable()
+                                strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                                |> deliverOnMainQueue).start())
                             }
-                            strongSelf.shareStatusDisposable?.set((combineLatest(signals)
-                            |> deliverOnMainQueue).start())
-                        }
-                    })
-                    
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let text: String
-                    var savedMessages = false
-                    if peers.count == 1, let peerId = peers.first?.id, peerId == strongSelf.context.account.peerId {
-                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
-                        savedMessages = true
-                    } else {
-                        if peers.count == 1, let peer = peers.first {
-                            let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
-                        } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                            let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
-                        } else if let peer = peers.first {
-                            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
+                        })
+                        
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        let text: String
+                        var savedMessages = false
+                        if peers.count == 1, let peerId = peers.first?.id, peerId == strongSelf.context.account.peerId {
+                            text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                            savedMessages = true
                         } else {
-                            text = ""
+                            if peers.count == 1, let peer = peers.first {
+                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
+                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
+                            } else if let peer = peers.first {
+                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
+                            } else {
+                                text = ""
+                            }
                         }
+                        
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                     }
-                    
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                }
+                
+                switch mode {
+                    case .generic:
+                        commit(result)
+                    case .silent:
+                        let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: true)
+                        commit(transformedMessages)
+                    case .schedule:
+                        strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+                            if let strongSelf = self {
+                                let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleTime)
+                                commit(transformedMessages)
+                            }
+                        })
                 }
             }
             controller.peerSelected = { [weak self, weak controller] peer in

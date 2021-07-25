@@ -295,6 +295,9 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
+        if self.hasScheduledUnblur {
+            self.hasScheduledUnblur = false
+        }
         if self.isBlurred == isBlurred {
             return
         }
@@ -326,18 +329,22 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
         }
     }
     
+    private var hasScheduledUnblur = false
     func flip(withBackground: Bool) {
         if withBackground {
             self.backgroundColor = .black
         }
         UIView.transition(with: withBackground ? self.videoTransformContainer.view : self.view, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
             UIView.performWithoutAnimation {
-                self.updateIsBlurred(isBlurred: true, light: true, animated: false)
+                self.updateIsBlurred(isBlurred: true, light: false, animated: false)
             }
         }) { finished in
             self.backgroundColor = nil
+            self.hasScheduledUnblur = true
             Queue.mainQueue().after(0.5) {
-                self.updateIsBlurred(isBlurred: false)
+                if self.hasScheduledUnblur {
+                    self.updateIsBlurred(isBlurred: false)
+                }
             }
         }
     }

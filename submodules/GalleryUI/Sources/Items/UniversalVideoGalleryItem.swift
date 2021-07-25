@@ -773,6 +773,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var forceEnablePiP = false
             var forceEnableUserInteraction = false
             var isAnimated = false
+            var isEnhancedWebPlayer = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
                 self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
@@ -782,9 +783,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 let type = webEmbedType(content: content.webpageContent)
                 switch type {
                     case .youtube:
+                        isEnhancedWebPlayer = true
                         forceEnableUserInteraction = true
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
                         self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
+                    case .vimeo:
+                        isEnhancedWebPlayer = true
                     case .iframe:
                         disablePlayerControls = true
                     default:
@@ -1121,7 +1125,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
 
-                if !isWebpage, let file = file, !file.isAnimated {
+                var hasMoreButton = false
+                if isEnhancedWebPlayer {
+                    hasMoreButton = true
+                } else if !isWebpage, let file = file, !file.isAnimated {
+                    hasMoreButton = true
+                }
+                 
+                if hasMoreButton {
                     let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
                     barButtonItems.append(moreMenuItem)
                 }
@@ -1315,6 +1326,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
+                    playbackRate = item.playbackRate
                 }
             }
             if let playbackRate = playbackRate {
@@ -1923,7 +1935,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
 
-    private func contentInfo() -> (message: Message, file: TelegramMediaFile, isWebpage: Bool)? {
+    private func contentInfo() -> (message: Message, file: TelegramMediaFile?, isWebpage: Bool)? {
         guard let item = self.item else {
             return nil
         }
@@ -1934,16 +1946,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let m = m as? TelegramMediaFile, m.isVideo {
                     file = m
                     break
-                } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
-                    file = f
+                } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content {
+                    if let f = content.file, f.isVideo {
+                        file = f
+                    }
                     isWebpage = true
                     break
                 }
             }
-
-            if let file = file {
-                return (message, file, isWebpage)
-            }
+            return (message, file, isWebpage)
         }
         return nil
     }
@@ -2042,7 +2053,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
-            if let (message, file, isWebpage) = strongSelf.contentInfo(), !isWebpage {
+            if let (message, maybeFile, isWebpage) = strongSelf.contentInfo(), let file = maybeFile, !isWebpage {
                 items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 

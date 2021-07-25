@@ -2438,27 +2438,21 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     PGCameraMode newMode = PGCameraModeUndefined;
     if (gestureRecognizer == _photoSwipeGestureRecognizer)
     {
-        if (_camera.cameraMode == PGCameraModePhoto && _intent == TGCameraControllerGenericIntent)
-            newMode = PGCameraModePhotoScan;
-        else if (_camera.cameraMode != PGCameraModePhotoScan)
-            newMode = PGCameraModePhoto;
+        newMode = PGCameraModePhoto;
     }
     else if (gestureRecognizer == _videoSwipeGestureRecognizer)
     {
-        if (_camera.cameraMode == PGCameraModePhotoScan) {
-            if (_items.count == 0)
-                newMode = PGCameraModePhoto;
+        if (_intent == TGCameraControllerAvatarIntent) {
+            newMode = PGCameraModeSquareVideo;
         } else {
-            if (_intent == TGCameraControllerAvatarIntent) {
-                newMode = PGCameraModeSquareVideo;
-            } else {
-                newMode = PGCameraModeVideo;
-            }
+            newMode = PGCameraModeVideo;
         }
     }
     
-    if (newMode != PGCameraModeUndefined && _camera.cameraMode != newMode) {
-        [self _updateCameraMode:newMode updateInterface:true];
+    if (newMode != PGCameraModeUndefined && _camera.cameraMode != newMode)
+    {
+        [_camera setCameraMode:newMode];
+        [_interfaceView setCameraMode:newMode];
     }
 }
 

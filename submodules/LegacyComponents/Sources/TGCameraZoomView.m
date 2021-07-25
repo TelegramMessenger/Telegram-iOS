@@ -1,6 +1,10 @@
 #import "TGCameraZoomView.h"
 #import "TGCameraInterfaceAssets.h"
 
+#import "TGModernButton.h"
+#import "TGImageUtils.h"
+#import "TGPhotoEditorUtils.h"
+
 #import "LegacyComponentsInternal.h"
 
 @interface TGCameraZoomView ()
@@ -174,3 +178,287 @@
 }
 
 @end
+
+@interface TGCameraZoomModeItemView: TGModernButton
+{
+    UIImageView *_backgroundView;
+    UILabel *_label;
+}
+@end
+
+@implementation TGCameraZoomModeItemView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(3, 3, 37, 37)];
+        _backgroundView.image = TGCircleImage(37, [UIColor colorWithWhite:0.0 alpha:0.4]);
+        
+        _label = [[UILabel alloc] initWithFrame:self.bounds];
+        _label.textAlignment = NSTextAlignmentCenter;
+        
+        [self addSubview:_backgroundView];
+        [self addSubview:_label];
+    }
+    return self;
+}
+
+- (void)setValue:(NSString *)value selected:(bool)selected animated:(bool)animated {
+    CGFloat scale = selected ? 1.0 : 0.7;
+    CGFloat textScale = selected ? 1.0 : 0.85;
+    
+    _label.text = value;
+    _label.textColor = selected ? [TGCameraInterfaceAssets accentColor] : [UIColor whiteColor];
+    _label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+    
+    if (animated) {
+        [UIView animateWithDuration:0.3f animations:^
+        {
+            _backgroundView.transform = CGAffineTransformMakeScale(scale, scale);
+            _label.transform = CGAffineTransformMakeScale(textScale, textScale);
+        }];
+    } else {
+        _backgroundView.transform = CGAffineTransformMakeScale(scale, scale);
+        _label.transform = CGAffineTransformMakeScale(textScale, textScale);
+    }
+}
+
+@end
+
+@interface TGCameraZoomModeView ()
+{
+    UIView *_backgroundView;
+
+    TGCameraZoomModeItemView *_leftItem;
+    TGCameraZoomModeItemView *_centerItem;
+    TGCameraZoomModeItemView *_rightItem;
+}
+@end
+
+@implementation TGCameraZoomModeView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self != nil)
+    {        
+        _backgroundView = [[UIView alloc] initWithFrame:self.bounds];
+        _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.15];
+        _backgroundView.layer.cornerRadius = self.bounds.size.height / 2.0;
+        
+        _leftItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(0, 0, 43, 43)];
+        [_leftItem addTarget:self action:@selector(leftPressed) forControlEvents:UIControlEventTouchUpInside];
+        
+        _centerItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(43, 0, 43, 43)];
+        [_centerItem addTarget:self action:@selector(centerPressed) forControlEvents:UIControlEventTouchUpInside];
+        
+        _rightItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(86, 0, 43, 43)];
+        [_rightItem addTarget:self action:@selector(rightPressed) forControlEvents:UIControlEventTouchUpInside];
+        
+        [self addSubview:_backgroundView];
+        [self addSubview:_leftItem];
+        [self addSubview:_centerItem];
+        [self addSubview:_rightItem];
+        
+        UIPanGestureRecognizer *gestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
+        [self addGestureRecognizer:gestureRecognizer];
+    }
+    return self;
+}
+
+
+- (void)panGesture:(UIPanGestureRecognizer *)gestureRecognizer {
+    CGPoint translation = [gestureRecognizer translationInView:self];
+    
+    switch (gestureRecognizer.state) {
+    case UIGestureRecognizerStateBegan:
+        self.zoomChanged(_zoomLevel, false);
+        break;
+        
+    case UIGestureRecognizerStateChanged:
+        _zoomLevel = MAX(0.5, MIN(10.0, _zoomLevel - translation.x / 100.0));
+        self.zoomChanged(_zoomLevel, false);
+        break;
+        
+    case UIGestureRecognizerStateEnded:
+        self.zoomChanged(_zoomLevel, true);
+        break;
+        
+    case UIGestureRecognizerStateCancelled:
+        self.zoomChanged(_zoomLevel, true);
+        break;
+        
+    default:
+        break;
+    }
+    
+    [gestureRecognizer setTranslation:CGPointZero inView:self];
+}
+
+- (void)leftPressed {
+    [self setZoomLevel:0.5 animated:true];
+    self.zoomChanged(0.5, true);
+}
+
+- (void)centerPressed {
+    [self setZoomLevel:1.0 animated:true];
+    self.zoomChanged(1.0, true);
+}
+
+- (void)rightPressed {
+    [self setZoomLevel:2.0 animated:true];
+    self.zoomChanged(2.0, true);
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel {
+    [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
+{
+    _zoomLevel = zoomLevel;
+    if (zoomLevel < 1.0) {
+        [_leftItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+        [_centerItem setValue:@"1" selected:false animated:animated];
+        [_rightItem setValue:@"2" selected:false animated:animated];
+    } else if (zoomLevel < 2.0) {
+        [_leftItem setValue:@"0.5" selected:false animated:animated];
+        if ((zoomLevel - 1.0) < FLT_EPSILON) {
+            [_centerItem setValue:@"1x" selected:true animated:animated];
+        } else {
+            [_centerItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+        }
+        [_rightItem setValue:@"2" selected:false animated:animated];
+    } else {
+        [_leftItem setValue:@"0.5" selected:false animated:animated];
+        [_centerItem setValue:@"1" selected:false animated:animated];
+        
+        CGFloat near = round(zoomLevel);
+        if (ABS(zoomLevel - near) < FLT_EPSILON) {
+            [_rightItem setValue:[NSString stringWithFormat:@"%d", (int)zoomLevel] selected:true animated:animated];
+        } else {
+            [_rightItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+        }
+    }
+}
+
+- (void)setHidden:(BOOL)hidden
+{
+    self.alpha = hidden ? 0.0f : 1.0f;
+    super.hidden = hidden;
+}
+
+- (void)setHidden:(bool)hidden animated:(bool)animated
+{
+    if (animated)
+    {
+        super.hidden = false;
+        self.userInteractionEnabled = false;
+        
+        [UIView animateWithDuration:0.25f animations:^
+        {
+            self.alpha = hidden ? 0.0f : 1.0f;
+        } completion:^(BOOL finished)
+        {
+            self.userInteractionEnabled = true;
+             
+            if (finished)
+                self.hidden = hidden;
+        }];
+    }
+    else
+    {
+        self.alpha = hidden ? 0.0f : 1.0f;
+        super.hidden = hidden;
+    }
+}
+
+- (void)layoutSubviews
+{
+    if (_leftItem.isHidden) {
+        
+    } else {
+        _leftItem.frame = CGRectMake(0, 0, 43, 43.0);
+        _centerItem.frame = CGRectMake(43, 0, 43, 43.0);
+        _rightItem.frame = CGRectMake(86, 0, 43, 43.0);
+    }
+}
+
+@end
+
+
+@interface TGCameraZoomWheelView ()
+{
+    UIImageView *_backgroundView;
+}
+@end
+
+@implementation TGCameraZoomWheelView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self != nil)
+    {
+        self.clipsToBounds = true;
+        
+        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(-28.0, 0.0, 446.0, 446.0)];
+        _backgroundView.alpha = 0.75;
+
+        [self addSubview:_backgroundView];
+    }
+    return self;
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel {
+    zoomLevel = MAX(0.5, zoomLevel);
+    _zoomLevel = zoomLevel;
+    
+    CGFloat angle = 0.0;
+    if (zoomLevel < 1.0) {
+        CGFloat delta = (zoomLevel - 0.5) / 0.5;
+        angle = TGDegreesToRadians(20.8) * (1.0 - delta);
+    } else if (zoomLevel < 2.0) {
+        CGFloat delta = zoomLevel - 1.0;
+        angle = TGDegreesToRadians(-22.0) * delta;
+    } else if (zoomLevel < 10.0) {
+        CGFloat delta = (zoomLevel - 2.0) / 8.0;
+        angle = TGDegreesToRadians(-22.0) + TGDegreesToRadians(-68.0) * delta;
+    }
+    
+    _backgroundView.transform = CGAffineTransformMakeRotation(angle);
+}
+
+- (void)setHidden:(BOOL)hidden
+{
+    self.alpha = hidden ? 0.0f : 1.0f;
+    super.hidden = hidden;
+}
+
+- (void)setHidden:(bool)hidden animated:(bool)animated
+{
+    if (animated)
+    {
+        super.hidden = false;
+        self.userInteractionEnabled = false;
+        
+        [UIView animateWithDuration:0.25f animations:^
+        {
+            self.alpha = hidden ? 0.0f : 1.0f;
+        } completion:^(BOOL finished)
+        {
+            self.userInteractionEnabled = true;
+             
+            if (finished)
+                self.hidden = hidden;
+        }];
+    }
+    else
+    {
+        self.alpha = hidden ? 0.0f : 1.0f;
+        super.hidden = hidden;
+    }
+}
+
+@end
+
