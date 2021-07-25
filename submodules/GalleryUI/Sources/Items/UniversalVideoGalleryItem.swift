@@ -494,6 +494,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var requiresDownload = false
     
     private var item: UniversalVideoGalleryItem?
+    private var playbackRate: Double?
+    private let playbackRatePromise = ValuePromise<Double>()
     
     private let statusDisposable = MetaDisposable()
     private let moreButtonStateDisposable = MetaDisposable()
@@ -622,6 +624,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setPlayRate = { [weak self] rate in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 videoNode.setBaseRate(rate)
+
+                if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }
             }
         }
         
@@ -839,6 +845,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
+
+                        if let playbackRate = strongSelf.playbackRate {
+                            videoNode.setBaseRate(playbackRate)
+                        }
                     }
                 }
             }
@@ -872,10 +882,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
-                        return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
+                        return .single(next) |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))
                     }
                     
-                    self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
+                    self.mediaPlaybackStateDisposable.set((throttledSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let strongSelf = self, let videoNode = strongSelf.videoNode, videoNode.ownsContentNode else {
+                            return
+                        }
+
                         if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
@@ -923,13 +938,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
-                videoNode.status,
+                self.playbackRatePromise.get(),
                 self.isShowingContextMenuPromise.get()
-            ).start(next: { [weak self] status, isShowingContextMenu in
+            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
                 guard let strongSelf = self else {
-                    return
-                }
-                guard let status = status else {
                     return
                 }
 
@@ -937,7 +949,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if isShowingContextMenu {
                     effectiveBaseRate = 1.0
                 } else {
-                    effectiveBaseRate = status.baseRate
+                    effectiveBaseRate = playbackRate
                 }
 
                 if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
@@ -1158,6 +1170,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.item = item
+
+        if let _ = item.content as? NativeVideoContent {
+            self.playbackRate = item.playbackRate
+        } else if let _ = item.content as? WebEmbedVideoContent {
+            self.playbackRate = item.playbackRate
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
         if let contentInfo = item.contentInfo {
             switch contentInfo {
@@ -1244,6 +1264,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: self.actionAtEnd)
+
+                            videoNode.setBaseRate(self.playbackRate ?? 1.0)
                         }
                     } else {
                         if self.shouldAutoplayOnCentrality()  {
@@ -1314,24 +1336,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var isAnimated = false
             var seek = MediaPlayerSeek.start
-            var playbackRate: Double? = nil
             if let item = self.item {
                 if let content = item.content as? NativeVideoContent {
                     isAnimated = content.fileReference.media.isAnimated
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
-                    playbackRate = item.playbackRate
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
-                    playbackRate = item.playbackRate
                 }
             }
-            if let playbackRate = playbackRate {
-                videoNode.setBaseRate(playbackRate)
-            }
+
+            videoNode.setBaseRate(self.playbackRate ?? 1.0)
+
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
@@ -2127,6 +2146,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     videoNode.setBaseRate(rate)
+
+                    if let controller = strongSelf.galleryController() as? GalleryController {
+                        controller.updateSharedPlaybackRate(rate)
+                    }
                 })))
             }
 
@@ -2197,6 +2220,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
         return .single((self.footerContentNode, nil))
+    }
+
+    func updatePlaybackRate(_ playbackRate: Double?) {
+        self.playbackRate = playbackRate
+
+        if let playbackRate = self.playbackRate {
+            self.videoNode?.setBaseRate(playbackRate)
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
     }
 }
 

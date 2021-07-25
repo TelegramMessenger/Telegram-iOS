@@ -348,7 +348,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let fromPlayingVideo: Bool
     private let landscape: Bool
     private let timecode: Double?
-    private let playbackRate: Double?
+    private var playbackRate: Double?
     
     private let accountInUseDisposable = MetaDisposable()
     private let disposable = MetaDisposable()
@@ -538,7 +538,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 if entry.message.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
-                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, playbackRate: isCentral ? playbackRate : nil, displayInfoOnTop: displayInfoOnTop, configuration: configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, playbackRate: playbackRate, displayInfoOnTop: displayInfoOnTop, configuration: configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
                                     if let strongSelf = self {
                                         strongSelf.presentInGlobalOverlay(c, with: a)
                                     }
@@ -1102,7 +1102,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
-            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, playbackRate: isCentral ? self.playbackRate : 1.0, displayInfoOnTop: displayInfoOnTop, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, playbackRate: self.playbackRate, displayInfoOnTop: displayInfoOnTop, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
                 if let strongSelf = self {
                     strongSelf.presentInGlobalOverlay(c, with: a)
                 }
@@ -1366,6 +1366,16 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 centralItemNode.adjustForPreviewing()
                 self.preferredContentSize = itemSize.aspectFitted(layout.size)
                 self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+            }
+        }
+    }
+
+    func updateSharedPlaybackRate(_ playbackRate: Double?) {
+        self.playbackRate = playbackRate
+
+        self.galleryNode.pager.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? UniversalVideoGalleryItemNode {
+                itemNode.updatePlaybackRate(playbackRate)
             }
         }
     }
