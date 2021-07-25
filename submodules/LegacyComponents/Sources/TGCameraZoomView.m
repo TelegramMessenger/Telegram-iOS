@@ -228,6 +228,9 @@
 @interface TGCameraZoomModeView ()
 {
     UIView *_backgroundView;
+    
+    bool _hasUltrawideCamera;
+    bool _hasTelephotoCamera;
 
     TGCameraZoomModeItemView *_leftItem;
     TGCameraZoomModeItemView *_centerItem;
@@ -237,11 +240,14 @@
 
 @implementation TGCameraZoomModeView
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)
-    {        
+    {
+        _hasUltrawideCamera = hasUltrawideCamera;
+        _hasTelephotoCamera = hasTelephotoCamera;
+        
         _backgroundView = [[UIView alloc] initWithFrame:self.bounds];
         _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.15];
         _backgroundView.layer.cornerRadius = self.bounds.size.height / 2.0;
@@ -256,12 +262,16 @@
         [_rightItem addTarget:self action:@selector(rightPressed) forControlEvents:UIControlEventTouchUpInside];
         
         [self addSubview:_backgroundView];
-        [self addSubview:_leftItem];
+        if (hasUltrawideCamera) {
+            [self addSubview:_leftItem];
+        }
         [self addSubview:_centerItem];
-        [self addSubview:_rightItem];
+        if (hasTelephotoCamera) {
+            [self addSubview:_rightItem];
+        }
         
         UIPanGestureRecognizer *gestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
-        [self addGestureRecognizer:gestureRecognizer];
+//        [self addGestureRecognizer:gestureRecognizer];
     }
     return self;
 }
@@ -318,15 +328,23 @@
 {
     _zoomLevel = zoomLevel;
     if (zoomLevel < 1.0) {
-        [_leftItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+        NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+        if ([value isEqual:@"1.0x"]) {
+            value = @"0.9x";
+        }
+        [_leftItem setValue:value selected:true animated:animated];
         [_centerItem setValue:@"1" selected:false animated:animated];
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else if (zoomLevel < 2.0) {
         [_leftItem setValue:@"0.5" selected:false animated:animated];
-        if ((zoomLevel - 1.0) < FLT_EPSILON) {
+        if ((zoomLevel - 1.0) < 0.1) {
             [_centerItem setValue:@"1x" selected:true animated:animated];
         } else {
-            [_centerItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+            NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+            if ([value isEqual:@"1.0x"]) {
+                value = @"1x";
+            }
+            [_centerItem setValue:value selected:true animated:animated];
         }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else {
@@ -334,8 +352,8 @@
         [_centerItem setValue:@"1" selected:false animated:animated];
         
         CGFloat near = round(zoomLevel);
-        if (ABS(zoomLevel - near) < FLT_EPSILON) {
-            [_rightItem setValue:[NSString stringWithFormat:@"%d", (int)zoomLevel] selected:true animated:animated];
+        if (ABS(zoomLevel - near) < 0.1) {
+            [_rightItem setValue:[NSString stringWithFormat:@"%dx", (int)zoomLevel] selected:true animated:animated];
         } else {
             [_rightItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
         }
@@ -375,8 +393,12 @@
 
 - (void)layoutSubviews
 {
-    if (_leftItem.isHidden) {
-        
+    if (_rightItem.superview == nil) {
+        _backgroundView.frame = CGRectMake(43, 0, 43, 43);
+    } else if (_leftItem.superview == nil) {
+        _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 86, 43);
+        _centerItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43);
+        _rightItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43);
     } else {
         _leftItem.frame = CGRectMake(0, 0, 43, 43.0);
         _centerItem.frame = CGRectMake(43, 0, 43, 43.0);

@@ -49,6 +49,7 @@
 
 @property (nonatomic, copy) void(^focusPointChanged)(CGPoint point);
 @property (nonatomic, copy) void(^expositionChanged)(CGFloat value);
+@property (nonatomic, copy) void(^zoomChanged)(CGFloat level);
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
@@ -61,7 +62,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;

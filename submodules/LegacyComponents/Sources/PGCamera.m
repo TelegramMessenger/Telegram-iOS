@@ -705,9 +705,25 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 #pragma mark - Zoom
 
+- (bool)hasUltrawideCamera {
+    return self.captureSession.hasUltrawideCamera;
+}
+
+- (bool)hasTelephotoCamera {
+    return self.captureSession.hasTelephotoCamera;
+}
+
 - (bool)isZoomAvailable
 {
     return self.captureSession.isZoomAvailable;
+}
+
+- (CGFloat)minZoomLevel {
+    return self.captureSession.minZoomLevel;
+}
+
+- (CGFloat)maxZoomLevel {
+    return self.captureSession.maxZoomLevel;
 }
 
 - (CGFloat)zoomLevel
@@ -717,8 +733,6 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)setZoomLevel:(CGFloat)zoomLevel
 {
-    zoomLevel = MAX(0.0f, MIN(1.0f, zoomLevel));
-    
     [[PGCamera cameraQueue] dispatch:^
     {
         if (self.disabled)

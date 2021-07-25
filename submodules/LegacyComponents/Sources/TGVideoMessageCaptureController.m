@@ -450,6 +450,10 @@ typedef enum
             gestureRecognizer.scale = 1.0f;
         }
             break;
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+            [_capturePipeline cancelZoom];
+            break;
         default:
             break;
     }

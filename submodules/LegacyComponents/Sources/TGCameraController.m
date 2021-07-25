@@ -302,12 +302,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];
@@ -376,6 +376,15 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             return;
         
         [strongSelf->_camera setFlashMode:mode];
+    };
+    
+    _interfaceView.zoomChanged = ^(CGFloat level)
+    {
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [strongSelf->_camera setZoomLevel:level];
     };
     
     _interfaceView.shutterPressed = ^(bool fromHardwareButton)
@@ -555,8 +564,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
         else
         {
-            strongSelf->_camera.zoomLevel = 0.0f;
-            
             [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
             {
                 if (commitBlock != nil)
@@ -2514,8 +2521,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         case UIGestureRecognizerStateChanged:
         {
-            CGFloat delta = (gestureRecognizer.scale - 1.0f) / 1.5f;
-            CGFloat value = MAX(0.0f, MIN(1.0f, _camera.zoomLevel + delta));
+            CGFloat delta = (gestureRecognizer.scale - 1.0f) * 1.25;
+            if (_camera.zoomLevel > 2.0) {
+                delta *= 2.0;
+            }
+            CGFloat value = MAX(_camera.minZoomLevel, MIN(_camera.maxZoomLevel, _camera.zoomLevel + delta));
             
             [_camera setZoomLevel:value];
             [_interfaceView setZoomLevel:value displayNeeded:true];

@@ -67,10 +67,7 @@
     TGCameraFlashActiveView *_flashActiveView;
     
     TGCameraFlipButton *_topFlipButton;
-    
-    TGCameraZoomModeView *_zoomModeView;
-    TGCameraZoomWheelView *_zoomWheelView;
-    
+        
     bool _hasResults;
     
     CGFloat _topPanelOffset;
@@ -103,7 +100,7 @@
 @synthesize cancelPressed;
 @synthesize actionHandle = _actionHandle;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)
@@ -287,7 +284,7 @@
         };
 //        [self addSubview:_zoomView];
         
-        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43)];
+        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
         _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done) {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -303,6 +300,9 @@
                 [strongSelf->_zoomModeView setHidden:false animated:true];
                 [strongSelf->_zoomWheelView setHidden:true animated:true];
             }
+            
+            if (strongSelf.zoomChanged != nil)
+                strongSelf.zoomChanged(zoomLevel);
         };
         [_zoomModeView setZoomLevel:1.0];
         [self addSubview:_zoomModeView];

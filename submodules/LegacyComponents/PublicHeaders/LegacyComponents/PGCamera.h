@@ -83,6 +83,11 @@ typedef enum
 
 @property (nonatomic, readonly) bool isZoomAvailable;
 @property (nonatomic, assign) CGFloat zoomLevel;
+@property (nonatomic, readonly) CGFloat minZoomLevel;
+@property (nonatomic, readonly) CGFloat maxZoomLevel;
+
+@property (nonatomic, readonly) bool hasUltrawideCamera;
+@property (nonatomic, readonly) bool hasTelephotoCamera;
 
 @property (nonatomic, assign) bool disableResultMirroring;
 

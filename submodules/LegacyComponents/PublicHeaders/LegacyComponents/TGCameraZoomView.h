@@ -25,6 +25,8 @@
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
+
 @end
 
 
