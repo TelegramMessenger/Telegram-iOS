@@ -182,12 +182,12 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
             let convertedType: ManagedAudioSessionType
             switch type {
                 case TGAudioSessionTypePlayAndRecord, TGAudioSessionTypePlayAndRecordHeadphones:
-                    convertedType = .record(speaker: false)
+                    convertedType = .recordWithOthers
                 default:
                     convertedType = .play
             }
             let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
-            }, deactivate: {
+            }, deactivate: { _ in
                 interrupted?()
                 return .complete()
             })

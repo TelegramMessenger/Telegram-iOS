@@ -233,7 +233,7 @@ public func playSound(context: AccountContext, sound: PeerMessageSound, defaultS
                         currentPlayer?.play()
                     }
                 }
-            }, deactivate: {
+            }, deactivate: { _ in
                 return Signal { subscriber in
                     Queue.mainQueue().async {
                         currentPlayer?.stop()
