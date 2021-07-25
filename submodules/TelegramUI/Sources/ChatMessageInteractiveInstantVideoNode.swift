@@ -37,6 +37,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let secretVideoPlaceholder: TransformImageNode
     
     private var statusNode: RadialStatusNode?
+    private var disappearingStatusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
     private(set) var videoFrame: CGRect?
     
@@ -494,8 +495,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     strongSelf.secretVideoPlaceholderBackground.frame = displayVideoFrame
                     
-                    let placeholderFrame = displayVideoFrame.insetBy(dx: 2.0, dy: 2.0)
-                    strongSelf.secretVideoPlaceholder.frame = placeholderFrame
+                    let placeholderFrame = videoFrame.insetBy(dx: 2.0, dy: 2.0)
+                    strongSelf.secretVideoPlaceholder.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+                    strongSelf.secretVideoPlaceholder.transform = CATransform3DMakeScale(imageScale, imageScale, 1.0)
+                    strongSelf.secretVideoPlaceholder.position = displayVideoFrame.center
                     let makeSecretPlaceholderLayout = strongSelf.secretVideoPlaceholder.asyncLayout()
                     let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderFrame.size.width / 2.0), imageSize: placeholderFrame.size, boundingSize: placeholderFrame.size, intrinsicInsets: UIEdgeInsets())
                     let applySecretPlaceholder = makeSecretPlaceholderLayout(arguments)
@@ -612,14 +615,20 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         } else {
             if let statusNode = self.statusNode {
-                statusNode.transitionToState(.none, completion: { [weak statusNode] in
+                self.disappearingStatusNode = statusNode
+                statusNode.transitionToState(.none, completion: { [weak statusNode, weak self] in
                     statusNode?.removeFromSupernode()
+                    if self?.disappearingStatusNode === statusNode {
+                        self?.disappearingStatusNode = nil
+                    }
                 })
                 self.statusNode = nil
             }
         }
         
-        self.statusNode?.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+        let statusFrame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
+        self.statusNode?.frame = statusFrame
+        self.disappearingStatusNode?.frame = statusFrame
         
         var state: RadialStatusNodeState
         switch status.mediaStatus {
