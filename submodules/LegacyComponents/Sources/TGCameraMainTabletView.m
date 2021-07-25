@@ -42,7 +42,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
 @synthesize shutterReleased;
 @synthesize cancelPressed;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)

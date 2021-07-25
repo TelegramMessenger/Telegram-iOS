@@ -139,6 +139,8 @@ const NSInteger PGCameraFrameRate = 30;
         TGLegacyLog(@"ERROR: camera can't add still image output");
     }
     
+    [self resetZoom];
+    
     AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
     videoOutput.alwaysDiscardsLateVideoFrames = true;
     videoOutput.videoSettings = @{ (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange) };
@@ -234,8 +236,7 @@ const NSInteger PGCameraFrameRate = 30;
     [self commitConfiguration];
     
     [self resetFocusPoint];
-    
-    self.zoomLevel = 0.0f;
+    [self resetZoom];
 }
 
 - (void)resetFlashMode
@@ -291,6 +292,8 @@ const NSInteger PGCameraFrameRate = 30;
     
     [self _enableLowLightBoost];
     [self _enableVideoStabilization];
+    
+    [self resetZoom];
     
     [self commitConfiguration];
     
@@ -444,9 +447,22 @@ const NSInteger PGCameraFrameRate = 30;
 
 #pragma mark - Zoom
 
-- (CGFloat)_maximumZoomFactor
-{
-    return MIN(5.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+- (bool)hasUltrawideCamera {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
+            return true;
+        }
+    }
+    return false;
+}
+
+- (bool)hasTelephotoCamera {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.lastObject.deviceType == AVCaptureDeviceTypeBuiltInTelephotoCamera) {
+            return true;
+        }
+    }
+    return false;
 }
 
 - (CGFloat)zoomLevel
@@ -454,7 +470,52 @@ const NSInteger PGCameraFrameRate = 30;
     if (![self.videoDevice respondsToSelector:@selector(videoZoomFactor)])
         return 1.0f;
     
-    return (self.videoDevice.videoZoomFactor - 1.0f) / ([self _maximumZoomFactor] - 1.0f);
+    if (iosMajorVersion() >= 13.0 && self.videoDevice.isVirtualDevice) {
+        CGFloat backingLevel = self.videoDevice.videoZoomFactor;
+        CGFloat realLevel = backingLevel;
+        
+        NSArray *marks = self.videoDevice.virtualDeviceSwitchOverVideoZoomFactors;
+        if (marks.count == 2) {
+            CGFloat firstMark = [marks.firstObject floatValue];
+            CGFloat secondMark = [marks.lastObject floatValue];
+            
+            if (backingLevel < firstMark) {
+                realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
+            } else if (backingLevel < secondMark) {
+                realLevel = 1.0 + (backingLevel - firstMark) / (secondMark - firstMark);
+            } else {
+                realLevel = 2.0 + (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
+            }
+        } else if (marks.count == 1) {
+            CGFloat mark = [marks.firstObject floatValue];
+            if (backingLevel < mark) {
+                realLevel = 1.0 + backingLevel / mark;
+            } else {
+                realLevel = 2.0 + (backingLevel - mark) / (self.maxZoomLevel - mark);
+            }
+        }
+        
+        return realLevel;
+    }
+    
+    return self.videoDevice.videoZoomFactor;
+}
+
+- (CGFloat)minZoomLevel {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
+            return 0.5;
+        }
+    }
+    return 1.0;
+}
+
+- (CGFloat)maxZoomLevel {
+    return MIN(6.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+}
+
+- (void)resetZoom {
+    [self setZoomLevel:1.0];
 }
 
 - (void)setZoomLevel:(CGFloat)zoomLevel
@@ -469,7 +530,39 @@ const NSInteger PGCameraFrameRate = 30;
         if (strongSelf == nil)
             return;
         
-        device.videoZoomFactor = MAX(1.0f, MIN([strongSelf _maximumZoomFactor], 1.0f + ([strongSelf _maximumZoomFactor] - 1.0f) * zoomLevel));
+        CGFloat level = zoomLevel;
+        if (iosMajorVersion() >= 13.0 && device.isVirtualDevice) {
+            NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
+            if (marks.count == 2) {
+                CGFloat firstMark = [marks.firstObject floatValue];
+                CGFloat secondMark = [marks.lastObject floatValue];
+                
+                if (level < 1.0) {
+                    level = MAX(0.5, level);
+                    
+                    CGFloat backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
+                    device.videoZoomFactor = backingLevel;
+                } else if (zoomLevel < 2.0) {
+                    CGFloat backingLevel = firstMark + (level - 1.0) * (secondMark - firstMark);
+                    device.videoZoomFactor = backingLevel;
+                } else {
+                    CGFloat backingLevel = secondMark + (level - 2.0) * (self.maxZoomLevel - secondMark);
+                    device.videoZoomFactor = backingLevel;
+                }
+            } else if (marks.count == 1) {
+                CGFloat mark = [marks.firstObject floatValue];
+                if (zoomLevel < 2.0) {
+                    CGFloat backingLevel = (level - 1.0) * mark;
+                    device.videoZoomFactor = backingLevel;
+                } else {
+                    CGFloat backingLevel = mark + (level - 2.0) * (self.maxZoomLevel - mark);
+                    device.videoZoomFactor = backingLevel;
+                }
+            }
+        } else {
+            level = MAX(1.0, MIN(10.0, level));
+            device.videoZoomFactor = MAX([strongSelf minZoomLevel], MIN([strongSelf maxZoomLevel], level));
+        }
     }];
 }
 
@@ -700,16 +793,13 @@ const NSInteger PGCameraFrameRate = 30;
 
 + (AVCaptureDevice *)_deviceWithPosition:(AVCaptureDevicePosition)position
 {
-    if (iosMajorVersion() >= 10 && position == AVCaptureDevicePositionBack) {
-        AVCaptureDevice *device = nil;
-        if (iosMajorVersion() >= 13) {
-            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
-        }
+    if (iosMajorVersion() >= 13 && position != AVCaptureDevicePositionFront) {
+        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
         if (device == nil) {
             device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
         }
         if (device != nil) {
-            return  device;
+            return device;
         }
     }
     
