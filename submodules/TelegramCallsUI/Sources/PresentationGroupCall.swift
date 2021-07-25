@@ -662,7 +662,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
                 }
             }
-        }, deactivate: { [weak self] in
+        }, deactivate: { [weak self] _ in
             return Signal { subscriber in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
