@@ -4437,7 +4437,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for (_, headerNode) in self.itemHeaderNodes {
             let headerNodeFrame = headerNode.frame
             if headerNodeFrame.contains(point) {
-                return headerNode.hitTest(point.offsetBy(dx: -headerNodeFrame.minX, dy: -headerNodeFrame.minY), with: event)
+                return headerNode.hitTest(self.view.convert(point, to: headerNode.view), with: event)
             }
         }
         return nil
