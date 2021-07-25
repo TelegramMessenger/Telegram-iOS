@@ -2522,6 +2522,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         case UIGestureRecognizerStateChanged:
         {
             CGFloat delta = (gestureRecognizer.scale - 1.0f) * 1.25;
+            if (_camera.zoomLevel > 2.0) {
+                delta *= 2.0;
+            }
             CGFloat value = MAX(_camera.minZoomLevel, MIN(_camera.maxZoomLevel, _camera.zoomLevel + delta));
             
             [_camera setZoomLevel:value];

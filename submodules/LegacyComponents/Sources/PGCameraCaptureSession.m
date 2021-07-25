@@ -482,16 +482,16 @@ const NSInteger PGCameraFrameRate = 30;
             if (backingLevel < firstMark) {
                 realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
             } else if (backingLevel < secondMark) {
-                realLevel = 1.0 + (backingLevel - firstMark) / (secondMark - firstMark);
+                realLevel = 1.0 + 1.0 * (backingLevel - firstMark) / (secondMark - firstMark);
             } else {
-                realLevel = 2.0 + (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
+                realLevel = 2.0 + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
             }
         } else if (marks.count == 1) {
             CGFloat mark = [marks.firstObject floatValue];
             if (backingLevel < mark) {
-                realLevel = 1.0 + backingLevel / mark;
+                realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
             } else {
-                realLevel = 2.0 + (backingLevel - mark) / (self.maxZoomLevel - mark);
+                realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
             }
         }
         
@@ -511,7 +511,7 @@ const NSInteger PGCameraFrameRate = 30;
 }
 
 - (CGFloat)maxZoomLevel {
-    return MIN(6.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+    return MIN(16.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
 }
 
 - (void)resetZoom {
@@ -531,38 +531,30 @@ const NSInteger PGCameraFrameRate = 30;
             return;
         
         CGFloat level = zoomLevel;
+        CGFloat backingLevel = 1.0;
         if (iosMajorVersion() >= 13.0 && device.isVirtualDevice) {
             NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
             if (marks.count == 2) {
                 CGFloat firstMark = [marks.firstObject floatValue];
                 CGFloat secondMark = [marks.lastObject floatValue];
-                
                 if (level < 1.0) {
                     level = MAX(0.5, level);
-                    
-                    CGFloat backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
-                    device.videoZoomFactor = backingLevel;
+                    backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
                 } else if (zoomLevel < 2.0) {
-                    CGFloat backingLevel = firstMark + (level - 1.0) * (secondMark - firstMark);
-                    device.videoZoomFactor = backingLevel;
+                    backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
                 } else {
-                    CGFloat backingLevel = secondMark + (level - 2.0) * (self.maxZoomLevel - secondMark);
-                    device.videoZoomFactor = backingLevel;
+                    backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
                 }
             } else if (marks.count == 1) {
                 CGFloat mark = [marks.firstObject floatValue];
                 if (zoomLevel < 2.0) {
-                    CGFloat backingLevel = (level - 1.0) * mark;
-                    device.videoZoomFactor = backingLevel;
+                    backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
                 } else {
-                    CGFloat backingLevel = mark + (level - 2.0) * (self.maxZoomLevel - mark);
-                    device.videoZoomFactor = backingLevel;
+                    backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
                 }
             }
-        } else {
-            level = MAX(1.0, MIN(10.0, level));
-            device.videoZoomFactor = MAX([strongSelf minZoomLevel], MIN([strongSelf maxZoomLevel], level));
         }
+        device.videoZoomFactor = MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
     }];
 }
 
