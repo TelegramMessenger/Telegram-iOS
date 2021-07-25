@@ -1,17 +1,17 @@
 import Postbox
 
 public final class CachedWallpapersConfiguration: PostboxCoding {
-    public let hash: Int32
+    public let hash: Int64
     
-    public init(hash: Int32) {
+    public init(hash: Int64) {
         self.hash = hash
     }
     
     public init(decoder: PostboxDecoder) {
-        self.hash = decoder.decodeInt32ForKey("hash", orElse: 0)
+        self.hash = decoder.decodeInt64ForKey("hash6", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.hash, forKey: "hash")
+        encoder.encodeInt64(self.hash, forKey: "hash6")
     }
 }

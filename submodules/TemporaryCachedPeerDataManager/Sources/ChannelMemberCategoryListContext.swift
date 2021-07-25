@@ -205,7 +205,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         }
     }
     
-    private func loadSignal(offset: Int32, count: Int32, hash: Int32) -> Signal<[RenderedChannelParticipant]?, NoError> {
+    private func loadSignal(offset: Int32, count: Int32, hash: Int64) -> Signal<[RenderedChannelParticipant]?, NoError> {
         let requestCategory: ChannelMembersCategory
         var adminQuery: String? = nil
         switch self.category {
@@ -316,9 +316,9 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 
                 for i in 0 ..< min(strongSelf.listStateValue.list.count, Int(initialBatchSize)) {
                     let peerId = strongSelf.listStateValue.list[i].peer.id
-                    combineInt32Hash(&acc, with: peerId)
+                    combineInt64Hash(&acc, with: peerId)
                 }
-                let hashResult = Int32(bitPattern: UInt32(clamping: acc & UInt64(0x7FFFFFFF)))
+                let hashResult = finalizeInt64Hash(acc)
                 strongSelf.headUpdateDisposable.set((strongSelf.loadSignal(offset: 0, count: initialBatchSize, hash: hashResult)
                 |> deliverOnMainQueue).start(next: { members in
                     self?.updateHeadMembers(members)

@@ -173,7 +173,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-        return postbox.transaction { transaction -> (Api.InputPeer?, Int32) in
+        return postbox.transaction { transaction -> (Api.InputPeer?, Int64) in
             switch peerInput {
             case let .direct(peerId, _):
                 return (transaction.getPeer(peerId).flatMap(forceApiInputPeer), 0)

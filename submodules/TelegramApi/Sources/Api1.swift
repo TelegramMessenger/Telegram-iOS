@@ -368,7 +368,7 @@ public struct messages {
     }
     public enum Stickers: TypeConstructorDescription {
         case stickersNotModified
-        case stickers(hash: Int32, stickers: [Api.Document])
+        case stickers(hash: Int64, stickers: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -380,9 +380,9 @@ public struct messages {
                     break
                 case .stickers(let hash, let stickers):
                     if boxed {
-                        buffer.appendInt32(-463889475)
+                        buffer.appendInt32(816245886)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(stickers.count))
                     for item in stickers {
@@ -405,8 +405,8 @@ public struct messages {
             return Api.messages.Stickers.stickersNotModified
         }
         public static func parse_stickers(_ reader: BufferReader) -> Stickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.Document]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
@@ -424,7 +424,7 @@ public struct messages {
     }
     public enum FoundStickerSets: TypeConstructorDescription {
         case foundStickerSetsNotModified
-        case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
+        case foundStickerSets(hash: Int64, sets: [Api.StickerSetCovered])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -436,9 +436,9 @@ public struct messages {
                     break
                 case .foundStickerSets(let hash, let sets):
                     if boxed {
-                        buffer.appendInt32(1359533640)
+                        buffer.appendInt32(-1963942446)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sets.count))
                     for item in sets {
@@ -461,8 +461,8 @@ public struct messages {
             return Api.messages.FoundStickerSets.foundStickerSetsNotModified
         }
         public static func parse_foundStickerSets(_ reader: BufferReader) -> FoundStickerSets? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.StickerSetCovered]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
@@ -1222,7 +1222,7 @@ public struct messages {
     }
     public enum SavedGifs: TypeConstructorDescription {
         case savedGifsNotModified
-        case savedGifs(hash: Int32, gifs: [Api.Document])
+        case savedGifs(hash: Int64, gifs: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1234,9 +1234,9 @@ public struct messages {
                     break
                 case .savedGifs(let hash, let gifs):
                     if boxed {
-                        buffer.appendInt32(772213157)
+                        buffer.appendInt32(-2069878259)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(gifs.count))
                     for item in gifs {
@@ -1259,8 +1259,8 @@ public struct messages {
             return Api.messages.SavedGifs.savedGifsNotModified
         }
         public static func parse_savedGifs(_ reader: BufferReader) -> SavedGifs? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.Document]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
@@ -1788,7 +1788,7 @@ public struct messages {
     }
     public enum RecentStickers: TypeConstructorDescription {
         case recentStickersNotModified
-        case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
+        case recentStickers(hash: Int64, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1800,9 +1800,9 @@ public struct messages {
                     break
                 case .recentStickers(let hash, let packs, let stickers, let dates):
                     if boxed {
-                        buffer.appendInt32(586395571)
+                        buffer.appendInt32(-1999405994)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(packs.count))
                     for item in packs {
@@ -1835,8 +1835,8 @@ public struct messages {
             return Api.messages.RecentStickers.recentStickersNotModified
         }
         public static func parse_recentStickers(_ reader: BufferReader) -> RecentStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.StickerPack]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
@@ -1864,7 +1864,7 @@ public struct messages {
     }
     public enum FeaturedStickers: TypeConstructorDescription {
         case featuredStickersNotModified(count: Int32)
-        case featuredStickers(hash: Int32, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
+        case featuredStickers(hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1876,9 +1876,9 @@ public struct messages {
                     break
                 case .featuredStickers(let hash, let count, let sets, let unread):
                     if boxed {
-                        buffer.appendInt32(-1230257343)
+                        buffer.appendInt32(-2067782896)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sets.count))
@@ -1915,8 +1915,8 @@ public struct messages {
             }
         }
         public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: [Api.StickerSetCovered]?
@@ -2092,7 +2092,7 @@ public struct messages {
     }
     public enum FavedStickers: TypeConstructorDescription {
         case favedStickersNotModified
-        case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
+        case favedStickers(hash: Int64, packs: [Api.StickerPack], stickers: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2104,9 +2104,9 @@ public struct messages {
                     break
                 case .favedStickers(let hash, let packs, let stickers):
                     if boxed {
-                        buffer.appendInt32(-209768682)
+                        buffer.appendInt32(750063767)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(packs.count))
                     for item in packs {
@@ -2134,8 +2134,8 @@ public struct messages {
             return Api.messages.FavedStickers.favedStickersNotModified
         }
         public static func parse_favedStickers(_ reader: BufferReader) -> FavedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.StickerPack]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
@@ -2158,7 +2158,7 @@ public struct messages {
     }
     public enum AllStickers: TypeConstructorDescription {
         case allStickersNotModified
-        case allStickers(hash: Int32, sets: [Api.StickerSet])
+        case allStickers(hash: Int64, sets: [Api.StickerSet])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2170,9 +2170,9 @@ public struct messages {
                     break
                 case .allStickers(let hash, let sets):
                     if boxed {
-                        buffer.appendInt32(-302170017)
+                        buffer.appendInt32(-843329861)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sets.count))
                     for item in sets {
@@ -2195,8 +2195,8 @@ public struct messages {
             return Api.messages.AllStickers.allStickersNotModified
         }
         public static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: [Api.StickerSet]?
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)

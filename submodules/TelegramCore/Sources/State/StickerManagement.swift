@@ -8,7 +8,7 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt64 = 0
     
     for id in ids {
-        acc = (acc &* 20261) &+ UInt64(bitPattern: id)
+        combineInt64Hash(&acc, with: UInt64(bitPattern: id))
     }
     return Int32(bitPattern: UInt32(clamping: acc & UInt64(0x7FFFFFFF)))
 }

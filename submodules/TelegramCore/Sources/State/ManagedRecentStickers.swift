@@ -3,16 +3,16 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-private func hashForIds(_ ids: [Int64]) -> Int32 {
+private func hashForIds(_ ids: [Int64]) -> Int64 {
     var acc: UInt64 = 0
     
     for id in ids {
-        acc = (acc &* 20261) &+ UInt64(bitPattern: id)
+        combineInt64Hash(&acc, with: UInt64(bitPattern: id))
     }
-    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0xFFFFFFFF)))
+    return finalizeInt64Hash(acc)
 }
 
-private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, forceFetch: Bool, fetch: @escaping (Int32) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
+private func managedRecentMedia(postbox: Postbox, network: Network, collectionId: Int32, reverseHashOrder: Bool, forceFetch: Bool, fetch: @escaping (Int64) -> Signal<[OrderedItemListEntry]?, NoError>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var itemIds = transaction.getOrderedListItemIds(collectionId: collectionId).map {
             RecentMediaItemId($0).mediaId.id
