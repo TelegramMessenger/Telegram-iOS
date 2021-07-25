@@ -139,8 +139,6 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     _interfaceOrientation = interfaceOrientation;
-
-    [self setActive:false animated:false];
 }
 
 @end

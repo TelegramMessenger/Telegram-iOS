@@ -18,7 +18,9 @@
 
 @interface TGCameraZoomModeView : UIView
 
-@property (copy, nonatomic) void(^zoomChanged)(CGFloat zoomLevel, bool done);
+@property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
+
+@property (copy, nonatomic) void(^zoomChanged)(CGFloat zoomLevel, bool done, bool animated);
 
 @property (nonatomic, assign) CGFloat zoomLevel;
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;

@@ -282,20 +282,20 @@
     
     switch (gestureRecognizer.state) {
     case UIGestureRecognizerStateBegan:
-        self.zoomChanged(_zoomLevel, false);
+        self.zoomChanged(_zoomLevel, false, false);
         break;
         
     case UIGestureRecognizerStateChanged:
         _zoomLevel = MAX(0.5, MIN(10.0, _zoomLevel - translation.x / 100.0));
-        self.zoomChanged(_zoomLevel, false);
+        self.zoomChanged(_zoomLevel, false, false);
         break;
         
     case UIGestureRecognizerStateEnded:
-        self.zoomChanged(_zoomLevel, true);
+        self.zoomChanged(_zoomLevel, true, false);
         break;
         
     case UIGestureRecognizerStateCancelled:
-        self.zoomChanged(_zoomLevel, true);
+        self.zoomChanged(_zoomLevel, true, false);
         break;
         
     default:
@@ -307,17 +307,17 @@
 
 - (void)leftPressed {
     [self setZoomLevel:0.5 animated:true];
-    self.zoomChanged(0.5, true);
+    self.zoomChanged(0.5, true, true);
 }
 
 - (void)centerPressed {
     [self setZoomLevel:1.0 animated:true];
-    self.zoomChanged(1.0, true);
+    self.zoomChanged(1.0, true, true);
 }
 
 - (void)rightPressed {
     [self setZoomLevel:2.0 animated:true];
-    self.zoomChanged(2.0, true);
+    self.zoomChanged(2.0, true, true);
 }
 
 - (void)setZoomLevel:(CGFloat)zoomLevel {
@@ -329,33 +329,39 @@
     _zoomLevel = zoomLevel;
     if (zoomLevel < 1.0) {
         NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
-        if ([value isEqual:@"1.0x"]) {
-            value = @"0.9x";
+        if ([value isEqual:@"1,0x"]) {
+            value = @"0,9x";
         }
+        value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
         [_leftItem setValue:value selected:true animated:animated];
         [_centerItem setValue:@"1" selected:false animated:animated];
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else if (zoomLevel < 2.0) {
-        [_leftItem setValue:@"0.5" selected:false animated:animated];
+        [_leftItem setValue:@"0,5" selected:false animated:animated];
         if ((zoomLevel - 1.0) < 0.1) {
             [_centerItem setValue:@"1x" selected:true animated:animated];
         } else {
             NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
-            if ([value isEqual:@"1.0x"]) {
+            value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
+            if ([value isEqual:@"1,0x"]) {
                 value = @"1x";
+            } else if ([value isEqual:@"2,0x"]) {
+                value = @"1,9x";
             }
             [_centerItem setValue:value selected:true animated:animated];
         }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else {
-        [_leftItem setValue:@"0.5" selected:false animated:animated];
+        [_leftItem setValue:@"0,5" selected:false animated:animated];
         [_centerItem setValue:@"1" selected:false animated:animated];
         
         CGFloat near = round(zoomLevel);
         if (ABS(zoomLevel - near) < 0.1) {
             [_rightItem setValue:[NSString stringWithFormat:@"%dx", (int)zoomLevel] selected:true animated:animated];
         } else {
-            [_rightItem setValue:[NSString stringWithFormat:@"%.1fx", zoomLevel] selected:true animated:animated];
+            NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+            value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
+            [_rightItem setValue:value selected:true animated:animated];
         }
     }
 }
@@ -404,6 +410,14 @@
         _centerItem.frame = CGRectMake(43, 0, 43, 43.0);
         _rightItem.frame = CGRectMake(86, 0, 43, 43.0);
     }
+}
+
+- (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+{
+    _interfaceOrientation = interfaceOrientation;
+    _leftItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
+    _centerItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
+    _rightItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
 }
 
 @end

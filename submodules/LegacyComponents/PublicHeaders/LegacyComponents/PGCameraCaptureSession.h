@@ -27,6 +27,8 @@
 @property (nonatomic, readonly) CGFloat minZoomLevel;
 @property (nonatomic, readonly) CGFloat maxZoomLevel;
 
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
 @property (nonatomic, readonly) bool hasUltrawideCamera;
 @property (nonatomic, readonly) bool hasTelephotoCamera;
 
@@ -34,8 +36,9 @@
 
 @property (nonatomic, copy) void(^outputSampleBuffer)(CMSampleBufferRef sampleBuffer, AVCaptureConnection *connection);
 
-@property (nonatomic, copy) void(^changingPosition)(void);
 @property (nonatomic, copy) bool(^requestPreviewIsMirrored)(void);
+
+@property (nonatomic, copy) void(^crossfadeNeeded)(void);
 
 @property (nonatomic, copy) void(^recognizedQRCode)(NSString *value, AVMetadataMachineReadableCodeObject *object);
 

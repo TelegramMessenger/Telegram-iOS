@@ -86,6 +86,8 @@ typedef enum
 @property (nonatomic, readonly) CGFloat minZoomLevel;
 @property (nonatomic, readonly) CGFloat maxZoomLevel;
 
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
 @property (nonatomic, readonly) bool hasUltrawideCamera;
 @property (nonatomic, readonly) bool hasTelephotoCamera;
 

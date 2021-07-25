@@ -692,7 +692,6 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             if (strongSelf.finishedPositionChange != nil)
                 strongSelf.finishedPositionChange();
              
-            [strongSelf setZoomLevel:0.0f];
             [strongSelf _subscribeForCameraChanges];
         }];
     };
@@ -733,12 +732,20 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)setZoomLevel:(CGFloat)zoomLevel
 {
+    [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
+{
+    if (self.cameraMode == PGCameraModeVideo) {
+        animated = false;
+    }
     [[PGCamera cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
         
-        [self.captureSession setZoomLevel:zoomLevel];
+        [self.captureSession setZoomLevel:zoomLevel animated:animated];
     }];
 }
 

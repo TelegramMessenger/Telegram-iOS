@@ -194,6 +194,8 @@
 {
     if (!hasZoom)
         [_zoomView hideAnimated:true];
+    
+    [_zoomModeView setHidden:!hasZoom animated:true];
 }
 
 #pragma mark - Video
@@ -231,11 +233,6 @@
 {
     if (completion != nil)
         completion(true);
-}
-
-- (void)layoutPreviewRelativeViews
-{
-    
 }
 
 #pragma mark -

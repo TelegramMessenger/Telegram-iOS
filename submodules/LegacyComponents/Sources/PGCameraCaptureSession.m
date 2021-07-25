@@ -15,6 +15,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import <SSignalKit/SSignalKit.h>
 
+#import "POPSpringAnimation.h"
+
 const NSInteger PGCameraFrameRate = 30;
 
 @interface PGCameraCaptureSession () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureMetadataOutputObjectsDelegate>
@@ -518,7 +520,11 @@ const NSInteger PGCameraFrameRate = 30;
     [self setZoomLevel:1.0];
 }
 
-- (void)setZoomLevel:(CGFloat)zoomLevel
+- (void)setZoomLevel:(CGFloat)zoomLevel {
+    [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
 {
     if (![self.videoDevice respondsToSelector:@selector(setVideoZoomFactor:)])
         return;
@@ -554,7 +560,43 @@ const NSInteger PGCameraFrameRate = 30;
                 }
             }
         }
-        device.videoZoomFactor = MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
+        CGFloat finalLevel =  MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
+        if (animated) {
+            bool zoomingIn = finalLevel > self.videoDevice.videoZoomFactor;
+            bool needsCrossfade = level >= 1.0;
+            POPSpringAnimation *animation = [POPSpringAnimation new];
+            animation.property = [POPAnimatableProperty propertyWithName:@"zoom" initializer:^(POPMutableAnimatableProperty *prop)
+            {
+                prop.readBlock = ^(PGCameraCaptureSession *session, CGFloat values[])
+                {
+                    if (session != nil) {
+                        values[0] = session.videoDevice.videoZoomFactor;
+                    }
+                };
+                
+                prop.writeBlock = ^(PGCameraCaptureSession *session, const CGFloat values[])
+                {
+                    if (session != nil) {
+                        if ((zoomingIn && values[0] > finalLevel - 0.015) || (!zoomingIn && values[0] < finalLevel + 0.015)) {
+                            if (needsCrossfade && session.crossfadeNeeded != nil)
+                                session.crossfadeNeeded();
+                        }
+                        [session _reconfigureDevice:session->_videoDevice withBlock:^(AVCaptureDevice *device) {
+                            device.videoZoomFactor = values[0];
+                        }];
+                    }
+                };
+                
+                prop.threshold = 0.03f;
+            }];
+            animation.fromValue = @(self.videoDevice.videoZoomFactor);
+            animation.toValue = @(finalLevel);
+            animation.springSpeed = 14;
+            animation.springBounciness = 1;
+            [self pop_addAnimation:animation forKey:@"zoom"];
+        } else {
+            device.videoZoomFactor = finalLevel;
+        }
     }];
 }
 
@@ -759,9 +801,6 @@ const NSInteger PGCameraFrameRate = 30;
             [self _addAudioInputRequestAudioSession:false];
         }
         
-        if (self.changingPosition != nil)
-            self.changingPosition();
-        
         [self commitConfiguration];
         
         if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo || self.currentMode == PGCameraModeSquareSwing)
@@ -771,6 +810,7 @@ const NSInteger PGCameraFrameRate = 30;
     }
     
     _videoDevice = deviceForTargetPosition;
+    [self resetZoom];
     
     [self setCurrentFlashMode:self.currentFlashMode];
     
@@ -956,54 +996,18 @@ const NSInteger PGCameraFrameRate = 30;
 {
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferLockBaseAddress(imageBuffer,0);
-    
+
     size_t width = CVPixelBufferGetWidth(imageBuffer);
     size_t height = CVPixelBufferGetHeight(imageBuffer);
-    uint8_t *yBuffer = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
-    size_t yPitch = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0);
-    uint8_t *cbCrBuffer = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 1);
-    size_t cbCrPitch = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 1);
     
-    int bytesPerPixel = 4;
-    uint8_t *rgbBuffer = malloc(width * height * bytesPerPixel);
-    
-    for (size_t y = 0; y < height; y++)
-    {
-        uint8_t *rgbBufferLine = &rgbBuffer[y * width * bytesPerPixel];
-        uint8_t *yBufferLine = &yBuffer[y * yPitch];
-        uint8_t *cbCrBufferLine = &cbCrBuffer[(y >> 1) * cbCrPitch];
-        
-        for (size_t x = 0; x < width; x++)
-        {
-            int16_t y = yBufferLine[x];
-            int16_t cb = cbCrBufferLine[x & ~1] - 128;
-            int16_t cr = cbCrBufferLine[x | 1] - 128;
-            
-            uint8_t *rgbOutput = &rgbBufferLine[x * bytesPerPixel];
-            
-            int16_t r = (int16_t)round( y + cr *  1.4 );
-            int16_t g = (int16_t)round( y + cb * -0.343 + cr * -0.711 );
-            int16_t b = (int16_t)round( y + cb *  1.765);
-            
-            rgbOutput[0] = 0xff;
-            rgbOutput[1] = clamp(b);
-            rgbOutput[2] = clamp(g);
-            rgbOutput[3] = clamp(r);
-        }
-    }
-    
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(rgbBuffer, width, height, 8, width * bytesPerPixel, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast);
-    CGImageRef quartzImage = CGBitmapContextCreateImage(context);
-    UIImage *image = [UIImage imageWithCGImage:quartzImage scale:1.0 orientation:orientation];
-    
-    CGContextRelease(context);
-    CGColorSpaceRelease(colorSpace);
+    CIImage *coreImage = [CIImage imageWithCVPixelBuffer:imageBuffer];
+
+    CIContext *ciContext = [CIContext contextWithOptions:nil];
+    CGImageRef quartzImage = [ciContext createCGImage:coreImage fromRect:CGRectMake(0, 0, width, height)];
+    UIImage *image = [[UIImage alloc] initWithCGImage:quartzImage scale:1.0 orientation:orientation];
     CGImageRelease(quartzImage);
-    free(rgbBuffer);
     
     CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-    
     return image;
 }
 
@@ -1071,8 +1075,6 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
 {
     if (!self.isRunning || self.currentMode != PGCameraModePhoto)
         return;
-    
-    
     
     if ([metadataObjects.firstObject isKindOfClass:[AVMetadataMachineReadableCodeObject class]])
     {

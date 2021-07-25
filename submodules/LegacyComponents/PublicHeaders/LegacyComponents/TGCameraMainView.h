@@ -49,7 +49,7 @@
 
 @property (nonatomic, copy) void(^focusPointChanged)(CGPoint point);
 @property (nonatomic, copy) void(^expositionChanged)(CGFloat value);
-@property (nonatomic, copy) void(^zoomChanged)(CGFloat level);
+@property (nonatomic, copy) void(^zoomChanged)(CGFloat level, bool animated);
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
@@ -106,8 +106,6 @@
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;
-
-- (void)layoutPreviewRelativeViews;
 
 - (void)photoCounterButtonPressed;
 

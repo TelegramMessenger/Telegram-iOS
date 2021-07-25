@@ -136,6 +136,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     bool _saveCapturedMedia;
     
     bool _shutterIsBusy;
+    bool _crossfadingForZoom;
     
     UIImpactFeedbackGenerator *_feedbackGenerator;
     
@@ -378,13 +379,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [strongSelf->_camera setFlashMode:mode];
     };
     
-    _interfaceView.zoomChanged = ^(CGFloat level)
+    _interfaceView.zoomChanged = ^(CGFloat level, bool animated)
     {
         __strong TGCameraController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        [strongSelf->_camera setZoomLevel:level];
+        [strongSelf->_camera setZoomLevel:level animated:animated];
     };
     
     _interfaceView.shutterPressed = ^(bool fromHardwareButton)
@@ -655,6 +656,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 }];
             });
         }];
+        
+        if (iosMajorVersion() >= 13.0) {
+            [strongSelf->_feedbackGenerator impactOccurredWithIntensity:0.5];
+        } else {
+            [strongSelf->_feedbackGenerator impactOccurred];
+        }
     };
     
     _camera.finishedPositionChange = ^
@@ -666,7 +673,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGDispatchOnMainThread(^
         {
             [strongSelf->_previewView endTransitionAnimated:true];
-            [strongSelf->_interfaceView setZoomLevel:0.0f displayNeeded:false];
+            [strongSelf->_interfaceView setZoomLevel:1.0f displayNeeded:false];
 
             if (strongSelf->_camera.hasFlash && strongSelf->_camera.flashActive)
                 [strongSelf->_interfaceView setFlashActive:true];
@@ -769,6 +776,30 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [strongSelf->_previousQRCodes addObject:value];
             }
         }
+    };
+    
+    _camera.captureSession.crossfadeNeeded = ^{
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+        {
+            if (strongSelf->_crossfadingForZoom) {
+                return;
+            }
+            strongSelf->_crossfadingForZoom = true;
+            
+            [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
+            {
+                TGDispatchOnMainThread(^
+                {
+                    [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
+                    
+                    TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+                        [strongSelf->_previewView endTransitionAnimated:true];
+                        strongSelf->_crossfadingForZoom = false;
+                    });
+                });
+            }];
+        };
     };
 }
 
@@ -2128,7 +2159,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     } completion:nil];
     
     _interfaceView.previewViewFrame = _previewView.frame;
-    [_interfaceView layoutPreviewRelativeViews];
     
     return targetFrame;
 }
@@ -2168,7 +2198,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
     
     _interfaceView.previewViewFrame = toFrame;
-    [_interfaceView layoutPreviewRelativeViews];
 }
 
 - (void)beginTransitionOutWithVelocity:(CGFloat)velocity
@@ -2356,7 +2385,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 {
     CGRect frame = [TGCameraController _cameraPreviewFrameForScreenSize:TGScreenSize() mode:mode];
     _interfaceView.previewViewFrame = frame;
-    [_interfaceView layoutPreviewRelativeViews];
     [_interfaceView updateForCameraModeChangeAfterResize];
     
     [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
