@@ -901,6 +901,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             strongSelf.videoNode?.isHidden = !owns
                                             if owns {
                                                 strongSelf.videoNode?.setBaseRate(1.0)
+                                                strongSelf.videoNode?.continuePlayingWithoutSound()
                                             }
                                         }
                                     }

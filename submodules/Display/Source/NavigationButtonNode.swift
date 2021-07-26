@@ -53,7 +53,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
-    private var imageNode: ASImageNode?
+    private(set) var imageNode: ASImageNode?
     private let imageRippleNode: ASImageNode
     
     private var _image: UIImage?
@@ -226,7 +226,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         } else if let imageNode = self.imageNode {
             let nodeSize = imageNode.image?.size ?? CGSize()
             let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(44.0, max(nodeSize.height, superSize.height)))
-            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0), y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
             imageNode.frame = imageFrame
             self.imageRippleNode.frame = imageFrame
             return size
@@ -462,24 +462,30 @@ public final class NavigationButtonNode: ASDisplayNode {
     
     public func updateLayout(constrainedSize: CGSize, isLandscape: Bool) -> CGSize {
         var nodeOrigin = CGPoint()
-        var totalSize = CGSize()
-        for node in self.nodes {
-            if !totalSize.width.isZero {
-                totalSize.width += 16.0
-                nodeOrigin.x += 16.0
+        var totalHeight: CGFloat = 0.0
+        for i in 0 ..< self.nodes.count {
+            if i != 0 {
+                nodeOrigin.x += 10.0
             }
+
+            let node = self.nodes[i]
+
             var nodeSize = node.updateLayout(constrainedSize)
+
             nodeSize.width = ceil(nodeSize.width)
             nodeSize.height = ceil(nodeSize.height)
-            totalSize.width += nodeSize.width
-            totalSize.height = max(totalSize.height, nodeSize.height)
-            node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalSize.height - nodeSize.height) / 2.0)), size: nodeSize)
+            totalHeight = max(totalHeight, nodeSize.height)
+            node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalHeight - nodeSize.height) / 2.0)), size: nodeSize)
             nodeOrigin.x += node.bounds.width
             if isLandscape {
                 nodeOrigin.x += 16.0
             }
+
+            if node.node == nil && node.imageNode != nil && i == self.nodes.count - 1 {
+                nodeOrigin.x -= 5.0
+            }
         }
-        return totalSize
+        return CGSize(width: nodeOrigin.x, height: totalHeight)
     }
     
     func internalHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
