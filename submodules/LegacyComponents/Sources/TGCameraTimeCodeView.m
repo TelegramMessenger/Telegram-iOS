@@ -66,12 +66,20 @@
     [self reset];
     
     _recordingTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(recordingTimerEvent) interval:1.0 repeat:false];
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        _backgroundView.alpha = 1.0;
+    }];
 }
 
 - (void)stopRecording
 {
     [_recordingTimer invalidate];
     _recordingTimer = nil;
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        _backgroundView.alpha = 0.0;
+    }];
 }
 
 - (void)reset

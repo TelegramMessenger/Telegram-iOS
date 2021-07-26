@@ -18,6 +18,10 @@
 @class TGMediaPickerGallerySelectedItemsModel;
 @class TGMediaEditingContext;
 
+@interface TGCameraCornersView : UIImageView
+
+@end
+
 @interface TGCameraMainView : UIView
 {
     UIInterfaceOrientation _interfaceOrientation;

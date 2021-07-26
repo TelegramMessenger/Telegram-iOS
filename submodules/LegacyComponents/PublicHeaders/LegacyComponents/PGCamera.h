@@ -60,7 +60,7 @@ typedef enum
 @property (nonatomic, copy) void(^finishedModeChange)(void);
 
 @property (nonatomic, copy) void(^beganPositionChange)(bool targetPositionHasFlash, bool targetPositionHasZoom, void(^commitBlock)(void));
-@property (nonatomic, copy) void(^finishedPositionChange)(void);
+@property (nonatomic, copy) void(^finishedPositionChange)(bool targetPositionHasZoom);
 
 @property (nonatomic, copy) void(^beganAdjustingFocus)(void);
 @property (nonatomic, copy) void(^finishedAdjustingFocus)(void);

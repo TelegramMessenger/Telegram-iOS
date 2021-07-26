@@ -1126,6 +1126,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
         
+        self.chatListDisplayNode.containerNode.didBeginSelectingChats = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing {
+                var isEditing = false
+                strongSelf.chatListDisplayNode.containerNode.updateState { state in
+                    isEditing = state.editing
+                    return state
+                }
+                if !isEditing {
+                    strongSelf.editPressed()
+                }
+                strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing = true
+                if let layout = strongSelf.validLayout {
+                    strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+                }
+            }
+        }
+        
         guard case .root = self.groupId else {
             return
         }
@@ -1265,27 +1285,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return true
             })
         }
-        
-        self.chatListDisplayNode.containerNode.didBeginSelectingChats = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            if !strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing {
-                var isEditing = false
-                strongSelf.chatListDisplayNode.containerNode.updateState { state in
-                    isEditing = state.editing
-                    return state
-                }
-                if !isEditing {
-                    strongSelf.editPressed()
-                }
-                strongSelf.chatListDisplayNode.didBeginSelectingChatsWhileEditing = true
-                if let layout = strongSelf.validLayout {
-                    strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
-                }
-            }
-        }
-        
+                
         if !self.processedFeaturedFilters {
             let initializedFeatured = self.context.account.postbox.preferencesView(keys: [
                 PreferencesKeys.chatListFiltersFeaturedState

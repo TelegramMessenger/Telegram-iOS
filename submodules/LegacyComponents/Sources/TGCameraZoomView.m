@@ -227,6 +227,9 @@
 
 @interface TGCameraZoomModeView ()
 {
+    CGFloat _minZoomLevel;
+    CGFloat _maxZoomLevel;
+    
     UIView *_backgroundView;
     
     bool _hasUltrawideCamera;
@@ -240,13 +243,15 @@
 
 @implementation TGCameraZoomModeView
 
-- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
         _hasUltrawideCamera = hasUltrawideCamera;
         _hasTelephotoCamera = hasTelephotoCamera;
+        _minZoomLevel = minZoomLevel;
+        _maxZoomLevel = maxZoomLevel;
         
         _backgroundView = [[UIView alloc] initWithFrame:self.bounds];
         _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.15];
@@ -270,34 +275,39 @@
             [self addSubview:_rightItem];
         }
         
-        UIPanGestureRecognizer *gestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
-//        [self addGestureRecognizer:gestureRecognizer];
+        UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
+        [self addGestureRecognizer:panGestureRecognizer];
+        
+        UILongPressGestureRecognizer *pressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(pressGesture:)];
+        [self addGestureRecognizer:pressGestureRecognizer];
     }
     return self;
 }
 
+- (void)pressGesture:(UILongPressGestureRecognizer *)gestureRecognizer {
+    switch (gestureRecognizer.state) {
+    case UIGestureRecognizerStateBegan:
+        self.zoomChanged(_zoomLevel, false, false);
+        break;
+    case UIGestureRecognizerStateEnded:
+        self.zoomChanged(_zoomLevel, true, false);
+        break;
+    case UIGestureRecognizerStateCancelled:
+        self.zoomChanged(_zoomLevel, true, false);
+        break;
+    default:
+        break;
+    }
+}
 
 - (void)panGesture:(UIPanGestureRecognizer *)gestureRecognizer {
     CGPoint translation = [gestureRecognizer translationInView:self];
     
     switch (gestureRecognizer.state) {
-    case UIGestureRecognizerStateBegan:
-        self.zoomChanged(_zoomLevel, false, false);
-        break;
-        
     case UIGestureRecognizerStateChanged:
         _zoomLevel = MAX(0.5, MIN(10.0, _zoomLevel - translation.x / 100.0));
         self.zoomChanged(_zoomLevel, false, false);
         break;
-        
-    case UIGestureRecognizerStateEnded:
-        self.zoomChanged(_zoomLevel, true, false);
-        break;
-        
-    case UIGestureRecognizerStateCancelled:
-        self.zoomChanged(_zoomLevel, true, false);
-        break;
-        
     default:
         break;
     }
@@ -425,21 +435,85 @@
 
 @interface TGCameraZoomWheelView ()
 {
+    bool _hasUltrawideCamera;
+    bool _hasTelephotoCamera;
     UIImageView *_backgroundView;
 }
 @end
 
 @implementation TGCameraZoomWheelView
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (void)_drawLineInContext:(CGContextRef)context side:(CGFloat)side atAngle:(CGFloat)angle lineLength:(CGFloat)lineLength lineWidth:(CGFloat)lineWidth opaque:(bool)opaque {
+    CGContextSaveGState(context);
+    
+    CGContextTranslateCTM(context, side / 2.0, side / 2.0);
+    CGContextRotateCTM(context, angle);
+    CGContextTranslateCTM(context, -side / 2.0, -side / 2.0);
+    
+    CGContextSetLineWidth(context, lineWidth);
+    CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:1.0 alpha:opaque ? 1.0 : 0.5].CGColor);
+    CGContextMoveToPoint(context, side / 2.0, 4.0);
+    CGContextAddLineToPoint(context, side / 2.0, 4.0 + lineLength);
+    CGContextStrokePath(context);
+    
+    CGContextRestoreGState(context);
+}
+
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        self.clipsToBounds = true;
+        _hasUltrawideCamera = true;// hasUltrawideCamera;
+        _hasTelephotoCamera = true;//hasTelephotoCamera;
         
-        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(-28.0, 0.0, 446.0, 446.0)];
-        _backgroundView.alpha = 0.75;
+        self.clipsToBounds = true;
+                          
+        CGFloat side = floor(frame.size.width * 1.1435);
+        CGFloat length = 17.0;
+        CGFloat smallWidth = MAX(0.5, 1.0 - TGScreenPixel);
+        CGFloat mediumWidth = 1.0;
+        CGFloat bigWidth = 1.0 + TGScreenPixel;
+
+        CGFloat smallAngle = M_PI * 0.12;
+        CGFloat finalAngle = 1.08;
+        
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(side, side), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+
+        CGContextSetFillColorWithColor(context, [UIColor colorWithWhite:0.0 alpha:0.75].CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0, 0, side, side));
+        
+        [self _drawLineInContext:context side:side atAngle:0.0 lineLength:length lineWidth:bigWidth opaque:true];
+        
+        if (_hasUltrawideCamera) {
+            for (NSInteger i = 0; i < 4; i++) {
+                CGFloat angle = (smallAngle / 5.0) * (i + 1) + (0.007 * (i - 1));
+                [self _drawLineInContext:context side:side atAngle:-angle lineLength:length lineWidth:smallWidth opaque:false];
+            }
+            [self _drawLineInContext:context side:side atAngle:-smallAngle lineLength:length lineWidth:bigWidth opaque:true];
+        }
+        if (_hasTelephotoCamera) {
+            [self _drawLineInContext:context side:side atAngle:smallAngle lineLength:length lineWidth:bigWidth opaque:true];
+            
+            for (NSInteger i = 0; i < 4; i++) {
+                CGFloat angle = (smallAngle / 5.0) * (i + 1) + (0.01 * (i - 1));
+                [self _drawLineInContext:context side:side atAngle:angle lineLength:length lineWidth:smallWidth opaque:false];
+            }
+            
+            [self _drawLineInContext:context side:side atAngle:finalAngle lineLength:length lineWidth:bigWidth opaque:true];
+        } else {
+            [self _drawLineInContext:context side:side atAngle:smallAngle lineLength:length lineWidth:mediumWidth opaque:true];
+            
+            [self _drawLineInContext:context side:side atAngle:finalAngle lineLength:length lineWidth:bigWidth opaque:true];
+        }
+        
+    
+        UIImage *image = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:25 topCapHeight:25];
+        UIGraphicsEndImageContext();
+        
+        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(TGScreenPixelFloor((frame.size.width - side) / 2.0), 0.0, side, side)];
+        _backgroundView.image = image;
 
         [self addSubview:_backgroundView];
     }
