@@ -440,13 +440,6 @@
 
 #pragma mark - Actions
 
-- (void)shutterButtonReleased
-{
-    [super shutterButtonReleased];
-    
-    [_flashControl dismissAnimated:true];
-}
-
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)previousMode
 {
     [super updateForCameraModeChangeWithPreviousMode:previousMode];
@@ -490,7 +483,6 @@
                 [self _attachControlsToTopPanel];
             
             [self _layoutTopPanelSubviewsForInterfaceOrientation:orientation];
-            [_flashControl dismissAnimated:false];
             
             [UIView animateWithDuration:0.2f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut animations:^
             {
@@ -512,7 +504,7 @@
 
 - (void)setFlashActive:(bool)active
 {
-    [_flashActiveView setActive:active animated:true];
+    [_flashControl setFlashActive:active];
 }
 
 - (void)setFlashUnavailable:(bool)unavailable
@@ -522,9 +514,6 @@
 
 - (void)setHasFlash:(bool)hasFlash
 {
-    if (!hasFlash)
-        [_flashActiveView setActive:false animated:true];
-    
     [_flashControl setHidden:!hasFlash animated:true];
 }
 
@@ -676,8 +665,6 @@
     }
     else
     {
-        [_flashControl dismissAnimated:false];
-        
         _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _zoomModeView.interfaceOrientation = orientation;

@@ -712,8 +712,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         TGDispatchOnMainThread(^
         {
-            if (!strongSelf->_camera.isRecordingVideo)
-                [strongSelf->_interfaceView setFlashActive:active];
+            [strongSelf->_interfaceView setFlashActive:active];
         });
     };
     
