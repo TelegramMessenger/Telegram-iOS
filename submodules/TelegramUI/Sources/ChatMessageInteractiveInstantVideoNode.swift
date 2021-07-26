@@ -777,9 +777,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if !self.bounds.contains(point) {
             return nil
         }
-        if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.15 * playbackNode.frame.width, dy: 0.15 * playbackNode.frame.height).contains(point) {
+        if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.2 * playbackNode.frame.width, dy: 0.2 * playbackNode.frame.height).contains(point) {
             let distanceFromCenter = point.distanceTo(playbackNode.position)
-            if distanceFromCenter < 0.15 * playbackNode.frame.width {
+            if distanceFromCenter < 0.2 * playbackNode.frame.width {
                 return self.view
             } else {
                 return playbackNode.view

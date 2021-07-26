@@ -11,12 +11,14 @@ private final class InstantVideoRadialStatusNodeParameters: NSObject {
     let progress: CGFloat
     let dimProgress: CGFloat
     let playProgress: CGFloat
+    let hasSeek: Bool
     
-    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat) {
+    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat, hasSeek: Bool) {
         self.color = color
         self.progress = progress
         self.dimProgress = dimProgress
         self.playProgress = playProgress
+        self.hasSeek = hasSeek
     }
 }
 
@@ -141,7 +143,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
             let center = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
             let location = gestureRecognizer.location(in: self.view)
             let distanceFromCenter = location.distanceTo(center)
-            if distanceFromCenter < self.bounds.width * 0.15 {
+            if distanceFromCenter < self.bounds.width * 0.2 {
                 return false
             }
             return true
@@ -210,7 +212,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress)
+        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, hasSeek: self.hasSeek)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -239,20 +241,30 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
             progress = min(1.0, progress)
             
             var lineWidth: CGFloat = 4.0
-            lineWidth += 1.0 * parameters.dimProgress
+            if parameters.hasSeek {
+                lineWidth += 1.0 * parameters.dimProgress
+            }
             
             var pathDiameter = bounds.size.width - lineWidth - 8.0
-            pathDiameter -= (18.0 * 2.0) * parameters.dimProgress
-            
-            if !parameters.dimProgress.isZero {
-                context.setStrokeColor(parameters.color.withAlphaComponent(0.2 * parameters.dimProgress).cgColor)
-                context.setLineWidth(lineWidth)
-                context.strokeEllipse(in: CGRect(x: (bounds.size.width - pathDiameter) / 2.0 , y: (bounds.size.height - pathDiameter) / 2.0, width: pathDiameter, height: pathDiameter))
+            if parameters.hasSeek {
+                pathDiameter -= (18.0 * 2.0) * parameters.dimProgress
+            }
                 
+            if !parameters.dimProgress.isZero {
+                if parameters.hasSeek {
+                    context.setStrokeColor(parameters.color.withAlphaComponent(0.2 * parameters.dimProgress).cgColor)
+                    context.setLineWidth(lineWidth)
+                    context.strokeEllipse(in: CGRect(x: (bounds.size.width - pathDiameter) / 2.0 , y: (bounds.size.height - pathDiameter) / 2.0, width: pathDiameter, height: pathDiameter))
+                }
+                    
                 if !parameters.playProgress.isZero {
                     context.saveGState()
                     context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
-                    context.scaleBy(x: 1.0 + 1.4 * parameters.playProgress, y: 1.0 + 1.4 * parameters.playProgress)
+                    if parameters.hasSeek {
+                        context.scaleBy(x: 1.0 + 1.4 * parameters.playProgress, y: 1.0 + 1.4 * parameters.playProgress)
+                    } else {
+                        context.scaleBy(x: 1.0 + 0.7 * parameters.playProgress, y: 1.0 + 0.7 * parameters.playProgress)
+                    }
                     context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
                     
                     let iconSize = CGSize(width: 15.0, height: 18.0)
@@ -272,12 +284,14 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
             path.lineCapStyle = .round
             path.stroke()
             
-            let handleSide = 16.0 * min(1.0, (parameters.dimProgress * 2.0))
-            let handleSize = CGSize(width: handleSide, height: handleSide)
-            let handlePosition = CGPoint(x: 0.5 * pathDiameter * cos(endAngle), y: 0.5 * pathDiameter * sin(endAngle)).offsetBy(dx: bounds.size.width / 2.0, dy: bounds.size.height / 2.0)
-            let handleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(handlePosition.x - handleSize.width / 2.0), y: floorToScreenPixels(handlePosition.y - handleSize.height / 2.0)), size: handleSize)
-            context.setFillColor(UIColor.white.cgColor)
-            context.fillEllipse(in: handleFrame)
+            if parameters.hasSeek {
+                let handleSide = 16.0 * min(1.0, (parameters.dimProgress * 2.0))
+                let handleSize = CGSize(width: handleSide, height: handleSide)
+                let handlePosition = CGPoint(x: 0.5 * pathDiameter * cos(endAngle), y: 0.5 * pathDiameter * sin(endAngle)).offsetBy(dx: bounds.size.width / 2.0, dy: bounds.size.height / 2.0)
+                let handleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(handlePosition.x - handleSize.width / 2.0), y: floorToScreenPixels(handlePosition.y - handleSize.height / 2.0)), size: handleSize)
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: handleFrame)
+            }
         }
     }
     
@@ -296,11 +310,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         if self.seeking {
             dimmed = true
         }
-        
-        if !self.hasSeek {
-            dimmed = false
-        }
-        
+                
         if dimmed != self.dimmed {
             self.dimmed = dimmed
             

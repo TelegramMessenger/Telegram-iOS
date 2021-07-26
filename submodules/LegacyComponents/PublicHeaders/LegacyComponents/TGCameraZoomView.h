@@ -27,7 +27,7 @@
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
-- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel;
 
 @end
 
@@ -37,5 +37,7 @@
 @property (nonatomic, assign) CGFloat zoomLevel;
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
+
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 @end

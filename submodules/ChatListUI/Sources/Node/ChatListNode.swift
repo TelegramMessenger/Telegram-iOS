@@ -1997,6 +1997,13 @@ public final class ChatListNode: ListView {
     }
     
     private func handlePanSelection(location: CGPoint) {
+        var location = location
+        if location.y < self.insets.top {
+            location.y = self.insets.top + 5.0
+        } else if location.y > self.frame.height - self.insets.bottom {
+            location.y = self.frame.height - self.insets.bottom - 5.0
+        }
+        
         if let state = self.selectionPanState {
             if let peer = self.peerAtPoint(location) {
                 if peer.id == state.initialPeerId {

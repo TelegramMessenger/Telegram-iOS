@@ -70,6 +70,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
+    private var wasPlaying = false
+    
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -97,7 +99,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 return false
             }
             if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
-                return false
+                return strongSelf.interactiveVideoNode.frame.insetBy(dx: 0.15 * strongSelf.interactiveVideoNode.frame.width, dy: 0.15 * strongSelf.interactiveVideoNode.frame.height).contains(location)
             }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
                 if case .action = action {
@@ -126,7 +128,21 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
                     strongSelf.recognizer?.cancel()
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    if strongSelf.appliedCurrentlyPlaying && strongSelf.interactiveVideoNode.isPlaying {
+                        strongSelf.wasPlaying = true
+                        strongSelf.interactiveVideoNode.pause()
+                    }
                 }
+            }
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] extracted, _ in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            if !extracted && strongSelf.wasPlaying {
+                strongSelf.wasPlaying = false
+                strongSelf.interactiveVideoNode.play()
             }
         }
         

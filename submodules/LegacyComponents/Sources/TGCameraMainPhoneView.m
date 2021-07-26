@@ -82,6 +82,8 @@
     bool _displayedTooltip;
     TGMenuContainerView *_tooltipContainerView;
     NSTimer *_tooltipTimer;
+    
+    bool _dismissingWheel;
 }
 @end
 
@@ -261,21 +263,31 @@
         _toastView.userInteractionEnabled = false;
         [self addSubview:_toastView];
         
-        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
+        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera minZoomLevel:hasUltrawideCamera ? 0.5 : 1.0 maxZoomLevel:8.0];
         _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done, bool animated) {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
             
-            if (!done) {
-                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
-                [strongSelf->_zoomModeView setHidden:true animated:true];
-                [strongSelf->_zoomWheelView setHidden:false animated:true];
-            } else {
+            if (done) {
                 [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
                 [strongSelf->_zoomModeView setZoomLevel:zoomLevel animated:false];
-                [strongSelf->_zoomModeView setHidden:false animated:true];
-                [strongSelf->_zoomWheelView setHidden:true animated:true];
+                
+                if (!strongSelf->_zoomWheelView.isHidden) {
+                    strongSelf->_dismissingWheel = true;
+                    
+                    TGDispatchAfter(0.6, dispatch_get_main_queue(), ^{
+                        if (strongSelf->_dismissingWheel) {
+                            [strongSelf->_zoomModeView setHidden:false animated:true];
+//                            [strongSelf->_zoomWheelView setHidden:true animated:true];
+                        }
+                    });
+                }
+            } else {
+                strongSelf->_dismissingWheel = false;
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
+                [strongSelf->_zoomModeView setHidden:true animated:true];
+//                [strongSelf->_zoomWheelView setHidden:false animated:true];
             }
             
             if (strongSelf.zoomChanged != nil)
@@ -284,7 +296,7 @@
         [_zoomModeView setZoomLevel:1.0];
         [self addSubview:_zoomModeView];
         
-        _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132)];
+        _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
         [_zoomWheelView setHidden:true animated:false];
         [_zoomWheelView setZoomLevel:1.0];
         _zoomWheelView.userInteractionEnabled = false;
