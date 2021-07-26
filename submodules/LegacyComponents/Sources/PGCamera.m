@@ -690,7 +690,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             [strongSelf.captureSession setCurrentCameraPosition:targetCameraPosition];
              
             if (strongSelf.finishedPositionChange != nil)
-                strongSelf.finishedPositionChange();
+                strongSelf.finishedPositionChange([PGCameraCaptureSession _isZoomAvailableForDevice:targetDevice]);
              
             [strongSelf _subscribeForCameraChanges];
         }];

@@ -11,12 +11,24 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        self.adjustsImageWhenHighlighted = false;
+        self.modernHighlight = false;
         self.exclusiveTouch = true;
         self.backgroundColor = [TGCameraInterfaceAssets buttonColor];
         self.layer.cornerRadius = 24.0;
         [self setImage:[UIImage imageNamed:@"Camera/Flip"] forState:UIControlStateNormal];
     }
     return self;
+}
+
+- (void)_setHighligtedAnimated:(bool)highlighted animated:(bool)animated {
+    if (animated) {
+        [UIView animateWithDuration:0.3 animations:^{
+            self.layer.sublayerTransform = highlighted ? CATransform3DMakeScale(0.9, 0.9, 1.0) : CATransform3DIdentity;
+        }];
+    } else {
+        self.layer.sublayerTransform = highlighted ? CATransform3DMakeScale(0.9, 0.9, 1.0) : CATransform3DIdentity;
+    }
 }
 
 - (void)setHidden:(BOOL)hidden
@@ -60,12 +72,24 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        self.adjustsImageWhenHighlighted = false;
+        self.modernHighlight = false;
         self.exclusiveTouch = true;
         self.backgroundColor = [TGCameraInterfaceAssets buttonColor];
         self.layer.cornerRadius = 24.0;
         [self setImage:[UIImage imageNamed:@"Camera/Cancel"] forState:UIControlStateNormal];
     }
     return self;
+}
+
+- (void)_setHighligtedAnimated:(bool)highlighted animated:(bool)animated {
+    if (animated) {
+        [UIView animateWithDuration:0.3 animations:^{
+            self.layer.sublayerTransform = highlighted ? CATransform3DMakeScale(0.9, 0.9, 1.0) : CATransform3DIdentity;
+        }];
+    } else {
+        self.layer.sublayerTransform = highlighted ? CATransform3DMakeScale(0.9, 0.9, 1.0) : CATransform3DIdentity;
+    }
 }
 
 - (void)setHidden:(BOOL)hidden
