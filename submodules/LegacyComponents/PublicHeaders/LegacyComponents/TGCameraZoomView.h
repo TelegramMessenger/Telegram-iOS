@@ -14,3 +14,30 @@
 - (void)hideAnimated:(bool)animated;
 
 @end
+
+
+@interface TGCameraZoomModeView : UIView
+
+@property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
+
+@property (copy, nonatomic) void(^zoomChanged)(CGFloat zoomLevel, bool done, bool animated);
+
+@property (nonatomic, assign) CGFloat zoomLevel;
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel;
+
+@end
+
+
+@interface TGCameraZoomWheelView : UIView
+
+@property (nonatomic, assign) CGFloat zoomLevel;
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
+
+@end

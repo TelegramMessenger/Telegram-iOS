@@ -44,7 +44,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let isSecret: Bool
     let landscape: Bool
     let timecode: Double?
-    let playbackRate: Double
+    let playbackRate: Double?
     let configuration: GalleryConfiguration?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
@@ -52,7 +52,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double = 1.0, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -494,6 +494,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var requiresDownload = false
     
     private var item: UniversalVideoGalleryItem?
+    private var playbackRate: Double?
+    private let playbackRatePromise = ValuePromise<Double>()
     
     private let statusDisposable = MetaDisposable()
     private let moreButtonStateDisposable = MetaDisposable()
@@ -622,6 +624,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setPlayRate = { [weak self] rate in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 videoNode.setBaseRate(rate)
+
+                if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }
             }
         }
         
@@ -773,6 +779,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var forceEnablePiP = false
             var forceEnableUserInteraction = false
             var isAnimated = false
+            var isEnhancedWebPlayer = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
                 self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
@@ -782,9 +789,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 let type = webEmbedType(content: content.webpageContent)
                 switch type {
                     case .youtube:
+                        isEnhancedWebPlayer = true
                         forceEnableUserInteraction = true
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
                         self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
+                    case .vimeo:
+                        isEnhancedWebPlayer = true
                     case .iframe:
                         disablePlayerControls = true
                     default:
@@ -835,6 +845,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
+
+                        if let playbackRate = strongSelf.playbackRate {
+                            videoNode.setBaseRate(playbackRate)
+                        }
                     }
                 }
             }
@@ -868,10 +882,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
-                        return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
+                        return .single(next) |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))
                     }
                     
-                    self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
+                    self.mediaPlaybackStateDisposable.set((throttledSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let strongSelf = self, let videoNode = strongSelf.videoNode, videoNode.ownsContentNode else {
+                            return
+                        }
+
                         if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
@@ -919,13 +938,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
-                videoNode.status,
+                self.playbackRatePromise.get(),
                 self.isShowingContextMenuPromise.get()
-            ).start(next: { [weak self] status, isShowingContextMenu in
+            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
                 guard let strongSelf = self else {
-                    return
-                }
-                guard let status = status else {
                     return
                 }
 
@@ -933,7 +949,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if isShowingContextMenu {
                     effectiveBaseRate = 1.0
                 } else {
-                    effectiveBaseRate = status.baseRate
+                    effectiveBaseRate = playbackRate
                 }
 
                 if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
@@ -1121,7 +1137,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
 
-                if !isWebpage, let file = file, !file.isAnimated {
+                var hasMoreButton = false
+                if isEnhancedWebPlayer {
+                    hasMoreButton = true
+                } else if !isWebpage, let file = file, !file.isAnimated {
+                    hasMoreButton = true
+                }
+                 
+                if hasMoreButton {
                     let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
                     barButtonItems.append(moreMenuItem)
                 }
@@ -1147,6 +1170,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.item = item
+
+        if let _ = item.content as? NativeVideoContent {
+            self.playbackRate = item.playbackRate
+        } else if let _ = item.content as? WebEmbedVideoContent {
+            self.playbackRate = item.playbackRate
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
         if let contentInfo = item.contentInfo {
             switch contentInfo {
@@ -1233,6 +1264,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: self.actionAtEnd)
+
+                            videoNode.setBaseRate(self.playbackRate ?? 1.0)
                         }
                     } else {
                         if self.shouldAutoplayOnCentrality()  {
@@ -1303,21 +1336,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var isAnimated = false
             var seek = MediaPlayerSeek.start
-            var playbackRate: Double = 1.0
             if let item = self.item {
                 if let content = item.content as? NativeVideoContent {
                     isAnimated = content.fileReference.media.isAnimated
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
-                    playbackRate = item.playbackRate
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
                 }
             }
-            videoNode.setBaseRate(playbackRate)
+
+            videoNode.setBaseRate(self.playbackRate ?? 1.0)
+
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
@@ -1921,7 +1954,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
 
-    private func contentInfo() -> (message: Message, file: TelegramMediaFile, isWebpage: Bool)? {
+    private func contentInfo() -> (message: Message, file: TelegramMediaFile?, isWebpage: Bool)? {
         guard let item = self.item else {
             return nil
         }
@@ -1932,16 +1965,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let m = m as? TelegramMediaFile, m.isVideo {
                     file = m
                     break
-                } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
-                    file = f
+                } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content {
+                    if let f = content.file, f.isVideo {
+                        file = f
+                    }
                     isWebpage = true
                     break
                 }
             }
-
-            if let file = file {
-                return (message, file, isWebpage)
-            }
+            return (message, file, isWebpage)
         }
         return nil
     }
@@ -2040,22 +2072,32 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
-            if let (message, file, isWebpage) = strongSelf.contentInfo(), !isWebpage {
+            if let (message, maybeFile, isWebpage) = strongSelf.contentInfo(), let file = maybeFile, !isWebpage {
                 items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
-                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
-                        |> deliverOnMainQueue).start(completed: {
-                            guard let strongSelf = self else {
-                                return
-                            }
+                        switch strongSelf.fetchStatus {
+                        case .Local:
+                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
+                            |> deliverOnMainQueue).start(completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                guard let controller = strongSelf.galleryController() else {
+                                    return
+                                }
+                                //TODO:localize
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            })
+                        default:
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
                             //TODO:localize
-                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                        })
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: "Please wait for the video to be fully downloaded.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
                     }
                 })))
             }
@@ -2104,6 +2146,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     videoNode.setBaseRate(rate)
+
+                    if let controller = strongSelf.galleryController() as? GalleryController {
+                        controller.updateSharedPlaybackRate(rate)
+                    }
                 })))
             }
 
@@ -2174,6 +2220,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
         return .single((self.footerContentNode, nil))
+    }
+
+    func updatePlaybackRate(_ playbackRate: Double?) {
+        self.playbackRate = playbackRate
+
+        if let playbackRate = self.playbackRate {
+            self.videoNode?.setBaseRate(playbackRate)
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
     }
 }
 

@@ -433,13 +433,13 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private func refreshQrToken() {
         let sharedContext = self.sharedContext
         let account = self.account
-        let tokenSignal = sharedContext.activeAccounts
-            |> castError(ExportAuthTransferTokenError.self)
+        let tokenSignal = sharedContext.activeAccountContexts
+        |> castError(ExportAuthTransferTokenError.self)
         |> take(1)
         |> mapToSignal { activeAccountsAndInfo -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
             let (_, activeAccounts, _) = activeAccountsAndInfo
-            let activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
-            let activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            let activeProductionUserIds = activeAccounts.map({ $0.1.account }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            let activeTestingUserIds = activeAccounts.map({ $0.1.account }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             
             let allProductionUserIds = activeProductionUserIds
             let allTestingUserIds = activeTestingUserIds

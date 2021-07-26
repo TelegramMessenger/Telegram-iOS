@@ -88,6 +88,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     
     private let videoId: String
     private let timestamp: Int
+    private var baseRate: Double = 1.0
     private var status : MediaPlayerStatus
     
     private var ready: Bool = false
@@ -160,12 +161,30 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
             eval("seek(\(timestamp));", nil)
         }
         
-        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: self.status.soundEnabled)
-        if let updateStatus = self.updateStatus {
-            updateStatus(self.status)
+        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: self.status.baseRate, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: self.status.soundEnabled)
+        self.updateStatus?(self.status)
+           
+        self.ignorePosition = 2
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        var baseRate = baseRate
+        if baseRate < 0.5 {
+            baseRate = 0.5
+        }
+        if baseRate > 2.0 {
+            baseRate = 2.0
+        }
+        if !self.ready {
+            self.baseRate = baseRate
         }
         
-        self.ignorePosition = 2
+        if let eval = self.evalImpl {
+            eval("setRate(\(baseRate));", nil)
+        }
+        
+        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: self.status.timestamp, baseRate: baseRate, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: true)
+        self.updateStatus?(self.status)
     }
     
     func pageReady() {
@@ -210,6 +229,11 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                     }
                 }
                 
+                if !self.ready {
+                    self.ready = true
+                    self.play()
+                }
+                
                 if let updateStatus = self.updateStatus, let playback = playback, let duration = duration {
                     let playbackStatus: MediaPlayerPlaybackStatus
                     switch playback {
@@ -226,10 +250,12 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                     
                     if case .playing = playbackStatus, !self.started {
                         self.started = true
-                        self.onPlaybackStarted?()
+                        Queue.mainQueue().after(0.5) {
+                            self.onPlaybackStarted?()
+                        }
                     }
                     
-                    self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
+                    self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: self.status.baseRate, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
                     updateStatus(self.status)
                 }
             }

@@ -60,7 +60,7 @@ typedef enum
 @property (nonatomic, copy) void(^finishedModeChange)(void);
 
 @property (nonatomic, copy) void(^beganPositionChange)(bool targetPositionHasFlash, bool targetPositionHasZoom, void(^commitBlock)(void));
-@property (nonatomic, copy) void(^finishedPositionChange)(void);
+@property (nonatomic, copy) void(^finishedPositionChange)(bool targetPositionHasZoom);
 
 @property (nonatomic, copy) void(^beganAdjustingFocus)(void);
 @property (nonatomic, copy) void(^finishedAdjustingFocus)(void);
@@ -83,6 +83,13 @@ typedef enum
 
 @property (nonatomic, readonly) bool isZoomAvailable;
 @property (nonatomic, assign) CGFloat zoomLevel;
+@property (nonatomic, readonly) CGFloat minZoomLevel;
+@property (nonatomic, readonly) CGFloat maxZoomLevel;
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
+@property (nonatomic, readonly) bool hasUltrawideCamera;
+@property (nonatomic, readonly) bool hasTelephotoCamera;
 
 @property (nonatomic, assign) bool disableResultMirroring;
 

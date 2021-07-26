@@ -10,11 +10,17 @@
 @class TGCameraFlipButton;
 @class TGCameraTimeCodeView;
 @class TGCameraZoomView;
+@class TGCameraZoomModeView;
+@class TGCameraZoomWheelView;
 @class TGCameraToastView;
 @class TGMediaPickerPhotoCounterButton;
 @class TGMediaPickerPhotoStripView;
 @class TGMediaPickerGallerySelectedItemsModel;
 @class TGMediaEditingContext;
+
+@interface TGCameraCornersView : UIImageView
+
+@end
 
 @interface TGCameraMainView : UIView
 {
@@ -32,6 +38,8 @@
     TGMediaPickerPhotoStripView *_selectedPhotosView;
     
     TGCameraZoomView *_zoomView;
+    TGCameraZoomModeView *_zoomModeView;
+    TGCameraZoomWheelView *_zoomWheelView;
     
 @public
     TGModernButton *_cancelButton;
@@ -45,6 +53,7 @@
 
 @property (nonatomic, copy) void(^focusPointChanged)(CGPoint point);
 @property (nonatomic, copy) void(^expositionChanged)(CGFloat value);
+@property (nonatomic, copy) void(^zoomChanged)(CGFloat level, bool animated);
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
@@ -57,7 +66,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;
@@ -101,8 +110,6 @@
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;
-
-- (void)layoutPreviewRelativeViews;
 
 - (void)photoCounterButtonPressed;
 

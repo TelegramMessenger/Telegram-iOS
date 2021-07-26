@@ -71,6 +71,9 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
     func seek(timestamp: Double) {
     }
     
+    func setBaseRate(_ baseRate: Double) {
+    }
+    
     func pageReady() {
         self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .playing, soundEnabled: true)
         self.updateStatus?(self.status)

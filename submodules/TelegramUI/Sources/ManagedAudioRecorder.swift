@@ -402,7 +402,7 @@ final class ManagedAudioRecorderContext {
                         strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
-            }, deactivate: { [weak self] in
+            }, deactivate: { [weak self] _ in
                 return Signal { subscriber in
                     queue.async {
                         if let strongSelf = self {

@@ -491,6 +491,9 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
                 if let update = update {
                     update(progress, currentValue)
                 }
+                if progress == 1.0 {
+                    strongSelf.apparentHeightTransition = nil
+                }
             }
         })
         self.setAnimationForKey("apparentHeight", animation: animation)

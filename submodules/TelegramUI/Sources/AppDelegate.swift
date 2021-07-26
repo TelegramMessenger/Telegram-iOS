@@ -833,9 +833,9 @@ final class SharedApplicationContext {
             
             presentationDataPromise.set(sharedContext.presentationData)
             
-            let rawAccounts = sharedContext.activeAccounts
-            |> map { _, accounts, _ -> [Account] in
-                return accounts.map({ $0.1 })
+            let rawAccounts = sharedContext.activeAccountContexts
+            |> map { _, contexts, _ -> [Account] in
+                return contexts.map({ $0.1.account })
             }
             let storeQueue = Queue()
             let _ = (
@@ -870,7 +870,7 @@ final class SharedApplicationContext {
                 }
             }
             
-            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in accounts.map({ ($0.1, $0.1.id == primary?.id) }) }, pollLiveLocationOnce: { accountId in
+            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccountContexts |> map { primary, accounts, _ in accounts.map({ ($0.1.account, $0.1.account.id == primary?.account.id) }) }, pollLiveLocationOnce: { accountId in
                 let _ = (self.context.get()
                 |> filter {
                     return $0 != nil
@@ -922,7 +922,7 @@ final class SharedApplicationContext {
                     return .single(nil)
                 }
             }
-            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
                 return sharedContext.accountUserInterfaceInUse(id)
             })
             let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
@@ -946,8 +946,8 @@ final class SharedApplicationContext {
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext?, NoError> in
-            return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { primary, _, _ -> Account? in
+            return sharedApplicationContext.sharedContext.activeAccountContexts
+            |> map { primary, _, _ -> AccountContext? in
                 return primary
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -956,7 +956,7 @@ final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)?, NoError> in
+            |> mapToSignal { context -> Signal<(AccountContext, CallListSettings)?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
                 }
@@ -969,24 +969,18 @@ final class SharedApplicationContext {
                     }
                     return result
                 }
-                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)?, NoError> in
-                    if let account = account {
-                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            let contentSettings = getContentSettings(transaction: transaction)
-                            let appConfiguration = getAppConfiguration(transaction: transaction)
-                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings, contentSettings, appConfiguration)
-                        }
+                |> map { callListSettings -> (AccountContext, CallListSettings)? in
+                    if let context = context {
+                        return (context, callListSettings ?? .defaultSettings)
                     } else {
-                        return .single(nil)
+                        return nil
                     }
                 }
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings, appConfiguration in
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings, appConfiguration: appConfiguration)
-                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                return accountAndSettings.flatMap { context, callListSettings in
+                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -1002,8 +996,8 @@ final class SharedApplicationContext {
         self.authContext.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
-            return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
+            return sharedApplicationContext.sharedContext.activeAccountContexts
+            |> map { primary, accounts, auth -> (AccountContext?, UnauthorizedAccount, [AccountContext])? in
                 if let auth = auth {
                     return (primary, auth, Array(accounts.map({ $0.1 })))
                 } else {
@@ -1018,10 +1012,10 @@ final class SharedApplicationContext {
             })
             |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 if let (primary, auth, accounts) = authAndAccounts {
-                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<(AccountRecordId, String, Bool)?, NoError> in
-                        return account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
-                            if let phone = (transaction.getPeer(account.peerId) as? TelegramUser)?.phone {
-                                return (account.id, phone, account.testingEnvironment)
+                    let phoneNumbers = combineLatest(accounts.map { context -> Signal<(AccountRecordId, String, Bool)?, NoError> in
+                        return context.account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
+                            if let phone = (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone {
+                                return (context.account.id, phone, context.account.testingEnvironment)
                             } else {
                                 return nil
                             }
@@ -1032,7 +1026,7 @@ final class SharedApplicationContext {
                         var primaryNumber: (String, AccountRecordId, Bool)?
                         if let primary = primary {
                             for idAndNumber in phoneNumbers {
-                                if let (id, number, testingEnvironment) = idAndNumber, id == primary.id {
+                                if let (id, number, testingEnvironment) = idAndNumber, id == primary.account.id {
                                     primaryNumber = (number, id, testingEnvironment)
                                     break
                                 }
@@ -1194,13 +1188,14 @@ final class SharedApplicationContext {
                 authContextReadyDisposable.set(nil)
             }
         }))
-        
-        self.logoutDisposable.set((self.sharedContextPromise.get()
+
+
+        let logoutDataSignal: Signal<(AccountManager, Set<PeerId>), NoError> = self.sharedContextPromise.get()
         |> take(1)
         |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
-            return sharedContext.sharedContext.activeAccounts
+            return sharedContext.sharedContext.activeAccountContexts
             |> map { _, accounts, _ -> Set<PeerId> in
-                return Set(accounts.map { $0.1.peerId })
+                return Set(accounts.map { $0.1.account.peerId })
             }
             |> reduceLeft(value: Set<PeerId>()) { current, updated, emit in
                 if !current.isEmpty {
@@ -1211,7 +1206,9 @@ final class SharedApplicationContext {
             |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
-        }).start(next: { accountManager, loggedOutAccountPeerIds in
+        }
+
+        self.logoutDisposable.set(logoutDataSignal.start(next: { accountManager, loggedOutAccountPeerIds in
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
@@ -1266,7 +1263,7 @@ final class SharedApplicationContext {
                     
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
-                    |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+                    |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
                         return primaryAndAccounts.1.first
                     }
                     |> map { accountAndPeer -> String? in
@@ -1579,13 +1576,13 @@ final class SharedApplicationContext {
                         encryptedPayload.append("=")
                     }
                     if let data = Data(base64Encoded: encryptedPayload) {
-                        let _ = (sharedApplicationContext.sharedContext.activeAccounts
+                        let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
                         |> take(1)
                         |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                            return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
-                                return masterNotificationsKey(account: account.1, ignoreDisabled: true)
+                            return combineLatest(activeAccounts.accounts.map { context -> Signal<(Account, MasterNotificationKey), NoError> in
+                                return masterNotificationsKey(account: context.1.account, ignoreDisabled: true)
                                 |> map { key -> (Account, MasterNotificationKey) in
-                                    return (account.1, key)
+                                    return (context.1.account, key)
                                 }
                             })
                         }
@@ -1803,38 +1800,38 @@ final class SharedApplicationContext {
                 
                     let signal = self.sharedContextPromise.get()
                     |> take(1)
-                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [Account?]), NoError> in
-                        return sharedApplicationContext.sharedContext.activeAccounts
+                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
+                        return sharedApplicationContext.sharedContext.activeAccountContexts
                         |> take(1)
-                        |> mapToSignal { primary, accounts, _ -> Signal<(AccountRecordId?, [Account?]), NoError> in
-                            return combineLatest(accounts.map { _, account, _ -> Signal<Account?, NoError> in
-                                return account.postbox.transaction { transaction -> Account? in
+                        |> mapToSignal { primary, contexts, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
+                            return combineLatest(contexts.map { _, context, _ -> Signal<AccountContext?, NoError> in
+                                return context.account.postbox.transaction { transaction -> AccountContext? in
                                     if transaction.getPeer(peerId) != nil {
-                                        return account
+                                        return context
                                     } else {
                                         return nil
                                     }
                                 }
                             })
-                            |> map { accounts -> (AccountRecordId?, [Account?]) in
-                                return (primary?.id, accounts)
+                            |> map { contexts -> (AccountRecordId?, [AccountContext?]) in
+                                return (primary?.account.id, contexts)
                             }
                         }
                     }
                     let _ = (signal
-                    |> deliverOnMainQueue).start(next: { primary, accounts in
+                    |> deliverOnMainQueue).start(next: { primary, contexts in
                         if let primary = primary {
-                            for account in accounts {
-                                if let account = account, account.id == primary {
+                            for context in contexts {
+                                if let context = context, context.account.id == primary {
                                     self.openChatWhenReady(accountId: nil, peerId: peerId)
                                     return
                                 }
                             }
                         }
                         
-                        for account in accounts {
-                            if let account = account {
-                                self.openChatWhenReady(accountId: account.id, peerId: peerId)
+                        for context in contexts {
+                            if let context = context {
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId)
                                 return
                             }
                         }
@@ -1974,11 +1971,11 @@ final class SharedApplicationContext {
                 |> deliverOnMainQueue
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
                     sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: true)
-                    return sharedContext.sharedContext.activeAccounts
-                    |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
-                        for account in accounts {
-                            if account.1.id == accountId {
-                                return .single(account.1)
+                    return sharedContext.sharedContext.activeAccountContexts
+                    |> mapToSignal { _, contexts, _ -> Signal<Account, NoError> in
+                        for context in contexts {
+                            if context.1.account.id == accountId {
+                                return .single(context.1.account)
                             }
                         }
                         return .complete()
@@ -2300,13 +2297,13 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
-                return sharedContext.sharedContext.activeAccounts
+                return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> mapToSignal { _, accounts, _ -> Signal<AccountRecordId?, NoError> in
-                    let keys = accounts.map { _, account, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
-                        return masterNotificationsKey(account: account, ignoreDisabled: true)
+                |> mapToSignal { _, contexts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = contexts.map { _, context, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: context.account, ignoreDisabled: true)
                         |> map { key in
-                            return (account.id, key)
+                            return (context.account.id, key)
                         }
                     }
                     return combineLatest(keys)
@@ -2324,12 +2321,12 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
-                return sharedContext.sharedContext.activeAccounts
+                return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> map { _, accounts, _ -> AccountRecordId? in
-                    for (_, account, _) in accounts {
-                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
-                            return account.id
+                |> map { _, contexts, _ -> AccountRecordId? in
+                    for (_, context, _) in contexts {
+                        if Int(context.account.peerId.id._internalGetInt32Value()) == userId {
+                            return context.account.id
                         }
                     }
                     return nil

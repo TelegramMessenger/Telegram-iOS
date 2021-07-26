@@ -957,7 +957,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
             } else {
-                if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree() {
+                if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree(keepTransform: true) {
                     self.contentContainerNode.view.addSubview(snapshotView)
                 }
                 

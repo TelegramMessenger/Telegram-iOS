@@ -15,6 +15,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import <SSignalKit/SSignalKit.h>
 
+#import "POPSpringAnimation.h"
+
 const NSInteger PGCameraFrameRate = 30;
 
 @interface PGCameraCaptureSession () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureMetadataOutputObjectsDelegate>
@@ -139,6 +141,8 @@ const NSInteger PGCameraFrameRate = 30;
         TGLegacyLog(@"ERROR: camera can't add still image output");
     }
     
+    [self resetZoom];
+    
     AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
     videoOutput.alwaysDiscardsLateVideoFrames = true;
     videoOutput.videoSettings = @{ (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange) };
@@ -234,8 +238,7 @@ const NSInteger PGCameraFrameRate = 30;
     [self commitConfiguration];
     
     [self resetFocusPoint];
-    
-    self.zoomLevel = 0.0f;
+    [self resetZoom];
 }
 
 - (void)resetFlashMode
@@ -291,6 +294,8 @@ const NSInteger PGCameraFrameRate = 30;
     
     [self _enableLowLightBoost];
     [self _enableVideoStabilization];
+    
+    [self resetZoom];
     
     [self commitConfiguration];
     
@@ -444,9 +449,22 @@ const NSInteger PGCameraFrameRate = 30;
 
 #pragma mark - Zoom
 
-- (CGFloat)_maximumZoomFactor
-{
-    return MIN(5.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+- (bool)hasUltrawideCamera {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
+            return true;
+        }
+    }
+    return false;
+}
+
+- (bool)hasTelephotoCamera {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.lastObject.deviceType == AVCaptureDeviceTypeBuiltInTelephotoCamera) {
+            return true;
+        }
+    }
+    return false;
 }
 
 - (CGFloat)zoomLevel
@@ -454,10 +472,59 @@ const NSInteger PGCameraFrameRate = 30;
     if (![self.videoDevice respondsToSelector:@selector(videoZoomFactor)])
         return 1.0f;
     
-    return (self.videoDevice.videoZoomFactor - 1.0f) / ([self _maximumZoomFactor] - 1.0f);
+    if (iosMajorVersion() >= 13.0 && self.videoDevice.isVirtualDevice) {
+        CGFloat backingLevel = self.videoDevice.videoZoomFactor;
+        CGFloat realLevel = backingLevel;
+        
+        NSArray *marks = self.videoDevice.virtualDeviceSwitchOverVideoZoomFactors;
+        if (marks.count == 2) {
+            CGFloat firstMark = [marks.firstObject floatValue];
+            CGFloat secondMark = [marks.lastObject floatValue];
+            
+            if (backingLevel < firstMark) {
+                realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
+            } else if (backingLevel < secondMark) {
+                realLevel = 1.0 + 1.0 * (backingLevel - firstMark) / (secondMark - firstMark);
+            } else {
+                realLevel = 2.0 + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
+            }
+        } else if (marks.count == 1) {
+            CGFloat mark = [marks.firstObject floatValue];
+            if (backingLevel < mark) {
+                realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
+            } else {
+                realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+            }
+        }
+        
+        return realLevel;
+    }
+    
+    return self.videoDevice.videoZoomFactor;
 }
 
-- (void)setZoomLevel:(CGFloat)zoomLevel
+- (CGFloat)minZoomLevel {
+    if (iosMajorVersion() >= 13.0) {
+        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
+            return 0.5;
+        }
+    }
+    return 1.0;
+}
+
+- (CGFloat)maxZoomLevel {
+    return MIN(16.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+}
+
+- (void)resetZoom {
+    [self setZoomLevel:1.0];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel {
+    [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
 {
     if (![self.videoDevice respondsToSelector:@selector(setVideoZoomFactor:)])
         return;
@@ -469,7 +536,67 @@ const NSInteger PGCameraFrameRate = 30;
         if (strongSelf == nil)
             return;
         
-        device.videoZoomFactor = MAX(1.0f, MIN([strongSelf _maximumZoomFactor], 1.0f + ([strongSelf _maximumZoomFactor] - 1.0f) * zoomLevel));
+        CGFloat level = zoomLevel;
+        CGFloat backingLevel = 1.0;
+        if (iosMajorVersion() >= 13.0 && device.isVirtualDevice) {
+            NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
+            if (marks.count == 2) {
+                CGFloat firstMark = [marks.firstObject floatValue];
+                CGFloat secondMark = [marks.lastObject floatValue];
+                if (level < 1.0) {
+                    level = MAX(0.5, level);
+                    backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
+                } else if (zoomLevel < 2.0) {
+                    backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
+                } else {
+                    backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
+                }
+            } else if (marks.count == 1) {
+                CGFloat mark = [marks.firstObject floatValue];
+                if (zoomLevel < 2.0) {
+                    backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
+                } else {
+                    backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
+                }
+            }
+        }
+        CGFloat finalLevel =  MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
+        if (animated) {
+            bool zoomingIn = finalLevel > self.videoDevice.videoZoomFactor;
+            bool needsCrossfade = level >= 1.0;
+            POPSpringAnimation *animation = [POPSpringAnimation new];
+            animation.property = [POPAnimatableProperty propertyWithName:@"zoom" initializer:^(POPMutableAnimatableProperty *prop)
+            {
+                prop.readBlock = ^(PGCameraCaptureSession *session, CGFloat values[])
+                {
+                    if (session != nil) {
+                        values[0] = session.videoDevice.videoZoomFactor;
+                    }
+                };
+                
+                prop.writeBlock = ^(PGCameraCaptureSession *session, const CGFloat values[])
+                {
+                    if (session != nil) {
+                        if ((zoomingIn && values[0] > finalLevel - 0.015) || (!zoomingIn && values[0] < finalLevel + 0.015)) {
+                            if (needsCrossfade && session.crossfadeNeeded != nil)
+                                session.crossfadeNeeded();
+                        }
+                        [session _reconfigureDevice:session->_videoDevice withBlock:^(AVCaptureDevice *device) {
+                            device.videoZoomFactor = values[0];
+                        }];
+                    }
+                };
+                
+                prop.threshold = 0.03f;
+            }];
+            animation.fromValue = @(self.videoDevice.videoZoomFactor);
+            animation.toValue = @(finalLevel);
+            animation.springSpeed = 14;
+            animation.springBounciness = 1;
+            [self pop_addAnimation:animation forKey:@"zoom"];
+        } else {
+            device.videoZoomFactor = finalLevel;
+        }
     }];
 }
 
@@ -674,9 +801,6 @@ const NSInteger PGCameraFrameRate = 30;
             [self _addAudioInputRequestAudioSession:false];
         }
         
-        if (self.changingPosition != nil)
-            self.changingPosition();
-        
         [self commitConfiguration];
         
         if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo || self.currentMode == PGCameraModeSquareSwing)
@@ -686,6 +810,7 @@ const NSInteger PGCameraFrameRate = 30;
     }
     
     _videoDevice = deviceForTargetPosition;
+    [self resetZoom];
     
     [self setCurrentFlashMode:self.currentFlashMode];
     
@@ -700,14 +825,22 @@ const NSInteger PGCameraFrameRate = 30;
 
 + (AVCaptureDevice *)_deviceWithPosition:(AVCaptureDevicePosition)position
 {
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    if (iosMajorVersion() >= 13 && position != AVCaptureDevicePositionFront) {
+        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
+        if (device == nil) {
+            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
+        }
+        if (device != nil) {
+            return device;
+        }
+    }
     
+    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     for (AVCaptureDevice *device in devices)
     {
         if (device.position == position)
             return device;
     }
-    
     return nil;
 }
 
@@ -863,54 +996,18 @@ const NSInteger PGCameraFrameRate = 30;
 {
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferLockBaseAddress(imageBuffer,0);
-    
+
     size_t width = CVPixelBufferGetWidth(imageBuffer);
     size_t height = CVPixelBufferGetHeight(imageBuffer);
-    uint8_t *yBuffer = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
-    size_t yPitch = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0);
-    uint8_t *cbCrBuffer = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 1);
-    size_t cbCrPitch = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 1);
     
-    int bytesPerPixel = 4;
-    uint8_t *rgbBuffer = malloc(width * height * bytesPerPixel);
-    
-    for (size_t y = 0; y < height; y++)
-    {
-        uint8_t *rgbBufferLine = &rgbBuffer[y * width * bytesPerPixel];
-        uint8_t *yBufferLine = &yBuffer[y * yPitch];
-        uint8_t *cbCrBufferLine = &cbCrBuffer[(y >> 1) * cbCrPitch];
-        
-        for (size_t x = 0; x < width; x++)
-        {
-            int16_t y = yBufferLine[x];
-            int16_t cb = cbCrBufferLine[x & ~1] - 128;
-            int16_t cr = cbCrBufferLine[x | 1] - 128;
-            
-            uint8_t *rgbOutput = &rgbBufferLine[x * bytesPerPixel];
-            
-            int16_t r = (int16_t)round( y + cr *  1.4 );
-            int16_t g = (int16_t)round( y + cb * -0.343 + cr * -0.711 );
-            int16_t b = (int16_t)round( y + cb *  1.765);
-            
-            rgbOutput[0] = 0xff;
-            rgbOutput[1] = clamp(b);
-            rgbOutput[2] = clamp(g);
-            rgbOutput[3] = clamp(r);
-        }
-    }
-    
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(rgbBuffer, width, height, 8, width * bytesPerPixel, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipLast);
-    CGImageRef quartzImage = CGBitmapContextCreateImage(context);
-    UIImage *image = [UIImage imageWithCGImage:quartzImage scale:1.0 orientation:orientation];
-    
-    CGContextRelease(context);
-    CGColorSpaceRelease(colorSpace);
+    CIImage *coreImage = [CIImage imageWithCVPixelBuffer:imageBuffer];
+
+    CIContext *ciContext = [CIContext contextWithOptions:nil];
+    CGImageRef quartzImage = [ciContext createCGImage:coreImage fromRect:CGRectMake(0, 0, width, height)];
+    UIImage *image = [[UIImage alloc] initWithCGImage:quartzImage scale:1.0 orientation:orientation];
     CGImageRelease(quartzImage);
-    free(rgbBuffer);
     
     CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-    
     return image;
 }
 
@@ -978,8 +1075,6 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
 {
     if (!self.isRunning || self.currentMode != PGCameraModePhoto)
         return;
-    
-    
     
     if ([metadataObjects.firstObject isKindOfClass:[AVMetadataMachineReadableCodeObject class]])
     {

@@ -21,6 +21,7 @@ public enum ManagedAudioSessionType: Equatable {
     case record(speaker: Bool)
     case voiceCall
     case videoCall
+    case recordWithOthers
     
     var isPlay: Bool {
         switch self {
@@ -38,7 +39,7 @@ private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: 
         return .ambient
     case .play:
         return .playback
-    case .record, .voiceCall, .videoCall:
+        case .record, .recordWithOthers, .voiceCall, .videoCall:
         return .playAndRecord
     case .playWithPossiblePortOverride:
         if headphones {
@@ -114,7 +115,7 @@ private final class HolderRecord {
     let audioSessionType: ManagedAudioSessionType
     let control: ManagedAudioSessionControl
     let activate: (ManagedAudioSessionControl) -> Void
-    let deactivate: () -> Signal<Void, NoError>
+    let deactivate: (Bool) -> Signal<Void, NoError>
     let headsetConnectionStatusChanged: (Bool) -> Void
     let availableOutputsChanged: ([AudioSessionOutput], AudioSessionOutput?) -> Void
     let once: Bool
@@ -122,7 +123,7 @@ private final class HolderRecord {
     var active: Bool = false
     var deactivatingDisposable: Disposable? = nil
     
-    init(id: Int32, audioSessionType: ManagedAudioSessionType, control: ManagedAudioSessionControl, activate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void, once: Bool, outputMode: AudioSessionOutputMode) {
+    init(id: Int32, audioSessionType: ManagedAudioSessionType, control: ManagedAudioSessionControl, activate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping (Bool) -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void, once: Bool, outputMode: AudioSessionOutputMode) {
         self.id = id
         self.audioSessionType = audioSessionType
         self.control = control
@@ -431,7 +432,7 @@ public final class ManagedAudioSession {
         return AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint
     }
     
-    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activate: @escaping (AudioSessionActivationState) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> Disposable {
+    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activate: @escaping (AudioSessionActivationState) -> Void, deactivate: @escaping (Bool) -> Signal<Void, NoError>) -> Disposable {
         return self.push(audioSessionType: audioSessionType, once: once, manualActivate: { control in
             control.setupAndActivate(synchronous: false, { state in
                 activate(state)
@@ -439,7 +440,7 @@ public final class ManagedAudioSession {
         }, deactivate: deactivate)
     }
     
-    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activateImmediately: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping () -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
+    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activateImmediately: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping (Bool) -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
         let id = OSAtomicIncrement32(&self.nextId)
         let queue = self.queue
         queue.async {
@@ -566,9 +567,12 @@ public final class ManagedAudioSession {
                 }
                 index += 1
             }
+            
+            let lastIsRecordWithOthers = self.holders.last?.audioSessionType == .recordWithOthers
             if !deactivating {
                 if let activeIndex = activeIndex {
                     var deactivate = false
+                    var temporary = false
                     
                     if interruption {
                         if self.holders[activeIndex].audioSessionType != .voiceCall {
@@ -576,7 +580,10 @@ public final class ManagedAudioSession {
                         }
                     } else {
                         if activeIndex != self.holders.count - 1 {
-                            if self.holders[activeIndex].audioSessionType == .voiceCall {
+                            if lastIsRecordWithOthers {
+                                deactivate = true
+                                temporary = true
+                            } else if self.holders[activeIndex].audioSessionType == .voiceCall {
                                 deactivate = false
                             } else {
                                 deactivate = true
@@ -587,7 +594,7 @@ public final class ManagedAudioSession {
                     if deactivate {
                         self.holders[activeIndex].active = false
                         let id = self.holders[activeIndex].id
-                        self.holders[activeIndex].deactivatingDisposable = (self.holders[activeIndex].deactivate()
+                        self.holders[activeIndex].deactivatingDisposable = (self.holders[activeIndex].deactivate(temporary)
                         |> deliverOn(self.queue)).start(completed: { [weak self] in
                             guard let strongSelf = self else {
                                 return
@@ -726,21 +733,24 @@ public final class ManagedAudioSession {
                                 options.insert(.allowBluetooth)
                             }
                         }
-                    case .record, .voiceCall, .videoCall:
+                    case .record, .recordWithOthers, .voiceCall, .videoCall:
                         options.insert(.allowBluetooth)
                 }
                 managedAudioSessionLog("ManagedAudioSession setting active true")
                 let mode: AVAudioSession.Mode
-                   switch type {
-                       case .voiceCall:
-                           mode = .voiceChat
-                            options.insert(.mixWithOthers)
-                       case .videoCall:
-                           mode = .videoChat
-                            options.insert(.mixWithOthers)
-                       default:
-                           mode = .default
-                   }
+                switch type {
+                    case .voiceCall:
+                        mode = .voiceChat
+                        options.insert(.mixWithOthers)
+                    case .videoCall:
+                        mode = .videoChat
+                        options.insert(.mixWithOthers)
+                    case .recordWithOthers:
+                        mode = .videoRecording
+                        options.insert(.mixWithOthers)
+                    default:
+                        mode = .default
+                }
                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     try AVAudioSession.sharedInstance().setCategory(nativeCategory, mode: mode, policy: .default, options: options)
                 } else {

@@ -308,6 +308,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 
 #import <PresentationStrings/PresentationStrings.h>
 #import <NumberPluralizationForm/NumberPluralizationForm.h>
+#import <AppBundle/AppBundle.h>
 
 @implementation _FormattedStringRange
 
@@ -447,7 +448,7 @@ static NSString * _Nonnull getSingle(_PresentationStrings * _Nonnull strings, NS
         static NSDictionary<NSString *, NSString *> *fallbackDict = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            NSString *lprojPath = [[NSBundle mainBundle] pathForResource:@"en" ofType:@"lproj"];
+            NSString *lprojPath = [getAppBundle() pathForResource:@"en" ofType:@"lproj"];
             if (!lprojPath) {
                 return;
             }
@@ -496,7 +497,7 @@ static NSString * _Nonnull getPluralizedIndirect(_PresentationStrings * _Nonnull
         static NSDictionary<NSNumber *, NSString *> *idToKey = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            NSString *dataPath = [[NSBundle mainBundle] pathForResource:@"PresentationStrings" ofType:@"data"];
+            NSString *dataPath = [getAppBundle() pathForResource:@"PresentationStrings" ofType:@"data"];
             if (!dataPath) {
                 assert(false);
                 return;

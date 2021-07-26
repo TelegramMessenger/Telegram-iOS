@@ -295,6 +295,9 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     }
     
     func updateIsBlurred(isBlurred: Bool, light: Bool = false, animated: Bool = true) {
+        if self.hasScheduledUnblur {
+            self.hasScheduledUnblur = false
+        }
         if self.isBlurred == isBlurred {
             return
         }
@@ -326,18 +329,22 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
         }
     }
     
+    private var hasScheduledUnblur = false
     func flip(withBackground: Bool) {
         if withBackground {
             self.backgroundColor = .black
         }
         UIView.transition(with: withBackground ? self.videoTransformContainer.view : self.view, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
             UIView.performWithoutAnimation {
-                self.updateIsBlurred(isBlurred: true, light: true, animated: false)
+                self.updateIsBlurred(isBlurred: true, light: false, animated: false)
             }
         }) { finished in
             self.backgroundColor = nil
+            self.hasScheduledUnblur = true
             Queue.mainQueue().after(0.5) {
-                self.updateIsBlurred(isBlurred: false)
+                if self.hasScheduledUnblur {
+                    self.updateIsBlurred(isBlurred: false)
+                }
             }
         }
     }
@@ -569,7 +576,17 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
             switch callState.state {
             case .active:
-                if strongSelf.outgoingVideoNodeValue == nil {
+                var isScreencastActive = false
+                switch callState.videoState {
+                case .active(true), .paused(true):
+                    isScreencastActive = true
+                default:
+                    break
+                }
+
+                if isScreencastActive {
+                    (strongSelf.call as! PresentationCallImpl).disableScreencast()
+                } else if strongSelf.outgoingVideoNodeValue == nil {
                     DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: strongSelf.presentationData, present: { [weak self] c, a in
                         if let strongSelf = self {
                             strongSelf.present?(c)
@@ -620,10 +637,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                                     updateLayoutImpl?(layout, navigationBarHeight)
                                 })
                                 
-                                let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { [weak self] _, _ in
-                                    if let strongSelf = self {
-                                        proceed()
-                                    }
+                                let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { _, _ in
+                                    proceed()
                                 }, switchCamera: { [weak self] in
                                     Queue.mainQueue().after(0.1) {
                                         self?.call.switchVideoCamera()
@@ -636,14 +651,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                                 }
                             }
                         })
-                        
-//                        if strongSelf.displayedCameraConfirmation {
-//                            proceed()
-//                        } else {
-//                            strongSelf.present?(textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: strongSelf.presentationData.strings.Call_CameraConfirmationText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Call_CameraConfirmationConfirm, action: {
-//                                proceed()
-//                            })]))
-//                        }
                     })
                 } else {
                     strongSelf.call.disableVideo()
@@ -716,7 +723,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             return
         }
                 
-        self.present?(TooltipScreen(text: self.presentationData.strings.Call_CameraTooltip, style: .light, icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: -14.0), .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _ in
+        self.present?(TooltipScreen(text: self.presentationData.strings.Call_CameraOrScreenTooltip, style: .light, icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: -14.0), .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _ in
             return .dismiss(consume: false)
         }))
     }
@@ -877,7 +884,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         switch callState.videoState {
-        case .active, .paused:
+        case .active(false), .paused(false):
             if !self.outgoingVideoViewRequested {
                 self.outgoingVideoViewRequested = true
                 let delayUntilInitialized = self.isRequestingVideo
@@ -959,7 +966,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 })
             }
-        case .notAvailable, .inactive:
+        default:
             self.candidateOutgoingVideoNodeValue = nil
             if let outgoingVideoNodeValue = self.outgoingVideoNodeValue {
                 if self.minimizedVideoNode == outgoingVideoNodeValue {
@@ -1256,16 +1263,20 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 mode = .none
             }
         }
-        var mappedVideoState = CallControllerButtonsMode.VideoState(isAvailable: false, isCameraActive: self.outgoingVideoNodeValue != nil, canChangeStatus: false, hasVideo: self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil, isInitializingCamera: self.isRequestingVideo)
+        var mappedVideoState = CallControllerButtonsMode.VideoState(isAvailable: false, isCameraActive: self.outgoingVideoNodeValue != nil, isScreencastActive: false, canChangeStatus: false, hasVideo: self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil, isInitializingCamera: self.isRequestingVideo)
         switch callState.videoState {
         case .notAvailable:
             break
         case .inactive:
             mappedVideoState.isAvailable = true
             mappedVideoState.canChangeStatus = true
-        case .active, .paused:
+        case .active(let isScreencast), .paused(let isScreencast):
             mappedVideoState.isAvailable = true
             mappedVideoState.canChangeStatus = true
+            if isScreencast {
+                mappedVideoState.isScreencastActive = true
+                mappedVideoState.hasVideo = true
+            }
         }
         
         switch callState.state {
