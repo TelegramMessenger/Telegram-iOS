@@ -229,7 +229,9 @@
                 strongSelf.zoomChanged(zoomLevel, animated);
         };
         [_zoomModeView setZoomLevel:1.0];
-        [self addSubview:_zoomModeView];
+        if (hasTelephotoCamera || hasUltrawideCamera) {
+            [self addSubview:_zoomModeView];
+        }
         
         _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
         [_zoomWheelView setHidden:true animated:false];
@@ -240,7 +242,17 @@
                 return;
             [strongSelf->_zoomModeView panGesture:gestureRecognizer];
         };
-        [self addSubview:_zoomWheelView];
+        if (hasTelephotoCamera || hasUltrawideCamera) {
+            [self addSubview:_zoomWheelView];
+        }
+        
+        _zoomView = [[TGCameraZoomView alloc] initWithFrame:CGRectMake(10, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18, frame.size.width - 20, 1.5f)];
+        _zoomView.activityChanged = ^(bool active)
+        {
+        };
+        if (!hasTelephotoCamera && !hasUltrawideCamera) {
+            [self addSubview:_zoomView];
+        }
         
         _bottomPanelView = [[UIView alloc] init];
         [self addSubview:_bottomPanelView];
@@ -298,9 +310,7 @@
         
         _videoLandscapePanelView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 274, 44)];
         _videoLandscapePanelView.alpha = 0.0f;
-        _videoLandscapePanelView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
         _videoLandscapePanelView.hidden = true;
-        _videoLandscapePanelView.layer.cornerRadius = 3.5f;
         [self addSubview:_videoLandscapePanelView];
         
         _toastView = [[TGCameraToastView alloc] initWithFrame:CGRectMake(0, frame.size.height - _bottomPanelHeight - 42, frame.size.width, 32)];
@@ -566,6 +576,8 @@
 {
     bool hasDoneButton = _hasResults;
     
+    _zoomWheelView.clipsToBounds = !hidden;
+    
     if (animated)
     {
         if (!hidden)
@@ -576,6 +588,11 @@
             _flipButton.hidden = false;
             _bottomPanelBackgroundView.hidden = false;
         }
+        
+        [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^{
+            CGFloat offset = hidden ? 19 : 18 + 43;
+            _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
+        } completion:nil];
         
         [UIView animateWithDuration:0.25 animations:^
         {
@@ -619,6 +636,9 @@
         _bottomPanelBackgroundView.hidden = hidden;
         _bottomPanelBackgroundView.alpha = alpha;
         
+        CGFloat offset = hidden ? 19 : 18 + 43;
+        _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
+        
         if (hasDoneButton)
         {
             _doneButton.hidden = hidden;
@@ -647,13 +667,13 @@
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
             {
-                _topPanelView.alpha = 0.0f;
                 _videoLandscapePanelView.alpha = 0.0f;
             }
             
             _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _zoomModeView.interfaceOrientation = orientation;
+            _timecodeView.interfaceOrientation = orientation;
         } completion:^(__unused BOOL finished)
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
@@ -674,8 +694,6 @@
                 {
                     if (UIInterfaceOrientationIsLandscape(orientation))
                         _videoLandscapePanelView.alpha = 1.0f;
-                    else
-                        _topPanelView.alpha = 1.0f;
                 }
             } completion:nil];
         }];
@@ -699,7 +717,6 @@
         case UIInterfaceOrientationLandscapeLeft:
         {
             _videoLandscapePanelView.hidden = false;
-            _topPanelView.hidden = true;
             
             _videoLandscapePanelView.transform = transform;
             _videoLandscapePanelView.frame = CGRectMake(3, (self.frame.size.height - _videoLandscapePanelView.frame.size.height) / 2, _videoLandscapePanelView.frame.size.width, _videoLandscapePanelView.frame.size.height);
@@ -708,7 +725,6 @@
         case UIInterfaceOrientationLandscapeRight:
         {
             _videoLandscapePanelView.hidden = false;
-            _topPanelView.hidden = true;
             
             _videoLandscapePanelView.transform = transform;
             _videoLandscapePanelView.frame = CGRectMake(self.frame.size.width - _videoLandscapePanelView.frame.size.width - 3, (self.frame.size.height - _videoLandscapePanelView.frame.size.height) / 2, _videoLandscapePanelView.frame.size.width, _videoLandscapePanelView.frame.size.height);
@@ -718,20 +734,18 @@
         case UIInterfaceOrientationPortraitUpsideDown:
         {
             _videoLandscapePanelView.hidden = true;
-            _topPanelView.hidden = false;
             
             _topPanelView.transform = transform;
-            _topPanelView.frame = CGRectMake(0, 0, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
+            _topPanelView.frame = CGRectMake(0, _topPanelOffset, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
         }
             break;
             
         default:
         {
             _videoLandscapePanelView.hidden = true;
-            _topPanelView.hidden = false;
             
             _topPanelView.transform = transform;
-            _topPanelView.frame = CGRectMake(0, 0, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
+            _topPanelView.frame = CGRectMake(0, _topPanelOffset, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
         }
             break;
     }
@@ -749,7 +763,7 @@
 
 - (void)_layoutTopPanelSubviewsForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
-    UIView *superview = _flashControl.superview;
+    UIView *superview = _timecodeView.superview;
     CGSize superviewSize = superview.frame.size;
     
     if (superview == _videoLandscapePanelView && superviewSize.width < superviewSize.height)

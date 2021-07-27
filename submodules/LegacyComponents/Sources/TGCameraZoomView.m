@@ -54,7 +54,7 @@
             CGContextRef context = UIGraphicsGetCurrentContext();
 
             CGContextSetStrokeColorWithColor(context, [TGCameraInterfaceAssets accentColor].CGColor);
-            CGContextSetLineWidth(context, 1.5f);
+            CGContextSetLineWidth(context, 1.0f);
             CGContextStrokeEllipseInRect(context, CGRectMake(0.75f, 0.75f, 12.5f - 1.5f, 12.5f - 1.5f));
 
             knobImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -170,7 +170,11 @@
 {
     _clipView.frame = CGRectMake(22, (self.frame.size.height - 12.5f) / 2, self.frame.size.width - 44, 12.5f);
     
-    CGFloat position = (_clipView.frame.size.width - _knobView.frame.size.width) * self.zoomLevel;
+    CGFloat zoomLevel = self.zoomLevel;
+    zoomLevel = MAX(1.0, zoomLevel);
+    CGFloat factor = zoomLevel / 8.0;
+    
+    CGFloat position = (_clipView.frame.size.width - _knobView.frame.size.width) * factor;
     if (self.zoomLevel < 1.0f - FLT_EPSILON)
         position = CGFloor(position);
     
@@ -363,10 +367,10 @@
 {
     _zoomLevel = zoomLevel;
     if (zoomLevel < 1.0) {
-        NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+        NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
         value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-        if ([value isEqual:@"1,0x"] || [value isEqual:@"1x"]) {
-            value = @"0,9x";
+        if ([value isEqual:@"1,0×"] || [value isEqual:@"1×"]) {
+            value = @"0,9×";
         }
         [_leftItem setValue:value selected:true animated:animated];
         [_centerItem setValue:@"1" selected:false animated:animated];
@@ -374,13 +378,13 @@
     } else if (zoomLevel < 2.0) {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
         if ((zoomLevel - 1.0) < 0.025) {
-            [_centerItem setValue:@"1x" selected:true animated:animated];
+            [_centerItem setValue:@"1×" selected:true animated:animated];
         } else {
-            NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+            NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
             value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-            value = [value stringByReplacingOccurrencesOfString:@",0x" withString:@"x"];
-            if ([value isEqual:@"2x"]) {
-                value = @"1,9x";
+            value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
+            if ([value isEqual:@"2×"]) {
+                value = @"1,9×";
             }
             [_centerItem setValue:value selected:true animated:animated];
         }
@@ -388,8 +392,8 @@
     } else {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
           
-        NSString *value = [[NSString stringWithFormat:@"%.1fx", zoomLevel] stringByReplacingOccurrencesOfString:@"." withString:@","];
-        value = [value stringByReplacingOccurrencesOfString:@",0x" withString:@"x"];
+        NSString *value = [[NSString stringWithFormat:@"%.1f×", zoomLevel] stringByReplacingOccurrencesOfString:@"." withString:@","];
+        value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
         
         if (_rightItem.superview != nil) {
             [_centerItem setValue:@"1" selected:false animated:animated];
@@ -607,9 +611,7 @@
         
         _hasUltrawideCamera = hasUltrawideCamera;
         _hasTelephotoCamera = hasTelephotoCamera;
-        
-        self.clipsToBounds = true;
-                          
+                                  
         CGFloat side = floor(frame.size.width * 1.1435);
         CGFloat length = 17.0;
         CGFloat smallWidth = MAX(0.5, 1.0 - TGScreenPixel);
@@ -814,19 +816,32 @@
     
     _scaleView.transform = CGAffineTransformMakeRotation(finalAngle);
     
-    NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+    NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
     value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-    value = [value stringByReplacingOccurrencesOfString:@",0x" withString:@"x"];
+    value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
 
     NSString *previousValue = _valueLabel.text;
     _valueLabel.text = value;
     [_valueLabel sizeToFit];
     
-    if (panning && ![previousValue isEqualToString:value] && ([value isEqualToString:@"0,5x"] || ![value containsString:@","])) {
+    if (panning && ![previousValue isEqualToString:value] && ([value isEqualToString:@"0,5×"] || ![value containsString:@","])) {
         [_feedbackGenerator selectionChanged];
     }
     
     _valueLabel.frame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.frame.size.width) / 2.0), 30.0, _valueLabel.frame.size.width, _valueLabel.frame.size.height);
+}
+
+- (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    _interfaceOrientation = interfaceOrientation;
+ 
+    switch (interfaceOrientation) {
+        case UIInterfaceOrientationLandscapeLeft:
+            break;
+        case UIInterfaceOrientationLandscapeRight:
+            break;
+        default:
+            break;
+    }
 }
 
 - (void)setHidden:(BOOL)hidden

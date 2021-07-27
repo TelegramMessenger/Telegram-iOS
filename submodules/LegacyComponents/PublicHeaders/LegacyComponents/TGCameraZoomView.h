@@ -36,6 +36,8 @@
 
 @interface TGCameraZoomWheelView : UIView
 
+@property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
+
 @property (copy, nonatomic) void(^panGesture)(UIPanGestureRecognizer *gestureRecognizer);
 
 @property (nonatomic, assign) CGFloat zoomLevel;
