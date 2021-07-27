@@ -674,6 +674,7 @@
             _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _zoomModeView.interfaceOrientation = orientation;
             _timecodeView.interfaceOrientation = orientation;
+            _zoomWheelView.interfaceOrientation = orientation;
         } completion:^(__unused BOOL finished)
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
@@ -703,6 +704,8 @@
         _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _zoomModeView.interfaceOrientation = orientation;
+        _timecodeView.interfaceOrientation = orientation;
+        _zoomWheelView.interfaceOrientation = orientation;
         
         [self _layoutTopPanelSubviewsForInterfaceOrientation:orientation];
     }

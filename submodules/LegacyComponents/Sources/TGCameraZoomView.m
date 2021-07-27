@@ -828,20 +828,32 @@
         [_feedbackGenerator selectionChanged];
     }
     
-    _valueLabel.frame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.frame.size.width) / 2.0), 30.0, _valueLabel.frame.size.width, _valueLabel.frame.size.height);
+    CGRect valueLabelFrame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.frame.size.width) / 2.0), 30.0, _valueLabel.frame.size.width, _valueLabel.frame.size.height);
+    _valueLabel.bounds = CGRectMake(0, 0, valueLabelFrame.size.width, valueLabelFrame.size.height);
+    _valueLabel.center = CGPointMake(valueLabelFrame.origin.x + valueLabelFrame.size.width / 2.0, valueLabelFrame.origin.y + valueLabelFrame.size.height / 2.0);
 }
 
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
     _interfaceOrientation = interfaceOrientation;
  
+    CGFloat delta = 0.0f;
     switch (interfaceOrientation) {
         case UIInterfaceOrientationLandscapeLeft:
+            delta = -90.0f;
             break;
         case UIInterfaceOrientationLandscapeRight:
+            delta = 90.0f;
             break;
+        case UIInterfaceOrientationPortraitUpsideDown:
+            delta = 180.0f;
         default:
             break;
     }
+    _valueLabel.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(delta));
+    _05Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(-19.6 + delta));
+    _1Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(delta));
+    _2Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(19.6 + delta));
+    _8Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(58.93 + delta));
 }
 
 - (void)setHidden:(BOOL)hidden
