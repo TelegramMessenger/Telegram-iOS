@@ -27,6 +27,8 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
     self = [super initWithFrame:frame];
     if (self != nil) {
         self.contentMode = UIViewContentModeRedraw;
+        self.opaque = false;
+        self.backgroundColor = [UIColor clearColor];
     }
     return self;
 }
@@ -102,7 +104,8 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         CGPathRelease(strokedPath);
         CGPathRelease(path);
         
-        CGContextSetStrokeColorWithColor(context, [UIColor blackColor].CGColor);
+        CGContextSetBlendMode(context, kCGBlendModeCopy);
+        CGContextSetStrokeColorWithColor(context, [UIColor clearColor].CGColor);
         CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
         CGContextDrawPath(context, kCGPathFillStroke);
     }

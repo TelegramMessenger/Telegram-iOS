@@ -64,7 +64,8 @@
     UIView *_videoLandscapePanelView;
     
     TGCameraFlashControl *_flashControl;
-    TGCameraFlashActiveView *_flashActiveView;
+    
+    TGCameraSmallFlipButton *_topFlipButton;
             
     bool _hasResults;
     
@@ -137,7 +138,7 @@
             _topPanelOffset = 33.0f;
             _topPanelHeight = 44.0f;
             _bottomPanelOffset = 63.0f;
-            _bottomPanelHeight = 123.0f;
+            _bottomPanelHeight = 128.0f;
             _modeControlOffset = 3.0f;
             _modeControlHeight = 40.0f;
             _counterOffset = 7.0f;
@@ -198,6 +199,62 @@
         _topPanelBackgroundView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
         [_topPanelView addSubview:_topPanelBackgroundView];
         
+        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera minZoomLevel:hasUltrawideCamera ? 0.5 : 1.0 maxZoomLevel:8.0];
+        _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done, bool animated) {
+            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (done) {
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
+                [strongSelf->_zoomModeView setZoomLevel:zoomLevel animated:false];
+                
+                if (!strongSelf->_zoomWheelView.isHidden) {
+                    strongSelf->_dismissingWheel = true;
+                    
+                    TGDispatchAfter(0.6, dispatch_get_main_queue(), ^{
+                        if (strongSelf->_dismissingWheel) {
+                            [strongSelf->_zoomModeView setHidden:false animated:true];
+                            [strongSelf->_zoomWheelView setHidden:true animated:true];
+                        }
+                    });
+                }
+            } else {
+                strongSelf->_dismissingWheel = false;
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel panning:true];
+                [strongSelf->_zoomModeView setHidden:true animated:true];
+                [strongSelf->_zoomWheelView setHidden:false animated:true];
+            }
+            
+            if (strongSelf.zoomChanged != nil)
+                strongSelf.zoomChanged(zoomLevel, animated);
+        };
+        [_zoomModeView setZoomLevel:1.0];
+        if (hasTelephotoCamera || hasUltrawideCamera) {
+            [self addSubview:_zoomModeView];
+        }
+        
+        _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
+        [_zoomWheelView setHidden:true animated:false];
+        [_zoomWheelView setZoomLevel:1.0];
+        _zoomWheelView.panGesture = ^(UIPanGestureRecognizer *gestureRecognizer) {
+            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            [strongSelf->_zoomModeView panGesture:gestureRecognizer];
+        };
+        if (hasTelephotoCamera || hasUltrawideCamera) {
+            [self addSubview:_zoomWheelView];
+        }
+        
+        _zoomView = [[TGCameraZoomView alloc] initWithFrame:CGRectMake(10, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18, frame.size.width - 20, 1.5f)];
+        _zoomView.activityChanged = ^(bool active)
+        {
+        };
+        if (!hasTelephotoCamera && !hasUltrawideCamera) {
+            [self addSubview:_zoomView];
+        }
+        
         _bottomPanelView = [[UIView alloc] init];
         [self addSubview:_bottomPanelView];
         
@@ -239,6 +296,11 @@
         _flashControl = [[TGCameraFlashControl alloc] initWithFrame:CGRectMake(3.0, 0, TGCameraFlashControlHeight, TGCameraFlashControlHeight)];
         [_topPanelView addSubview:_flashControl];
         
+        _topFlipButton = [[TGCameraSmallFlipButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44)];
+        _topFlipButton.hidden = true;
+        [_topFlipButton addTarget:self action:@selector(flipButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_topPanelView addSubview:_topFlipButton];
+        
         _timecodeView = [[TGCameraTimeCodeView alloc] initWithFrame:CGRectMake((frame.size.width - 120) / 2, 12, 120, 28)];
         _timecodeView.alpha = 0.0;
         _timecodeView.requestedRecordingDuration = ^NSTimeInterval
@@ -254,54 +316,13 @@
         
         _videoLandscapePanelView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 274, 44)];
         _videoLandscapePanelView.alpha = 0.0f;
-        _videoLandscapePanelView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
         _videoLandscapePanelView.hidden = true;
-        _videoLandscapePanelView.layer.cornerRadius = 3.5f;
         [self addSubview:_videoLandscapePanelView];
         
         _toastView = [[TGCameraToastView alloc] initWithFrame:CGRectMake(0, frame.size.height - _bottomPanelHeight - 42, frame.size.width, 32)];
         _toastView.userInteractionEnabled = false;
         [self addSubview:_toastView];
         
-        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera minZoomLevel:hasUltrawideCamera ? 0.5 : 1.0 maxZoomLevel:8.0];
-        _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done, bool animated) {
-            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            if (done) {
-                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
-                [strongSelf->_zoomModeView setZoomLevel:zoomLevel animated:false];
-                
-                if (!strongSelf->_zoomWheelView.isHidden) {
-                    strongSelf->_dismissingWheel = true;
-                    
-                    TGDispatchAfter(0.6, dispatch_get_main_queue(), ^{
-                        if (strongSelf->_dismissingWheel) {
-                            [strongSelf->_zoomModeView setHidden:false animated:true];
-//                            [strongSelf->_zoomWheelView setHidden:true animated:true];
-                        }
-                    });
-                }
-            } else {
-                strongSelf->_dismissingWheel = false;
-                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
-                [strongSelf->_zoomModeView setHidden:true animated:true];
-//                [strongSelf->_zoomWheelView setHidden:false animated:true];
-            }
-            
-            if (strongSelf.zoomChanged != nil)
-                strongSelf.zoomChanged(zoomLevel, animated);
-        };
-        [_zoomModeView setZoomLevel:1.0];
-        [self addSubview:_zoomModeView];
-        
-        _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
-        [_zoomWheelView setHidden:true animated:false];
-        [_zoomWheelView setZoomLevel:1.0];
-        _zoomWheelView.userInteractionEnabled = false;
-        [self addSubview:_zoomWheelView];
-            
         _flashControl.modeChanged = ^(PGCameraFlashMode mode)
         {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
@@ -379,13 +400,15 @@
     if (results.count == 0)
     {
         _hasResults = false;
+        _topFlipButton.hidden = true;
         _flipButton.hidden = false;
         _doneButton.hidden = true;
     }
     else
     {
         _hasResults = true;
-        _flipButton.hidden = false;
+        _topFlipButton.hidden = _modeControl.cameraMode == PGCameraModePhotoScan;
+        _flipButton.hidden = true;
         _doneButton.hidden = false;
         if (_modeControl.cameraMode == PGCameraModePhotoScan) {
             _modeControl.hidden = true;
@@ -444,7 +467,7 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
-    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView)
+    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView || (view == _zoomWheelView && !_zoomWheelView.isHidden))
         return view;
     
     return nil;
@@ -561,6 +584,8 @@
 {
     bool hasDoneButton = _hasResults;
     
+    _zoomWheelView.clipsToBounds = !hidden;
+    
     if (animated)
     {
         if (!hidden)
@@ -568,9 +593,15 @@
             _modeControl.hidden = false;
             _cancelButton.hidden = false;
             _flashControl.hidden = false;
-            _flipButton.hidden = false;
+            _flipButton.hidden = hasDoneButton;
+            _topFlipButton.hidden = !hasDoneButton;
             _bottomPanelBackgroundView.hidden = false;
         }
+        
+        [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^{
+            CGFloat offset = hidden ? 19 : 18 + 43;
+            _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
+        } completion:nil];
         
         [UIView animateWithDuration:0.25 animations:^
         {
@@ -579,6 +610,7 @@
             _cancelButton.alpha = alpha;
             _flashControl.alpha = alpha;
             _flipButton.alpha = alpha;
+            _topFlipButton.alpha = alpha;
             _bottomPanelBackgroundView.alpha = alpha;
             
             if (hasDoneButton)
@@ -590,7 +622,8 @@
                 _modeControl.hidden = hidden;
                 _cancelButton.hidden = hidden;
                 _flashControl.hidden = hidden;
-                _flipButton.hidden = hidden;
+                _flipButton.hidden = hidden || hasDoneButton;
+                _topFlipButton.hidden = hidden || !hasDoneButton;
                 _bottomPanelBackgroundView.hidden = hidden;
                 
                 if (hasDoneButton)
@@ -609,10 +642,15 @@
         _cancelButton.alpha = alpha;
         _flashControl.hidden = hidden;
         _flashControl.alpha = alpha;
-        _flipButton.hidden = hidden;
+        _flipButton.hidden = hidden || hasDoneButton;
         _flipButton.alpha = alpha;
+        _topFlipButton.hidden = hidden || !hasDoneButton;
+        _topFlipButton.alpha = alpha;
         _bottomPanelBackgroundView.hidden = hidden;
         _bottomPanelBackgroundView.alpha = alpha;
+        
+        CGFloat offset = hidden ? 19 : 18 + 43;
+        _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
         
         if (hasDoneButton)
         {
@@ -642,13 +680,15 @@
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
             {
-                _topPanelView.alpha = 0.0f;
                 _videoLandscapePanelView.alpha = 0.0f;
             }
             
             _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
             _zoomModeView.interfaceOrientation = orientation;
+            _timecodeView.interfaceOrientation = orientation;
+            _zoomWheelView.interfaceOrientation = orientation;
+            _topFlipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         } completion:^(__unused BOOL finished)
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
@@ -669,8 +709,6 @@
                 {
                     if (UIInterfaceOrientationIsLandscape(orientation))
                         _videoLandscapePanelView.alpha = 1.0f;
-                    else
-                        _topPanelView.alpha = 1.0f;
                 }
             } completion:nil];
         }];
@@ -680,6 +718,9 @@
         _flipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _flashControl.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         _zoomModeView.interfaceOrientation = orientation;
+        _timecodeView.interfaceOrientation = orientation;
+        _zoomWheelView.interfaceOrientation = orientation;
+        _topFlipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         
         [self _layoutTopPanelSubviewsForInterfaceOrientation:orientation];
     }
@@ -694,7 +735,6 @@
         case UIInterfaceOrientationLandscapeLeft:
         {
             _videoLandscapePanelView.hidden = false;
-            _topPanelView.hidden = true;
             
             _videoLandscapePanelView.transform = transform;
             _videoLandscapePanelView.frame = CGRectMake(3, (self.frame.size.height - _videoLandscapePanelView.frame.size.height) / 2, _videoLandscapePanelView.frame.size.width, _videoLandscapePanelView.frame.size.height);
@@ -703,7 +743,6 @@
         case UIInterfaceOrientationLandscapeRight:
         {
             _videoLandscapePanelView.hidden = false;
-            _topPanelView.hidden = true;
             
             _videoLandscapePanelView.transform = transform;
             _videoLandscapePanelView.frame = CGRectMake(self.frame.size.width - _videoLandscapePanelView.frame.size.width - 3, (self.frame.size.height - _videoLandscapePanelView.frame.size.height) / 2, _videoLandscapePanelView.frame.size.width, _videoLandscapePanelView.frame.size.height);
@@ -713,20 +752,18 @@
         case UIInterfaceOrientationPortraitUpsideDown:
         {
             _videoLandscapePanelView.hidden = true;
-            _topPanelView.hidden = false;
             
             _topPanelView.transform = transform;
-            _topPanelView.frame = CGRectMake(0, 0, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
+            _topPanelView.frame = CGRectMake(0, _topPanelOffset, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
         }
             break;
             
         default:
         {
             _videoLandscapePanelView.hidden = true;
-            _topPanelView.hidden = false;
             
             _topPanelView.transform = transform;
-            _topPanelView.frame = CGRectMake(0, 0, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
+            _topPanelView.frame = CGRectMake(0, _topPanelOffset, _topPanelView.frame.size.width, _topPanelView.frame.size.height);
         }
             break;
     }
@@ -744,7 +781,7 @@
 
 - (void)_layoutTopPanelSubviewsForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
-    UIView *superview = _flashControl.superview;
+    UIView *superview = _timecodeView.superview;
     CGSize superviewSize = superview.frame.size;
     
     if (superview == _videoLandscapePanelView && superviewSize.width < superviewSize.height)
@@ -776,6 +813,8 @@
     _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, round(_shutterButton.center.y - _doneButton.frame.size.height / 2.0f), _doneButton.frame.size.width, _doneButton.frame.size.height);
     
     _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 20.0f, round(_shutterButton.center.y - _flipButton.frame.size.height / 2.0f), _flipButton.frame.size.width, _flipButton.frame.size.height);
+    
+    _topFlipButton.frame = CGRectMake(self.frame.size.width - _topFlipButton.frame.size.width - 4.0f, 0.0f, _topFlipButton.frame.size.width, _topFlipButton.frame.size.height);
     
     _toastView.frame = CGRectMake(0, self.frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 32 - 16, self.frame.size.width, 32);
     

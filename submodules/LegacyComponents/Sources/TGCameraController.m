@@ -455,7 +455,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
     
     [_autorotationCorrectionView addSubview:_interfaceView];
-    [_autorotationCorrectionView addSubview:_cornersView];
+    if ((int)self.view.frame.size.width > 320 || [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone) {
+        [_autorotationCorrectionView addSubview:_cornersView];
+    }
      
     _photoSwipeGestureRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(handleSwipe:)];
     _photoSwipeGestureRecognizer.delegate = self;
@@ -594,7 +596,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGDispatchOnMainThread(^
         {
             [strongSelf->_previewView endTransitionAnimated:true];
-
+            [strongSelf->_interfaceView setZoomLevel:1.0f displayNeeded:false];
+            
             if (!strongSelf->_dismissing)
             {
                 strongSelf.view.userInteractionEnabled = true;
@@ -803,7 +806,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 {
                     [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
                     
-                    TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
                         [strongSelf->_previewView endTransitionAnimated:true];
                         strongSelf->_crossfadingForZoom = false;
                     });
@@ -2659,6 +2662,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
             default:
             {
+                if (widescreenWidth == 926.0f)
+                    return CGRectMake(0, 154, screenSize.width, screenSize.height - 154 - 249);
                 if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 223);
                 else if (widescreenWidth == 844.0f)
