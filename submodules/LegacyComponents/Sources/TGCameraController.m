@@ -594,7 +594,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGDispatchOnMainThread(^
         {
             [strongSelf->_previewView endTransitionAnimated:true];
-
+            [strongSelf->_interfaceView setZoomLevel:1.0f displayNeeded:false];
+            
             if (!strongSelf->_dismissing)
             {
                 strongSelf.view.userInteractionEnabled = true;
@@ -803,7 +804,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 {
                     [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
                     
-                    TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
                         [strongSelf->_previewView endTransitionAnimated:true];
                         strongSelf->_crossfadingForZoom = false;
                     });

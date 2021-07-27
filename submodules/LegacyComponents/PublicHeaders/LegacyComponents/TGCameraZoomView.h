@@ -27,6 +27,8 @@
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
+- (void)panGesture:(UIPanGestureRecognizer *)gestureRecognizer;
+
 - (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel;
 
 @end
@@ -34,7 +36,10 @@
 
 @interface TGCameraZoomWheelView : UIView
 
+@property (copy, nonatomic) void(^panGesture)(UIPanGestureRecognizer *gestureRecognizer);
+
 @property (nonatomic, assign) CGFloat zoomLevel;
+- (void)setZoomLevel:(CGFloat)zoomLevel panning:(bool)panning;
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 

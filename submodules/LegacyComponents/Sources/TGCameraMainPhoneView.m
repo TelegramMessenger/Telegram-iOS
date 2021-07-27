@@ -137,7 +137,7 @@
             _topPanelOffset = 33.0f;
             _topPanelHeight = 44.0f;
             _bottomPanelOffset = 63.0f;
-            _bottomPanelHeight = 123.0f;
+            _bottomPanelHeight = 128.0f;
             _modeControlOffset = 3.0f;
             _modeControlHeight = 40.0f;
             _counterOffset = 7.0f;
@@ -220,7 +220,7 @@
                 }
             } else {
                 strongSelf->_dismissingWheel = false;
-                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel];
+                [strongSelf->_zoomWheelView setZoomLevel:zoomLevel panning:true];
                 [strongSelf->_zoomModeView setHidden:true animated:true];
                 [strongSelf->_zoomWheelView setHidden:false animated:true];
             }
@@ -234,7 +234,12 @@
         _zoomWheelView = [[TGCameraZoomWheelView alloc] initWithFrame:CGRectMake(0.0, frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 132, frame.size.width, 132) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera];
         [_zoomWheelView setHidden:true animated:false];
         [_zoomWheelView setZoomLevel:1.0];
-        _zoomWheelView.userInteractionEnabled = false;
+        _zoomWheelView.panGesture = ^(UIPanGestureRecognizer *gestureRecognizer) {
+            __strong TGCameraMainPhoneView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            [strongSelf->_zoomModeView panGesture:gestureRecognizer];
+        };
         [self addSubview:_zoomWheelView];
         
         _bottomPanelView = [[UIView alloc] init];
@@ -444,7 +449,7 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
-    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView)
+    if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView || (view == _zoomWheelView && !_zoomWheelView.isHidden))
         return view;
     
     return nil;

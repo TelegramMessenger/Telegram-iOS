@@ -537,7 +537,7 @@ const NSInteger PGCameraFrameRate = 30;
             return;
         
         CGFloat level = zoomLevel;
-        CGFloat backingLevel = 1.0;
+        CGFloat backingLevel = zoomLevel;
         if (iosMajorVersion() >= 13.0 && device.isVirtualDevice) {
             NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
             if (marks.count == 2) {
@@ -829,6 +829,9 @@ const NSInteger PGCameraFrameRate = 30;
         AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
         if (device == nil) {
             device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
+        }
+        if (device == nil) {
+            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualWideCamera mediaType:AVMediaTypeVideo position:position];
         }
         if (device != nil) {
             return device;
