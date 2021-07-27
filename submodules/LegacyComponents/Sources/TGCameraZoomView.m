@@ -343,8 +343,10 @@
 }
 
 - (void)leftPressed {
-    [self setZoomLevel:0.5 animated:true];
-    self.zoomChanged(0.5, true, true);
+    if (_zoomLevel != 0.5) {
+        [self setZoomLevel:0.5 animated:true];
+        self.zoomChanged(0.5, true, true);
+    }
 }
 
 - (void)centerPressed {
@@ -362,14 +364,18 @@
             self.zoomChanged(1.0, true, true);
         }
     } else {
-        [self setZoomLevel:1.0 animated:true];
-        self.zoomChanged(1.0, true, true);
+        if (_zoomLevel != 1.0) {
+            [self setZoomLevel:1.0 animated:true];
+            self.zoomChanged(1.0, true, true);
+        }
     }
 }
 
 - (void)rightPressed {
-    [self setZoomLevel:2.0 animated:true];
-    self.zoomChanged(2.0, true, true);
+    if (_zoomLevel != 2.0) {
+        [self setZoomLevel:2.0 animated:true];
+        self.zoomChanged(2.0, true, true);
+    }
 }
 
 - (void)setZoomLevel:(CGFloat)zoomLevel {
