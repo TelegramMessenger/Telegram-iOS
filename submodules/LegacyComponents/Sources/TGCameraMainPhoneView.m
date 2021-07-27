@@ -281,9 +281,11 @@
         [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_bottomPanelView addSubview:_doneButton];
         
+        UIPanGestureRecognizer *shutterPanGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(shutterButtonPanGesture:)];
         _shutterButton = [[TGCameraShutterButton alloc] initWithFrame:CGRectMake((frame.size.width - shutterButtonWidth) / 2, 10, shutterButtonWidth, shutterButtonWidth)];
         [_shutterButton addTarget:self action:@selector(shutterButtonReleased) forControlEvents:UIControlEventTouchUpInside];
         [_shutterButton addTarget:self action:@selector(shutterButtonPressed) forControlEvents:UIControlEventTouchDown];
+        [_shutterButton addGestureRecognizer:shutterPanGestureRecognizer];
         [_bottomPanelView addSubview:_shutterButton];
         
         _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, _modeControlHeight) avatar:avatar];

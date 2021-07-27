@@ -271,11 +271,9 @@
         [_rightItem addTarget:self action:@selector(rightPressed) forControlEvents:UIControlEventTouchUpInside];
         
         [self addSubview:_backgroundView];
-        if (hasUltrawideCamera) {
-            [self addSubview:_leftItem];
-        }
         [self addSubview:_centerItem];
-        if (hasTelephotoCamera) {
+        if (hasTelephotoCamera && hasUltrawideCamera) {
+            [self addSubview:_leftItem];
             [self addSubview:_rightItem];
         }
         
@@ -350,8 +348,23 @@
 }
 
 - (void)centerPressed {
-    [self setZoomLevel:1.0 animated:true];
-    self.zoomChanged(1.0, true, true);
+    if (!(_hasTelephotoCamera && _hasUltrawideCamera)) {
+        if (_zoomLevel == 1.0) {
+            if (_hasUltrawideCamera) {
+                [self setZoomLevel:0.5 animated:true];
+                self.zoomChanged(0.5, true, true);
+            } else if (_hasTelephotoCamera) {
+                [self setZoomLevel:2.0 animated:true];
+                self.zoomChanged(2.0, true, true);
+            }
+        } else {
+            [self setZoomLevel:1.0 animated:true];
+            self.zoomChanged(1.0, true, true);
+        }
+    } else {
+        [self setZoomLevel:1.0 animated:true];
+        self.zoomChanged(1.0, true, true);
+    }
 }
 
 - (void)rightPressed {
@@ -828,7 +841,7 @@
         [_feedbackGenerator selectionChanged];
     }
     
-    CGRect valueLabelFrame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.frame.size.width) / 2.0), 30.0, _valueLabel.frame.size.width, _valueLabel.frame.size.height);
+    CGRect valueLabelFrame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.bounds.size.width) / 2.0), 30.0, _valueLabel.bounds.size.width, _valueLabel.bounds.size.height);
     _valueLabel.bounds = CGRectMake(0, 0, valueLabelFrame.size.width, valueLabelFrame.size.height);
     _valueLabel.center = CGPointMake(valueLabelFrame.origin.x + valueLabelFrame.size.width / 2.0, valueLabelFrame.origin.y + valueLabelFrame.size.height / 2.0);
 }

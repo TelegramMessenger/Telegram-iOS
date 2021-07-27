@@ -57,6 +57,7 @@
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
+@property (nonatomic, copy) void(^shutterPanGesture)(UIPanGestureRecognizer *gesture);
 @property (nonatomic, copy) void(^cancelPressed)(void);
 @property (nonatomic, copy) void(^donePressed)(void);
 @property (nonatomic, copy) void(^resultPressed)(NSInteger index);
@@ -93,6 +94,7 @@
 
 - (void)shutterButtonPressed;
 - (void)shutterButtonReleased;
+- (void)shutterButtonPanGesture:(UIPanGestureRecognizer *)gestureRecognizer;
 - (void)flipButtonPressed;
 - (void)cancelButtonPressed;
 - (void)doneButtonPressed;

@@ -6563,3 +6563,5 @@ Sorry for the inconvenience.";
 "VoiceChat.VideoPreviewBackCamera" = "Back Camera";
 "VoiceChat.VideoPreviewContinue" = "Continue";
 "VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen\nwill be shared";
+
+"VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";

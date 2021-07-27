@@ -128,7 +128,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     NSTimer *_switchToVideoTimer;
     NSTimer *_startRecordingTimer;
-    bool _recordingByShutterHold;
     bool _stopRecordingOnRelease;
     bool _shownMicrophoneAlert;
     
@@ -417,6 +416,14 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             return;
         
         [strongSelf shutterReleased];
+    };
+    
+    _interfaceView.shutterPanGesture = ^(UIPanGestureRecognizer *gesture) {
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [strongSelf handleRamp:gesture];
     };
     
     _interfaceView.cancelPressed = ^
@@ -1153,8 +1160,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         {
             _stopRecordingOnRelease = false;
             
-            _camera.disabled = true;
             [_camera stopVideoRecording];
+            TGDispatchAfter(0.3, dispatch_get_main_queue(), ^{
+                [_camera setZoomLevel:1.0];
+                [_interfaceView setZoomLevel:1.0 displayNeeded:false];
+                _camera.disabled = true;
+            });
             
             [_buttonHandler ignoreEventsFor:1.0f andDisable:[self willPresentResultController]];
         }
@@ -2610,6 +2621,37 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
             break;
             
+        default:
+            break;
+    }
+}
+
+- (void)handleRamp:(UIPanGestureRecognizer *)gestureRecognizer
+{
+    if (!_stopRecordingOnRelease) {
+        [gestureRecognizer setTranslation:CGPointZero inView:self.view];
+        return;
+    }
+    switch (gestureRecognizer.state)
+    {
+        case UIGestureRecognizerStateChanged:
+        {
+            CGPoint translation = [gestureRecognizer translationInView:self.view];
+          
+            CGFloat value = 1.0;
+            if (translation.y < 0.0) {
+                value = MIN(8.0, value + ABS(translation.y) / 60.0);
+            }
+            
+            [_camera setZoomLevel:value];
+            [_interfaceView setZoomLevel:value displayNeeded:true];
+        }
+            break;
+        case UIGestureRecognizerStateEnded:
+        {
+            [self shutterReleased];
+        }
+            break;
         default:
             break;
     }
