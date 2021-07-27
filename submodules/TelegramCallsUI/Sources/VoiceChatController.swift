@@ -3504,6 +3504,8 @@ public final class VoiceChatController: ViewController {
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
                     if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                        videoView.updateIsEnabled(true)
+                        
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
                         let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.context.sharedContext, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
                             if let strongSelf = self {

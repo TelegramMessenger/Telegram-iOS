@@ -446,6 +446,7 @@ private:
         _interface = interface;
         _isProcessingCustomSampleBuffer = [[IsProcessingCustomSampleBufferFlag alloc] init];
         _croppingBuffer = std::make_shared<std::vector<uint8_t>>();
+        _sinks = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -460,6 +461,7 @@ private:
             resolvedId += std::string(":landscape");
         }
         _interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), resolvedId);
+        _sinks = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -473,7 +475,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 + (instancetype _Nonnull)capturerWithExternalSampleBufferProvider {
-    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom");
+    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom", true);
     return [[OngoingCallThreadLocalContextVideoCapturer alloc] initWithInterface:interface];
 }
 #endif
