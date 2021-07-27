@@ -879,6 +879,11 @@ public class ChatMessageItemView: ListViewItemNode {
 
     override public func attachedHeaderNodesUpdated() {
         self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                headerNode.updateSelectionState(animated: false)
+            }
+        }
     }
 
     func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
