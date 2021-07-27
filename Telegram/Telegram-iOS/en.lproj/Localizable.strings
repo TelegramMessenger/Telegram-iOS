@@ -100,7 +100,7 @@
 "PUSH_MESSAGE_ROUND" = "%1$@|sent you a video message";
 "PUSH_MESSAGE" = "%1$@|sent you a message";
 "PUSH_MESSAGES_TEXT_1" = "sent you a message";
-"PUSH_MESSAGES_TEXT_any" = "sent you %2$d messages";
+"PUSH_MESSAGES_TEXT_any" = "sent you %d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
 "PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
