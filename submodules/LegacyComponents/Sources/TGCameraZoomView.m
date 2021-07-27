@@ -244,6 +244,8 @@
     TGCameraZoomModeItemView *_leftItem;
     TGCameraZoomModeItemView *_centerItem;
     TGCameraZoomModeItemView *_rightItem;
+    
+    bool _lockedOn;
 }
 @end
 
@@ -321,13 +323,39 @@
     switch (gestureRecognizer.state) {
     case UIGestureRecognizerStateChanged:
     {
+        if (_lockedOn) {
+            if (ABS(translation.x) > 8.0) {
+                _lockedOn = false;
+                [gestureRecognizer setTranslation:CGPointZero inView:self];
+                
+                CGFloat delta = translation.x > 0 ? -0.06 : 0.06;
+                CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
+                _zoomLevel = newLevel;
+                self.zoomChanged(newLevel, false, false);
+                return;
+            } else {
+                return;
+            }
+        }
+        
+        CGFloat previousLevel = _zoomLevel;
+        
         CGFloat delta = -translation.x / 60.0;
         if (_zoomLevel > 2.0) {
             delta *= 3.5;
         }
+        CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
         
-        _zoomLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
-        self.zoomChanged(_zoomLevel, false, false);
+        CGFloat near = floor(newLevel);
+        if (near <= 2.0 && ABS(newLevel - near) < 0.05 && previousLevel != near && translation.x < 15.0) {
+            newLevel = near;
+            _lockedOn = true;
+            
+            [gestureRecognizer setTranslation:CGPointZero inView:self];
+        }
+        
+        _zoomLevel = newLevel;
+        self.zoomChanged(newLevel, false, false);
     }
         break;
     case UIGestureRecognizerStateEnded:
@@ -343,7 +371,9 @@
         break;
     }
     
-    [gestureRecognizer setTranslation:CGPointZero inView:self];
+    if (!_lockedOn) {
+        [gestureRecognizer setTranslation:CGPointZero inView:self];
+    }
 }
 
 - (void)leftPressed {
