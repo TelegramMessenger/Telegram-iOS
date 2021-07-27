@@ -57,7 +57,12 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         self.backdropVideoView = backdropVideoView
                 
         super.init()
-                
+
+        if let backdropVideoView = backdropVideoView {
+            self.backdropVideoViewContainer.addSubview(backdropVideoView)
+            self.view.addSubview(self.backdropVideoViewContainer)
+        }
+
         self.videoViewContainer.addSubview(self.videoView)
         self.addSubnode(self.sourceContainerNode)
         self.containerNode.view.addSubview(self.videoViewContainer)
@@ -299,7 +304,20 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
             
             let normalizedVideoSize = rotatedVideoFrame.size.aspectFilled(CGSize(width: 1080.0, height: 1080.0))
 
-            self.backdropVideoView?.updateIsEnabled(self.isEnabled && self.isBlurEnabled)
+            let effectiveBlurEnabled = self.isEnabled && self.isBlurEnabled
+
+            if effectiveBlurEnabled {
+                self.backdropVideoView?.updateIsEnabled(true)
+            }
+
+            transition.updatePosition(layer: backdropVideoView.layer, position: rotatedVideoFrame.center, force: true, completion: { [weak self] value in
+                guard let strongSelf = self, value else {
+                    return
+                }
+                if !(strongSelf.isEnabled && strongSelf.isBlurEnabled) {
+                    strongSelf.backdropVideoView?.updateIsEnabled(false)
+                }
+            })
 
             transition.updateBounds(layer: backdropVideoView.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
             

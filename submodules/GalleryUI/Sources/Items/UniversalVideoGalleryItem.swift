@@ -2090,7 +2090,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
             if let (message, maybeFile, isWebpage) = strongSelf.contentInfo(), let file = maybeFile, !isWebpage {
-                items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
@@ -2104,22 +2104,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 guard let controller = strongSelf.galleryController() else {
                                     return
                                 }
-                                //TODO:localize
-                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         default:
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
-                            //TODO:localize
-                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: "Please wait for the video to be fully downloaded.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             })]), in: .window(.root))
                         }
                     }
                 })))
             }
             if strongSelf.canDelete() {
-                items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
