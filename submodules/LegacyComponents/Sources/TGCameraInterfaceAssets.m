@@ -26,7 +26,7 @@ static NSString *TGCameraEncodeText(NSString *string, int key)
 
 + (UIColor *)accentColor
 {
-    return UIColorRGB(0xffd60a);
+    return UIColorRGB(0xf8d74a);
 }
 
 + (UIColor *)redColor
