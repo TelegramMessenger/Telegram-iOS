@@ -64,7 +64,8 @@
     UIView *_videoLandscapePanelView;
     
     TGCameraFlashControl *_flashControl;
-    TGCameraFlashActiveView *_flashActiveView;
+    
+    TGCameraSmallFlipButton *_topFlipButton;
             
     bool _hasResults;
     
@@ -295,6 +296,11 @@
         _flashControl = [[TGCameraFlashControl alloc] initWithFrame:CGRectMake(3.0, 0, TGCameraFlashControlHeight, TGCameraFlashControlHeight)];
         [_topPanelView addSubview:_flashControl];
         
+        _topFlipButton = [[TGCameraSmallFlipButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44)];
+        _topFlipButton.hidden = true;
+        [_topFlipButton addTarget:self action:@selector(flipButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        [_topPanelView addSubview:_topFlipButton];
+        
         _timecodeView = [[TGCameraTimeCodeView alloc] initWithFrame:CGRectMake((frame.size.width - 120) / 2, 12, 120, 28)];
         _timecodeView.alpha = 0.0;
         _timecodeView.requestedRecordingDuration = ^NSTimeInterval
@@ -394,13 +400,15 @@
     if (results.count == 0)
     {
         _hasResults = false;
+        _topFlipButton.hidden = true;
         _flipButton.hidden = false;
         _doneButton.hidden = true;
     }
     else
     {
         _hasResults = true;
-        _flipButton.hidden = false;
+        _topFlipButton.hidden = _modeControl.cameraMode == PGCameraModePhotoScan;
+        _flipButton.hidden = true;
         _doneButton.hidden = false;
         if (_modeControl.cameraMode == PGCameraModePhotoScan) {
             _modeControl.hidden = true;
@@ -585,7 +593,8 @@
             _modeControl.hidden = false;
             _cancelButton.hidden = false;
             _flashControl.hidden = false;
-            _flipButton.hidden = false;
+            _flipButton.hidden = hasDoneButton;
+            _topFlipButton.hidden = !hasDoneButton;
             _bottomPanelBackgroundView.hidden = false;
         }
         
@@ -601,6 +610,7 @@
             _cancelButton.alpha = alpha;
             _flashControl.alpha = alpha;
             _flipButton.alpha = alpha;
+            _topFlipButton.alpha = alpha;
             _bottomPanelBackgroundView.alpha = alpha;
             
             if (hasDoneButton)
@@ -612,7 +622,8 @@
                 _modeControl.hidden = hidden;
                 _cancelButton.hidden = hidden;
                 _flashControl.hidden = hidden;
-                _flipButton.hidden = hidden;
+                _flipButton.hidden = hidden || hasDoneButton;
+                _topFlipButton.hidden = hidden || !hasDoneButton;
                 _bottomPanelBackgroundView.hidden = hidden;
                 
                 if (hasDoneButton)
@@ -631,8 +642,10 @@
         _cancelButton.alpha = alpha;
         _flashControl.hidden = hidden;
         _flashControl.alpha = alpha;
-        _flipButton.hidden = hidden;
+        _flipButton.hidden = hidden || hasDoneButton;
         _flipButton.alpha = alpha;
+        _topFlipButton.hidden = hidden || !hasDoneButton;
+        _topFlipButton.alpha = alpha;
         _bottomPanelBackgroundView.hidden = hidden;
         _bottomPanelBackgroundView.alpha = alpha;
         
@@ -675,6 +688,7 @@
             _zoomModeView.interfaceOrientation = orientation;
             _timecodeView.interfaceOrientation = orientation;
             _zoomWheelView.interfaceOrientation = orientation;
+            _topFlipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         } completion:^(__unused BOOL finished)
         {
             if (_modeControl.cameraMode == PGCameraModeVideo)
@@ -706,6 +720,7 @@
         _zoomModeView.interfaceOrientation = orientation;
         _timecodeView.interfaceOrientation = orientation;
         _zoomWheelView.interfaceOrientation = orientation;
+        _topFlipButton.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(orientation));
         
         [self _layoutTopPanelSubviewsForInterfaceOrientation:orientation];
     }
@@ -798,6 +813,8 @@
     _doneButton.frame = CGRectMake(_bottomPanelView.frame.size.width - _doneButton.frame.size.width, round(_shutterButton.center.y - _doneButton.frame.size.height / 2.0f), _doneButton.frame.size.width, _doneButton.frame.size.height);
     
     _flipButton.frame = CGRectMake(self.frame.size.width - _flipButton.frame.size.width - 20.0f, round(_shutterButton.center.y - _flipButton.frame.size.height / 2.0f), _flipButton.frame.size.width, _flipButton.frame.size.height);
+    
+    _topFlipButton.frame = CGRectMake(self.frame.size.width - _topFlipButton.frame.size.width - 4.0f, 0.0f, _topFlipButton.frame.size.width, _topFlipButton.frame.size.height);
     
     _toastView.frame = CGRectMake(0, self.frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 32 - 16, self.frame.size.width, 32);
     
