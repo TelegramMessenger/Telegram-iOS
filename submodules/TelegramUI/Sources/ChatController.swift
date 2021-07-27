@@ -454,6 +454,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private var importStateDisposable: Disposable?
+
+    private var nextChannelToReadDisposable: Disposable?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in
@@ -3295,6 +3297,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                         })
+
+                        if let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                            if strongSelf.nextChannelToReadDisposable == nil {
+                                strongSelf.nextChannelToReadDisposable = (strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id)
+                                |> deliverOnMainQueue
+                                |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                                |> restart).start(next: { nextPeer in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+
+                                    strongSelf.chatDisplayNode.historyNode.offerNextChannelToRead = true
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer
+                                })
+                            }
+                        }
+
                         if !strongSelf.didSetChatLocationInfoReady {
                             strongSelf.didSetChatLocationInfoReady = true
                             strongSelf._chatLocationInfoReady.set(.single(true))
@@ -3867,6 +3886,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.importStateDisposable?.dispose()
+        self.nextChannelToReadDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -7011,8 +7031,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         })
+
+        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer in
+            guard let strongSelf = self else {
+                return
+            }
+            if let navigationController = strongSelf.effectiveNavigationController, let snapshotView = strongSelf.chatDisplayNode.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = strongSelf.view.bounds
+                strongSelf.view.addSubview(snapshotView)
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, completion: { nextController in
+                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotView: snapshotView)
+                }))
+            }
+        }
         
         self.displayNodeDidLoad()
+    }
+
+    private var storedAnimateFromSnapshotView: UIView?
+
+    private func animateFromPreviousController(snapshotView: UIView) {
+        self.storedAnimateFromSnapshotView = snapshotView
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -7413,6 +7452,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                 return state.updatedInputMode({ _ in .text })
+            })
+        }
+
+        if let snapshotView = self.storedAnimateFromSnapshotView {
+            self.storedAnimateFromSnapshotView = nil
+
+            snapshotView.frame = self.view.bounds.offsetBy(dx: 0.0, dy: -self.view.bounds.height)
+            self.view.insertSubview(snapshotView, at: 0)
+
+            self.view.layer.animateBoundsOriginYAdditive(from: -self.view.bounds.height, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
             })
         }
     }

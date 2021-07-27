@@ -478,5 +478,35 @@ public extension TelegramEngine {
         public func updatePeerDescription(peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
             return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
+
+        public func getNextUnreadChannel(peerId: PeerId) -> Signal<EnginePeer?, NoError> {
+            return self.account.postbox.transaction { transaction -> EnginePeer? in
+                var peers: [RenderedPeer] = []
+                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: .root, count: 100))
+                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: Namespaces.PeerGroup.archive, count: 100))
+
+                var results: [(EnginePeer, Int32)] = []
+
+                for peer in peers {
+                    guard let channel = peer.chatMainPeer as? TelegramChannel, case .broadcast = channel.info else {
+                        continue
+                    }
+                    if channel.id == peerId {
+                        continue
+                    }
+                    guard let readState = transaction.getCombinedPeerReadState(channel.id), readState.count != 0 else {
+                        continue
+                    }
+                    guard let topMessageIndex = transaction.getTopPeerMessageIndex(peerId: channel.id) else {
+                        continue
+                    }
+                    results.append((EnginePeer(channel), topMessageIndex.timestamp))
+                }
+
+                results.sort(by: { $0.1 > $1.1 })
+
+                return results.first?.0
+            }
+        }
     }
 }
