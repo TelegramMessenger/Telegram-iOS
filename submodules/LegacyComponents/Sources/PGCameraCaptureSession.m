@@ -75,6 +75,10 @@ const NSInteger PGCameraFrameRate = 30;
         _preferredCameraPosition = position;
         
         _currentAudioSession = [[SMetaDisposable alloc] init];
+        
+        self.automaticallyConfiguresApplicationAudioSession = false;
+        self.usesApplicationAudioSession = true;
+
     }
     return self;
 }
