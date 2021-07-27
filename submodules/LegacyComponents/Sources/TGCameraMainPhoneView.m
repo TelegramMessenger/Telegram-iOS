@@ -113,11 +113,11 @@
         CGFloat widescreenWidth = MAX(screenSize.width, screenSize.height);
         if (widescreenWidth == 926.0f)
         {
-            _topPanelOffset = 77.0f;
+            _topPanelOffset = 34.0f;
             _topPanelHeight = 77.0f;
             _bottomPanelOffset = 94.0f;
-            _bottomPanelHeight = 155.0f;
-            _modeControlOffset = 6.0f;
+            _bottomPanelHeight = 140.0f;
+            _modeControlOffset = -2.0f;
             _modeControlHeight = 66.0f;
             _counterOffset = 7.0f;
             shutterButtonWidth = 72.0f;
@@ -133,7 +133,7 @@
             _counterOffset = 7.0f;
             shutterButtonWidth = 72.0f;
         }
-        if (widescreenWidth == 844.0f)
+        else if (widescreenWidth == 844.0f)
         {
             _topPanelOffset = 33.0f;
             _topPanelHeight = 44.0f;

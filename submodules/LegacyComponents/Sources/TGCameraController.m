@@ -2679,7 +2679,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         {
             case PGCameraModeVideo:
             {
-                if (widescreenWidth == 896.0f)
+                if (widescreenWidth == 926.0f)
+                    return CGRectMake(0, 82, screenSize.width, screenSize.height - 82 - 83);
+                else if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 83);
                 else if (widescreenWidth == 812.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 68);
@@ -2705,7 +2707,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             default:
             {
                 if (widescreenWidth == 926.0f)
-                    return CGRectMake(0, 154, screenSize.width, screenSize.height - 154 - 249);
+                    return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 234);
                 if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 223);
                 else if (widescreenWidth == 844.0f)
