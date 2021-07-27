@@ -34,6 +34,7 @@
 
 #include "sdk/objc/native/src/objc_frame_buffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
+#import "platform/darwin/TGRTCCVPixelBuffer.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
@@ -326,7 +327,7 @@
 
 @implementation CallVideoFrameData
 
-- (instancetype)initWithBuffer:(id<CallVideoFrameBuffer>)buffer frame:(webrtc::VideoFrame const &)frame {
+- (instancetype)initWithBuffer:(id<CallVideoFrameBuffer>)buffer frame:(webrtc::VideoFrame const &)frame mirrorHorizontally:(bool)mirrorHorizontally mirrorVertically:(bool)mirrorVertically {
     self = [super init];
     if (self != nil) {
         _buffer = buffer;
@@ -356,6 +357,9 @@
                 break;
             }
         }
+
+        _mirrorHorizontally = mirrorHorizontally;
+        _mirrorVertically = mirrorVertically;
     }
     return self;
 }
@@ -400,11 +404,30 @@ private:
         _adapter.reset(new GroupCallVideoSinkAdapter(^(webrtc::VideoFrame const &videoFrame) {
             id<CallVideoFrameBuffer> mappedBuffer = nil;
 
+            bool mirrorHorizontally = false;
+            bool mirrorVertically = false;
+
             if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNative) {
                 id<RTC_OBJC_TYPE(RTCVideoFrameBuffer)> nativeBuffer = static_cast<webrtc::ObjCFrameBuffer *>(videoFrame.video_frame_buffer().get())->wrapped_frame_buffer();
                 if ([nativeBuffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
                     RTCCVPixelBuffer *pixelBuffer = (RTCCVPixelBuffer *)nativeBuffer;
                     mappedBuffer = [[CallVideoFrameNativePixelBuffer alloc] initWithPixelBuffer:pixelBuffer.pixelBuffer];
+                }
+                if ([nativeBuffer isKindOfClass:[TGRTCCVPixelBuffer class]]) {
+                    if (((TGRTCCVPixelBuffer *)nativeBuffer).shouldBeMirrored) {
+                        switch (videoFrame.rotation()) {
+                            case webrtc::kVideoRotation_0:
+                            case webrtc::kVideoRotation_180:
+                                mirrorHorizontally = true;
+                                break;
+                            case webrtc::kVideoRotation_90:
+                            case webrtc::kVideoRotation_270:
+                                mirrorVertically = true;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                 }
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNV12) {
                 rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer = (webrtc::NV12BufferInterface *)videoFrame.video_frame_buffer().get();
@@ -415,7 +438,7 @@ private:
             }
 
             if (storedSink && mappedBuffer) {
-                storedSink([[CallVideoFrameData alloc] initWithBuffer:mappedBuffer frame:videoFrame]);
+                storedSink([[CallVideoFrameData alloc] initWithBuffer:mappedBuffer frame:videoFrame mirrorHorizontally:mirrorHorizontally mirrorVertically:mirrorVertically]);
             }
         }));
     }

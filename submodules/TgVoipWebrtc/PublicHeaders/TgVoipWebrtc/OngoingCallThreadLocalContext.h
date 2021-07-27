@@ -161,6 +161,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 @property (nonatomic, readonly) int width;
 @property (nonatomic, readonly) int height;
 @property (nonatomic, readonly) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) bool mirrorHorizontally;
+@property (nonatomic, readonly) bool mirrorVertically;
 
 @end
 
