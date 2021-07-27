@@ -3501,6 +3501,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self, ready else {
                         return
                     }
+                    var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
                     if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
@@ -3510,7 +3511,7 @@ public final class VoiceChatController: ViewController {
                         let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.context.sharedContext, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
                             if let strongSelf = self {
                                 strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
-                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer)
+                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer, useFrontCamera: isFrontCamera)
 
                                 if let (layout, navigationHeight) = strongSelf.validLayout {
                                     strongSelf.animatingButtonsSwap = true
@@ -3519,7 +3520,8 @@ public final class VoiceChatController: ViewController {
                             }
                         }, switchCamera: { [weak self] in
                             Queue.mainQueue().after(0.1) {
-                                self?.call.switchVideoCamera()
+                                isFrontCamera = !isFrontCamera
+                                videoCapturer.switchVideoInput(isFront: isFrontCamera)
                             }
                         })
                         strongSelf.controller?.present(controller, in: .window(.root))

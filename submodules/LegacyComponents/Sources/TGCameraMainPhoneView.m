@@ -114,7 +114,7 @@
         if (widescreenWidth == 926.0f)
         {
             _topPanelOffset = 34.0f;
-            _topPanelHeight = 77.0f;
+            _topPanelHeight = 48.0f;
             _bottomPanelOffset = 94.0f;
             _bottomPanelHeight = 140.0f;
             _modeControlOffset = -2.0f;
