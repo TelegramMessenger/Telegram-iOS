@@ -6,6 +6,12 @@
 
 @end
 
+@interface TGCameraSmallFlipButton : TGModernButton
+
+- (void)setHidden:(bool)hidden animated:(bool)animated;
+
+@end
+
 @interface TGCameraCancelButton : TGModernButton
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;

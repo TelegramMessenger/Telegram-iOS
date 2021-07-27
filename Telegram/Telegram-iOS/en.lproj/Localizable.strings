@@ -6567,3 +6567,5 @@ Sorry for the inconvenience.";
 "Gallery.SaveToGallery" = "Save to Gallery";
 "Gallery.VideoSaved" = "Video Saved";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
+
+"VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";

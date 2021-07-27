@@ -379,7 +379,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private enum ListEntry: Comparable, Identifiable {
-            case tiles([VoiceChatTileItem], VoiceChatTileLayoutMode)
+            case tiles([VoiceChatTileItem], VoiceChatTileLayoutMode, Int32, Bool)
             case invite(PresentationTheme, PresentationStrings, String, Bool)
             case peer(VoiceChatPeerEntry, Int32)
             
@@ -396,8 +396,8 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: ListEntry, rhs: ListEntry) -> Bool {
                 switch lhs {
-                    case let .tiles(lhsTiles, lhsLayoutMode):
-                        if case let .tiles(rhsTiles, rhsLayoutMode) = rhs, lhsTiles == rhsTiles, lhsLayoutMode == rhsLayoutMode {
+                    case let .tiles(lhsTiles, lhsLayoutMode, lhsVideoLimit, lhsReachedLimit):
+                        if case let .tiles(rhsTiles, rhsLayoutMode, rhsVideoLimit, rhsReachedLimit) = rhs, lhsTiles == rhsTiles, lhsLayoutMode == rhsLayoutMode, lhsVideoLimit == rhsVideoLimit, lhsReachedLimit == rhsReachedLimit {
                             return true
                         } else {
                             return false
@@ -644,8 +644,8 @@ public final class VoiceChatController: ViewController {
             
             func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListViewItem {
                 switch self {
-                    case let .tiles(tiles, layoutMode):
-                        return VoiceChatTilesGridItem(context: context, tiles: tiles, layoutMode: layoutMode, getIsExpanded: {
+                    case let .tiles(tiles, layoutMode, videoLimit, reachedLimit):
+                        return VoiceChatTilesGridItem(context: context, tiles: tiles, layoutMode: layoutMode, videoLimit: videoLimit, reachedLimit: reachedLimit, getIsExpanded: {
                             return interaction.isExpanded
                         })
                     case let .invite(_, _, text, isLink):
@@ -5021,12 +5021,16 @@ public final class VoiceChatController: ViewController {
             
             self.joinedVideo = joinedVideo
             
+            let configuration = self.configuration ?? VoiceChatConfiguration.defaultValue
+            var reachedLimit = false
+
             if !joinedVideo && (!tileItems.isEmpty || !gridTileItems.isEmpty), let peer = self.peer {
                 tileItems.removeAll()
                 gridTileItems.removeAll()
                 
-                let configuration = self.configuration ?? VoiceChatConfiguration.defaultValue
                 tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
+            } else if !tileItems.isEmpty && !(self.callState?.isVideoEnabled ?? false) {
+                reachedLimit = true
             }
             
             for member in callMembers.0 {
@@ -5110,11 +5114,11 @@ public final class VoiceChatController: ViewController {
                 updateLayout = true
                 self.currentTileItems = gridTileItems
                 if displayPanelVideos && !tileItems.isEmpty {
-                    entries.insert(.tiles(tileItems, .pairs), at: 0)
+                    entries.insert(.tiles(tileItems, .pairs, configuration.videoParticipantsMaxCount, reachedLimit), at: 0)
                 }
             } else {
                 if !tileItems.isEmpty {
-                    entries.insert(.tiles(tileItems, .pairs), at: 0)
+                    entries.insert(.tiles(tileItems, .pairs, configuration.videoParticipantsMaxCount, reachedLimit), at: 0)
                 }
             }
             

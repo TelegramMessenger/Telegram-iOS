@@ -54,7 +54,7 @@
             CGContextRef context = UIGraphicsGetCurrentContext();
 
             CGContextSetStrokeColorWithColor(context, [TGCameraInterfaceAssets accentColor].CGColor);
-            CGContextSetLineWidth(context, 1.5f);
+            CGContextSetLineWidth(context, 1.0f);
             CGContextStrokeEllipseInRect(context, CGRectMake(0.75f, 0.75f, 12.5f - 1.5f, 12.5f - 1.5f));
 
             knobImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -170,7 +170,11 @@
 {
     _clipView.frame = CGRectMake(22, (self.frame.size.height - 12.5f) / 2, self.frame.size.width - 44, 12.5f);
     
-    CGFloat position = (_clipView.frame.size.width - _knobView.frame.size.width) * self.zoomLevel;
+    CGFloat zoomLevel = self.zoomLevel;
+    zoomLevel = MAX(1.0, zoomLevel);
+    CGFloat factor = zoomLevel / 8.0;
+    
+    CGFloat position = (_clipView.frame.size.width - _knobView.frame.size.width) * factor;
     if (self.zoomLevel < 1.0f - FLT_EPSILON)
         position = CGFloor(position);
     
@@ -196,6 +200,7 @@
         
         _label = [[UILabel alloc] initWithFrame:self.bounds];
         _label.textAlignment = NSTextAlignmentCenter;
+        _label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
         
         [self addSubview:_backgroundView];
         [self addSubview:_label];
@@ -209,7 +214,6 @@
     
     _label.text = value;
     _label.textColor = selected ? [TGCameraInterfaceAssets accentColor] : [UIColor whiteColor];
-    _label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
     
     if (animated) {
         [UIView animateWithDuration:0.3f animations:^
@@ -225,7 +229,7 @@
 
 @end
 
-@interface TGCameraZoomModeView ()
+@interface TGCameraZoomModeView () <UIGestureRecognizerDelegate>
 {
     CGFloat _minZoomLevel;
     CGFloat _maxZoomLevel;
@@ -267,21 +271,29 @@
         [_rightItem addTarget:self action:@selector(rightPressed) forControlEvents:UIControlEventTouchUpInside];
         
         [self addSubview:_backgroundView];
-        if (hasUltrawideCamera) {
-            [self addSubview:_leftItem];
-        }
         [self addSubview:_centerItem];
-        if (hasTelephotoCamera) {
+        if (hasTelephotoCamera && hasUltrawideCamera) {
+            [self addSubview:_leftItem];
             [self addSubview:_rightItem];
         }
         
         UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
+        panGestureRecognizer.delegate = self;
         [self addGestureRecognizer:panGestureRecognizer];
         
         UILongPressGestureRecognizer *pressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(pressGesture:)];
+        pressGestureRecognizer.delegate = self;
         [self addGestureRecognizer:pressGestureRecognizer];
     }
     return self;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    if (gestureRecognizer.view == self && otherGestureRecognizer.view == self) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 - (void)pressGesture:(UILongPressGestureRecognizer *)gestureRecognizer {
@@ -305,8 +317,23 @@
     
     switch (gestureRecognizer.state) {
     case UIGestureRecognizerStateChanged:
-        _zoomLevel = MAX(0.5, MIN(10.0, _zoomLevel - translation.x / 100.0));
+    {
+        CGFloat delta = -translation.x / 60.0;
+        if (_zoomLevel > 2.0) {
+            delta *= 3.5;
+        }
+        
+        _zoomLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
         self.zoomChanged(_zoomLevel, false, false);
+    }
+        break;
+    case UIGestureRecognizerStateEnded:
+    case UIGestureRecognizerStateCancelled:
+    {
+        if (gestureRecognizer.view != self) {
+            self.zoomChanged(_zoomLevel, true, false);
+        }
+    }
         break;
     default:
         break;
@@ -321,8 +348,23 @@
 }
 
 - (void)centerPressed {
-    [self setZoomLevel:1.0 animated:true];
-    self.zoomChanged(1.0, true, true);
+    if (!(_hasTelephotoCamera && _hasUltrawideCamera)) {
+        if (_zoomLevel == 1.0) {
+            if (_hasUltrawideCamera) {
+                [self setZoomLevel:0.5 animated:true];
+                self.zoomChanged(0.5, true, true);
+            } else if (_hasTelephotoCamera) {
+                [self setZoomLevel:2.0 animated:true];
+                self.zoomChanged(2.0, true, true);
+            }
+        } else {
+            [self setZoomLevel:1.0 animated:true];
+            self.zoomChanged(1.0, true, true);
+        }
+    } else {
+        [self setZoomLevel:1.0 animated:true];
+        self.zoomChanged(1.0, true, true);
+    }
 }
 
 - (void)rightPressed {
@@ -338,40 +380,44 @@
 {
     _zoomLevel = zoomLevel;
     if (zoomLevel < 1.0) {
-        NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
-        if ([value isEqual:@"1,0x"]) {
-            value = @"0,9x";
-        }
+        NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
         value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-        [_leftItem setValue:value selected:true animated:animated];
-        [_centerItem setValue:@"1" selected:false animated:animated];
+        if ([value isEqual:@"1,0×"] || [value isEqual:@"1×"]) {
+            value = @"0,9×";
+        }
+        if (_leftItem.superview != nil) {
+            [_leftItem setValue:value selected:true animated:animated];
+            [_centerItem setValue:@"1" selected:false animated:animated];
+        } else {
+            [_centerItem setValue:value selected:false animated:animated];
+        }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else if (zoomLevel < 2.0) {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
-        if ((zoomLevel - 1.0) < 0.1) {
-            [_centerItem setValue:@"1x" selected:true animated:animated];
+        bool selected = _hasTelephotoCamera && _hasUltrawideCamera;
+        if ((zoomLevel - 1.0) < 0.025) {
+            [_centerItem setValue:@"1×" selected:true animated:animated];
         } else {
-            NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
+            NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
             value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-            if ([value isEqual:@"1,0x"]) {
-                value = @"1x";
-            } else if ([value isEqual:@"2,0x"]) {
-                value = @"1,9x";
+            value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
+            if ([value isEqual:@"2×"]) {
+                value = @"1,9×";
             }
-            [_centerItem setValue:value selected:true animated:animated];
+            [_centerItem setValue:value selected:selected animated:animated];
         }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
-        [_centerItem setValue:@"1" selected:false animated:animated];
+          
+        NSString *value = [[NSString stringWithFormat:@"%.1f×", zoomLevel] stringByReplacingOccurrencesOfString:@"." withString:@","];
+        value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
         
-        CGFloat near = round(zoomLevel);
-        if (ABS(zoomLevel - near) < 0.1) {
-            [_rightItem setValue:[NSString stringWithFormat:@"%dx", (int)zoomLevel] selected:true animated:animated];
-        } else {
-            NSString *value = [NSString stringWithFormat:@"%.1fx", zoomLevel];
-            value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
+        if (_rightItem.superview != nil) {
+            [_centerItem setValue:@"1" selected:false animated:animated];
             [_rightItem setValue:value selected:true animated:animated];
+        } else {
+            [_centerItem setValue:value selected:true animated:animated];
         }
     }
 }
@@ -409,9 +455,13 @@
 
 - (void)layoutSubviews
 {
-    if (_rightItem.superview == nil) {
+    if (_leftItem.superview == nil && _rightItem.superview == nil) {
         _backgroundView.frame = CGRectMake(43, 0, 43, 43);
-    } else if (_leftItem.superview == nil) {
+    } else if (_leftItem.superview != nil && _rightItem.superview == nil) {
+        _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 86, 43);
+        _leftItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43);
+        _centerItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43);
+    } else if (_leftItem.superview == nil && _rightItem.superview != nil) {
         _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 86, 43);
         _centerItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43);
         _rightItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43);
@@ -437,7 +487,21 @@
 {
     bool _hasUltrawideCamera;
     bool _hasTelephotoCamera;
+    UIView *_containerView;
     UIImageView *_backgroundView;
+    UIImageView *_scaleView;
+    UIImageView *_maskView;
+    UIImageView *_arrowView;
+    
+    UILabel *_valueLabel;
+    UILabel *_05Label;
+    UILabel *_1Label;
+    UILabel *_2Label;
+    UILabel *_8Label;
+    
+    UIPanGestureRecognizer *_gestureRecognizer;
+    
+    UISelectionFeedbackGenerator *_feedbackGenerator;
 }
 @end
 
@@ -459,84 +523,355 @@
     CGContextRestoreGState(context);
 }
 
+- (NSArray *)ultraLines {
+    return @[
+        @[@0.5, @-19.6, @3],
+        @[@0.6, @-14.4, @1],
+        @[@0.7, @-10.0, @1],
+        @[@0.8, @-6.3, @1],
+        @[@0.9, @-3.0, @1]
+    ];
+}
+
+- (NSArray *)lines {
+    return @[
+        @[@1.0, @0.0, @3],
+        
+        @[@1.1, @2.7, @1],
+        @[@1.2, @5.2, @1],
+        @[@1.3, @7.4, @1],
+        @[@1.4, @9.6, @1],
+        @[@1.5, @11.5, @1],
+        @[@1.6, @13.3, @1],
+        @[@1.7, @15.0, @1],
+        @[@1.8, @16.7, @1],
+        @[@1.9, @18.2, @1],
+        @[@2.0, @19.6, _hasTelephotoCamera ? @3 : @2],
+        
+        @[@2.1, @21.0, @1],
+        @[@2.2, @22.4, @1],
+        @[@2.3, @23.7, @1],
+        @[@2.4, @24.8, @1],
+        @[@2.5, @26.0, @1],
+        @[@2.6, @27.1, @1],
+        @[@2.7, @28.2, @1],
+        @[@2.8, @29.2, @1],
+        @[@2.9, @30.2, @1],
+        @[@3.0, @31.1, @2],
+        
+        @[@3.1, @32.0, @1],
+        @[@3.2, @32.9, @1],
+        @[@3.3, @33.8, @1],
+        @[@3.4, @34.7, @1],
+        @[@3.5, @35.5, @1],
+        @[@3.6, @36.34, @1],
+        @[@3.7, @37.1, @1],
+        @[@3.8, @37.85, @1],
+        @[@3.9, @38.55, @1],
+        @[@4.0, @39.3, @2],
+        
+        @[@4.1, @40.0, @1],
+        @[@4.2, @40.77, @1],
+        @[@4.3, @41.4, @1],
+        @[@4.4, @42.05, @1],
+        @[@4.5, @42.63, @1],
+        @[@4.6, @43.3, @1],
+        @[@4.7, @43.89, @1],
+        @[@4.8, @44.42, @1],
+        @[@4.9, @45.05, @1],
+        @[@5.0, @45.6, @2],
+        
+        @[@5.1, @46.17, @1],
+        @[@5.2, @46.77, @1],
+        @[@5.3, @47.31, @1],
+        @[@5.4, @47.78, @1],
+        @[@5.5, @48.34, @1],
+        @[@5.6, @48.8, @1],
+        @[@5.7, @49.31, @1],
+        @[@5.8, @49.85, @1],
+        @[@5.9, @50.3, @1],
+        @[@6.0, @50.8, @2],
+        
+        @[@6.1, @51.25, @1],
+        @[@6.2, @51.7, @1],
+        @[@6.3, @52.18, @1],
+        @[@6.4, @52.63, @1],
+        @[@6.5, @53.12, @1],
+        @[@6.6, @53.49, @1],
+        @[@6.7, @53.88, @1],
+        @[@6.8, @54.28, @1],
+        @[@6.9, @54.71, @1],
+        @[@7.0, @55.15, @2],
+        
+        @[@7.1, @55.53, @1],
+        @[@7.2, @55.91, @1],
+        @[@7.3, @56.36, @1],
+        @[@7.4, @56.74, @1],
+        @[@7.5, @57.09, @1],
+        @[@7.6, @57.52, @1],
+        @[@7.7, @57.89, @1],
+        @[@7.8, @58.19, @1],
+        @[@7.9, @58.56, @1],
+        @[@8.0, @58.93, @3],
+    ];
+}
+
 - (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        _hasUltrawideCamera = true;// hasUltrawideCamera;
-        _hasTelephotoCamera = true;//hasTelephotoCamera;
+        TGIsRetina();
         
-        self.clipsToBounds = true;
-                          
+        if (iosMajorVersion() >= 10) {
+            _feedbackGenerator = [[UISelectionFeedbackGenerator alloc] init];
+        }
+        
+        _hasUltrawideCamera = hasUltrawideCamera;
+        _hasTelephotoCamera = hasTelephotoCamera;
+                                  
         CGFloat side = floor(frame.size.width * 1.1435);
         CGFloat length = 17.0;
         CGFloat smallWidth = MAX(0.5, 1.0 - TGScreenPixel);
-        CGFloat mediumWidth = 1.0;
-        CGFloat bigWidth = 1.0 + TGScreenPixel;
-
-        CGFloat smallAngle = M_PI * 0.12;
-        CGFloat finalAngle = 1.08;
+        CGFloat mediumWidth = smallWidth;
+        CGFloat bigWidth = 1.0;
         
+        _backgroundView = [[UIImageView alloc] initWithImage:TGCircleImage(side, [UIColor colorWithWhite:0.0 alpha:0.5])];
+        _backgroundView.frame = CGRectMake(TGScreenPixelFloor((frame.size.width - side) / 2.0), 0.0, side, side);
+        [self addSubview:_backgroundView];
+
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(side, side), false, 0.0f);
         CGContextRef context = UIGraphicsGetCurrentContext();
-
-        CGContextSetFillColorWithColor(context, [UIColor colorWithWhite:0.0 alpha:0.75].CGColor);
-        CGContextFillEllipseInRect(context, CGRectMake(0, 0, side, side));
         
-        [self _drawLineInContext:context side:side atAngle:0.0 lineLength:length lineWidth:bigWidth opaque:true];
+        NSArray *ultraLines = [self ultraLines];
+        NSArray *lines = [self lines];
         
         if (_hasUltrawideCamera) {
-            for (NSInteger i = 0; i < 4; i++) {
-                CGFloat angle = (smallAngle / 5.0) * (i + 1) + (0.007 * (i - 1));
-                [self _drawLineInContext:context side:side atAngle:-angle lineLength:length lineWidth:smallWidth opaque:false];
+            for (NSArray *values in ultraLines) {
+                CGFloat angle = [values[1] floatValue];
+                CGFloat width = [values[2] intValue];
+                
+                CGFloat lineWidth = smallWidth;
+                if (width == 2) {
+                    lineWidth = mediumWidth;
+                } else if (width == 3) {
+                    lineWidth = bigWidth;
+                }
+                [self _drawLineInContext:context side:side atAngle:TGDegreesToRadians(angle) lineLength:length lineWidth:lineWidth opaque:width > 1];
             }
-            [self _drawLineInContext:context side:side atAngle:-smallAngle lineLength:length lineWidth:bigWidth opaque:true];
         }
-        if (_hasTelephotoCamera) {
-            [self _drawLineInContext:context side:side atAngle:smallAngle lineLength:length lineWidth:bigWidth opaque:true];
+        for (NSArray *values in lines) {
+            CGFloat angle = [values[1] floatValue];
+            CGFloat width = [values[2] intValue];
             
-            for (NSInteger i = 0; i < 4; i++) {
-                CGFloat angle = (smallAngle / 5.0) * (i + 1) + (0.01 * (i - 1));
-                [self _drawLineInContext:context side:side atAngle:angle lineLength:length lineWidth:smallWidth opaque:false];
+            CGFloat lineWidth = smallWidth;
+            if (width == 2) {
+                lineWidth = mediumWidth;
+            } else if (width == 3) {
+                lineWidth = bigWidth;
             }
             
-            [self _drawLineInContext:context side:side atAngle:finalAngle lineLength:length lineWidth:bigWidth opaque:true];
-        } else {
-            [self _drawLineInContext:context side:side atAngle:smallAngle lineLength:length lineWidth:mediumWidth opaque:true];
-            
-            [self _drawLineInContext:context side:side atAngle:finalAngle lineLength:length lineWidth:bigWidth opaque:true];
+            [self _drawLineInContext:context side:side atAngle:TGDegreesToRadians(angle) lineLength:length lineWidth:lineWidth opaque:width > 1];
         }
-        
-    
-        UIImage *image = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:25 topCapHeight:25];
+       
+        UIImage *scaleImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:25 topCapHeight:25];
         UIGraphicsEndImageContext();
         
-        _backgroundView = [[UIImageView alloc] initWithFrame:CGRectMake(TGScreenPixelFloor((frame.size.width - side) / 2.0), 0.0, side, side)];
-        _backgroundView.image = image;
+        _containerView = [[UIView alloc] initWithFrame:CGRectMake(TGScreenPixelFloor((frame.size.width - side) / 2.0), 0.0, side, frame.size.height)];
+        _containerView.userInteractionEnabled = false;
+        [self addSubview:_containerView];
+        
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(side, frame.size.height), false, 0.0f);
+        context = UIGraphicsGetCurrentContext();
 
-        [self addSubview:_backgroundView];
+        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0, 0, side, side));
+        
+        CGContextSetBlendMode(context, kCGBlendModeClear);
+        CGContextMoveToPoint(context, side / 2.0 - 7.0, 0);
+        CGContextAddLineToPoint(context, side / 2.0 + 7.0, 0);
+        CGContextAddLineToPoint(context, side / 2.0 + 2.0, 22);
+        CGContextAddLineToPoint(context, side / 2.0 - 2.0, 22);
+        CGContextClosePath(context);
+        CGContextFillPath(context);
+        
+        CGContextFillRect(context, CGRectMake(side / 2.0 - 1.0, 20, 2.0, 7.0));
+        CGContextFillEllipseInRect(context, CGRectMake(side / 2.0 - 17.0, 21.0, 34.0, 34.0));
+        
+        UIImage *maskImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:25 topCapHeight:25];
+        UIGraphicsEndImageContext();
+        
+        _maskView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0, 0.0, side, frame.size.height)];
+        _maskView.image = maskImage;
+        _containerView.maskView = _maskView;
+        
+        _scaleView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0, 0.0, side, side)];
+        _scaleView.image = scaleImage;
+        [_containerView addSubview:_scaleView];
+        
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(4, 10), false, 0.0f);
+        context = UIGraphicsGetCurrentContext();
+
+        CGContextSetFillColorWithColor(context, [TGCameraInterfaceAssets accentColor].CGColor);
+        CGContextMoveToPoint(context, 0, 0);
+        CGContextAddLineToPoint(context, 4, 0);
+        CGContextAddLineToPoint(context, 2 + TGScreenPixel, 10);
+        CGContextAddLineToPoint(context, 2 - TGScreenPixel, 10);
+        CGContextClosePath(context);
+        CGContextFillPath(context);
+        
+        UIImage *arrowImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        _arrowView = [[UIImageView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 4) / 2.0), 4, 4, 10)];
+        _arrowView.image = arrowImage;
+        _arrowView.userInteractionEnabled = false;
+        [self addSubview:_arrowView];
+        
+        _valueLabel = [[UILabel alloc] init];
+        _valueLabel.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+        _valueLabel.textColor = [TGCameraInterfaceAssets accentColor];
+        _valueLabel.userInteractionEnabled = false;
+        [self addSubview:_valueLabel];
+        
+        CGFloat radius = side / 2.0;
+        if (_hasUltrawideCamera) {
+            _05Label = [[UILabel alloc] init];
+            _05Label.text = @"0,5";
+            _05Label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+            _05Label.textColor = [UIColor whiteColor];
+            [_05Label sizeToFit];
+            [_scaleView addSubview:_05Label];
+            
+            _05Label.center = CGPointMake(radius - sin(TGDegreesToRadians(19.6)) * (radius - 38.0), radius - cos(TGDegreesToRadians(19.6)) * (radius - 38.0));
+            _05Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(-19.6));
+        }
+        
+        _1Label = [[UILabel alloc] init];
+        _1Label.text = @"1";
+        _1Label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+        _1Label.textColor = [UIColor whiteColor];
+        [_1Label sizeToFit];
+        _1Label.frame = CGRectMake(TGScreenPixelFloor((_scaleView.bounds.size.width - _1Label.frame.size.width) / 2.0), 30.0, _1Label.frame.size.width, _1Label.frame.size.height);
+        [_scaleView addSubview:_1Label];
+        
+        if (_hasTelephotoCamera) {
+            _2Label = [[UILabel alloc] init];
+            _2Label.text = @"2";
+            _2Label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+            _2Label.textColor = [UIColor whiteColor];
+            [_2Label sizeToFit];
+            [_scaleView addSubview:_2Label];
+            
+            _2Label.center = CGPointMake(radius - sin(TGDegreesToRadians(-19.6)) * (radius - 38.0), radius - cos(TGDegreesToRadians(-19.6)) * (radius - 38.0));
+            _2Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(19.6));
+        }
+        
+        _8Label = [[UILabel alloc] init];
+        _8Label.text = @"8";
+        _8Label.font = [TGCameraInterfaceAssets boldFontOfSize:13.0];
+        _8Label.textColor = [UIColor whiteColor];
+        [_8Label sizeToFit];
+        [_scaleView addSubview:_8Label];
+        
+        _8Label.center = CGPointMake(radius - sin(TGDegreesToRadians(-58.93)) * (radius - 38.0), radius - cos(TGDegreesToRadians(-58.93)) * (radius - 38.0));
+        _8Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(58.93));
+        
+        _gestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
+        [self addGestureRecognizer:_gestureRecognizer];
     }
     return self;
 }
 
+- (void)panGesture:(UIPanGestureRecognizer *)gestureRecognizer {
+    if (self.panGesture != nil) {
+        self.panGesture(gestureRecognizer);
+    }
+}
+
+
 - (void)setZoomLevel:(CGFloat)zoomLevel {
+    [self setZoomLevel:zoomLevel panning:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel panning:(bool)panning {
     zoomLevel = MAX(0.5, zoomLevel);
     _zoomLevel = zoomLevel;
     
-    CGFloat angle = 0.0;
-    if (zoomLevel < 1.0) {
-        CGFloat delta = (zoomLevel - 0.5) / 0.5;
-        angle = TGDegreesToRadians(20.8) * (1.0 - delta);
-    } else if (zoomLevel < 2.0) {
-        CGFloat delta = zoomLevel - 1.0;
-        angle = TGDegreesToRadians(-22.0) * delta;
-    } else if (zoomLevel < 10.0) {
-        CGFloat delta = (zoomLevel - 2.0) / 8.0;
-        angle = TGDegreesToRadians(-22.0) + TGDegreesToRadians(-68.0) * delta;
+    NSArray *ultraLines = [self ultraLines];
+    NSArray *lines = [self lines];
+    
+    CGFloat finalAngle = 0.0;
+    NSArray *allLines = [ultraLines arrayByAddingObjectsFromArray:lines];
+    NSArray *previous = nil;
+    for (NSArray *values in allLines) {
+        CGFloat value = [values[0] floatValue];
+        CGFloat angle = [values[1] floatValue];
+        
+        if (previous == nil && zoomLevel <= value) {
+            finalAngle = angle;
+            break;
+        }
+
+        if (previous != nil && zoomLevel <= value) {
+            if (zoomLevel == value) {
+                finalAngle = angle;
+                break;
+            } else {
+                CGFloat previousValue = [previous[0] floatValue];
+                CGFloat previousAngle = [previous[1] floatValue];
+                
+                if (zoomLevel > previousValue) {
+                    CGFloat factor = (zoomLevel - previousValue) / (value - previousValue);
+                    finalAngle = previousAngle + (angle - previousAngle) * factor;
+                    break;
+                }
+            }
+        }
+        previous = values;
+    }
+    finalAngle = -TGDegreesToRadians(finalAngle);
+    
+    _scaleView.transform = CGAffineTransformMakeRotation(finalAngle);
+    
+    NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
+    value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
+    value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
+
+    NSString *previousValue = _valueLabel.text;
+    _valueLabel.text = value;
+    [_valueLabel sizeToFit];
+    
+    if (panning && ![previousValue isEqualToString:value] && ([value isEqualToString:@"0,5×"] || ![value containsString:@","])) {
+        [_feedbackGenerator selectionChanged];
     }
     
-    _backgroundView.transform = CGAffineTransformMakeRotation(angle);
+    CGRect valueLabelFrame = CGRectMake(TGScreenPixelFloor((self.frame.size.width - _valueLabel.bounds.size.width) / 2.0), 30.0, _valueLabel.bounds.size.width, _valueLabel.bounds.size.height);
+    _valueLabel.bounds = CGRectMake(0, 0, valueLabelFrame.size.width, valueLabelFrame.size.height);
+    _valueLabel.center = CGPointMake(valueLabelFrame.origin.x + valueLabelFrame.size.width / 2.0, valueLabelFrame.origin.y + valueLabelFrame.size.height / 2.0);
+}
+
+- (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    _interfaceOrientation = interfaceOrientation;
+ 
+    CGFloat delta = 0.0f;
+    switch (interfaceOrientation) {
+        case UIInterfaceOrientationLandscapeLeft:
+            delta = -90.0f;
+            break;
+        case UIInterfaceOrientationLandscapeRight:
+            delta = 90.0f;
+            break;
+        case UIInterfaceOrientationPortraitUpsideDown:
+            delta = 180.0f;
+        default:
+            break;
+    }
+    _valueLabel.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(delta));
+    _05Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(-19.6 + delta));
+    _1Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(delta));
+    _2Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(19.6 + delta));
+    _8Label.transform = CGAffineTransformMakeRotation(TGDegreesToRadians(58.93 + delta));
 }
 
 - (void)setHidden:(BOOL)hidden

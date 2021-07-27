@@ -201,6 +201,11 @@
         self.shutterReleased(false);
 }
 
+- (void)shutterButtonPanGesture:(UIPanGestureRecognizer *)gestureRecognizer {
+    if (self.shutterPanGesture != nil)
+        self.shutterPanGesture(gestureRecognizer);
+}
+
 - (void)cancelButtonPressed
 {
     if (self.cancelPressed != nil)
@@ -228,6 +233,7 @@
 {
     [_zoomView setZoomLevel:zoomLevel displayNeeded:displayNeeded];
     [_zoomModeView setZoomLevel:zoomLevel animated:true];
+    [_zoomWheelView setZoomLevel:zoomLevel];
 }
 
 - (void)zoomChangingEnded
