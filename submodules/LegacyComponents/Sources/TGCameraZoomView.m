@@ -238,6 +238,8 @@
     
     bool _hasUltrawideCamera;
     bool _hasTelephotoCamera;
+    
+    bool _beganFromPress;
 
     TGCameraZoomModeItemView *_leftItem;
     TGCameraZoomModeItemView *_centerItem;
@@ -299,6 +301,7 @@
 - (void)pressGesture:(UILongPressGestureRecognizer *)gestureRecognizer {
     switch (gestureRecognizer.state) {
     case UIGestureRecognizerStateBegan:
+        _beganFromPress = true;
         self.zoomChanged(_zoomLevel, false, false);
         break;
     case UIGestureRecognizerStateEnded:
@@ -330,9 +333,10 @@
     case UIGestureRecognizerStateEnded:
     case UIGestureRecognizerStateCancelled:
     {
-        if (gestureRecognizer.view != self) {
+        if (gestureRecognizer.view != self || !_beganFromPress) {
             self.zoomChanged(_zoomLevel, true, false);
         }
+        _beganFromPress = false;
     }
         break;
     default:

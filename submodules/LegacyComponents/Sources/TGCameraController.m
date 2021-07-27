@@ -602,7 +602,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         TGDispatchOnMainThread(^
         {
-            [strongSelf->_previewView endTransitionAnimated:true];
             [strongSelf->_interfaceView setZoomLevel:1.0f displayNeeded:false];
             
             if (!strongSelf->_dismissing)
@@ -636,6 +635,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     };
                 }
             }
+            
+            [strongSelf->_previewView endTransitionAnimated:true];
         });
     };
     

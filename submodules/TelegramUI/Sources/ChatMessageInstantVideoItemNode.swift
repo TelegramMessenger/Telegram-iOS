@@ -393,7 +393,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - normalDisplaySize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
             var ignoreForward = false
             var ignoreSource = false
@@ -511,7 +511,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         forwardAuthorSignature = forwardInfo.authorSignature
                     }
                 }
-                let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
+                let availableWidth = max(60.0, availableContentWidth - normalDisplaySize.width + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
