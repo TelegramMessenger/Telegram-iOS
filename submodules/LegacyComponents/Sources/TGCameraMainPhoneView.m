@@ -469,6 +469,11 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
+    if (CGRectContainsPoint(_zoomModeView.frame, point)) {
+        CGPoint zoomPoint = [self convertPoint:point toView:_zoomModeView];
+        return [_zoomModeView hitTest:zoomPoint withEvent:event];
+    }
+    
     if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView || (view == _zoomWheelView && !_zoomWheelView.isHidden))
         return view;
     
