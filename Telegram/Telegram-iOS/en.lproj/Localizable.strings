@@ -849,7 +849,8 @@
 "MessageTimer.ShortWeeks_3_10" = "%@w";
 "MessageTimer.ShortWeeks_any" = "%@w";
 "MessageTimer.ShortWeeks_many" = "%@w";
-"MessageTimer.ShortWeeks_0" = "%@w";
+"MessageTimer.ShortMonths_1" = "%@mo";
+"MessageTimer.ShortMonths_any" = "%@mo";
 
 "Activity.UploadingPhoto" = "sending photo";
 "Activity.UploadingVideo" = "sending video";
