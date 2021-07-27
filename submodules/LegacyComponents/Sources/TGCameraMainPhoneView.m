@@ -469,7 +469,7 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
-    if (CGRectContainsPoint(_zoomModeView.frame, point)) {
+    if (!_zoomModeView.isHidden && CGRectContainsPoint(_zoomModeView.frame, point)) {
         CGPoint zoomPoint = [self convertPoint:point toView:_zoomModeView];
         return [_zoomModeView hitTest:zoomPoint withEvent:event];
     }

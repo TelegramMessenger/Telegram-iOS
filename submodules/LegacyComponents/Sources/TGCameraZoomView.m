@@ -318,9 +318,9 @@
     switch (gestureRecognizer.state) {
     case UIGestureRecognizerStateChanged:
     {
-        CGFloat delta = -translation.x / 100.0;
+        CGFloat delta = -translation.x / 60.0;
         if (_zoomLevel > 2.0) {
-            delta *= 2.2;
+            delta *= 3.5;
         }
         
         _zoomLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
@@ -385,11 +385,16 @@
         if ([value isEqual:@"1,0×"] || [value isEqual:@"1×"]) {
             value = @"0,9×";
         }
-        [_leftItem setValue:value selected:true animated:animated];
-        [_centerItem setValue:@"1" selected:false animated:animated];
+        if (_leftItem.superview != nil) {
+            [_leftItem setValue:value selected:true animated:animated];
+            [_centerItem setValue:@"1" selected:false animated:animated];
+        } else {
+            [_centerItem setValue:value selected:false animated:animated];
+        }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else if (zoomLevel < 2.0) {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
+        bool selected = _hasTelephotoCamera && _hasUltrawideCamera;
         if ((zoomLevel - 1.0) < 0.025) {
             [_centerItem setValue:@"1×" selected:true animated:animated];
         } else {
@@ -399,7 +404,7 @@
             if ([value isEqual:@"2×"]) {
                 value = @"1,9×";
             }
-            [_centerItem setValue:value selected:true animated:animated];
+            [_centerItem setValue:value selected:selected animated:animated];
         }
         [_rightItem setValue:@"2" selected:false animated:animated];
     } else {
