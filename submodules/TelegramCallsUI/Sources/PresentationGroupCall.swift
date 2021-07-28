@@ -245,7 +245,8 @@ private extension PresentationGroupCallState {
             raisedHand: false,
             scheduleTimestamp: scheduleTimestamp,
             subscribedToScheduled: subscribedToScheduled,
-            isVideoEnabled: false
+            isVideoEnabled: false,
+            isVideoWatchersLimitReached: false
         )
     }
 }
@@ -1781,7 +1782,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let strongSelf = self else {
                         return
                     }
-
+                    let appConfiguration = strongSelf.accountContext.currentAppConfiguration.with({ $0 })
+                    let configuration = VoiceChatConfiguration.with(appConfiguration: appConfiguration)
+                    
                     strongSelf.participantsContext?.updateAdminIds(adminIds)
                     
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
@@ -1859,6 +1862,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
 
                     var otherParticipantsWithVideo = 0
+                    var videoWatchingParticipants = 0
                     
                     for participant in participants {
                         var participant = participant
@@ -1950,6 +1954,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.genericCallContext?.setIsMuted(true)
                             }
+                            
+                            if participant.joinedVideo {
+                                videoWatchingParticipants += 1
+                            }
                         } else {
                             if let ssrc = participant.ssrc {
                                 if let volume = participant.volume {
@@ -1968,6 +1976,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                             if participant.videoDescription != nil || participant.presentationDescription != nil {
                                 otherParticipantsWithVideo += 1
+                            }
+                            if participant.joinedVideo {
+                                videoWatchingParticipants += 1
                             }
                         }
                         
@@ -1994,6 +2005,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.stateValue.title = state.title
                     strongSelf.stateValue.scheduleTimestamp = state.scheduleTimestamp
                     strongSelf.stateValue.isVideoEnabled = state.isVideoEnabled && otherParticipantsWithVideo < state.unmutedVideoLimit
+                    strongSelf.stateValue.isVideoWatchersLimitReached = videoWatchingParticipants >= configuration.videoParticipantsMaxCount
                     
                     strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                         id: callInfo.id,

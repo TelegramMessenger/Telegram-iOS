@@ -43,26 +43,6 @@ let bottomAreaHeight: CGFloat = 206.0
 private let fullscreenBottomAreaHeight: CGFloat = 80.0
 private let bottomGradientHeight: CGFloat = 70.0
 
-public struct VoiceChatConfiguration {
-    static var defaultValue: VoiceChatConfiguration {
-        return VoiceChatConfiguration(videoParticipantsMaxCount: 30)
-    }
-    
-    public let videoParticipantsMaxCount: Int32
-    
-    fileprivate init(videoParticipantsMaxCount: Int32) {
-        self.videoParticipantsMaxCount = videoParticipantsMaxCount
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> VoiceChatConfiguration {
-        if let data = appConfiguration.data, let value = data["groupcall_video_participants_max"] as? Double {
-            return VoiceChatConfiguration(videoParticipantsMaxCount: Int32(value))
-        } else {
-            return .defaultValue
-        }
-    }
-}
-
 func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
         return nil
@@ -5031,7 +5011,7 @@ public final class VoiceChatController: ViewController {
                 gridTileItems.removeAll()
                 
                 tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
-            } else if let callState = self.callState, !tileItems.isEmpty && !callState.isVideoEnabled && self.connectedOnce && (callState.canManageCall || callState.adminIds.contains(self.context.account.peerId)) {
+            } else if let callState = self.callState, !tileItems.isEmpty && callState.isVideoWatchersLimitReached && self.connectedOnce && (callState.canManageCall || callState.adminIds.contains(self.context.account.peerId)) {
                 reachedLimit = true
             }
             

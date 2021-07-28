@@ -336,6 +336,10 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
                     }
                     
                     let _ = textApply()
+                    if !transition.isAnimated && currentItem?.reachedLimit != item.reachedLimit {
+                        strongSelf.backgroundNode.layer.removeAllAnimations()
+                        strongSelf.limitLabel.layer.removeAllAnimations()
+                    }
                     transition.updateFrame(node: strongSelf.limitLabel, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - textLayout.size.width) / 2.0), y: gridSize.height + 10.0), size: textLayout.size))
                     transition.updateAlpha(node: strongSelf.limitLabel, alpha: item.reachedLimit ? 1.0 : 0.0)
                 }
