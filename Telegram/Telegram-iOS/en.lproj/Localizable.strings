@@ -168,7 +168,7 @@
 "PUSH_CHAT_MESSAGE_PHOTOS_TEXT_any" = "{author} sent %d photos";
 "PUSH_CHAT_MESSAGE_VIDEO" = "%2$@|%1$@ sent a video";
 "PUSH_CHAT_MESSAGE_VIDEOS_TEXT_1" = "{author} sent a video";
-"PUSH_CHAT_MESSAGE_VIDEOS_TEXT_any" = "{text} sent %d videos";
+"PUSH_CHAT_MESSAGE_VIDEOS_TEXT_any" = "{author} sent %d videos";
 "PUSH_CHAT_MESSAGE_ROUND" = "%2$@|%1$@ sent a video message";
 "PUSH_CHAT_MESSAGE" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_TEXT_1" = "{author} sent a message";
@@ -6570,3 +6570,6 @@ Sorry for the inconvenience.";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
 
 "VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";
+
+"PlaybackSpeed.Title" = "Playback Speed";
+"PlaybackSpeed.Normal" = "Normal";
