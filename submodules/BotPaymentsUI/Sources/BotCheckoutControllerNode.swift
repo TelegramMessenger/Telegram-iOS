@@ -460,7 +460,8 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
         "yandex",
         "privatbank",
         "tranzzo",
-        "paymaster"
+        "paymaster",
+        "smartglocal",
     ])
     if !applePayProviders.contains(nativeProvider.name) {
         return false
