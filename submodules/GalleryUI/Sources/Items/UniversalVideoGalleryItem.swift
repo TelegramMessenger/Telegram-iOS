@@ -1136,14 +1136,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
-                var isWebpage = false
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
-                        isWebpage = true
                         break
                     }
                 }
@@ -1151,7 +1149,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var hasMoreButton = false
                 if isEnhancedWebPlayer {
                     hasMoreButton = true
-                } else if !isWebpage, let file = file, !file.isAnimated {
+                } else if let file = file, !file.isAnimated {
                     hasMoreButton = true
                 }
                  
@@ -2043,10 +2041,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
 
-    private func speedList() -> [(String, String, Double)] {
+    private func speedList(strings: PresentationStrings) -> [(String, String, Double)] {
         let speedList: [(String, String, Double)] = [
             ("0.5x", "0.5x", 0.5),
-            ("Normal", "1x", 1.0),
+            (strings.PlaybackSpeed_Normal, "1x", 1.0),
             ("1.5x", "1.5x", 1.5),
             ("2x", "2x", 2.0)
         ]
@@ -2069,9 +2067,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            var speedValue: String = "Normal"
+            var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
-            for (text, iconText, speed) in strongSelf.speedList() {
+            for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 if abs(speed - status.baseRate) < 0.01 {
                     speedValue = text
                     speedIconText = iconText
@@ -2079,7 +2077,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            items.append(.action(ContextMenuActionItem(text: "Playback Speed", textLayout: .secondLineWithValue(speedValue), icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
                 return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 guard let strongSelf = self else {
@@ -2089,8 +2087,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
-            if let (message, maybeFile, isWebpage) = strongSelf.contentInfo(), let file = maybeFile, !isWebpage {
-                items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
@@ -2104,22 +2102,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 guard let controller = strongSelf.galleryController() else {
                                     return
                                 }
-                                //TODO:localize
-                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         default:
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
-                            //TODO:localize
-                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: "Please wait for the video to be fully downloaded.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             })]), in: .window(.root))
                         }
                     }
                 })))
             }
             if strongSelf.canDelete() {
-                items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
@@ -2147,7 +2143,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            for (text, _, rate) in strongSelf.speedList() {
+            for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 let isSelected = abs(status.baseRate - rate) < 0.01
                 items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                     if isSelected {

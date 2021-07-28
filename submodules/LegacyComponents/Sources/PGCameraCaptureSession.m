@@ -75,6 +75,10 @@ const NSInteger PGCameraFrameRate = 30;
         _preferredCameraPosition = position;
         
         _currentAudioSession = [[SMetaDisposable alloc] init];
+        
+        self.automaticallyConfiguresApplicationAudioSession = false;
+        self.usesApplicationAudioSession = true;
+
     }
     return self;
 }
@@ -490,10 +494,18 @@ const NSInteger PGCameraFrameRate = 30;
             }
         } else if (marks.count == 1) {
             CGFloat mark = [marks.firstObject floatValue];
-            if (backingLevel < mark) {
-                realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
-            } else {
-                realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+            if ([self hasTelephotoCamera]) {
+                if (backingLevel < mark) {
+                    realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
+                } else {
+                    realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+                }
+            } else if ([self hasUltrawideCamera]) {
+                if (backingLevel < mark) {
+                    realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (mark - 1.0);
+                } else {
+                    realLevel = 1.0 + 7.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+                }
             }
         }
         
@@ -504,10 +516,8 @@ const NSInteger PGCameraFrameRate = 30;
 }
 
 - (CGFloat)minZoomLevel {
-    if (iosMajorVersion() >= 13.0) {
-        if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
-            return 0.5;
-        }
+    if (self.hasUltrawideCamera) {
+        return 0.5;
     }
     return 1.0;
 }
@@ -553,10 +563,19 @@ const NSInteger PGCameraFrameRate = 30;
                 }
             } else if (marks.count == 1) {
                 CGFloat mark = [marks.firstObject floatValue];
-                if (zoomLevel < 2.0) {
-                    backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
-                } else {
-                    backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
+                if ([self hasTelephotoCamera]) {
+                    if (zoomLevel < 2.0) {
+                        backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
+                    } else {
+                        backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
+                    }
+                } else if ([self hasUltrawideCamera]) {
+                    if (level < 1.0) {
+                        level = MAX(0.5, level);
+                        backingLevel = 1.0 + ((level - 0.5) / 0.5) * (mark - 1.0);
+                    } else {
+                        backingLevel = mark + ((level - 1.0) / 7.0) * (self.maxZoomLevel - mark);
+                    }
                 }
             }
         }

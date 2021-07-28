@@ -290,6 +290,8 @@ public final class OngoingGroupCallContext {
         public let width: Int
         public let height: Int
         public let orientation: OngoingCallVideoOrientation
+        public let mirrorHorizontally: Bool
+        public let mirrorVertically: Bool
 
         init(frameData: CallVideoFrameData) {
             if let nativeBuffer = frameData.buffer as? CallVideoFrameNativePixelBuffer {
@@ -305,6 +307,8 @@ public final class OngoingGroupCallContext {
             self.width = Int(frameData.width)
             self.height = Int(frameData.height)
             self.orientation = OngoingCallVideoOrientation(frameData.orientation)
+            self.mirrorHorizontally = frameData.mirrorHorizontally
+            self.mirrorVertically = frameData.mirrorVertically
         }
     }
     

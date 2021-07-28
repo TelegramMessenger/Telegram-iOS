@@ -84,7 +84,7 @@
     TGMenuContainerView *_tooltipContainerView;
     NSTimer *_tooltipTimer;
     
-    bool _dismissingWheel;
+    int _dismissingWheelCounter;
 }
 @end
 
@@ -108,16 +108,18 @@
     {
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
+        _dismissingWheelCounter = 0;
+        
         CGFloat shutterButtonWidth = 66.0f;
         CGSize screenSize = TGScreenSize();
         CGFloat widescreenWidth = MAX(screenSize.width, screenSize.height);
         if (widescreenWidth == 926.0f)
         {
-            _topPanelOffset = 77.0f;
-            _topPanelHeight = 77.0f;
+            _topPanelOffset = 34.0f;
+            _topPanelHeight = 48.0f;
             _bottomPanelOffset = 94.0f;
-            _bottomPanelHeight = 155.0f;
-            _modeControlOffset = 6.0f;
+            _bottomPanelHeight = 140.0f;
+            _modeControlOffset = -2.0f;
             _modeControlHeight = 66.0f;
             _counterOffset = 7.0f;
             shutterButtonWidth = 72.0f;
@@ -133,7 +135,7 @@
             _counterOffset = 7.0f;
             shutterButtonWidth = 72.0f;
         }
-        if (widescreenWidth == 844.0f)
+        else if (widescreenWidth == 844.0f)
         {
             _topPanelOffset = 33.0f;
             _topPanelHeight = 44.0f;
@@ -210,17 +212,19 @@
                 [strongSelf->_zoomModeView setZoomLevel:zoomLevel animated:false];
                 
                 if (!strongSelf->_zoomWheelView.isHidden) {
-                    strongSelf->_dismissingWheel = true;
+                    NSInteger counter = strongSelf->_dismissingWheelCounter + 1;
+                    strongSelf->_dismissingWheelCounter = counter;
                     
-                    TGDispatchAfter(0.6, dispatch_get_main_queue(), ^{
-                        if (strongSelf->_dismissingWheel) {
+                    TGDispatchAfter(1.5, dispatch_get_main_queue(), ^{
+                        if (strongSelf->_dismissingWheelCounter == counter) {
                             [strongSelf->_zoomModeView setHidden:false animated:true];
                             [strongSelf->_zoomWheelView setHidden:true animated:true];
                         }
                     });
                 }
             } else {
-                strongSelf->_dismissingWheel = false;
+                NSInteger counter = strongSelf->_dismissingWheelCounter + 1;
+                strongSelf->_dismissingWheelCounter = counter;
                 [strongSelf->_zoomWheelView setZoomLevel:zoomLevel panning:true];
                 [strongSelf->_zoomModeView setHidden:true animated:true];
                 [strongSelf->_zoomWheelView setHidden:false animated:true];
@@ -281,9 +285,11 @@
         [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_bottomPanelView addSubview:_doneButton];
         
+        UIPanGestureRecognizer *shutterPanGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(shutterButtonPanGesture:)];
         _shutterButton = [[TGCameraShutterButton alloc] initWithFrame:CGRectMake((frame.size.width - shutterButtonWidth) / 2, 10, shutterButtonWidth, shutterButtonWidth)];
         [_shutterButton addTarget:self action:@selector(shutterButtonReleased) forControlEvents:UIControlEventTouchUpInside];
         [_shutterButton addTarget:self action:@selector(shutterButtonPressed) forControlEvents:UIControlEventTouchDown];
+        [_shutterButton addGestureRecognizer:shutterPanGestureRecognizer];
         [_bottomPanelView addSubview:_shutterButton];
         
         _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, _modeControlHeight) avatar:avatar];
@@ -467,6 +473,11 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
+    if (!_zoomModeView.isHidden && CGRectContainsPoint(_zoomModeView.frame, point)) {
+        CGPoint zoomPoint = [self convertPoint:point toView:_zoomModeView];
+        return [_zoomModeView hitTest:zoomPoint withEvent:event];
+    }
+    
     if ([view isDescendantOfView:_topPanelView] || [view isDescendantOfView:_bottomPanelView] || [view isDescendantOfView:_videoLandscapePanelView] || [view isDescendantOfView:_tooltipContainerView] || [view isDescendantOfView:_selectedPhotosView] || [view isDescendantOfView:_zoomModeView] || view == _zoomModeView || (view == _zoomWheelView && !_zoomWheelView.isHidden))
         return view;
     
@@ -482,20 +493,26 @@
     UIInterfaceOrientation orientation = _interfaceOrientation;
     PGCameraMode cameraMode = _modeControl.cameraMode;
     
-    [UIView animateWithDuration:0.25f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
-    {
-        if (cameraMode == PGCameraModeVideo)
+    if (previousMode == PGCameraModePhoto && cameraMode == PGCameraModeVideo) {
+        [UIView animateWithDuration:0.25f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
         {
             _timecodeView.alpha = 1.0;
-        } else {
+            _bottomPanelBackgroundView.alpha = 0.0;
+        } completion:nil];
+    } else if (previousMode == PGCameraModeVideo && cameraMode == PGCameraModePhoto) {
+        [UIView animateWithDuration:0.25f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
+        {
             _timecodeView.alpha = 0.0;
-        }
-    } completion:nil];
+        } completion:nil];
+        [UIView animateWithDuration:0.25f delay:1.5f options:UIViewAnimationOptionCurveLinear animations:^
+        {
+            _bottomPanelBackgroundView.alpha = 1.0;
+        } completion:nil];
+    }
     if (UIInterfaceOrientationIsLandscape(orientation) && !((cameraMode == PGCameraModePhoto && previousMode == PGCameraModeSquarePhoto) || (cameraMode == PGCameraModeSquarePhoto && previousMode == PGCameraModePhoto)))
     {
         [UIView animateWithDuration:0.25f delay:0.0f options:UIViewAnimationOptionCurveLinear animations:^
         {
-            _topPanelView.alpha = 0.0f;
             _videoLandscapePanelView.alpha = 0.0f;
         } completion:^(__unused BOOL finished)
         {
@@ -523,8 +540,6 @@
             {
                 if (cameraMode == PGCameraModeVideo)
                     _videoLandscapePanelView.alpha = 1.0f;
-                else
-                    _topPanelView.alpha = 1.0f;
             } completion:nil];
         }];
     }
@@ -595,7 +610,6 @@
             _flashControl.hidden = false;
             _flipButton.hidden = hasDoneButton;
             _topFlipButton.hidden = !hasDoneButton;
-            _bottomPanelBackgroundView.hidden = false;
         }
         
         [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^{
@@ -611,7 +625,6 @@
             _flashControl.alpha = alpha;
             _flipButton.alpha = alpha;
             _topFlipButton.alpha = alpha;
-            _bottomPanelBackgroundView.alpha = alpha;
             
             if (hasDoneButton)
                 _doneButton.alpha = alpha;
@@ -624,7 +637,6 @@
                 _flashControl.hidden = hidden;
                 _flipButton.hidden = hidden || hasDoneButton;
                 _topFlipButton.hidden = hidden || !hasDoneButton;
-                _bottomPanelBackgroundView.hidden = hidden;
                 
                 if (hasDoneButton)
                     _doneButton.hidden = hidden;
@@ -646,8 +658,6 @@
         _flipButton.alpha = alpha;
         _topFlipButton.hidden = hidden || !hasDoneButton;
         _topFlipButton.alpha = alpha;
-        _bottomPanelBackgroundView.hidden = hidden;
-        _bottomPanelBackgroundView.alpha = alpha;
         
         CGFloat offset = hidden ? 19 : 18 + 43;
         _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);

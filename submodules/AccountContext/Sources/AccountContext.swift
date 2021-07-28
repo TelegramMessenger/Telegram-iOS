@@ -145,10 +145,12 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
 public struct ChatAvailableMessageActions {
     public var options: ChatAvailableMessageActionOptions
     public var banAuthor: Peer?
+    public var disableDelete: Bool
     
-    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?) {
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, disableDelete: Bool) {
         self.options = options
         self.banAuthor = banAuthor
+        self.disableDelete = disableDelete
     }
 }
 

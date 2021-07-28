@@ -128,7 +128,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     NSTimer *_switchToVideoTimer;
     NSTimer *_startRecordingTimer;
-    bool _recordingByShutterHold;
     bool _stopRecordingOnRelease;
     bool _shownMicrophoneAlert;
     
@@ -419,6 +418,14 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [strongSelf shutterReleased];
     };
     
+    _interfaceView.shutterPanGesture = ^(UIPanGestureRecognizer *gesture) {
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [strongSelf handleRamp:gesture];
+    };
+    
     _interfaceView.cancelPressed = ^
     {
         __strong TGCameraController *strongSelf = weakSelf;
@@ -595,7 +602,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         TGDispatchOnMainThread(^
         {
-            [strongSelf->_previewView endTransitionAnimated:true];
             [strongSelf->_interfaceView setZoomLevel:1.0f displayNeeded:false];
             
             if (!strongSelf->_dismissing)
@@ -629,6 +635,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     };
                 }
             }
+            
+            [strongSelf->_previewView endTransitionAnimated:true];
         });
     };
     
@@ -1153,8 +1161,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         {
             _stopRecordingOnRelease = false;
             
-            _camera.disabled = true;
             [_camera stopVideoRecording];
+            TGDispatchAfter(0.3, dispatch_get_main_queue(), ^{
+                [_camera setZoomLevel:1.0];
+                [_interfaceView setZoomLevel:1.0 displayNeeded:false];
+                _camera.disabled = true;
+            });
             
             [_buttonHandler ignoreEventsFor:1.0f andDisable:[self willPresentResultController]];
         }
@@ -2615,6 +2627,37 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
 }
 
+- (void)handleRamp:(UIPanGestureRecognizer *)gestureRecognizer
+{
+    if (!_stopRecordingOnRelease) {
+        [gestureRecognizer setTranslation:CGPointZero inView:self.view];
+        return;
+    }
+    switch (gestureRecognizer.state)
+    {
+        case UIGestureRecognizerStateChanged:
+        {
+            CGPoint translation = [gestureRecognizer translationInView:self.view];
+          
+            CGFloat value = 1.0;
+            if (translation.y < 0.0) {
+                value = MIN(8.0, value + ABS(translation.y) / 60.0);
+            }
+            
+            [_camera setZoomLevel:value];
+            [_interfaceView setZoomLevel:value displayNeeded:true];
+        }
+            break;
+        case UIGestureRecognizerStateEnded:
+        {
+            [self shutterReleased];
+        }
+            break;
+        default:
+            break;
+    }
+}
+
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
 {
     if (gestureRecognizer == _panGestureRecognizer)
@@ -2637,7 +2680,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         {
             case PGCameraModeVideo:
             {
-                if (widescreenWidth == 896.0f)
+                if (widescreenWidth == 926.0f)
+                    return CGRectMake(0, 82, screenSize.width, screenSize.height - 82 - 83);
+                else if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 83);
                 else if (widescreenWidth == 812.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 68);
@@ -2663,7 +2708,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             default:
             {
                 if (widescreenWidth == 926.0f)
-                    return CGRectMake(0, 154, screenSize.width, screenSize.height - 154 - 249);
+                    return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 234);
                 if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 223);
                 else if (widescreenWidth == 844.0f)

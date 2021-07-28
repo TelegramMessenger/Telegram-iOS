@@ -27,12 +27,21 @@ private func getCubeVertexData(
     frameWidth: Int,
     frameHeight: Int,
     rotation: Int,
+    mirrorHorizontally: Bool,
+    mirrorVertically: Bool,
     buffer: UnsafeMutablePointer<Float>
 ) {
-    let cropLeft = Float(cropX) / Float(frameWidth)
-    let cropRight = Float(cropX + cropWidth) / Float(frameWidth)
-    let cropTop = Float(cropY) / Float(frameHeight)
-    let cropBottom = Float(cropY + cropHeight) / Float(frameHeight)
+    var cropLeft = Float(cropX) / Float(frameWidth)
+    var cropRight = Float(cropX + cropWidth) / Float(frameWidth)
+    var cropTop = Float(cropY) / Float(frameHeight)
+    var cropBottom = Float(cropY + cropHeight) / Float(frameHeight)
+
+    if mirrorHorizontally {
+        swap(&cropLeft, &cropRight)
+    }
+    if mirrorVertically {
+        swap(&cropTop, &cropBottom)
+    }
 
     switch rotation {
     default:
@@ -49,6 +58,8 @@ private func getCubeVertexData(
 @available(iOS 13.0, *)
 private protocol FrameBufferRenderingState {
     var frameSize: CGSize? { get }
+    var mirrorHorizontally: Bool { get }
+    var mirrorVertically: Bool { get }
 
     func encode(renderingContext: MetalVideoRenderingContext, vertexBuffer: MTLBuffer, renderEncoder: MTLRenderCommandEncoder) -> Bool
 }
@@ -73,6 +84,9 @@ private final class NV12FrameBufferRenderingState: FrameBufferRenderingState {
     private var yTexture: MTLTexture?
     private var uvTexture: MTLTexture?
 
+    private(set) var mirrorHorizontally: Bool = false
+    private(set) var mirrorVertically: Bool = false
+
     var frameSize: CGSize? {
         if let yTexture = self.yTexture {
             return CGSize(width: yTexture.width, height: yTexture.height)
@@ -81,7 +95,7 @@ private final class NV12FrameBufferRenderingState: FrameBufferRenderingState {
         }
     }
 
-    func updateTextureBuffers(renderingContext: MetalVideoRenderingContext, frameBuffer: OngoingGroupCallContext.VideoFrameData.NativeBuffer) {
+    func updateTextureBuffers(renderingContext: MetalVideoRenderingContext, frameBuffer: OngoingGroupCallContext.VideoFrameData.NativeBuffer, mirrorHorizontally: Bool, mirrorVertically: Bool) {
         let pixelBuffer = frameBuffer.pixelBuffer
 
         var lumaTexture: MTLTexture?
@@ -112,6 +126,9 @@ private final class NV12FrameBufferRenderingState: FrameBufferRenderingState {
             self.yTexture = nil
             self.uvTexture = nil
         }
+
+        self.mirrorHorizontally = mirrorHorizontally
+        self.mirrorVertically = mirrorVertically
     }
 
     func encode(renderingContext: MetalVideoRenderingContext, vertexBuffer: MTLBuffer, renderEncoder: MTLRenderCommandEncoder) -> Bool {
@@ -141,6 +158,9 @@ private final class I420FrameBufferRenderingState: FrameBufferRenderingState {
     private var lumaTextureDescriptorSize: CGSize?
     private var lumaTextureDescriptor: MTLTextureDescriptor?
     private var chromaTextureDescriptor: MTLTextureDescriptor?
+
+    private(set) var mirrorHorizontally: Bool = false
+    private(set) var mirrorVertically: Bool = false
 
     var frameSize: CGSize? {
         if let yTexture = self.yTexture {
@@ -318,7 +338,7 @@ final class MetalVideoRenderingView: UIView, VideoRenderingView {
                     renderingState = NV12FrameBufferRenderingState()
                     self.frameBufferRenderingState = renderingState
                 }
-                renderingState.updateTextureBuffers(renderingContext: renderingContext, frameBuffer: buffer)
+                renderingState.updateTextureBuffers(renderingContext: renderingContext, frameBuffer: buffer, mirrorHorizontally: videoFrameData.mirrorHorizontally, mirrorVertically: videoFrameData.mirrorVertically)
                 self.needsRedraw = true
             case let .i420(buffer):
                 let renderingState: I420FrameBufferRenderingState
@@ -350,6 +370,8 @@ final class MetalVideoRenderingView: UIView, VideoRenderingView {
         guard let frameSize = frameBufferRenderingState.frameSize else {
             return nil
         }
+        let mirrorHorizontally = frameBufferRenderingState.mirrorHorizontally
+        let mirrorVertically = frameBufferRenderingState.mirrorVertically
 
         let drawableSize: CGSize
         if self.blur {
@@ -382,19 +404,20 @@ final class MetalVideoRenderingView: UIView, VideoRenderingView {
 
         if self.metalLayer.drawableSize != drawableSize {
             self.metalLayer.drawableSize = drawableSize
-
-            getCubeVertexData(
-                cropX: 0,
-                cropY: 0,
-                cropWidth: Int(drawableSize.width),
-                cropHeight: Int(drawableSize.height),
-                frameWidth: Int(drawableSize.width),
-                frameHeight: Int(drawableSize.height),
-                rotation: 0,
-                buffer: self.vertexBuffer.contents().assumingMemoryBound(to: Float.self)
-            )
         }
 
+        getCubeVertexData(
+            cropX: 0,
+            cropY: 0,
+            cropWidth: Int(drawableSize.width),
+            cropHeight: Int(drawableSize.height),
+            frameWidth: Int(drawableSize.width),
+            frameHeight: Int(drawableSize.height),
+            rotation: 0,
+            mirrorHorizontally: mirrorHorizontally,
+            mirrorVertically: mirrorVertically,
+            buffer: self.vertexBuffer.contents().assumingMemoryBound(to: Float.self)
+        )
 
         guard let drawable = self.metalLayer.nextDrawable() else {
             return nil

@@ -601,6 +601,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     default:
                         break
                 }
+                if let file = content.file, !file.isAnimated, file.isVideo {
+                    canFullscreen = true
+                }
             }
         }
         

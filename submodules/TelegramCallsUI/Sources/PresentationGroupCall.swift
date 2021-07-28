@@ -2596,8 +2596,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
 
-    func requestVideo(capturer: OngoingCallVideoCapturer) {
+    func requestVideo(capturer: OngoingCallVideoCapturer, useFrontCamera: Bool = true) {
         self.videoCapturer = capturer
+        self.useFrontCamera = useFrontCamera
         
         self.hasVideo = true
         if let videoCapturer = self.videoCapturer {

@@ -290,7 +290,12 @@ final class SharedMediaPlayer {
                                                 player.play()
                                             }
                                         case let .instantVideo(node):
-                                            node.playOnceWithSound(playAndRecord: controlPlaybackWithProximity)
+                                            if let scheduledStartTime = scheduledStartTime {
+                                                node.seek(scheduledStartTime)
+                                                node.playOnceWithSound(playAndRecord: controlPlaybackWithProximity)
+                                            } else {
+                                                node.playOnceWithSound(playAndRecord: controlPlaybackWithProximity)
+                                            }
                                     }
                                 case .pause:
                                     playbackItem.pause()
