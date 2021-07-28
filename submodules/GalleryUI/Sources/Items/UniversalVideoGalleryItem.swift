@@ -2041,10 +2041,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
 
-    private func speedList() -> [(String, String, Double)] {
+    private func speedList(strings: PresentationStrings) -> [(String, String, Double)] {
         let speedList: [(String, String, Double)] = [
             ("0.5x", "0.5x", 0.5),
-            ("Normal", "1x", 1.0),
+            (strings.PlaybackSpeed_Normal, "1x", 1.0),
             ("1.5x", "1.5x", 1.5),
             ("2x", "2x", 2.0)
         ]
@@ -2067,9 +2067,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            var speedValue: String = "Normal"
+            var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
-            for (text, iconText, speed) in strongSelf.speedList() {
+            for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 if abs(speed - status.baseRate) < 0.01 {
                     speedValue = text
                     speedIconText = iconText
@@ -2077,7 +2077,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            items.append(.action(ContextMenuActionItem(text: "Playback Speed", textLayout: .secondLineWithValue(speedValue), icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
                 return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 guard let strongSelf = self else {
@@ -2143,7 +2143,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            for (text, _, rate) in strongSelf.speedList() {
+            for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 let isSelected = abs(status.baseRate - rate) < 0.01
                 items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                     if isSelected {

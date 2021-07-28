@@ -6570,3 +6570,6 @@ Sorry for the inconvenience.";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
 
 "VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";
+
+"PlaybackSpeed.Title" = "Playback Speed";
+"PlaybackSpeed.Normal" = "Normal";
