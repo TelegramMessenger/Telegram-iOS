@@ -1136,14 +1136,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
-                var isWebpage = false
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
-                        isWebpage = true
                         break
                     }
                 }
@@ -1151,7 +1149,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var hasMoreButton = false
                 if isEnhancedWebPlayer {
                     hasMoreButton = true
-                } else if !isWebpage, let file = file, !file.isAnimated {
+                } else if let file = file, !file.isAnimated {
                     hasMoreButton = true
                 }
                  
