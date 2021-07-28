@@ -5031,7 +5031,7 @@ public final class VoiceChatController: ViewController {
                 gridTileItems.removeAll()
                 
                 tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
-            } else if !tileItems.isEmpty && !(self.callState?.isVideoEnabled ?? false) && self.connectedOnce {
+            } else if let callState = self.callState, !tileItems.isEmpty && !callState.isVideoEnabled && self.connectedOnce && (callState.canManageCall || callState.adminIds.contains(self.context.account.peerId)) {
                 reachedLimit = true
             }
             
