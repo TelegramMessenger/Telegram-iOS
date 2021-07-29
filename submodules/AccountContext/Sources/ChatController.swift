@@ -130,7 +130,7 @@ public enum ChatControllerInteractionNavigateToPeer {
     case withBotStartPayload(ChatControllerInitialBotStart)
 }
 
-public struct ChatTextInputState: PostboxCoding, Equatable {
+public struct ChatTextInputState: Codable, Equatable {
     public let inputText: NSAttributedString
     public let selectionRange: Range<Int>
     
@@ -153,28 +153,89 @@ public struct ChatTextInputState: PostboxCoding, Equatable {
         let length = inputText.length
         self.selectionRange = length ..< length
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.inputText = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
-        self.selectionRange = Int(decoder.decodeInt32ForKey("as0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("as1", orElse: 0))
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.inputText = ((try? container.decodeIfPresent(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
+        let rangeFrom = (try? container.decodeIfPresent(Int32.self, forKey: "as0")) ?? 0
+        let rangeTo = (try? container.decodeIfPresent(Int32.self, forKey: "as1")) ?? 0
+        if rangeFrom <= rangeTo {
+            self.selectionRange = Int(rangeFrom) ..< Int(rangeTo)
+        } else {
+            let length = self.inputText.length
+            self.selectionRange = length ..< length
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(ChatTextInputStateText(attributedText: self.inputText), forKey: "at")
+        try container.encode(Int32(self.selectionRange.lowerBound), forKey: "as0")
+        try container.encode(Int32(self.selectionRange.upperBound), forKey: "as1")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    /*public init(decoder: PostboxDecoder) {
+        self.inputText = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
+        self.selectionRange = Int(decoder.decodeInt32ForKey("as0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("as1", orElse: 0))
+    }*/
+    
+    /*public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(ChatTextInputStateText(attributedText: self.inputText), forKey: "at")
         
         encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "as0")
         encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "as1")
-    }
+    }*/
 }
 
-public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
+public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case bold
     case italic
     case monospace
     case textMention(EnginePeer.Id)
     case textUrl(String)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch (try? container.decodeIfPresent(Int32.self, forKey: "t")) ?? 0 {
+        case 0:
+            self = .bold
+        case 1:
+            self = .italic
+        case 2:
+            self = .monospace
+        case 3:
+            let peerId = (try? container.decode(Int64.self, forKey: "peerId")) ?? 0
+            self = .textMention(EnginePeer.Id(peerId))
+        case 4:
+            let url = (try? container.decode(String.self, forKey: "url")) ?? ""
+            self = .textUrl(url)
+        default:
+            assertionFailure()
+            self = .bold
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        switch self {
+        case .bold:
+            try container.encode(0 as Int32, forKey: "t")
+        case .italic:
+            try container.encode(1 as Int32, forKey: "t")
+        case .monospace:
+            try container.encode(2 as Int32, forKey: "t")
+        case let .textMention(id):
+            try container.encode(3 as Int32, forKey: "t")
+            try container.encode(id.toInt64(), forKey: "peerId")
+        case let .textUrl(url):
+            try container.encode(4 as Int32, forKey: "t")
+            try container.encode(url, forKey: "url")
+        }
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("t", orElse: 0) {
         case 0:
             self = .bold
@@ -207,45 +268,10 @@ public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
             encoder.encodeInt32(4, forKey: "t")
             encoder.encodeString(url, forKey: "url")
         }
-    }
-    
-    public static func ==(lhs: ChatTextInputStateTextAttributeType, rhs: ChatTextInputStateTextAttributeType) -> Bool {
-        switch lhs {
-        case .bold:
-            if case .bold = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .italic:
-            if case .italic = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .monospace:
-            if case .monospace = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .textMention(id):
-            if case .textMention(id) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .textUrl(url):
-            if case .textUrl(url) = rhs {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
+    }*/
 }
 
-public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
+public struct ChatTextInputStateTextAttribute: Codable, Equatable {
     public let type: ChatTextInputStateTextAttributeType
     public let range: Range<Int>
     
@@ -253,8 +279,26 @@ public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
         self.type = type
         self.range = range
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.type = try container.decode(ChatTextInputStateTextAttributeType.self, forKey: "type")
+        let rangeFrom = (try? container.decodeIfPresent(Int32.self, forKey: "range0")) ?? 0
+        let rangeTo = (try? container.decodeIfPresent(Int32.self, forKey: "range1")) ?? 0
+
+        self.range = Int(rangeFrom) ..< Int(rangeTo)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.type, forKey: "type")
+
+        try container.encode(Int32(self.range.lowerBound), forKey: "range0")
+        try container.encode(Int32(self.range.upperBound), forKey: "range1")
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         self.type = decoder.decodeObjectForKey("type", decoder: { ChatTextInputStateTextAttributeType(decoder: $0) }) as! ChatTextInputStateTextAttributeType
         self.range = Int(decoder.decodeInt32ForKey("range0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("range1", orElse: 0))
     }
@@ -263,14 +307,14 @@ public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
         encoder.encodeObject(self.type, forKey: "type")
         encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "range0")
         encoder.encodeInt32(Int32(self.range.upperBound), forKey: "range1")
-    }
+    }*/
     
     public static func ==(lhs: ChatTextInputStateTextAttribute, rhs: ChatTextInputStateTextAttribute) -> Bool {
         return lhs.type == rhs.type && lhs.range == rhs.range
     }
 }
 
-public struct ChatTextInputStateText: PostboxCoding, Equatable {
+public struct ChatTextInputStateText: Codable, Equatable {
     public let text: String
     public let attributes: [ChatTextInputStateTextAttribute]
     
@@ -304,8 +348,20 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
         })
         self.attributes = parsedAttributes
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.text = (try? container.decodeIfPresent(String.self, forKey: "text")) ?? ""
+        self.attributes = (try? container.decodeIfPresent([ChatTextInputStateTextAttribute].self, forKey: "attributes")) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        try container.encode(self.text, forKey: "text")
+        try container.encode(self.attributes, forKey: "attributes")
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         self.text = decoder.decodeStringForKey("text", orElse: "")
         self.attributes = decoder.decodeObjectArrayWithDecoderForKey("attributes")
     }
@@ -313,7 +369,7 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.text, forKey: "text")
         encoder.encodeObjectArray(self.attributes, forKey: "attributes")
-    }
+    }*/
     
     static public func ==(lhs: ChatTextInputStateText, rhs: ChatTextInputStateText) -> Bool {
         return lhs.text == rhs.text && lhs.attributes == rhs.attributes
@@ -359,8 +415,21 @@ public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceStat
         self.timestamp = timestamp
         self.text = text
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.timestamp = (try? container.decode(Int32.self, forKey: "d")) ?? 0
+        self.text = ((try? container.decodeIfPresent(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.timestamp, forKey: "d")
+        try container.encode(ChatTextInputStateText(attributedText: self.text), forKey: "at")
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         self.timestamp = decoder.decodeInt32ForKey("d", orElse: 0)
         self.text = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
     }
@@ -368,7 +437,7 @@ public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceStat
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.timestamp, forKey: "d")
         encoder.encodeObject(ChatTextInputStateText(attributedText: self.text), forKey: "at")
-    }
+    }*/
     
     public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
         if let to = to as? ChatEmbeddedInterfaceState {

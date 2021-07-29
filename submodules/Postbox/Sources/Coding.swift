@@ -278,6 +278,12 @@ public final class PostboxEncoder {
         var type: Int8 = ValueType.Nil.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
     }
+
+    public func encodeNil(forKey key: String) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Nil.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+    }
     
     public func encodeInt32(_ value: Int32, forKey key: StaticString) {
         self.encodeKey(key)
@@ -302,8 +308,24 @@ public final class PostboxEncoder {
         var v = value
         self.buffer.write(&v, offset: 0, length: 8)
     }
+
+    public func encodeInt64(_ value: Int64, forKey key: String) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Int64.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v = value
+        self.buffer.write(&v, offset: 0, length: 8)
+    }
     
     public func encodeBool(_ value: Bool, forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Bool.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v: Int8 = value ? 1 : 0
+        self.buffer.write(&v, offset: 0, length: 1)
+    }
+
+    public func encodeBool(_ value: Bool, forKey key: String) {
         self.encodeKey(key)
         var type: Int8 = ValueType.Bool.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -318,8 +340,30 @@ public final class PostboxEncoder {
         var v = value
         self.buffer.write(&v, offset: 0, length: 8)
     }
+
+    public func encodeDouble(_ value: Double, forKey key: String) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Double.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v = value
+        self.buffer.write(&v, offset: 0, length: 8)
+    }
     
     public func encodeString(_ value: String, forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.String.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        if let data = value.data(using: .utf8, allowLossyConversion: true) {
+            var length: Int32 = Int32(data.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(data)
+        } else {
+            var length: Int32 = 0
+            self.buffer.write(&length, offset: 0, length: 4)
+        }
+    }
+
+    public func encodeString(_ value: String, forKey key: String) {
         self.encodeKey(key)
         var type: Int8 = ValueType.String.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -598,6 +642,38 @@ public final class PostboxEncoder {
         }
     }
 
+    public func encode<T: Encodable>(_ value: T, forKey key: String) {
+        let innerEncoder = AdaptedPostboxEncoder()
+        guard let innerData = try? innerEncoder.encode(value) else {
+            return
+        }
+
+        self.encodeKey(key)
+        var t: Int8 = ValueType.Object.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+
+        let string = "\(type(of: value))"
+        var typeHash: Int32 = murMurHashString32(string)
+        self.buffer.write(&typeHash, offset: 0, length: 4)
+
+        var length: Int32 = Int32(innerData.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        self.buffer.write(innerData)
+    }
+
+    public func encodeInnerObjectData(_ value: Data, forKey key: String) {
+        self.encodeKey(key)
+        var t: Int8 = ValueType.Object.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+
+        var typeHash: Int32 = 0
+        self.buffer.write(&typeHash, offset: 0, length: 4)
+
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        self.buffer.write(value)
+    }
+
     public let sharedWriteBuffer = WriteBuffer()
 }
 
@@ -718,6 +794,60 @@ public final class PostboxDecoder {
         return false
     }
 
+    private class func positionOnKey(_ rawBytes: UnsafeRawPointer, offset: inout Int, maxOffset: Int, length: Int, key: String, valueType: ValueType?, consumeKey: Bool = true) -> Bool
+    {
+        let bytes = rawBytes.assumingMemoryBound(to: Int8.self)
+
+        let startOffset = offset
+
+        let keyData = key.data(using: .utf8)!
+
+        let keyLength: Int = keyData.count
+        while (offset < maxOffset) {
+            let keyOffset = offset
+            let readKeyLength = bytes[offset]
+            assert(readKeyLength >= 0)
+            offset += 1
+            offset += Int(readKeyLength)
+
+            let readValueType = bytes[offset]
+            offset += 1
+
+            if keyLength != Int(readKeyLength) {
+                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                continue
+            }
+
+            if keyData.withUnsafeBytes({ keyBytes -> Bool in
+                return memcmp(bytes + (offset - Int(readKeyLength) - 1), keyBytes.baseAddress!, keyLength) == 0
+            }) {
+                if let valueType = valueType {
+                    if readValueType == valueType.rawValue {
+                        return true
+                    } else if readValueType == ValueType.Nil.rawValue {
+                        return false
+                    } else {
+                        skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                    }
+                } else {
+                    if !consumeKey {
+                        offset = keyOffset
+                    }
+                    return true
+                }
+            } else {
+                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+            }
+        }
+
+        if (startOffset != 0) {
+            offset = 0
+            return positionOnKey(bytes, offset: &offset, maxOffset: startOffset, length: length, key: key, valueType: valueType)
+        }
+
+        return false
+    }
+
     private class func positionOnStringKey(_ rawBytes: UnsafeRawPointer, offset: inout Int, maxOffset: Int, length: Int, key: String, valueType: ValueType) -> Bool
     {
         let bytes = rawBytes.assumingMemoryBound(to: Int8.self)
@@ -788,6 +918,22 @@ public final class PostboxDecoder {
         }
         
         return false
+    }
+
+    public func containsKey(_ key: String) -> Bool {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: nil, consumeKey: false) {
+            return true
+        } else {
+            return false
+        }
+    }
+
+    public func decodeNilForKey(_ key: String) -> Bool {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Nil) {
+            return true
+        } else {
+            return false
+        }
     }
     
     public func decodeInt32ForKey(_ key: StaticString, orElse: Int32) -> Int32 {
@@ -1516,6 +1662,40 @@ public final class PostboxDecoder {
                 memcpy(bytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
             }
             return result
+        } else {
+            return nil
+        }
+    }
+
+    public func decodeDataForKey(_ key: String) -> Data? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bytes) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4 + Int(length)
+            var result = Data(count: Int(length))
+            result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                memcpy(bytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
+            }
+            return result
+        } else {
+            return nil
+        }
+    }
+
+    public func decode<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Object) {
+            var typeHash: Int32 = 0
+            memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+
+            let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(length), freeWhenDone: false)
+            let innerData = innerBuffer.makeData()
+            self.offset += 4 + Int(length)
+
+            return try? AdaptedPostboxDecoder().decode(T.self, from: innerData)
         } else {
             return nil
         }
