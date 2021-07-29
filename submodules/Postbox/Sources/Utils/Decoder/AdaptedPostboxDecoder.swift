@@ -1,9 +1,57 @@
 import Foundation
 
 final public class AdaptedPostboxDecoder {
+    enum ContentType {
+        case object
+        case int32Array
+        case int64Array
+        case objectArray
+        case stringArray
+        case dataArray
+    }
+
     func decode<T>(_ type: T.Type, from data: Data) throws -> T where T : Decodable {
-        let decoder = _AdaptedPostboxDecoder(data: data)
+        return try self.decode(type, from: data, contentType: .object)
+    }
+
+    func decode<T>(_ type: T.Type, from data: Data, contentType: ContentType) throws -> T where T : Decodable {
+        let decoder = _AdaptedPostboxDecoder(data: data, contentType: contentType)
         return try T(from: decoder)
+    }
+}
+
+extension AdaptedPostboxDecoder.ContentType {
+    init?(valueType: ValueType) {
+        switch valueType {
+        case .Int32:
+            return nil
+        case .Int64:
+            return nil
+        case .Bool:
+            return nil
+        case .Double:
+            return nil
+        case .String:
+            return nil
+        case .Object:
+            self = .object
+        case .Int32Array:
+            self = .int32Array
+        case .Int64Array:
+            self = .int64Array
+        case .ObjectArray:
+            self = .objectArray
+        case .ObjectDictionary:
+            return nil
+        case .Bytes:
+            return nil
+        case .Nil:
+            return nil
+        case .StringArray:
+            self = .stringArray
+        case .BytesArray:
+            self = .dataArray
+        }
     }
 }
 
@@ -13,10 +61,13 @@ final class _AdaptedPostboxDecoder {
     var userInfo: [CodingUserInfoKey : Any] = [:]
     
     var container: AdaptedPostboxDecodingContainer?
-    fileprivate var data: Data
+
+    fileprivate let data: Data
+    fileprivate let contentType: AdaptedPostboxDecoder.ContentType
     
-    init(data: Data) {
+    init(data: Data, contentType: AdaptedPostboxDecoder.ContentType) {
         self.data = data
+        self.contentType = contentType
     }
 }
 
@@ -35,7 +86,34 @@ extension _AdaptedPostboxDecoder: Decoder {
     }
 
     func unkeyedContainer() -> UnkeyedDecodingContainer {
-        preconditionFailure()
+        assertCanCreateContainer()
+
+        let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
+
+        var content: UnkeyedContainer.Content?
+        switch self.contentType {
+        case .object:
+            preconditionFailure()
+        case .int32Array:
+            content = .int32Array(decoder.decodeInt32ArrayRaw())
+        case .int64Array:
+            content = .int64Array(decoder.decodeInt64ArrayRaw())
+        case .objectArray:
+            content = .objectArray(decoder.decodeObjectDataArrayRaw())
+        case .stringArray:
+            content = .stringArray(decoder.decodeStringArrayRaw())
+        case .dataArray:
+            content = .dataArray(decoder.decodeBytesArrayRaw().map { $0.makeData() })
+        }
+
+        if let content = content {
+            let container = UnkeyedContainer(data: self.data, codingPath: self.codingPath, userInfo: self.userInfo, content: content)
+            self.container = container
+
+            return container
+        } else {
+            preconditionFailure()
+        }
     }
     
     func singleValueContainer() -> SingleValueDecodingContainer {

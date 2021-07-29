@@ -156,9 +156,9 @@ public struct ChatTextInputState: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
-        self.inputText = ((try? container.decodeIfPresent(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
-        let rangeFrom = (try? container.decodeIfPresent(Int32.self, forKey: "as0")) ?? 0
-        let rangeTo = (try? container.decodeIfPresent(Int32.self, forKey: "as1")) ?? 0
+        self.inputText = ((try? container.decode(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
+        let rangeFrom = (try? container.decode(Int32.self, forKey: "as0")) ?? 0
+        let rangeTo = (try? container.decode(Int32.self, forKey: "as1")) ?? 0
         if rangeFrom <= rangeTo {
             self.selectionRange = Int(rangeFrom) ..< Int(rangeTo)
         } else {
@@ -351,8 +351,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
-        self.text = (try? container.decodeIfPresent(String.self, forKey: "text")) ?? ""
-        self.attributes = (try? container.decodeIfPresent([ChatTextInputStateTextAttribute].self, forKey: "attributes")) ?? []
+        self.text = (try? container.decode(String.self, forKey: "text")) ?? ""
+        self.attributes = (try? container.decode([ChatTextInputStateTextAttribute].self, forKey: "attributes")) ?? []
     }
 
     public func encode(to encoder: Encoder) throws {

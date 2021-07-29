@@ -28,7 +28,15 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
     }
     
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
-        preconditionFailure()
+        if let (data, valueType) = self.decoder.decodeObjectDataForKey(key.stringValue) {
+            if let mappedType = AdaptedPostboxDecoder.ContentType(valueType: valueType) {
+                return try AdaptedPostboxDecoder().decode(T.self, from: data, contentType: mappedType)
+            } else {
+                throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+            }
+        } else {
+            throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+        }
     }
 
     func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32 {
@@ -39,7 +47,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         }
     }
 
-    func decode(_ type: Int64.Type, forKey key: Key) throws -> Int32 {
+    func decode(_ type: Int64.Type, forKey key: Key) throws -> Int64 {
         if let value = self.decoder.decodeOptionalInt64ForKey(key.stringValue) {
             return value
         } else {
@@ -47,7 +55,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         }
     }
 
-    func decode(_ type: Bool.Type, forKey key: Key) throws -> Int32 {
+    func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
         if let value = self.decoder.decodeOptionalBoolForKey(key.stringValue) {
             return value
         } else {
@@ -55,7 +63,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         }
     }
 
-    func decode(_ type: String.Type, forKey key: Key) throws -> Int32 {
+    func decode(_ type: String.Type, forKey key: Key) throws -> String {
         if let value = self.decoder.decodeOptionalStringForKey(key.stringValue) {
             return value
         } else {
