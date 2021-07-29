@@ -14,6 +14,12 @@ extension _AdaptedPostboxDecoder {
     }
 }
 
+private func decodingErrorBreakpoint() {
+    #if DEBUG
+    print("Decoding error. Install a breakpoint at decodingErrorBreakpoint to debug.")
+    #endif
+}
+
 extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
     var allKeys: [Key] {
         preconditionFailure()
@@ -32,9 +38,11 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
             if let mappedType = AdaptedPostboxDecoder.ContentType(valueType: valueType) {
                 return try AdaptedPostboxDecoder().decode(T.self, from: data, contentType: mappedType)
             } else {
+                decodingErrorBreakpoint()
                 throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
             }
         } else {
+            decodingErrorBreakpoint()
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
         }
     }
@@ -43,6 +51,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         if let value = self.decoder.decodeOptionalInt32ForKey(key.stringValue) {
             return value
         } else {
+            decodingErrorBreakpoint()
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
         }
     }
@@ -51,6 +60,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         if let value = self.decoder.decodeOptionalInt64ForKey(key.stringValue) {
             return value
         } else {
+            decodingErrorBreakpoint()
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
         }
     }
@@ -59,6 +69,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         if let value = self.decoder.decodeOptionalBoolForKey(key.stringValue) {
             return value
         } else {
+            decodingErrorBreakpoint()
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
         }
     }
@@ -67,6 +78,7 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
         if let value = self.decoder.decodeOptionalStringForKey(key.stringValue) {
             return value
         } else {
+            decodingErrorBreakpoint()
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
         }
     }

@@ -79,7 +79,7 @@ extension _AdaptedPostboxEncoder.SingleValueContainer: SingleValueEncodingContai
 }
 
 extension _AdaptedPostboxEncoder.SingleValueContainer: AdaptedPostboxEncodingContainer {
-    func makeData() -> Data {
+    func makeData() -> (Data, ValueType) {
         preconditionFailure()
     }
 }

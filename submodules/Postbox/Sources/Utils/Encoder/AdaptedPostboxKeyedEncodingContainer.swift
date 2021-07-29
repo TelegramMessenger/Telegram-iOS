@@ -14,8 +14,19 @@ extension _AdaptedPostboxEncoder {
             self.encoder = PostboxEncoder()
         }
 
-        func makeData() -> Data {
-            return self.encoder.makeData()
+        func makeData() -> (Data, ValueType) {
+            let buffer = WriteBuffer()
+
+            var typeHash: Int32 = 0
+            buffer.write(&typeHash, offset: 0, length: 4)
+
+            let data = self.encoder.makeData()
+
+            var length: Int32 = Int32(data.count)
+            buffer.write(&length, offset: 0, length: 4)
+            buffer.write(data)
+
+            return (buffer.makeData(), .Object)
         }
     }
 }
@@ -25,7 +36,8 @@ extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         let innerEncoder = _AdaptedPostboxEncoder()
         try! value.encode(to: innerEncoder)
 
-        self.encoder.encodeInnerObjectData(innerEncoder.data, forKey: key.stringValue)
+        let (data, valueType) = innerEncoder.makeData()
+        self.encoder.encodeInnerObjectData(data, valueType: valueType, forKey: key.stringValue)
     }
 
     func encodeNil(forKey key: Key) throws {

@@ -4,7 +4,7 @@ public class AdaptedPostboxEncoder {
     func encode(_ value: Encodable) throws -> Data {
         let encoder = _AdaptedPostboxEncoder()
         try value.encode(to: encoder)
-        return encoder.data
+        return encoder.makeData().0
     }
 }
 
@@ -15,7 +15,7 @@ final class _AdaptedPostboxEncoder {
     
     fileprivate var container: AdaptedPostboxEncodingContainer?
 
-    var data: Data {
+    func makeData() -> (Data, ValueType) {
         return self.container!.makeData()
     }
 }
@@ -35,7 +35,12 @@ extension _AdaptedPostboxEncoder: Encoder {
     }
     
     func unkeyedContainer() -> UnkeyedEncodingContainer {
-        preconditionFailure()
+        assertCanCreateContainer()
+
+        let container = UnkeyedContainer(codingPath: self.codingPath, userInfo: self.userInfo)
+        self.container = container
+
+        return container
     }
     
     func singleValueContainer() -> SingleValueEncodingContainer {
@@ -44,5 +49,5 @@ extension _AdaptedPostboxEncoder: Encoder {
 }
 
 protocol AdaptedPostboxEncodingContainer: AnyObject {
-    func makeData() -> Data
+    func makeData() -> (Data, ValueType)
 }

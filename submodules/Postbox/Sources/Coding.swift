@@ -603,16 +603,12 @@ public final class PostboxEncoder {
         self.buffer.write(innerData)
     }
 
-    public func encodeInnerObjectData(_ value: Data, forKey key: String) {
+    func encodeInnerObjectData(_ value: Data, valueType: ValueType, forKey key: String) {
         self.encodeKey(key)
-        var t: Int8 = ValueType.Object.rawValue
+
+        var t: Int8 = valueType.rawValue
         self.buffer.write(&t, offset: 0, length: 1)
-
-        var typeHash: Int32 = 0
-        self.buffer.write(&typeHash, offset: 0, length: 4)
-
-        var length: Int32 = Int32(value.count)
-        self.buffer.write(&length, offset: 0, length: 4)
+        
         self.buffer.write(value)
     }
 
@@ -1008,7 +1004,7 @@ public final class PostboxDecoder {
                 let initialOffset = self.offset
                 PostboxDecoder.skipValue(self.buffer.memory.assumingMemoryBound(to: Int8.self), offset: &self.offset, length: self.buffer.length, valueType: actualValueType)
 
-                let data = ReadBuffer(memory: UnsafeMutableRawPointer(mutating: self.buffer.memory.advanced(by: self.offset)), length: self.offset - initialOffset, freeWhenDone: false).makeData()
+                let data = ReadBuffer(memory: UnsafeMutableRawPointer(mutating: self.buffer.memory.advanced(by: initialOffset)), length: self.offset - initialOffset, freeWhenDone: false).makeData()
 
                 return (data, actualValueType)
             }
@@ -1179,7 +1175,16 @@ public final class PostboxDecoder {
             
             return array
         } else {
-            return nil
+            if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32Array) {
+                let array = decodeInt32ArrayRaw()
+                if array.isEmpty {
+                    return []
+                } else {
+                    return nil
+                }
+            } else {
+                return nil
+            }
         }
     }
     
