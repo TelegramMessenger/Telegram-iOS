@@ -127,9 +127,9 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 if let message = messages.last, let peer = peer.peer {
                     self.interaction.messageSelected(peer, message, promoInfo)
                 } else if let peer = peer.peer {
-                    self.interaction.peerSelected(peer, promoInfo)
+                    self.interaction.peerSelected(peer, nil, promoInfo)
                 } else if let peer = peer.peers[peer.peerId] {
-                    self.interaction.peerSelected(peer, promoInfo)
+                    self.interaction.peerSelected(peer, nil, promoInfo)
                 }
             case let .groupReference(groupId, _, _, _, _):
                 self.interaction.groupSelected(groupId)

@@ -5649,7 +5649,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     func forwardMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, messageText, mode in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }
@@ -5674,6 +5674,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return .forward(source: messageId, grouping: .auto, attributes: [], correlationId: nil)
                 })
                 
+                var displayPeers: [Peer] = []
                 for peer in peers {
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
                     |> deliverOnMainQueue).start(next: { messageIds in
@@ -5700,30 +5701,38 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     })
                     
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let text: String
-                    var savedMessages = false
-                    if peers.count == 1, let peerId = peers.first?.id, peerId == strongSelf.context.account.peerId {
-                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
-                        savedMessages = true
-                    } else {
-                        if peers.count == 1, let peer = peers.first {
-                            let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
-                        } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                            let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
-                        } else if let peer = peers.first {
-                            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
-                        } else {
-                            text = ""
+                    if let secretPeer = peer as? TelegramSecretChat {
+                        if let peer = peerMap[secretPeer.regularPeerId] {
+                            displayPeers.append(peer)
                         }
+                    } else {
+                        displayPeers.append(peer)
                     }
-
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                 }
+                    
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                var savedMessages = false
+                if displayPeers.count == 1, let peerId = displayPeers.first?.id, peerId == strongSelf.context.account.peerId {
+                    text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many
+                    savedMessages = true
+                } else {
+                    if displayPeers.count == 1, let peer = displayPeers.first {
+                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
+                    } else if displayPeers.count == 2, let firstPeer = displayPeers.first, let secondPeer = displayPeers.last {
+                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
+                    } else if let peer = displayPeers.first {
+                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(displayPeers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(displayPeers.count - 1)").string
+                    } else {
+                        text = ""
+                    }
+                }
+
+                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             }
             peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
                 let peerId = peer.id
