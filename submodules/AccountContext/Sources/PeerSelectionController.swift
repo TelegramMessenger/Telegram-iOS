@@ -63,7 +63,7 @@ public enum PeerSelectionControllerSendMode {
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

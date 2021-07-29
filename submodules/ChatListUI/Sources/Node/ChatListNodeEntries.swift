@@ -281,7 +281,7 @@ private func offsetPinnedIndex(_ index: ChatListIndex, offset: UInt16) -> ChatLi
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, foundPeers: [Peer], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, foundPeers: [(Peer, Peer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -300,7 +300,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
     
     var foundPeerIds = Set<PeerId>()
     for peer in foundPeers {
-        foundPeerIds.insert(peer.id)
+        foundPeerIds.insert(peer.0.id)
     }
     
     if view.laterIndex == nil && savedMessagesPeer == nil {
@@ -338,8 +338,13 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             if !foundPeers.isEmpty {
                 var foundPinningIndex: UInt16 = UInt16(foundPeers.count)
                 for peer in foundPeers.reversed() {
-                    let messageIndex = MessageIndex(id: MessageId(peerId: peer.id, namespace: 0, id: 0), timestamp: 1)
-                    result.append(.PeerEntry(index: ChatListIndex(pinningIndex: foundPinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: peer.id, peers: SimpleDictionary([peer.id: peer])), presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(peer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+                    var peers: [PeerId: Peer] = [peer.0.id: peer.0]
+                    if let chatPeer = peer.1 {
+                        peers[chatPeer.id] = chatPeer
+                    }
+                    
+                    let messageIndex = MessageIndex(id: MessageId(peerId: peer.0.id, namespace: 0, id: 0), timestamp: 1)
+                    result.append(.PeerEntry(index: ChatListIndex(pinningIndex: foundPinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: peer.0.id, peers: SimpleDictionary(peers)), presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(peer.0.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
                     }
