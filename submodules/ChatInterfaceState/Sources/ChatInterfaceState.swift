@@ -10,7 +10,7 @@ public enum ChatTextInputMediaRecordingButtonMode: Int32 {
     case video = 1
 }
 
-public struct ChatInterfaceSelectionState: PostboxCoding, Equatable {
+public struct ChatInterfaceSelectionState: Codable, Equatable {
     public let selectedIds: Set<MessageId>
     
     public static func ==(lhs: ChatInterfaceSelectionState, rhs: ChatInterfaceSelectionState) -> Bool {
@@ -20,8 +20,28 @@ public struct ChatInterfaceSelectionState: PostboxCoding, Equatable {
     public init(selectedIds: Set<MessageId>) {
         self.selectedIds = selectedIds
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let data = try? container.decodeIfPresent(Data.self, forKey: "i") {
+            self.selectedIds = Set(MessageId.decodeArrayFromBuffer(ReadBuffer(data: data)))
+        } else {
+            self.selectedIds = Set()
+        }
+    }
+
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        let buffer = WriteBuffer()
+        MessageId.encodeArrayToBuffer(Array(selectedIds), buffer: buffer)
+
+        try container.encode(buffer.makeData(), forKey: "i")
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         if let data = decoder.decodeBytesForKeyNoCopy("i") {
             self.selectedIds = Set(MessageId.decodeArrayFromBuffer(data))
         } else {
@@ -33,10 +53,10 @@ public struct ChatInterfaceSelectionState: PostboxCoding, Equatable {
         let buffer = WriteBuffer()
         MessageId.encodeArrayToBuffer(Array(selectedIds), buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "i")
-    }
+    }*/
 }
 
-public struct ChatEditMessageState: PostboxCoding, Equatable {
+public struct ChatEditMessageState: Codable, Equatable {
     public let messageId: MessageId
     public let inputState: ChatTextInputState
     public let disableUrlPreview: String?
@@ -48,8 +68,41 @@ public struct ChatEditMessageState: PostboxCoding, Equatable {
         self.disableUrlPreview = disableUrlPreview
         self.inputTextMaxLength = inputTextMaxLength
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.messageId = MessageId(
+            peerId: PeerId((try? container.decode(Int64.self, forKey: "mp")) ?? 0),
+            namespace: (try? container.decode(Int32.self, forKey: "mn")) ?? 0,
+            id: (try? container.decode(Int32.self, forKey: "mi")) ?? 0
+        )
+
+        if let inputState = try? container.decode(ChatTextInputState.self, forKey: "is") {
+            self.inputState = inputState
+        } else {
+            self.inputState = ChatTextInputState()
+        }
+
+        self.disableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup")
+        self.inputTextMaxLength = try? container.decodeIfPresent(Int32.self, forKey: "tl")
+    }
+
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.messageId.peerId.toInt64(), forKey: "mp")
+        try container.encode(self.messageId.namespace, forKey: "mn")
+        try container.encode(self.messageId.id, forKey: "mi")
+
+        try container.encode(self.inputState, forKey: "is")
+
+        try container.encodeIfPresent(self.disableUrlPreview, forKey: "dup")
+        try container.encodeIfPresent(self.inputTextMaxLength, forKey: "tl")
+    }
     
-    public init(decoder: PostboxDecoder) {
+    /*public init(decoder: PostboxDecoder) {
         self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("mp", orElse: 0)), namespace: decoder.decodeInt32ForKey("mn", orElse: 0), id: decoder.decodeInt32ForKey("mi", orElse: 0))
         if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
             self.inputState = inputState
@@ -75,7 +128,7 @@ public struct ChatEditMessageState: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "ml")
         }
-    }
+    }*/
     
     public static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
         return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview && lhs.inputTextMaxLength == rhs.inputTextMaxLength
@@ -322,7 +375,7 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
     
     public init(decoder: PostboxDecoder) {
         self.timestamp = decoder.decodeInt32ForKey("ts", orElse: 0)
-        if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
+        if let inputState = decoder.decode(ChatTextInputState.self, forKey: "is") {
             self.composeInputState = inputState
         } else {
             self.composeInputState = ChatTextInputState()
@@ -345,12 +398,12 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
         } else {
             self.forwardMessageIds = nil
         }
-        if let editMessage = decoder.decodeObjectForKey("em", decoder: { ChatEditMessageState(decoder: $0) }) as? ChatEditMessageState {
+        if let editMessage = decoder.decode(ChatEditMessageState.self, forKey: "em") {
             self.editMessage = editMessage
         } else {
             self.editMessage = nil
         }
-        if let selectionState = decoder.decodeObjectForKey("ss", decoder: { return ChatInterfaceSelectionState(decoder: $0) }) as? ChatInterfaceSelectionState {
+        if let selectionState = decoder.decode(ChatInterfaceSelectionState.self, forKey: "ss") {
             self.selectionState = selectionState
         } else {
             self.selectionState = nil
@@ -372,7 +425,7 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.timestamp, forKey: "ts")
-        encoder.encodeObject(self.composeInputState, forKey: "is")
+        encoder.encode(self.composeInputState, forKey: "is")
         if let composeDisableUrlPreview = self.composeDisableUrlPreview {
             encoder.encodeString(composeDisableUrlPreview, forKey: "dup")
         } else {
@@ -395,12 +448,12 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
             encoder.encodeNil(forKey: "fm")
         }
         if let editMessage = self.editMessage {
-            encoder.encodeObject(editMessage, forKey: "em")
+            encoder.encode(editMessage, forKey: "em")
         } else {
             encoder.encodeNil(forKey: "em")
         }
         if let selectionState = self.selectionState {
-            encoder.encodeObject(selectionState, forKey: "ss")
+            encoder.encode(selectionState, forKey: "ss")
         } else {
             encoder.encodeNil(forKey: "ss")
         }

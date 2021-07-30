@@ -736,4 +736,33 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
         return super.hitTest(point, with: event)
     }
+
+    final class SnapshotState {
+        fileprivate let snapshotView: UIView
+
+        fileprivate init(snapshotView: UIView) {
+            self.snapshotView = snapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        let snapshotView = self.snapshotView(afterScreenUpdates: false)!
+        return SnapshotState(
+            snapshotView: snapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+
+        snapshotState.snapshotView.frame = self.frame
+        self.superview?.insertSubview(snapshotState.snapshotView, belowSubview: self)
+
+        let snapshotView = snapshotState.snapshotView
+        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView?.removeFromSuperview()
+        })
+        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+    }
 }
