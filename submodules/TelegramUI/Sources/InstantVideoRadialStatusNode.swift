@@ -200,8 +200,12 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
                         self.hapticFeedback.impact(.light)
                     }
                 }
-                self.seekTo?(min(0.99, fraction), false)
-                self.seekingProgress = CGFloat(fraction)
+                let newProgress = min(0.99, fraction)
+                if let seekingProgress = self.seekingProgress, abs(seekingProgress - CGFloat(newProgress)) < 0.005 {
+                } else {
+                    self.seekTo?(newProgress, false)
+                    self.seekingProgress = CGFloat(fraction)
+                }
             case .ended, .cancelled:
                 self.seeking = false
                 self.seekTo?(min(0.99, fraction), true)
