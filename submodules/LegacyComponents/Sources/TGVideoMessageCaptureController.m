@@ -96,6 +96,7 @@ typedef enum
     UIView *_separatorView;
     
     UIImageView *_placeholderView;
+    TGVideoMessageShimmerView *_shimmerView;
     
     bool _automaticDismiss;
     NSTimeInterval _startTimestamp;
@@ -328,6 +329,10 @@ typedef enum
     _placeholderView.backgroundColor = [UIColor blackColor];
     _placeholderView.image = [TGVideoMessageCaptureController startImage];
     [_circleView addSubview:_placeholderView];
+    
+    _shimmerView = [[TGVideoMessageShimmerView alloc] initWithFrame:_circleView.bounds];
+    [_shimmerView updateAbsoluteRect:_circleView.bounds containerSize:_circleView.bounds.size];
+    [_circleView addSubview:_shimmerView];
     
     if (iosMajorVersion() >= 11)
     {
@@ -1182,9 +1187,11 @@ typedef enum
     [UIView animateWithDuration:0.3 delay:delay options:kNilOptions animations:^
     {
         _placeholderView.alpha = 0.0f;
+        _shimmerView.alpha = 0.0f;
         _switchButton.alpha = 1.0f;
     } completion:^(__unused BOOL finished)
     {
+        _shimmerView.hidden = true;
         _placeholderView.hidden = true;
         _placeholderView.alpha = 1.0f;
     }];
