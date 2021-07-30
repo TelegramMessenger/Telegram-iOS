@@ -1,5 +1,5 @@
 
-public protocol PeerChatListEmbeddedInterfaceState: PostboxCoding {
+public protocol PeerChatListEmbeddedInterfaceState: Codable {
     var timestamp: Int32 { get }
     
     func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool

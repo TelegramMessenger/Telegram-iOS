@@ -17,6 +17,7 @@ import ListMessageItem
 import AccountContext
 import ChatInterfaceState
 import ChatListUI
+import ComponentFlow
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -546,6 +547,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     let topVisibleMessageRange = ValuePromise<ChatTopVisibleMessageRange?>(nil, ignoreRepeated: true)
     
     var isSelectionGestureEnabled = true
+
+    private var overscrollView: ComponentHostView<Empty>?
+    var nextChannelToRead: EnginePeer?
+    var offerNextChannelToRead: Bool = false
+    private var currentOverscrollExpandProgress: CGFloat = 0.0
+    private var feedback: HapticFeedback?
+    var openNextChannelToRead: ((EnginePeer) -> Void)?
     
     private let clientId: Atomic<Int32>
     
@@ -577,6 +585,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         nextClientId += 1
         
         super.init()
+
+        self.clipsToBounds = false
         
         self.accessibilityPageScrolledString = { [weak self] row, count in
             if let strongSelf = self {
@@ -617,7 +627,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        self.preloadPages = false
+        self.preloadPages = true
         switch self.mode {
             case .bubbles:
                 self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
@@ -1115,11 +1125,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 if strongSelf.tagMask == nil {
                     var atBottom = false
+                    var offsetFromBottom: CGFloat?
                     switch offset {
                         case let .known(offsetValue):
                             if offsetValue.isLessThanOrEqualTo(0.0) {
                                 atBottom = true
+                                offsetFromBottom = offsetValue
                             }
+                            //print("offsetValue: \(offsetValue)")
                         default:
                             break
                     }
@@ -1130,6 +1143,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         strongSelf.isScrollAtBottomPositionUpdated?()
                     }
+
+                    strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
                 }
             }
         }
@@ -1150,10 +1165,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self?.isInteractivelyScrollingPromise.set(true)
             self?.beganDragging?()
         }
+
+        self.endedInteractiveDragging = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let channel = strongSelf.nextChannelToRead, strongSelf.currentOverscrollExpandProgress >= 0.99 {
+                strongSelf.openNextChannelToRead?(channel)
+            }
+        }
         
         self.didEndScrolling = { [weak self] in
-            self?.isInteractivelyScrollingValue = false
-            self?.isInteractivelyScrollingPromise.set(false)
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isInteractivelyScrollingValue = false
+            strongSelf.isInteractivelyScrollingPromise.set(false)
         }
         
         let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
@@ -1176,6 +1203,64 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
+    }
+
+    private func maybeUpdateOverscrollAction(offset: CGFloat?) {
+        if let offset = offset, offset < 0.0, self.offerNextChannelToRead {
+            let overscrollView: ComponentHostView<Empty>
+            if let current = self.overscrollView {
+                overscrollView = current
+            } else {
+                overscrollView = ComponentHostView<Empty>()
+                overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                self.overscrollView = overscrollView
+                self.view.addSubview(overscrollView)
+            }
+
+            let expandProgress: CGFloat = min(1.0, max(-offset, 0.0) / 110.0)
+
+            let text: String
+            if self.nextChannelToRead != nil {
+                if expandProgress >= 0.99 {
+                    //TODO:localize
+                    text = "Release to go to the next unread channel"
+                } else {
+                    text = "Swipe up to go to the next unread channel"
+                }
+
+                let previousType = self.currentOverscrollExpandProgress >= 0.99
+                let currentType = expandProgress >= 0.99
+
+                if previousType != currentType {
+                    if self.feedback == nil {
+                        self.feedback = HapticFeedback()
+                    }
+                    self.feedback?.tap()
+                }
+
+                self.currentOverscrollExpandProgress = expandProgress
+            } else {
+                text = "You have no unread channels"
+            }
+
+            let overscrollSize = overscrollView.update(
+                transition: .immediate,
+                component: AnyComponent(ChatOverscrollControl(
+                    text: text,
+                    backgroundColor: selectDateFillStaticColor(theme: self.currentPresentationData.theme.theme, wallpaper: self.currentPresentationData.theme.wallpaper),
+                    foregroundColor: bubbleVariableColor(variableColor: self.currentPresentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: self.currentPresentationData.theme.wallpaper),
+                    peer: self.nextChannelToRead,
+                    context: self.context,
+                    expandProgress: expandProgress
+                )),
+                environment: {},
+                containerSize: CGSize(width: self.bounds.width, height: 200.0)
+            )
+            overscrollView.frame = CGRect(origin: CGPoint(x: floor((self.bounds.width - overscrollSize.width) / 2.0), y: -offset + self.insets.top - overscrollSize.height - 10.0), size: overscrollSize)
+        } else if let overscrollView = self.overscrollView {
+            self.overscrollView = nil
+            overscrollView.removeFromSuperview()
+        }
     }
     
     func refreshPollActionsForVisibleMessages() {
@@ -2324,4 +2409,76 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
 
     var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
+
+    final class SnapshotState {
+        fileprivate let snapshotTopInset: CGFloat
+        fileprivate let snapshotBottomInset: CGFloat
+        fileprivate let snapshotView: UIView
+
+        fileprivate init(
+            snapshotTopInset: CGFloat,
+            snapshotBottomInset: CGFloat,
+            snapshotView: UIView
+        ) {
+            self.snapshotTopInset = snapshotTopInset
+            self.snapshotBottomInset = snapshotBottomInset
+            self.snapshotView = snapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        var snapshotTopInset: CGFloat = 0.0
+        var snapshotBottomInset: CGFloat = 0.0
+        self.forEachItemNode { itemNode in
+            let topOverflow = itemNode.frame.maxY - self.bounds.height
+            snapshotTopInset = max(snapshotTopInset, topOverflow)
+
+            if itemNode.frame.minY < 0.0 {
+                snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
+            }
+        }
+        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+
+        let currentSnapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+        currentSnapshotView.frame = self.view.bounds
+        if let sublayers = self.layer.sublayers {
+            for sublayer in sublayers {
+                sublayer.isHidden = true
+            }
+        }
+        self.view.addSubview(currentSnapshotView)
+
+        return SnapshotState(
+            snapshotTopInset: snapshotTopInset,
+            snapshotBottomInset: snapshotBottomInset,
+            snapshotView: snapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        var snapshotTopInset: CGFloat = 0.0
+        var snapshotBottomInset: CGFloat = 0.0
+        self.forEachItemNode { itemNode in
+            let topOverflow = itemNode.frame.maxY - self.bounds.height
+            snapshotTopInset = max(snapshotTopInset, topOverflow)
+
+            if itemNode.frame.minY < 0.0 {
+                snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
+            }
+        }
+
+        let snapshotParentView = UIView()
+        snapshotParentView.addSubview(snapshotState.snapshotView)
+        snapshotParentView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        snapshotParentView.frame = self.view.frame
+
+        snapshotState.snapshotView.frame = snapshotParentView.bounds
+        self.view.superview?.insertSubview(snapshotParentView, belowSubview: self.view)
+
+        snapshotParentView.layer.animatePosition(from: CGPoint(x: 0.0, y: 0.0), to: CGPoint(x: 0.0, y: -self.view.bounds.height - snapshotState.snapshotBottomInset - snapshotTopInset), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshotParentView] _ in
+            snapshotParentView?.removeFromSuperview()
+        })
+
+        self.view.layer.animatePosition(from: CGPoint(x: 0.0, y: self.view.bounds.height + snapshotTopInset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+    }
 }
