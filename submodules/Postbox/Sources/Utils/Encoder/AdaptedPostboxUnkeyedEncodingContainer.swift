@@ -106,17 +106,14 @@ extension _AdaptedPostboxEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
     }
     
     func encode<T>(_ value: T) throws where T : Encodable {
-        let innerEncoder = _AdaptedPostboxEncoder()
+        let typeHash: Int32 = murMurHashString32("\(type(of: value))")
+
+        let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try! value.encode(to: innerEncoder)
 
         let (data, _) = innerEncoder.makeData()
 
         let buffer = WriteBuffer()
-        var typeHash: Int32 = murMurHashString32("\(type(of: value))")
-        buffer.write(&typeHash, offset: 0, length: 4)
-
-        var length: Int32 = Int32(data.count)
-        buffer.write(&length, offset: 0, length: 4)
 
         buffer.write(data)
 

@@ -585,6 +585,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         nextClientId += 1
         
         super.init()
+
+        self.clipsToBounds = false
         
         self.accessibilityPageScrolledString = { [weak self] row, count in
             if let strongSelf = self {
@@ -625,7 +627,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        self.preloadPages = false
+        self.preloadPages = true
         switch self.mode {
             case .bubbles:
                 self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
@@ -2407,4 +2409,76 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
 
     var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
+
+    final class SnapshotState {
+        fileprivate let snapshotTopInset: CGFloat
+        fileprivate let snapshotBottomInset: CGFloat
+        fileprivate let snapshotView: UIView
+
+        fileprivate init(
+            snapshotTopInset: CGFloat,
+            snapshotBottomInset: CGFloat,
+            snapshotView: UIView
+        ) {
+            self.snapshotTopInset = snapshotTopInset
+            self.snapshotBottomInset = snapshotBottomInset
+            self.snapshotView = snapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        var snapshotTopInset: CGFloat = 0.0
+        var snapshotBottomInset: CGFloat = 0.0
+        self.forEachItemNode { itemNode in
+            let topOverflow = itemNode.frame.maxY - self.bounds.height
+            snapshotTopInset = max(snapshotTopInset, topOverflow)
+
+            if itemNode.frame.minY < 0.0 {
+                snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
+            }
+        }
+        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+
+        let currentSnapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+        currentSnapshotView.frame = self.view.bounds
+        if let sublayers = self.layer.sublayers {
+            for sublayer in sublayers {
+                sublayer.isHidden = true
+            }
+        }
+        self.view.addSubview(currentSnapshotView)
+
+        return SnapshotState(
+            snapshotTopInset: snapshotTopInset,
+            snapshotBottomInset: snapshotBottomInset,
+            snapshotView: snapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        var snapshotTopInset: CGFloat = 0.0
+        var snapshotBottomInset: CGFloat = 0.0
+        self.forEachItemNode { itemNode in
+            let topOverflow = itemNode.frame.maxY - self.bounds.height
+            snapshotTopInset = max(snapshotTopInset, topOverflow)
+
+            if itemNode.frame.minY < 0.0 {
+                snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
+            }
+        }
+
+        let snapshotParentView = UIView()
+        snapshotParentView.addSubview(snapshotState.snapshotView)
+        snapshotParentView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        snapshotParentView.frame = self.view.frame
+
+        snapshotState.snapshotView.frame = snapshotParentView.bounds
+        self.view.superview?.insertSubview(snapshotParentView, belowSubview: self.view)
+
+        snapshotParentView.layer.animatePosition(from: CGPoint(x: 0.0, y: 0.0), to: CGPoint(x: 0.0, y: -self.view.bounds.height - snapshotState.snapshotBottomInset - snapshotTopInset), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshotParentView] _ in
+            snapshotParentView?.removeFromSuperview()
+        })
+
+        self.view.layer.animatePosition(from: CGPoint(x: 0.0, y: self.view.bounds.height + snapshotTopInset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+    }
 }

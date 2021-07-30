@@ -7036,11 +7036,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            if let navigationController = strongSelf.effectiveNavigationController, let snapshotView = strongSelf.chatDisplayNode.view.snapshotView(afterScreenUpdates: false) {
-                snapshotView.frame = strongSelf.view.bounds
-                strongSelf.view.addSubview(snapshotView)
+            if let navigationController = strongSelf.effectiveNavigationController {
+                let snapshotState = strongSelf.chatDisplayNode.prepareSnapshotState(
+                    titleViewSnapshotState: strongSelf.chatTitleView?.prepareSnapshotState(),
+                    avatarSnapshotState: (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.prepareSnapshotState()
+                )
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, completion: { nextController in
-                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotView: snapshotView)
+                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }))
             }
         }
@@ -7048,10 +7050,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.displayNodeDidLoad()
     }
 
-    private var storedAnimateFromSnapshotView: UIView?
+    private var storedAnimateFromSnapshotState: ChatControllerNode.SnapshotState?
 
-    private func animateFromPreviousController(snapshotView: UIView) {
-        self.storedAnimateFromSnapshotView = snapshotView
+    private func animateFromPreviousController(snapshotState: ChatControllerNode.SnapshotState) {
+        self.storedAnimateFromSnapshotState = snapshotState
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -7106,7 +7108,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.didAppear = true
         
-        self.chatDisplayNode.historyNode.preloadPages = true
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
         self.chatDisplayNode.historyNode.canReadHistory.set(combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
@@ -7455,15 +7456,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
 
-        if let snapshotView = self.storedAnimateFromSnapshotView {
-            self.storedAnimateFromSnapshotView = nil
+        if let snapshotState = self.storedAnimateFromSnapshotState {
+            self.storedAnimateFromSnapshotState = nil
 
-            snapshotView.frame = self.view.bounds.offsetBy(dx: 0.0, dy: -self.view.bounds.height)
-            self.view.insertSubview(snapshotView, at: 0)
-
-            self.view.layer.animateBoundsOriginYAdditive(from: -self.view.bounds.height, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
+            if let titleViewSnapshotState = snapshotState.titleViewSnapshotState {
+                self.chatTitleView?.animateFromSnapshot(titleViewSnapshotState)
+            }
+            if let avatarSnapshotState = snapshotState.avatarSnapshotState {
+                (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.animateFromSnapshot(avatarSnapshotState)
+            }
+            self.chatDisplayNode.animateFromSnapshot(snapshotState)
         }
     }
     

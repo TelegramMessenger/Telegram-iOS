@@ -585,22 +585,12 @@ public final class PostboxEncoder {
     }
 
     public func encode<T: Encodable>(_ value: T, forKey key: String) {
-        let innerEncoder = AdaptedPostboxEncoder()
-        guard let innerData = try? innerEncoder.encode(value) else {
-            return
-        }
+        let typeHash: Int32 = murMurHashString32("\(type(of: value))")
+        let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
+        try! value.encode(to: innerEncoder)
 
-        self.encodeKey(key)
-        var t: Int8 = ValueType.Object.rawValue
-        self.buffer.write(&t, offset: 0, length: 1)
-
-        let string = "\(type(of: value))"
-        var typeHash: Int32 = murMurHashString32(string)
-        self.buffer.write(&typeHash, offset: 0, length: 4)
-
-        var length: Int32 = Int32(innerData.count)
-        self.buffer.write(&length, offset: 0, length: 4)
-        self.buffer.write(innerData)
+        let (data, valueType) = innerEncoder.makeData()
+        self.encodeInnerObjectData(data, valueType: valueType, forKey: key)
     }
 
     func encodeInnerObjectData(_ value: Data, valueType: ValueType, forKey key: String) {
@@ -995,9 +985,10 @@ public final class PostboxDecoder {
 
                 var length: Int32 = 0
                 memcpy(&length, self.buffer.memory + self.offset, 4)
+                self.offset += 4
 
-                let innerData = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(length), freeWhenDone: false).makeData()
-                self.offset += 4 + Int(length)
+                let innerData = ReadBuffer(memory: self.buffer.memory + self.offset, length: Int(length), freeWhenDone: false).makeData()
+                self.offset += Int(length)
 
                 return (innerData, actualValueType)
             } else {

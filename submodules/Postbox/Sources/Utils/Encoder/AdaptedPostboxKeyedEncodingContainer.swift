@@ -1,15 +1,18 @@
 import Foundation
+import MurMurHash32
 
 extension _AdaptedPostboxEncoder {
     final class KeyedContainer<Key> where Key: CodingKey {
         var codingPath: [CodingKey]
         var userInfo: [CodingUserInfoKey: Any]
+        let typeHash: Int32
 
         let encoder: PostboxEncoder
         
-        init(codingPath: [CodingKey], userInfo: [CodingUserInfoKey : Any]) {
+        init(codingPath: [CodingKey], userInfo: [CodingUserInfoKey : Any], typeHash: Int32) {
             self.codingPath = codingPath
             self.userInfo = userInfo
+            self.typeHash = typeHash
 
             self.encoder = PostboxEncoder()
         }
@@ -17,7 +20,7 @@ extension _AdaptedPostboxEncoder {
         func makeData() -> (Data, ValueType) {
             let buffer = WriteBuffer()
 
-            var typeHash: Int32 = 0
+            var typeHash: Int32 = self.typeHash
             buffer.write(&typeHash, offset: 0, length: 4)
 
             let data = self.encoder.makeData()
@@ -33,7 +36,8 @@ extension _AdaptedPostboxEncoder {
 
 extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
     func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable {
-        let innerEncoder = _AdaptedPostboxEncoder()
+        let typeHash: Int32 = murMurHashString32("\(type(of: value))")
+        let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try! value.encode(to: innerEncoder)
 
         let (data, valueType) = innerEncoder.makeData()
