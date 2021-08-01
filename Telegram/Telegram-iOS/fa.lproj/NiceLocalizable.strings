@@ -17,6 +17,10 @@
 "NiceFeatures.ChatScreen.AnimatedStickers" = "استیکرهای انیمیشنی";
 "NiceFeatures.useBackCam" = "از دوربین عقب استفاده کنید (فیلم های گرد)";
 
+"NiceFeatures.Folders.Header" = "پوشه ها";
+
+"NiceFeatures.RoundVideos.Header" = "فیلم های round";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "ذخیره در فضای ابری";
 
@@ -119,3 +123,10 @@
 "Gmod.OpenChatNotice" = "چت به صورت خوانده شده نشان داده می شود ، ولی شما می توانید پیش نمایش چت را با نگه داشتن  طولانی ببیند(لمس طولانی)";
 "Gmod.OpenChatBtn" = "بله ، چت را باز کن";
 "Gmod.DisableBtn" = "هشدار ها را غیر فعال کن";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "شماره شما فقط در رابط کاربری پنهان خواهد شد. برای پنهان کردن آن از دید دیگران ، لطفاً از تنظیمات حریم خصوصی استفاده کنید.";
+"NicegramSettings.Other.showProfileId" = "نمایش ایدی پروفایل";
+"NicegramSettings.Other.showRegDate" = "دریافت تاریخ ثبت نام";
+"Premium.OnetapTranslate.LowPower" = "شناخت در مورد قدرت کم";
+"Premium.OnetapTranslate.LowPower.Notice" = "برنامه زبان هر پیام را در دستگاه شما تشخیص می دهد. این یک کار با عملکرد بالا است که می تواند بر عمر باتری شما تأثیر بگذارد.";
+"Premium.rememberFolderOnExit" = "پوشه فعلی را در هنگام خروج بخاطر بسپارید";
