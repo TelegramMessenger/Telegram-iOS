@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AsyncDisplayKit
 import Display
 import UIKit
@@ -853,12 +852,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             if !hasAutoremove {
                 for media in message.media {
-                    if media is TelegramMediaAction {
+                    if let action = media as? TelegramMediaAction {
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel {
                             if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canDeleteMessages) == true) {
                             } else {
                                 isUnremovableAction = true
                             }
+                        }
+
+                        switch action.action {
+                        case .historyScreenshot:
+                            isUnremovableAction = true
+                        default:
+                            break
                         }
                     }
                     if let file = media as? TelegramMediaFile {
@@ -1160,6 +1166,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
         var banPeer: Peer?
         var hadPersonalIncoming = false
         var hadBanPeerId = false
+        var disableDelete = false
         
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let peer = transaction.getPeer(peerId) {
@@ -1330,6 +1337,15 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
+                        for media in message.media {
+                            if let action = media as? TelegramMediaAction {
+                                if case .historyScreenshot = action.action {
+                                    optionsMap[id]!.remove(.deleteLocally)
+                                    optionsMap[id]!.remove(.deleteGlobally)
+                                    disableDelete = true
+                                }
+                            }
+                        }
                         if user.botInfo != nil && message.flags.contains(.Incoming) && !user.id.isReplies && !isAction {
                             optionsMap[id]!.insert(.report)
                         }
@@ -1340,6 +1356,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                                 switch action.action {
                                     case .historyScreenshot:
                                         isNonRemovableServiceAction = true
+                                        disableDelete = true
                                     default:
                                         break
                                 }
@@ -1366,9 +1383,9 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
             if hadPersonalIncoming && optionsMap.values.contains(where: { $0.contains(.deleteGlobally) }) && !reducedOptions.contains(.deleteGlobally) {
                 reducedOptions.insert(.unsendPersonal)
             }
-            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer)
+            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete)
         } else {
-            return ChatAvailableMessageActions(options: [], banAuthor: nil)
+            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false)
         }
     }
 }
@@ -1596,5 +1613,5 @@ private func stringForRemainingTime(_ duration: Int32, strings: PresentationStri
     } else {
         durationString = String(format: "%d:%02d", minutes, seconds)
     }
-    return strings.Conversation_AutoremoveRemainingTime(durationString).0
+    return strings.Conversation_AutoremoveRemainingTime(durationString).string
 }

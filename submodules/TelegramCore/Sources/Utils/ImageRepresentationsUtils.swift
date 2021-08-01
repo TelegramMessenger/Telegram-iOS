@@ -1,7 +1,6 @@
 import Postbox
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
     if representations.count == 0 {

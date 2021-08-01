@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 extension TelegramMediaGame {
     convenience init(apiGame: Api.Game) {

@@ -84,6 +84,16 @@ public struct ListViewItemLayoutParams {
 }
 
 open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
+    public struct HeaderId: Hashable {
+        public var space: AnyHashable
+        public var id: AnyHashable
+
+        public init(space: AnyHashable, id: AnyHashable) {
+            self.space = space
+            self.id = id
+        }
+    }
+
     let rotated: Bool
     final var index: Int?
     
@@ -116,6 +126,14 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
+
+    final var tempHeaderSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
+    final var headerSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
+
+    public internal(set) var attachedHeaderNodes: [ListViewItemHeaderNode] = []
+
+    open func attachedHeaderNodesUpdated() {
+    }
     
     final let wantsScrollDynamics: Bool
     
@@ -221,6 +239,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     var apparentHeight: CGFloat = 0.0
+    public private(set) var apparentHeightTransition: (CGFloat, CGFloat)?
     private var _bounds: CGRect = CGRect()
     private var _position: CGPoint = CGPoint()
     
@@ -465,11 +484,15 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
+        self.apparentHeightTransition = (self.apparentHeight, value)
         let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
                 if let update = update {
                     update(progress, currentValue)
+                }
+                if progress == 1.0 {
+                    strongSelf.apparentHeightTransition = nil
                 }
             }
         })
@@ -533,7 +556,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return false
     }
     
-    open func header() -> ListViewItemHeader? {
+    open func headers() -> [ListViewItemHeader]? {
         return nil
     }
     

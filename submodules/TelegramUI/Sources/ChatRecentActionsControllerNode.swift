@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -112,7 +111,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.listNode.dynamicBounceEnabled = false
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
@@ -168,8 +167,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
                                             if let strongSelf = self {
-                                                let _ = (revokePeerExportedInvitation(account: strongSelf.context.account, peerId: peer.id, link: invite.link)
-                                                
+                                                let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: invite.link)
                                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                                     self?.eventLogContext.reload()
                                                 })
@@ -284,13 +282,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             let resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = strongSelf.context.engine.peers.resolvePeerByName(name: peerName)
-                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                        if let peerId = peerId {
-                            return context.account.postbox.loadedPeerWithId(peerId)
-                            |> map(Optional.init)
-                        } else {
-                            return .single(nil)
-                        }
+                |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                    return .single(peer?._asPeer())
                 }
             } else {
                 resolveSignal = context.account.postbox.loadedPeerWithId(strongSelf.peer.id)
@@ -733,7 +726,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if displayEmptyNode {
                                 var text: String = ""
                                 if let query = strongSelf.filter.query, hasFilter {
-                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
+                                    text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).string
                                 } else {
                                     text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Broadcast_AdminLog_EmptyText
                                 }
@@ -791,17 +784,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let postbox = self.context.account.postbox
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         |> take(1)
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            if let peerId = peerId {
-                return postbox.loadedPeerWithId(peerId) |> map(Optional.init)
-            } else {
-                return .single(nil)
-            }
-        }
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -972,7 +958,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 var isOn: Bool = true
                 var text: String?
                 if let myValue = value.value {
-                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").0
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").string
                 } else {
                     isOn = false
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff

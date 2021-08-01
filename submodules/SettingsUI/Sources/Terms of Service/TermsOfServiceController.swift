@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -125,8 +124,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
             }
             
             if let ageConfirmation = strongSelf.ageConfirmation {
-                let theme: PresentationTheme = strongSelf.presentationData.theme
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationAgree, action: {
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationAgree, action: {
                     self?.accept(self?.proccessBotNameAfterAccept)
                 })]), in: .window(.root))
             } else {

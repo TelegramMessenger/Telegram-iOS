@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -314,12 +313,12 @@ public final class SecretMediaPreviewController: ViewController {
                                 let text: String
                                 if let file = media as? TelegramMediaFile {
                                     if file.isAnimated {
-                                        text = strongSelf.presentationData.strings.SecretGIF_NotViewedYet(peerTitle).0
+                                        text = strongSelf.presentationData.strings.SecretGIF_NotViewedYet(peerTitle).string
                                     } else {
-                                        text = strongSelf.presentationData.strings.SecretVideo_NotViewedYet(peerTitle).0
+                                        text = strongSelf.presentationData.strings.SecretVideo_NotViewedYet(peerTitle).string
                                     }
                                 } else {
-                                    text = strongSelf.presentationData.strings.SecretImage_NotViewedYet(peerTitle).0
+                                    text = strongSelf.presentationData.strings.SecretImage_NotViewedYet(peerTitle).string
                                 }
                                 contentNode.setText(text)
                                 strongSelf.controllerNode.updatePresentationState({
@@ -438,7 +437,7 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 
-                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
+                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)), streamVideos: false, hideControls: true, isSecret: true, playbackRate: { nil }, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                 }, present: { _, _ in }) else {
                     self._ready.set(.single(true))

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -18,13 +17,13 @@ final class MentionChatInputPanelItem: ListViewItem {
     fileprivate let revealed: Bool
     fileprivate let inverted: Bool
     fileprivate let peer: Peer
-    private let peerSelected: (Peer) -> Void
-    fileprivate let setPeerIdRevealed: (PeerId?) -> Void
-    fileprivate let removeRequested: (PeerId) -> Void
+    private let peerSelected: (EnginePeer) -> Void
+    fileprivate let setPeerIdRevealed: (EnginePeer.Id?) -> Void
+    fileprivate let removeRequested: (EnginePeer.Id) -> Void
     
     let selectable: Bool = true
     
-    public init(context: AccountContext, presentationData: ItemListPresentationData, inverted: Bool, peer: Peer, revealed: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (Peer) -> Void, removeRequested: @escaping (PeerId) -> Void) {
+    public init(context: AccountContext, presentationData: ItemListPresentationData, inverted: Bool, peer: Peer, revealed: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, removeRequested: @escaping (PeerId) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.inverted = inverted
@@ -86,7 +85,7 @@ final class MentionChatInputPanelItem: ListViewItem {
         if self.revealed {
             self.setPeerIdRevealed(nil)
         } else {
-            self.peerSelected(self.peer)
+            self.peerSelected(EnginePeer(self.peer))
         }
     }
 }
@@ -188,8 +187,6 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.validLayout = (nodeLayout.contentSize, params.leftInset, params.rightInset)
                     
-                    let revealOffset = strongSelf.revealOffset
-                    
                     if let updatedInverted = updatedInverted {
                         if updatedInverted {
                             strongSelf.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
@@ -231,7 +228,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
     }
     
     func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        if let (size, leftInset, rightInset) = self.validLayout {
+        if let (size, leftInset, _) = self.validLayout {
             transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 12.0 + leftInset, y: self.avatarNode.frame.minY), size: self.avatarNode.frame.size))
             transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 55.0 + leftInset, y: self.textNode.frame.minY), size: self.textNode.frame.size))
         }
@@ -240,7 +237,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if let revealNode = self.revealNode, self.revealOffset != 0 {
+        if let _ = self.revealNode, self.revealOffset != 0 {
             return
         }
         
@@ -419,7 +416,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
     
     private func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
-        guard let (size, leftInset, rightInset) = self.validLayout else {
+        guard let (size, _, rightInset) = self.validLayout else {
             return
         }
         

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 
 public func legacyImageLocationUri(resource: MediaResource) -> String? {
     if let resource = resource as? CloudPeerPhotoSizeMediaResource {

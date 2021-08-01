@@ -151,9 +151,10 @@ private enum ChatListSearchItemHeaderId: Int32 {
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
-    public let id: Int64
+    public let id: ListViewItemNode.HeaderId
     public let type: ChatListSearchItemHeaderType
     public let stickDirection: ListViewItemHeaderStickDirection = .top
+    public let stickOverInsets: Bool = true
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let actionTitle: String?
@@ -163,14 +164,22 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     
     public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.type = type
-        self.id = Int64(self.type.id.rawValue)
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.type.id.rawValue))
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatListSearchItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    public func node() -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatListSearchItemHeaderNode(type: self.type, theme: self.theme, strings: self.strings, actionTitle: self.actionTitle, action: self.action)
     }
     

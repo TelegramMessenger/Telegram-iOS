@@ -7,7 +7,6 @@ import ItemListPeerItem
 import SwiftSignalKit
 import AccountContext
 import Postbox
-import SyncCore
 import TelegramCore
 import ItemListUI
 

@@ -20,6 +20,13 @@ public final class ManagedAnimationState {
     
     var relativeTime: Double = 0.0
     public var frameIndex: Int?
+    public var position: CGFloat {
+        if let frameIndex = frameIndex {
+            return CGFloat(frameIndex) / CGFloat(frameCount)
+        } else {
+            return 0.0
+        }
+    }
     
     public var executedCallbacks = Set<Int>()
     
@@ -131,6 +138,11 @@ open class ManagedAnimationNode: ASDisplayNode {
     
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
+    
+    public var imageUpdated: ((UIImage) -> Void)?
+    public var image: UIImage? {
+        return self.imageNode.image
+    }
     
     public var state: ManagedAnimationState?
     public var trackStack: [ManagedAnimationItem] = []
@@ -260,6 +272,7 @@ open class ManagedAnimationNode: ASDisplayNode {
                 } else {
                     self.imageNode.image = image
                 }
+                self.imageUpdated?(image)
             }
             
             for (callbackFrame, callback) in state.item.callbacks {

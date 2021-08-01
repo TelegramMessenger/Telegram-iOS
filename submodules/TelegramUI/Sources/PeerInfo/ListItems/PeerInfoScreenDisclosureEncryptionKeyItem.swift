@@ -1,8 +1,8 @@
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
-import SyncCore
 import EncryptionKeyVisualization
+import TelegramCore
 
 final class PeerInfoScreenDisclosureEncryptionKeyItem: PeerInfoScreenItem {
     let id: AnyHashable

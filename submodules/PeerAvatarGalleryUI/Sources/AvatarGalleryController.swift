@@ -6,7 +6,6 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
@@ -43,7 +42,7 @@ public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Si
                 return .single((true, []))
             }
         } else {
-            return fetchAndUpdateCachedPeerData(accountPeerId: context.account.peerId, peerId: peerId, network: context.account.network, postbox: context.account.postbox)
+            return context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peerId)
             |> map { _ -> (Bool, [AvatarGalleryEntry])? in
                 return nil
             }
@@ -748,7 +747,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             case let .image(_, reference, _, _, _, _, _, _, _, _):
                 if self.peer.id == self.context.account.peerId, let peerReference = PeerReference(self.peer) {
                     if let reference = reference {
-                        let _ = (updatePeerPhotoExisting(network: self.context.account.network, reference: reference)
+                        let _ = (self.context.engine.accountData.updatePeerPhotoExisting(reference: reference)
                         |> deliverOnMainQueue).start(next: { [weak self] photo in
                             if let strongSelf = self, let photo = photo, let firstEntry = strongSelf.entries.first, case let .image(image) = firstEntry {
                                 let updatedEntry = AvatarGalleryEntry.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), strongSelf.peer, image.5, image.6, image.7, photo.immediateThumbnailData, image.9)
@@ -860,7 +859,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     if self.peer.id == self.context.account.peerId {
                     } else {
                         if entry == self.entries.first {
-                            let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                            let _ = self.context.engine.peers.updatePeerPhoto(peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
                             dismiss = true
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
@@ -872,7 +871,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 case let .image(_, reference, _, _, _, _, _, messageId, _, _):
                     if self.peer.id == self.context.account.peerId {
                         if let reference = reference {
-                            let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
+                            let _ = self.context.engine.accountData.removeAccountPhoto(reference: reference).start()
                         }
                         if entry == self.entries.first {
                             dismiss = true
@@ -889,7 +888,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         }
                         
                         if entry == self.entries.first {
-                            let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                            let _ = self.context.engine.peers.updatePeerPhoto(peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
                             dismiss = true
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {

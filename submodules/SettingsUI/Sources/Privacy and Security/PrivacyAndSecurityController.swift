@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
@@ -374,21 +373,21 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             if enableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenNobody
             } else {
-                return strings.PrivacySettings_LastSeenNobodyPlus("\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenNobodyPlus("\(countForSelectivePeers(enableFor))").string
             }
         case let .enableEveryone(disableFor):
             if disableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenEverybody
             } else {
-                return strings.PrivacySettings_LastSeenEverybodyMinus("\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenEverybodyMinus("\(countForSelectivePeers(disableFor))").string
             }
         case let .enableContacts(enableFor, disableFor):
             if !enableFor.isEmpty && !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
             } else if !enableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
             } else if !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
             } else {
                 return strings.PrivacySettings_LastSeenContacts
             }

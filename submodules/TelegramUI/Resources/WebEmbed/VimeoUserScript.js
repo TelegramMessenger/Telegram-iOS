@@ -4,17 +4,17 @@ function initialize() {
         controls.style.display = "none";
     }
     
-    var sidedock = document.getElementsByClassName("sidedock")[0];
+    var sidedock = document.getElementsByClassName("vp-sidedock")[0];
     if (sidedock != null) {
         sidedock.style.display = "none";
     }
     
-    var video = document.getElementsByTagName("video")[0];
-    if (video != null) {
-        video.setAttribute("webkit-playsinline", "");
-        video.setAttribute("playsinline", "");
-        video.webkitEnterFullscreen = undefined;
-    }
+//    var video = document.getElementsByTagName("video")[0];
+//    if (video != null) {
+//        video.setAttribute("webkit-playsinline", "");
+//        video.setAttribute("playsinline", "");
+//        video.webkitEnterFullscreen = undefined;
+//    }
 }
 
 function eventFire(el, etype){

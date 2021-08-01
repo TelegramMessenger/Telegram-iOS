@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import CoreLocation
@@ -44,11 +43,11 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     
     private var invalidationTimer: (SwiftSignalKit.Timer, Int32)?
     
-    public init(account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
+    public init(engine: TelegramEngine, account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
         self.account = account
         self.locationManager = locationManager
         
-        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, postbox: account.postbox, accountPeerId: account.peerId, viewTracker: account.viewTracker)
+        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, engine: engine, postbox: account.postbox, accountPeerId: account.peerId, viewTracker: account.viewTracker)
         
         let viewKey: PostboxViewKey = .localMessageTag(.OutgoingLiveLocation)
         self.messagesDisposable = (account.postbox.combinedView(keys: [viewKey])

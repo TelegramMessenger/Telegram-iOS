@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -48,10 +47,16 @@ final class ChatListHighlightedLocation {
 }
 
 public final class ChatListNodeInteraction {
+    public enum PeerEntry {
+        case peerId(PeerId)
+        case peer(Peer)
+    }
+    
     let activateSearch: () -> Void
     let peerSelected: (Peer, ChatListNodeEntryPromoInfo?) -> Void
     let disabledPeerSelected: (Peer) -> Void
     let togglePeerSelected: (Peer) -> Void
+    let togglePeersSelection: ([PeerEntry], Bool) -> Void
     let additionalCategorySelected: (Int) -> Void
     let messageSelected: (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void
     let groupSelected: (PeerGroupId) -> Void
@@ -70,11 +75,12 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (Peer) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId, Bool) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (Peer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId, Bool) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
         self.togglePeerSelected = togglePeerSelected
+        self.togglePeersSelection = togglePeersSelection
         self.additionalCategorySelected = additionalCategorySelected
         self.messageSelected = messageSelected
         self.groupSelected = groupSelected
@@ -565,6 +571,8 @@ public final class ChatListNode: ListView {
     var didBeginSelectingChats: (() -> Void)?
     public var selectionCountChanged: ((Int) -> Void)?
     
+    var isSelectionGestureEnabled = true
+    
     public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
@@ -625,6 +633,34 @@ public final class ChatListNode: ListView {
             if didBeginSelecting {
                 self?.didBeginSelectingChats?()
             }
+        }, togglePeersSelection: { [weak self] peers, selected in
+            self?.updateState { state in
+                var state = state
+                if selected {
+                    for peerEntry in peers {
+                        switch peerEntry {
+                            case let .peer(peer):
+                                state.selectedPeerIds.insert(peer.id)
+                                state.selectedPeerMap[peer.id] = peer
+                            case let .peerId(peerId):
+                                state.selectedPeerIds.insert(peerId)
+                        }
+                    }
+                } else {
+                    for peerEntry in peers {
+                        switch peerEntry {
+                            case let .peer(peer):
+                                state.selectedPeerIds.remove(peer.id)
+                            case let .peerId(peerId):
+                                state.selectedPeerIds.remove(peerId)
+                        }
+                    }
+                }
+                return state
+            }
+            if selected && !peers.isEmpty {
+                self?.didBeginSelectingChats?()
+            }
         }, additionalCategorySelected: { [weak self] id in
             self?.additionalCategorySelected?(id)
         }, messageSelected: { [weak self] peer, message, promoInfo in
@@ -666,7 +702,7 @@ public final class ChatListNode: ListView {
             } else {
                 location = .group(groupId)
             }
-            let _ = (toggleItemPinned(postbox: context.account.postbox, location: location, itemId: itemId)
+            let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
             |> deliverOnMainQueue).start(next: { result in
                 if let strongSelf = self {
                     switch result {
@@ -677,7 +713,7 @@ public final class ChatListNode: ListView {
                         if chatListFilter != nil {
                             text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
                         } else {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0
+                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
                         }
                         strongSelf.presentAlert?(text)
                     }
@@ -1167,16 +1203,18 @@ public final class ChatListNode: ListView {
                     }
                     
                     if case let .index(index) = fromEntry.sortIndex, let _ = index.pinningIndex {
-                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            let location: TogglePeerChatPinnedLocation
-                            if let chatListFilter = chatListFilter {
-                                location = .filter(chatListFilter.id)
-                            } else {
-                                location = .group(groupId)
-                            }
-                            
-                            var itemIds = getPinnedItemIds(transaction: transaction, location: location)
-                            
+                        let location: TogglePeerChatPinnedLocation
+                        if let chatListFilter = chatListFilter {
+                            location = .filter(chatListFilter.id)
+                        } else {
+                            location = .group(groupId)
+                        }
+
+                        let engine = strongSelf.context.engine
+                        return engine.peers.getPinnedItemIds(location: location)
+                        |> mapToSignal { itemIds -> Signal<Bool, NoError> in
+                            var itemIds = itemIds
+
                             var itemId: PinnedItemId?
                             switch fromEntry {
                             case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
@@ -1184,7 +1222,7 @@ public final class ChatListNode: ListView {
                             default:
                                 break
                             }
-                            
+
                             if let itemId = itemId {
                                 itemIds = itemIds.filter({ $0 != itemId })
                                 if let referenceId = referenceId {
@@ -1208,9 +1246,9 @@ public final class ChatListNode: ListView {
                                 } else {
                                     itemIds.append(itemId)
                                 }
-                                return reorderPinnedItemIds(transaction: transaction, location: location, itemIds: itemIds)
+                                return engine.peers.reorderPinnedItemIds(location: location, itemIds: itemIds)
                             } else {
-                                return false
+                                return .single(false)
                             }
                         }
                     }
@@ -1315,6 +1353,15 @@ public final class ChatListNode: ListView {
         }
         
         self.resetFilter()
+        
+        let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        selectionRecognizer.shouldBegin = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.isSelectionGestureEnabled
+        }
+        self.view.addGestureRecognizer(selectionRecognizer)
     }
     
     deinit {
@@ -1332,7 +1379,7 @@ public final class ChatListNode: ListView {
     
     private func resetFilter() {
         if let chatListFilter = self.chatListFilter {
-            self.updatedFilterDisposable.set((updatedChatListFilters(postbox: self.context.account.postbox)
+            self.updatedFilterDisposable.set((self.context.engine.peers.updatedChatListFilters()
             |> map { filters -> ChatListFilter? in
                 for filter in filters {
                     if filter.id == chatListFilter.id {
@@ -1898,6 +1945,147 @@ public final class ChatListNode: ListView {
         }
         return nil
     }
+    
+    private func peerAtPoint(_ point: CGPoint) -> Peer? {
+        var resultPeer: Peer?
+        self.forEachVisibleItemNode { itemNode in
+            if resultPeer == nil, let itemNode = itemNode as? ListViewItemNode, itemNode.frame.contains(point) {
+                if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                    switch item.content {
+                        case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
+                            resultPeer = peer.peer
+                        default:
+                            break
+                    }
+                }
+            }
+        }
+        return resultPeer
+    }
+    
+    private var selectionPanState: (selecting: Bool, initialPeerId: PeerId, toggledPeerIds: [[PeerId]])?
+    private var selectionScrollActivationTimer: SwiftSignalKit.Timer?
+    private var selectionScrollDisplayLink: ConstantDisplayLinkAnimator?
+    private var selectionScrollDelta: CGFloat?
+    private var selectionLastLocation: CGPoint?
+    
+    @objc private func selectionPanGesture(_ recognizer: UIGestureRecognizer) -> Void {
+        let location = recognizer.location(in: self.view)
+        switch recognizer.state {
+            case .began:
+                if let peer = self.peerAtPoint(location) {
+                    let selecting = !self.currentState.selectedPeerIds.contains(peer.id)
+                    self.selectionPanState = (selecting, peer.id, [])
+                    self.interaction?.togglePeersSelection([.peer(peer)], selecting)
+                }
+            case .changed:
+                self.handlePanSelection(location: location)
+                self.selectionLastLocation = location
+            case .ended, .failed, .cancelled:
+                self.selectionPanState = nil
+                self.selectionScrollDisplayLink = nil
+                self.selectionScrollActivationTimer?.invalidate()
+                self.selectionScrollActivationTimer = nil
+                self.selectionScrollDelta = nil
+                self.selectionLastLocation = nil
+                self.selectionScrollSkipUpdate = false
+            case .possible:
+                break
+            @unknown default:
+                fatalError()
+        }
+    }
+    
+    private func handlePanSelection(location: CGPoint) {
+        var location = location
+        if location.y < self.insets.top {
+            location.y = self.insets.top + 5.0
+        } else if location.y > self.frame.height - self.insets.bottom {
+            location.y = self.frame.height - self.insets.bottom - 5.0
+        }
+        
+        if let state = self.selectionPanState {
+            if let peer = self.peerAtPoint(location) {
+                if peer.id == state.initialPeerId {
+                    if !state.toggledPeerIds.isEmpty {
+                        self.interaction?.togglePeersSelection(state.toggledPeerIds.flatMap { $0.compactMap({ .peerId($0) }) }, !state.selecting)
+                        self.selectionPanState = (state.selecting, state.initialPeerId, [])
+                    }
+                } else if state.toggledPeerIds.last?.first != peer.id {
+                    var updatedToggledPeerIds: [[PeerId]] = []
+                    var previouslyToggled = false
+                    for i in (0 ..< state.toggledPeerIds.count) {
+                        if let peerId = state.toggledPeerIds[i].first {
+                            if peerId == peer.id {
+                                previouslyToggled = true
+                                updatedToggledPeerIds = Array(state.toggledPeerIds.prefix(i + 1))
+                                
+                                let peerIdsToToggle = Array(state.toggledPeerIds.suffix(state.toggledPeerIds.count - i - 1)).flatMap { $0 }
+                                self.interaction?.togglePeersSelection(peerIdsToToggle.compactMap { .peerId($0) }, !state.selecting)
+                                break
+                            }
+                        }
+                    }
+                    
+                    if !previouslyToggled {
+                        updatedToggledPeerIds = state.toggledPeerIds
+                        let isSelected = self.currentState.selectedPeerIds.contains(peer.id)
+                        if state.selecting != isSelected {
+                            updatedToggledPeerIds.append([peer.id])
+                            self.interaction?.togglePeersSelection([.peer(peer)], state.selecting)
+                        }
+                    }
+                    
+                    self.selectionPanState = (state.selecting, state.initialPeerId, updatedToggledPeerIds)
+                }
+            }
+        
+            let scrollingAreaHeight: CGFloat = 50.0
+            if location.y < scrollingAreaHeight + self.insets.top || location.y > self.frame.height - scrollingAreaHeight - self.insets.bottom {
+                if location.y < self.frame.height / 2.0 {
+                    self.selectionScrollDelta = (scrollingAreaHeight - (location.y - self.insets.top)) / scrollingAreaHeight
+                } else {
+                    self.selectionScrollDelta = -(scrollingAreaHeight - min(scrollingAreaHeight, max(0.0, (self.frame.height - self.insets.bottom - location.y)))) / scrollingAreaHeight
+                }
+                if let displayLink = self.selectionScrollDisplayLink {
+                    displayLink.isPaused = false
+                } else {
+                    if let _ = self.selectionScrollActivationTimer {
+                    } else {
+                        let timer = SwiftSignalKit.Timer(timeout: 0.45, repeat: false, completion: { [weak self] in
+                            self?.setupSelectionScrolling()
+                        }, queue: .mainQueue())
+                        timer.start()
+                        self.selectionScrollActivationTimer = timer
+                    }
+                }
+            } else {
+                self.selectionScrollDisplayLink?.isPaused = true
+                self.selectionScrollActivationTimer?.invalidate()
+                self.selectionScrollActivationTimer = nil
+            }
+        }
+    }
+    
+    private var selectionScrollSkipUpdate = false
+    private func setupSelectionScrolling() {
+        self.selectionScrollDisplayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+            self?.selectionScrollActivationTimer = nil
+            if let strongSelf = self, let delta = strongSelf.selectionScrollDelta {
+                let distance: CGFloat = 15.0 * min(1.0, 0.15 + abs(delta * delta))
+                let direction: ListViewScrollDirection = delta > 0.0 ? .up : .down
+                let _ = strongSelf.scrollWithDirection(direction, distance: distance)
+                
+                if let location = strongSelf.selectionLastLocation {
+                    if !strongSelf.selectionScrollSkipUpdate {
+                        strongSelf.handlePanSelection(location: location)
+                    }
+                    strongSelf.selectionScrollSkipUpdate = !strongSelf.selectionScrollSkipUpdate
+                }
+            }
+        })
+        self.selectionScrollDisplayLink?.isPaused = false
+    }
 }
 
 private func statusStringForPeerType(accountPeerId: PeerId, strings: PresentationStrings, peer: Peer, isMuted: Bool, isUnread: Bool, isContact: Bool, hasUnseenMentions: Bool, chatListFilters: [ChatListFilter]?) -> (String, Bool)? {
@@ -1950,4 +2138,66 @@ private func statusStringForPeerType(accountPeerId: PeerId, strings: Presentatio
         }
     }
     return (strings.ChatList_PeerTypeNonContact, false)
+}
+
+public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
+    private let selectionGestureActivationThreshold: CGFloat = 5.0
+    
+    var recognized: Bool? = nil
+    var initialLocation: CGPoint = CGPoint()
+    
+    public var shouldBegin: (() -> Bool)?
+    
+    public override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        
+        self.minimumNumberOfTouches = 2
+        self.maximumNumberOfTouches = 2
+    }
+    
+    public override func reset() {
+        super.reset()
+        
+        self.recognized = nil
+    }
+    
+    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if let shouldBegin = self.shouldBegin, !shouldBegin() {
+            self.state = .failed
+        } else {
+            let touch = touches.first!
+            self.initialLocation = touch.location(in: self.view)
+        }
+    }
+    
+    public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        let location = touches.first!.location(in: self.view)
+        let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
+        
+        let touchesArray = Array(touches)
+        if self.recognized == nil, touchesArray.count == 2 {
+            if let firstTouch = touchesArray.first, let secondTouch = touchesArray.last {
+                let firstLocation = firstTouch.location(in: self.view)
+                let secondLocation = secondTouch.location(in: self.view)
+                
+                func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
+                    let dx = v1.x - v2.x
+                    let dy = v1.y - v2.y
+                    return sqrt(dx * dx + dy * dy)
+                }
+                if distance(firstLocation, secondLocation) > 200.0 {
+                    self.state = .failed
+                }
+            }
+            if self.state != .failed && (abs(translation.y) >= selectionGestureActivationThreshold) {
+                self.recognized = true
+            }
+        }
+        
+        if let recognized = self.recognized, recognized {
+            super.touchesMoved(touches, with: event)
+        }
+    }
 }

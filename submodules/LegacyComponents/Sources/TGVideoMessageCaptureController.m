@@ -305,8 +305,8 @@ typedef enum
     }
     
     CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
-    CGFloat diameter = minSide > 320.0f ? 240.0f : 216.0f;
-    CGFloat shadowSize = minSide > 320.0f ? 21.0f : 19.0f;
+    CGFloat diameter = minSide == 320.0 ? 216.0 : MIN(404.0, minSide - 24.0f);
+    CGFloat shadowSize = 21.0f;
     
     CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
     _circleWrapperView = [[UIView alloc] initWithFrame:(CGRect){
@@ -340,14 +340,14 @@ typedef enum
         _placeholderView.accessibilityIgnoresInvertColors = true;
     }
     
-    CGFloat ringViewLength = minSide > 320.0f ? 260.0f : 234.0f;
+    CGFloat ringViewLength = diameter - 8.0f;
     _ringView = [[TGVideoMessageRingView alloc] initWithFrame:(CGRect){
         .origin.x = (_circleWrapperView.bounds.size.width - ringViewLength) / 2.0f,
         .origin.y = (_circleWrapperView.bounds.size.height - ringViewLength) / 2.0f,
         .size.width = ringViewLength,
         .size.height = ringViewLength
     }];
-    _ringView.accentColor = self.pallete != nil ? self.pallete.buttonColor : TGAccentColor();
+    _ringView.accentColor = [UIColor colorWithWhite:1.0 alpha:0.6];
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
@@ -454,6 +454,10 @@ typedef enum
             
             gestureRecognizer.scale = 1.0f;
         }
+            break;
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+            [_capturePipeline cancelZoom];
             break;
         default:
             break;

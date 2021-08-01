@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -39,10 +38,18 @@ private var fadeImage: UIImage? = {
     return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
-        var locations: [CGFloat] = [1.0, 0.0]
-        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+        let stepCount = 10
+        var colors: [CGColor] = []
+        var locations: [CGFloat] = []
+
+        for i in 0 ... stepCount {
+            let t = CGFloat(i) / CGFloat(stepCount)
+            colors.append(fadeColor.withAlphaComponent((1.0 - t * t) * 0.7).cgColor)
+            locations.append(t)
+        }
+
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     })
 }()
@@ -990,7 +997,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func header() -> ListViewItemHeader? {
+    override func headers() -> [ListViewItemHeader]? {
         return nil
     }
     

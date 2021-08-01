@@ -5,7 +5,6 @@ import TelegramUIPreferences
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import LegacyComponents
 import DeviceAccess
@@ -407,7 +406,7 @@ final class AuthorizedApplicationContext {
                                         
                                         var processed = false
                                         for media in firstMessage.media {
-                                            if let action = media as? TelegramMediaAction, case let .geoProximityReached(fromId, toId, distance) = action.action {
+                                            if let action = media as? TelegramMediaAction, case .geoProximityReached = action.action {
                                                 strongSelf.context.sharedContext.openLocationScreen(context: strongSelf.context, messageId: firstMessage.id, navigationController: strongSelf.rootController)
                                                 processed = true
                                                 break
@@ -465,9 +464,9 @@ final class AuthorizedApplicationContext {
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let strongSelf = self, let botName = botName {
-                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-                                if let strongSelf = self, let peerId = peerId {
-                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)))
+                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+                                if let strongSelf = self, let peer = peer {
+                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peer.id)))
                                 }
                             }))
                         }
@@ -612,7 +611,7 @@ final class AuthorizedApplicationContext {
                             switch state {
                                 case .contacts:
                                     splitTest.addEvent(.ContactsRequest)
-                                    DeviceAccess.authorizeAccess(to: .contacts, presentationData: context.sharedContext.currentPresentationData.with { $0 }) { result in
+                                    DeviceAccess.authorizeAccess(to: .contacts, presentationData: context.sharedContext.currentPresentationData.with { $0 }, { result in
                                         if result {
                                             splitTest.addEvent(.ContactsAllowed)
                                         } else {
@@ -620,12 +619,12 @@ final class AuthorizedApplicationContext {
                                         }
                                         permissionsPosition.set(position + 1)
                                         ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: 0)
-                                    }
+                                    })
                                 case .notifications:
                                     splitTest.addEvent(.NotificationsRequest)
                                     DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { result in
                                         context.sharedContext.applicationBindings.registerForNotifications(result)
-                                    }) { result in
+                                    }, { result in
                                         if result {
                                             splitTest.addEvent(.NotificationsAllowed)
                                         } else {
@@ -633,7 +632,7 @@ final class AuthorizedApplicationContext {
                                         }
                                         permissionsPosition.set(position + 1)
                                         ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: 0)
-                                    }
+                                    })
                                 case .cellularData:
                                     DeviceAccess.authorizeAccess(to: .cellularData, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
                                         if let strongSelf = self {
@@ -648,9 +647,9 @@ final class AuthorizedApplicationContext {
                                 case .siri:
                                     DeviceAccess.authorizeAccess(to: .siri, requestSiriAuthorization: { completion in
                                         return context.sharedContext.applicationBindings.requestSiriAuthorization(completion)
-                                    }) { result in
+                                    }, { result in
                                         permissionsPosition.set(position + 1)
-                                    }
+                                    })
                                 default:
                                     break
                             }
@@ -871,21 +870,21 @@ final class AuthorizedApplicationContext {
     func switchAccount() {
         let _ = (activeAccountsAndPeers(context: self.context)
         |> take(1)
-        |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+        |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
             return primaryAndAccounts.1.first
         }
-        |> map { accountAndPeer -> Account? in
-            if let (account, _, _) = accountAndPeer {
-                return account
+        |> map { accountAndPeer -> AccountContext? in
+            if let (context, _, _) = accountAndPeer {
+                return context
             } else {
                 return nil
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] account in
-            guard let strongSelf = self, let account = account else {
+        |> deliverOnMainQueue).start(next: { [weak self] context in
+            guard let strongSelf = self, let context = context else {
                 return
             }
-            strongSelf.context.sharedContext.switchToAccount(id: account.id, fromSettingsController: nil, withChatListController: nil)
+            strongSelf.context.sharedContext.switchToAccount(id: context.account.id, fromSettingsController: nil, withChatListController: nil)
         })
     }
     

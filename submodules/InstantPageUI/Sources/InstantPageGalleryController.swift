@@ -6,7 +6,6 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SafariServices
 import TelegramPresentationData
 import AccountContext
@@ -113,7 +112,7 @@ public struct InstantPageGalleryEntry: Equatable {
                     nativeId = .instantPage(self.pageId, file.fileId)
                 }
                 
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file, nil), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file, nil), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackRate: { nil }, performAction: { _ in }, openActionOptions: { _, _ in }, storeMediaPlaybackState: { _, _, _ in }, present: { _, _ in })
             } else {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)
@@ -135,12 +134,12 @@ public struct InstantPageGalleryEntry: Equatable {
                     present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
                         return makeArguments()
                     }))
-                }), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+                }), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackRate: { nil }, performAction: { _ in }, openActionOptions: { _, _ in }, storeMediaPlaybackState: { _, _, _ in }, present: { _, _ in })
             } else {
                 if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent, openUrl: { url in
                     
                 }) {
-                    return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, nil), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+                    return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, nil), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackRate: { nil }, performAction: { _ in }, openActionOptions: { _, _ in }, storeMediaPlaybackState: { _, _, _ in }, present: { _, _ in })
                 } else {
                     preconditionFailure()
                 }

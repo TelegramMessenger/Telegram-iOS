@@ -2,9 +2,9 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import SwiftSignalKit
+import AccountContext
 
 public class VideoConversionWatcher: TGMediaVideoFileWatcher {
     private let update: (String, Int) -> Void
@@ -44,7 +44,7 @@ public final class LegacyLiveUploadInterfaceResult: NSObject {
 }
 
 public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInterface {
-    private let account: Account
+    private let context: AccountContext
     private let id: Int64
     private var path: String?
     private var size: Int?
@@ -52,8 +52,8 @@ public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUplo
     private let data = Promise<MediaResourceData>()
     private let dataValue = Atomic<MediaResourceData?>(value: nil)
     
-    public init(account: Account) {
-        self.account = account
+    public init(context: AccountContext) {
+        self.context = context
         self.id = Int64.random(in: Int64.min ... Int64.max)
         
         var updateImpl: ((String, Int) -> Void)?
@@ -65,7 +65,7 @@ public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUplo
             if let strongSelf = self {
                 if strongSelf.path == nil {
                     strongSelf.path = path
-                    strongSelf.account.messageMediaPreuploadManager.add(network: strongSelf.account.network, postbox: strongSelf.account.postbox, id: strongSelf.id, encrypt: false, tag: nil, source: strongSelf.data.get())
+                    strongSelf.context.engine.resources.preUpload(id: strongSelf.id, encrypt: false, tag: nil, source: strongSelf.data.get())
                 }
                 strongSelf.size = size
                 

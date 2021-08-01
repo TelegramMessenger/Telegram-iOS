@@ -42,7 +42,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
 @synthesize shutterReleased;
 @synthesize cancelPressed;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera
 {
     self = [super initWithFrame:frame];
     if (self != nil)
@@ -100,7 +100,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
         };
         [_panelView addSubview:_timecodeView];
         
-        _flipButton = [[TGCameraFlipButton alloc] initWithFrame:CGRectMake(0, 0, 44, 44) large:true];
+        _flipButton = [[TGCameraFlipButton alloc] initWithFrame:CGRectMake(0, 20, 44, 44)];
         [_flipButton addTarget:self action:@selector(flipButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_panelView addSubview:_flipButton];
         
@@ -277,6 +277,10 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
                                       (_panelView.frame.size.height - _shutterButton.frame.size.height) / 2,
                                       _shutterButton.frame.size.width, _shutterButton.frame.size.height);
     
+    _flipButton.frame = CGRectMake((_panelView.frame.size.width - _shutterButton.frame.size.width) / 2,
+                                   _shutterButton.frame.origin.y + _shutterButton.frame.size.height + 20.0,
+                                   _flipButton.frame.size.width, _flipButton.frame.size.height);
+    
     CGFloat flipButtonPosition = 0.0f;
     CGFloat cancelButtonPosition = _panelView.frame.size.height - _cancelButton.frame.size.height - 7;
     if (!_doneButton.hidden)
@@ -284,7 +288,6 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
         flipButtonPosition =  _panelView.frame.size.height / 8.0f - _flipButton.frame.size.height / 2.0f;
         cancelButtonPosition = 7.0f;
     }
-    _flipButton.frame = CGRectMake((_panelView.frame.size.width - _flipButton.frame.size.width) / 2, flipButtonPosition, _flipButton.frame.size.width, _flipButton.frame.size.height);
 
     _doneButton.frame = CGRectMake((_panelView.frame.size.width - _doneButton.frame.size.width) / 2, _panelView.frame.size.height - _doneButton.frame.size.height - 7, _doneButton.frame.size.width, _doneButton.frame.size.height);
     

@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return network.request(Api.functions.help.getAppConfig())

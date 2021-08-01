@@ -11,7 +11,6 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
         "//submodules/StickerResources:StickerResources",
         "//submodules/UrlEscaping:UrlEscaping",

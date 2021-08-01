@@ -4,12 +4,12 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
-import SyncCore
 import Display
 import QrCode
 import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
+import TelegramCore
 
 private func shareQrCode(context: AccountContext, link: String, view: UIView) {
     let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))

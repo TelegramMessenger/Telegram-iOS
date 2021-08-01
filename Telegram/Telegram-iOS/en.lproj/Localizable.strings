@@ -89,24 +89,21 @@
 "PUSH_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_MESSAGE_INVOICE" = "%1$@|sent you an invoice for %2$@";
 "PUSH_MESSAGE_FWD" = "%1$@|forwarded you a message";
-"PUSH_MESSAGE_FWDS_1" = "%1$@|forwarded you a message";
-"PUSH_MESSAGE_FWDS_any" = "%1$@|forwarded you %2$d messages";
+"PUSH_MESSAGE_FWDS_TEXT_1" = "forwarded you a message";
+"PUSH_MESSAGE_FWDS_TEXT_any" = "forwarded you %d messages";
 "PUSH_MESSAGE_PHOTO" = "%1$@|sent you a photo";
-"PUSH_MESSAGE_PHOTOS_1" = "%1$@|sent you a photo";
-"PUSH_MESSAGE_PHOTOS_any" = "%1$@|sent you %2$d photos";
+"PUSH_MESSAGE_PHOTOS_TEXT_1" = "sent you a photo";
+"PUSH_MESSAGE_PHOTOS_TEXT_any" = "sent you %d photos";
 "PUSH_MESSAGE_VIDEO" = "%1$@|sent you a video";
-"PUSH_MESSAGE_VIDEOS_1" = "%1$@|sent you a video";
-"PUSH_MESSAGE_VIDEOS_any" = "%1$@|sent you %2$d videos";
+"PUSH_MESSAGE_VIDEOS_TEXT_1" = "sent you a video";
+"PUSH_MESSAGE_VIDEOS_TEXT_any" = "sent you %d videos";
 "PUSH_MESSAGE_ROUND" = "%1$@|sent you a video message";
-"PUSH_MESSAGE_ROUNDS_1" = "%1$@|sent you a video message";
-"PUSH_MESSAGE_ROUNDS_any" = "%1$@|sent you %2$d video messages";
 "PUSH_MESSAGE" = "%1$@|sent you a message";
-"PUSH_MESSAGES_1" = "%1$@|sent you a message";
-"PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
+"PUSH_MESSAGES_TEXT_1" = "sent you a message";
+"PUSH_MESSAGES_TEXT_any" = "sent you %d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
-"PUSH_MESSAGE_FILES_1" = "%1$@|sent you a file";
-"PUSH_MESSAGE_FILES_any" = "%1$@|sent you %2$d files";
-
+"PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
+"PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -124,24 +121,19 @@
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@|posted a GIF";
 "PUSH_CHANNEL_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHANNEL_MESSAGE_FWD" = "%1$@|posted a forwarded message";
-"PUSH_CHANNEL_MESSAGE_FWDS_1" = "%1$@|posted a forwarded message";
-"PUSH_CHANNEL_MESSAGE_FWDS_any" = "%1$@|posted %2$d forwarded messages";
 "PUSH_CHANNEL_MESSAGE_PHOTO" = "%1$@|posted a photo";
-"PUSH_CHANNEL_MESSAGE_PHOTOS_1" = "%1$@|posted a photo";
-"PUSH_CHANNEL_MESSAGE_PHOTOS_any" = "%1$@|posted %2$d photos";
+"PUSH_CHANNEL_MESSAGE_PHOTOS_TEXT_1" = "posted a photo";
+"PUSH_CHANNEL_MESSAGE_PHOTOS_TEXT_any" = "posted %d photos";
 "PUSH_CHANNEL_MESSAGE_VIDEO" = "%1$@|posted a video";
-"PUSH_CHANNEL_MESSAGE_VIDEOS_1" = "%1$@|posted a video";
-"PUSH_CHANNEL_MESSAGE_VIDEOS_any" = "%1$@|posted %2$d videos";
+"PUSH_CHANNEL_MESSAGE_VIDEOS_TEXT_1" = "posted a video";
+"PUSH_CHANNEL_MESSAGE_VIDEOS_TEXT_any" = "posted %d videos";
 "PUSH_CHANNEL_MESSAGE_ROUND" = "%1$@|posted a video message";
-"PUSH_CHANNEL_MESSAGE_ROUNDS_1" = "%1$@|posted a video message";
-"PUSH_CHANNEL_MESSAGE_ROUNDS_any" = "%1$@|posted %2$d video messages";
 "PUSH_CHANNEL_MESSAGE" = "%1$@|posted a message";
-"PUSH_CHANNEL_MESSAGES_1" = "%1$@|posted a message";
-"PUSH_CHANNEL_MESSAGES_any" = "%1$@|posted %2$d messages";
+"PUSH_CHANNEL_MESSAGES_TEXT_1" = "posted a message";
+"PUSH_CHANNEL_MESSAGES_TEXT_any" = "posted %d messages";
 "PUSH_CHANNEL_ALBUM" = "%1$@|posted an album";
-"PUSH_CHANNEL_MESSAGE_DOCS" = "%1$@|posted %2$d files";
-"PUSH_CHANNEL_MESSAGE_DOCS_1" = "%1$@|posted a file";
-"PUSH_CHANNEL_MESSAGE_DOCS_any" = "%1$@|posted %2$d files";
+"PUSH_CHANNEL_MESSAGE_DOCS_TEXT_1" = "posted a file";
+"PUSH_CHANNEL_MESSAGE_DOCS_TEXT_any" = "posted %d files";
 
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@:%3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message to the group";
@@ -169,23 +161,21 @@
 "PUSH_CHAT_RETURNED" = "%2$@|%1$@ has returned to the group";
 "PUSH_CHAT_JOINED" = "%2$@|%1$@ has joined the group";
 "PUSH_CHAT_MESSAGE_FWD" = "%2$@|%1$@ forwarded a message";
-"PUSH_CHAT_MESSAGE_FWDS_1" = "%2$@|%1$@ forwarded a message";
-"PUSH_CHAT_MESSAGE_FWDS_any" = "%2$@|%1$@ forwarded %3$d messages";
+"PUSH_CHAT_MESSAGE_FWDS_TEXT_1" = "{author} forwarded a message";
+"PUSH_CHAT_MESSAGE_FWDS_TEXT_any" = "{author} forwarded %d messages";
 "PUSH_CHAT_MESSAGE_PHOTO" = "%2$@|%1$@ sent a photo";
-"PUSH_CHAT_MESSAGE_PHOTOS_1" = "%2$@|%1$@ sent a photo";
-"PUSH_CHAT_MESSAGE_PHOTOS_any" = "%2$@|%1$@ sent %3$d photos";
+"PUSH_CHAT_MESSAGE_PHOTOS_TEXT_1" = "{author} sent a photo";
+"PUSH_CHAT_MESSAGE_PHOTOS_TEXT_any" = "{author} sent %d photos";
 "PUSH_CHAT_MESSAGE_VIDEO" = "%2$@|%1$@ sent a video";
-"PUSH_CHAT_MESSAGE_VIDEOS_1" = "%2$@|%1$@ sent a video";
-"PUSH_CHAT_MESSAGE_VIDEOS_any" = "%2$@|%1$@ sent %3$d videos";
+"PUSH_CHAT_MESSAGE_VIDEOS_TEXT_1" = "{author} sent a video";
+"PUSH_CHAT_MESSAGE_VIDEOS_TEXT_any" = "{author} sent %d videos";
 "PUSH_CHAT_MESSAGE_ROUND" = "%2$@|%1$@ sent a video message";
-"PUSH_CHAT_MESSAGE_ROUNDS_1" = "%2$@|%1$@ sent a video message";
-"PUSH_CHAT_MESSAGE_ROUNDS_any" = "%2$@|%1$@ sent %3$d video messages";
 "PUSH_CHAT_MESSAGE" = "%2$@|%1$@ sent a message";
-"PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
-"PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
+"PUSH_CHAT_MESSAGES_TEXT_1" = "{author} sent a message";
+"PUSH_CHAT_MESSAGES_TEXT_any" = "{author} sent %d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
-"PUSH_CHAT_MESSAGE_DOCS_FIX1_1" = "%2$@|%1$@ sent a file";
-"PUSH_CHAT_MESSAGE_DOCS_FIX1_any" = "%2$@|%1$@ sent %3$d files";
+"PUSH_CHAT_MESSAGE_DOCS_TEXT_1" = "{author} sent a file";
+"PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -859,7 +849,8 @@
 "MessageTimer.ShortWeeks_3_10" = "%@w";
 "MessageTimer.ShortWeeks_any" = "%@w";
 "MessageTimer.ShortWeeks_many" = "%@w";
-"MessageTimer.ShortWeeks_0" = "%@w";
+"MessageTimer.ShortMonths_1" = "%@mo";
+"MessageTimer.ShortMonths_any" = "%@mo";
 
 "Activity.UploadingPhoto" = "sending photo";
 "Activity.UploadingVideo" = "sending video";
@@ -1285,12 +1276,6 @@
 "ForwardedContacts_0" = "%@ forwarded contacts";
 
 "ForwardedAuthors2" = "%@, %@";
-"ForwardedAuthorsOthers_1" = "%@ and 1 other";
-"ForwardedAuthorsOthers_2" = "%@ and 2 others";
-"ForwardedAuthorsOthers_3_10" = "%@ and %@ others";
-"ForwardedAuthorsOthers_any" = "%@ and %@ others";
-"ForwardedAuthorsOthers_many" = "%@ and %@ others";
-"ForwardedAuthorsOthers_0" = "%@ and %@ others";
 
 "PrivacySettings.TwoStepAuth" = "Two-Step Verification";
 "TwoStepAuth.Title" = "Two-Step Verification";
@@ -3298,7 +3283,7 @@ Unused sets are archived when you add more.";
 "Passport.DeleteDocument" = "Delete Document";
 "Passport.DeleteDocumentConfirmation" = "Are you sure you want to delete this document? All details will be lost.";
 
-"Passport.Scans" = "SCANS";
+"Passport.ScansHeader" = "SCANS";
 "Passport.Scans.Upload" = "Upload Scan";
 "Passport.Scans.UploadNew" = "Upload Additional Scan";
 "Passport.Scans.ScanIndex" = "Scan %@";
@@ -5525,6 +5510,7 @@ Sorry for the inconvenience.";
 "Stats.MessagePublicForwardsTitle" = "Public Shares";
 
 "Call.CameraTooltip" = "Tap here to turn on your camera";
+"Call.CameraOrScreenTooltip" = "Turn on your camera or screensharing";
 "Call.CameraConfirmationText" = "Switch to video call?";
 "Call.CameraConfirmationConfirm" = "Switch";
 
@@ -6571,3 +6557,19 @@ Sorry for the inconvenience.";
 "TwoFactorRemember.Done.Title" = "Perfect!";
 "TwoFactorRemember.Done.Text" = "You still remember your password.";
 "TwoFactorRemember.Done.Action" = "Back to Settings";
+
+"VoiceChat.VideoPreviewPhoneScreen" = "Phone Screen";
+"VoiceChat.VideoPreviewTabletScreen" = "Phone Screen";
+"VoiceChat.VideoPreviewFrontCamera" = "Front Camera";
+"VoiceChat.VideoPreviewBackCamera" = "Back Camera";
+"VoiceChat.VideoPreviewContinue" = "Continue";
+"VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen\nwill be shared";
+
+"Gallery.SaveToGallery" = "Save to Gallery";
+"Gallery.VideoSaved" = "Video Saved";
+"Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
+
+"VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";
+
+"PlaybackSpeed.Title" = "Playback Speed";
+"PlaybackSpeed.Normal" = "Normal";

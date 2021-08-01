@@ -5,7 +5,6 @@ import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
 import Postbox
-import SyncCore
 import TelegramCore
 import Display
 import AccountContext
@@ -284,7 +283,7 @@ public final class InviteLinkInviteController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
-            self.invitesContext = PeerExportedInvitationsContext(account: context.account, peerId: peerId, adminId: nil, revoked: false, forceUpdate: false)
+            self.invitesContext = context.engine.peers.peerExportedInvitations(peerId: peerId, adminId: nil, revoked: false, forceUpdate: false)
                         
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -319,7 +318,7 @@ public final class InviteLinkInviteController: ViewController {
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
             self.listNode.verticalScrollIndicatorFollowsOverscroll = true
             self.listNode.accessibilityPageScrolledString = { row, count in
-                return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
             }
             
             super.init()
@@ -395,7 +394,7 @@ public final class InviteLinkInviteController: ViewController {
                                     dismissAction()
                                     
                                     if let invite = invite {
-                                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
                                             if let result = result, case let .replace(_, invite) = result {
                                                 mainInvitePromise.set(invite)
                                             }

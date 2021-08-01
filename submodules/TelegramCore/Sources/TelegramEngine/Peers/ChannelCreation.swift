@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import SyncCore
 import TelegramApi
 import MtProtoKit
 

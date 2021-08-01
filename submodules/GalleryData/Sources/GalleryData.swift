@@ -3,7 +3,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import PassKit
 import Lottie
@@ -230,20 +229,20 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let startTimecode: Signal<Double?, NoError>
+                let startState: Signal<(timecode: Double?, rate: Double), NoError>
                 if let timecode = timecode {
-                    startTimecode = .single(timecode)
+                    startState = .single((timecode: timecode, rate: 1.0))
                 } else {
-                    startTimecode = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
+                    startState = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
                     |> map { state in
-                        return state?.timestamp
+                        return (state?.timestamp, state?.playbackRate.doubleValue ?? 1.0)
                     }
                 }
                 
-                return .gallery(startTimecode
+                return .gallery(startState
                 |> deliverOnMainQueue
-                |> map { timecode in
-                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil))), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                |> map { startState in
+                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil))), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                     gallery.temporaryDoNotWaitForReady = autoplayingVideo

@@ -6,7 +6,6 @@ import Display
 import SwiftSignalKit
 import WebKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -44,7 +43,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         }
         node.setMessage(self.message)
         
@@ -53,7 +52,7 @@ class ChatDocumentGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatDocumentGalleryItemNode, let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
             node.setMessage(self.message)
         }
     }

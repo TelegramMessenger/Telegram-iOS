@@ -124,7 +124,7 @@ final class ChatTextInputAudioRecordingOverlay {
         
         var containerNodeRef: ASDisplayNode? = self.containerNode
         
-        var completion: () -> Void = {
+        let completion: () -> Void = {
             if let containerNode = containerNodeRef, innerCompleted, outerCompleted, iconCompleted {
                 containerNode.removeFromSupernode()
                 containerNodeRef = nil

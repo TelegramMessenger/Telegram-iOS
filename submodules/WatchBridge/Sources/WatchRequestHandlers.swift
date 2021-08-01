@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import Display
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import WatchCommon
 import TelegramPresentationData
@@ -751,11 +750,11 @@ final class WatchLocationHandler: WatchRequestHandler {
                     if let context = context {
                         return context.engine.peers.resolvePeerByName(name: "foursquare")
                         |> take(1)
-                        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-                            guard let peerId = peerId else {
+                        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+                            guard let peer = peer else {
                                 return .single(nil)
                             }
-                            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }

@@ -2,7 +2,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public extension TelegramEngineUnauthorized {
     final class Auth {
@@ -38,6 +37,10 @@ public extension TelegramEngineUnauthorized {
 
         public func resendTwoStepRecoveryEmail() -> Signal<Never, ResendTwoStepRecoveryEmailError> {
             return _internal_resendTwoStepRecoveryEmail(network: self.account.network)
+        }
+
+        public func uploadedPeerVideo(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+            return _internal_uploadedPeerVideo(postbox: self.account.postbox, network: self.account.network, messageMediaPreuploadManager: nil, resource: resource)
         }
     }
 }

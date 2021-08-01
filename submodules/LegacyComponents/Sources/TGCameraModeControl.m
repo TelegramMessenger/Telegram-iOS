@@ -26,10 +26,7 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        if (frame.size.width > frame.size.height)
-            _kerning = 3.5f;
-        else
-            _kerning = 2.0f;
+        _kerning = 0.75f;
         
         _maskView = [[UIView alloc] initWithFrame:self.bounds];
         _maskView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -53,6 +50,7 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
             [
              [self _createButtonForMode:PGCameraModeVideo title:TGLocalized(@"Camera.VideoMode")],
              [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")]
+//             [self _createButtonForMode:PGCameraModePhotoScan title:TGLocalized(@"Camera.ScanMode")]
             ];
         }
         
@@ -72,7 +70,7 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
             
             _maskLayer = [CAGradientLayer layer];
             _maskLayer.colors = @[ (id)[UIColor clearColor].CGColor, (id)[UIColor whiteColor].CGColor, (id)[UIColor whiteColor].CGColor, (id)[UIColor clearColor].CGColor ];
-            _maskLayer.locations = @[ @0.0f, @0.33f, @0.67f, @1.0f ];
+            _maskLayer.locations = @[ @0.0f, @0.4f, @0.6f, @1.0f ];
             _maskLayer.startPoint = CGPointMake(0.0f, 0.5f);
             _maskLayer.endPoint = CGPointMake(1.0f, 0.5f);
             _maskView.layer.mask = _maskLayer;
@@ -94,19 +92,14 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
     return self;
 }
 
-+ (UIFont *)_buttonFont
-{
-    return [UIFont fontWithName:@"SFCompactText-Regular" size:14];
-}
-
 + (CGFloat)_buttonHorizontalSpacing
 {
-    return 19;
+    return 25;
 }
 
 + (CGFloat)_buttonVerticalSpacing
 {
-    return 19;
+    return 25;
 }
 
 - (UIButton *)_createButtonForMode:(PGCameraMode)mode title:(NSString *)title
@@ -116,11 +109,17 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
     button.exclusiveTouch = true;
     button.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     button.tag = mode;
-    button.titleLabel.font = [TGCameraInterfaceAssets normalFontOfSize:13];
-    [button setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets normalColor], NSKernAttributeName: @(_kerning) }] forState:UIControlStateNormal];
-    [button setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets accentColor], NSKernAttributeName: @(_kerning) }] forState:UIControlStateSelected];
+    [button setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets normalColor], NSKernAttributeName: @(_kerning), NSFontAttributeName: [TGCameraInterfaceAssets regularFontOfSize:14] }] forState:UIControlStateNormal];
+    [button setAttributedTitle:[[NSAttributedString alloc] initWithString:title attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets accentColor], NSKernAttributeName: @(_kerning), NSFontAttributeName: [TGCameraInterfaceAssets boldFontOfSize:14] }] forState:UIControlStateSelected];
     [button setAttributedTitle:[button attributedTitleForState:UIControlStateSelected] forState:UIControlStateHighlighted | UIControlStateSelected];
     [button sizeToFit];
+    button.titleLabel.shadowColor = [UIColor blackColor];
+    button.titleLabel.shadowOffset = CGSizeMake(0.0, 0.0);
+    button.titleLabel.layer.shadowRadius = 2.0;
+    button.titleLabel.layer.shadowOpacity = 0.3;
+    button.titleLabel.layer.masksToBounds = false;
+    button.titleLabel.layer.shouldRasterize = true;
+    button.frame = CGRectMake(0.0, 0.0, button.frame.size.width + 2.0, button.frame.size.height);
     [button addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     return button;

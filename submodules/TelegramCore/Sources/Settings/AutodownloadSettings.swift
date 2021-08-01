@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 public func updateAutodownloadSettingsInteractively(accountManager: AccountManager, _ f: @escaping (AutodownloadSettings) -> AutodownloadSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in

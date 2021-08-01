@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 func cloudChatAddRemoveMessagesOperation(transaction: Transaction, peerId: PeerId, messageIds: [MessageId], type: CloudChatRemoveMessagesType) {
     transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveMessagesOperation(messageIds: messageIds, type: type))

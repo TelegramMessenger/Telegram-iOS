@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramAudio
 
@@ -58,8 +57,8 @@ public struct PresentationCallState: Equatable {
     public enum VideoState: Equatable {
         case notAvailable
         case inactive
-        case active
-        case paused
+        case active(isScreencast: Bool)
+        case paused(isScreencast: Bool)
     }
     
     public enum RemoteVideoState: Equatable {
@@ -133,7 +132,7 @@ public final class PresentationCallVideoView {
 }
 
 public protocol PresentationCall: class {
-    var account: Account { get }
+    var context: AccountContext { get }
     var isIntegratedWithCallKit: Bool { get }
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
@@ -169,6 +168,26 @@ public protocol PresentationCall: class {
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
+public struct VoiceChatConfiguration {
+    public static var defaultValue: VoiceChatConfiguration {
+        return VoiceChatConfiguration(videoParticipantsMaxCount: 30)
+    }
+    
+    public let videoParticipantsMaxCount: Int32
+    
+    fileprivate init(videoParticipantsMaxCount: Int32) {
+        self.videoParticipantsMaxCount = videoParticipantsMaxCount
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> VoiceChatConfiguration {
+        if let data = appConfiguration.data, let value = data["groupcall_video_participants_max"] as? Double {
+            return VoiceChatConfiguration(videoParticipantsMaxCount: Int32(value))
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 public struct PresentationGroupCallState: Equatable {
     public enum NetworkState {
         case connecting
@@ -192,6 +211,7 @@ public struct PresentationGroupCallState: Equatable {
     public var scheduleTimestamp: Int32?
     public var subscribedToScheduled: Bool
     public var isVideoEnabled: Bool
+    public var isVideoWatchersLimitReached: Bool
     
     public init(
         myPeerId: PeerId,
@@ -205,7 +225,8 @@ public struct PresentationGroupCallState: Equatable {
         raisedHand: Bool,
         scheduleTimestamp: Int32?,
         subscribedToScheduled: Bool,
-        isVideoEnabled: Bool
+        isVideoEnabled: Bool,
+        isVideoWatchersLimitReached: Bool
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -219,6 +240,7 @@ public struct PresentationGroupCallState: Equatable {
         self.scheduleTimestamp = scheduleTimestamp
         self.subscribedToScheduled = subscribedToScheduled
         self.isVideoEnabled = isVideoEnabled
+        self.isVideoWatchersLimitReached = isVideoWatchersLimitReached
     }
 }
 

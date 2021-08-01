@@ -1,7 +1,6 @@
 import Foundation
 import Display
 import Postbox
-import SyncCore
 import TelegramCore
 import AccountContext
 import WebKit
@@ -100,12 +99,15 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     
     private var timestamp: Int
+    private var baseRate: Double = 1.0
     private var ignoreEarlierTimestamps = false
     private var status: MediaPlayerStatus
     
     private var ready = false
     private var started = false
     private var ignorePosition: Int?
+    
+    private var isPlaying = true
     
     private enum PlaybackDelay {
         case none
@@ -186,6 +188,8 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
             return
         }
         
+        self.isPlaying = true
+        
         if let eval = self.evalImpl {
             eval("play();", nil)
         }
@@ -194,6 +198,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     
     func pause() {
+        self.isPlaying = false
         if let eval = self.evalImpl {
             eval("pause();", nil)
         }
@@ -201,9 +206,9 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     
     func togglePlayPause() {
         if case .playing = self.status.status {
-            pause()
+            self.pause()
         } else {
-            play()
+            self.play()
         }
     }
     
@@ -217,10 +222,30 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
             eval("seek(\(timestamp));", nil)
         }
         
-        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: true)
+        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: self.status.baseRate, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: true)
         self.updateStatus?(self.status)
         
         self.ignorePosition = 2
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        var baseRate = baseRate
+        if baseRate < 0.5 {
+            baseRate = 0.5
+        }
+        if baseRate > 2.0 {
+            baseRate = 2.0
+        }
+        if !self.ready {
+            self.baseRate = baseRate
+        }
+        
+        if let eval = self.evalImpl {
+            eval("setRate(\(baseRate));", nil)
+        }
+        
+        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: self.status.timestamp, baseRate: baseRate, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: true)
+        self.updateStatus?(self.status)
     }
     
     func pageReady() {
@@ -283,6 +308,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                         switch playback {
                             case 0:
                                 if newTimestamp > Double(duration) - 1.0 {
+                                    self.isPlaying = false
                                     playbackStatus = .paused
                                     newTimestamp = 0.0
                                 } else {
@@ -293,9 +319,9 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                             case 2:
                                 playbackStatus = .paused
                             case 3:
-                                playbackStatus = .buffering(initial: false, whilePlaying: true, progress: 0.0, display: false)
+                                playbackStatus = .buffering(initial: !self.started, whilePlaying: self.isPlaying, progress: 0.0, display: false)
                             default:
-                                playbackStatus = .buffering(initial: true, whilePlaying: false, progress: 0.0, display: false)
+                                playbackStatus = .buffering(initial: true, whilePlaying: true, progress: 0.0, display: false)
                         }
                         
                         if case .playing = playbackStatus, !self.started {
@@ -305,7 +331,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                             self.onPlaybackStarted?()
                         }
                         
-                        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
+                        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: self.status.baseRate, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
                         updateStatus(self.status)
                     }
                 }
@@ -327,12 +353,20 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     self.play()
                 }
                 
+                if self.baseRate != 1.0 {
+                    self.setBaseRate(self.baseRate)
+                }
+                
                 print("YT ready in \(CFAbsoluteTimeGetCurrent() - self.benchmarkStartTime)")
 
                 Queue.mainQueue().async {
-                    self.play()
-                    
                     let delay = self.timestamp > 0 ? 2.8 : 2.0
+                    if self.timestamp > 0 {
+                        self.seek(timestamp: Double(self.timestamp))
+                        self.play()
+                    } else {
+                        self.play()
+                    }
                     Queue.mainQueue().after(delay, {
                         if !self.started {
                             self.play()

@@ -3,10 +3,10 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ContextUI
+import TelegramCore
 
 final class ChatSendMessageActionSheetController: ViewController {
     var controllerNode: ChatSendMessageActionSheetControllerNode {
@@ -14,12 +14,13 @@ final class ChatSendMessageActionSheetController: ViewController {
     }
     
     private let context: AccountContext
-    private let controllerInteraction: ChatControllerInteraction?
     private let interfaceState: ChatPresentationInterfaceState
     private let gesture: ContextGesture
     private let sourceSendButton: ASDisplayNode
     private let textInputNode: EditableTextNode
     private let completion: () -> Void
+    private let sendMessage: (Bool) -> Void
+    private let schedule: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
@@ -29,15 +30,16 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
+    init(context: AccountContext, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
         self.context = context
-        self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
         self.textInputNode = textInputNode
         self.completion = completion
-                
+        self.sendMessage = sendMessage
+        self.schedule = schedule
+        
         super.init(navigationBarPresentationData: nil)
         
         self.blocksBackgroundWhenInOverlay = true
@@ -77,13 +79,13 @@ final class ChatSendMessageActionSheetController: ViewController {
         }
         
         self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
-            self?.controllerInteraction?.sendCurrentMessage(false)
+            self?.sendMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
-            self?.controllerInteraction?.sendCurrentMessage(true)
+            self?.sendMessage(true)
             self?.dismiss(cancel: false)
         }, schedule: !canSchedule ? nil : { [weak self] in
-            self?.controllerInteraction?.scheduleCurrentMessage()
+            self?.schedule()
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)

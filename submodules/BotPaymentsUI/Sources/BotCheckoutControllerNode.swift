@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import PassKit
 import TelegramPresentationData
@@ -461,7 +460,8 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
         "yandex",
         "privatbank",
         "tranzzo",
-        "paymaster"
+        "paymaster",
+        "smartglocal",
     ])
     if !applePayProviders.contains(nativeProvider.name) {
         return false
@@ -971,7 +971,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         let totalAmount = currentTotalPrice(paymentForm: self.paymentFormValue, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
         let payString: String
         if let paymentForm = self.paymentFormValue, totalAmount > 0 {
-            payString = self.presentationData.strings.Checkout_PayPrice(formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)).0
+            payString = self.presentationData.strings.Checkout_PayPrice(formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)).string
         } else {
             payString = self.presentationData.strings.CheckoutInfo_Pay
         }
@@ -1324,12 +1324,12 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 let alertText: String
                 if requiresBiometrics {
                     if let biometricAuthentication = LocalAuth.biometricAuthentication, case .faceId = biometricAuthentication {
-                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndFaceId(durationString).0
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndFaceId(durationString).string
                     } else {
-                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).0
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).string
                     }
                 } else {
-                    alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).0
+                    alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).string
                 }
                 
                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: alertText, actions: [

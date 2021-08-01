@@ -70,14 +70,21 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         let screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: rootPath + "/broadcast-coordination")
         self.screencastBufferClientContext = screencastBufferClientContext
 
+        var wasRunning = false
         self.statusDisposable = (screencastBufferClientContext.status
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let strongSelf = self else {
                 return
             }
             switch status {
-                case let .finished(reason):
+            case .active:
+                wasRunning = true
+            case let .finished(reason):
+                if wasRunning {
+                    strongSelf.finish(with: .screencastEnded)
+                } else {
                     strongSelf.finish(with: reason)
+                }
             }
         })
     }

@@ -8,7 +8,6 @@ swift_library(
     ]),
     deps = [
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/Postbox:Postbox",
         "//submodules/Display:Display",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -18,6 +17,7 @@ swift_library(
         "//submodules/StringPluralization:StringPluralization",
         "//submodules/Sunrise:Sunrise",
         "//submodules/TinyThumbnail:TinyThumbnail",
+        "//Telegram:PresentationStrings",
     ],
     visibility = [
         "//visibility:public",

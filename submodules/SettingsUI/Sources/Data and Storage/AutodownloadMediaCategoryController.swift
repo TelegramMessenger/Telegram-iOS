@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -276,11 +275,11 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             } else {
                 sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             }
-            let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).0
+            let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).string
             entries.append(.sizeItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator, text, size))
             if #available(iOSApplicationExtension 10.3, *), category == .video {
                 entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
-                entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).0))
+                entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).string))
             }
         default:
             break

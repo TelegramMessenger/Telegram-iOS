@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import SyncCore
 
 public func updateProxySettingsInteractively(accountManager: AccountManager, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Bool, NoError> {
     return accountManager.transaction { transaction -> Bool in

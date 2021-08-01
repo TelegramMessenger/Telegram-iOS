@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 import Postbox
 
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {

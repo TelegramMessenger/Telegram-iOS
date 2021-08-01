@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 private enum PeerReadStateMarker: Equatable {
     case Global(Int32)
@@ -214,8 +213,10 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                 return .single(readState)
             case let .indexBased(maxIncomingReadIndex, _, _, _):
                 return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
-                |> retryRequest
-                |> mapToSignalPromotingError { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
+                    |> mapError { _ in
+                        return PeerReadStateValidationError.retry
+                    }
+                |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
                     return .single(readState)
                 }
             }

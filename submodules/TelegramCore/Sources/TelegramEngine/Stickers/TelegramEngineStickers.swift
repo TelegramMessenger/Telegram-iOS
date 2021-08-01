@@ -1,5 +1,4 @@
 import SwiftSignalKit
-import SyncCore
 import Postbox
 
 public extension TelegramEngine {

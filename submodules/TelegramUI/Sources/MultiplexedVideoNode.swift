@@ -5,7 +5,6 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AVFoundation
 import ContextUI
 import TelegramPresentationData
@@ -194,6 +193,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         
         class DisplayLinkProxy: NSObject {
             weak var target: MultiplexedVideoNode?
+            
             init(target: MultiplexedVideoNode) {
                 self.target = target
             }
@@ -258,24 +258,6 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             } else {
                 gesture.cancel()
             }
-        }
-        
-        self.contextContainerNode.customActivationProgress = { [weak self] progress, update in
-            guard let _ = self, let _ = gestureLocation else {
-                return
-            }
-            /*let minScale: CGFloat = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
-            let currentScale = 1.0 * (1.0 - progress) + minScale * progress
-            switch update {
-            case .update:
-                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
-            case .begin:
-                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
-            case let .ended(previousProgress):
-                let previousScale = 1.0 * (1.0 - previousProgress) + minScale * previousProgress
-                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
-                strongSelf.layer.animateSpring(from: previousScale as NSNumber, to: currentScale as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 90.0)
-            }*/
         }
     }
     

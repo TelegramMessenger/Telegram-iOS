@@ -4,7 +4,6 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 import CryptoUtils
-import SyncCore
 import EncryptionProvider
 
 private let accountRecordToActiveKeychainId = Atomic<[AccountRecordId: Int]>(value: [:])
@@ -852,7 +851,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
-    public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
+    private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!

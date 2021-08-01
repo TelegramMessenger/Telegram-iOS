@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import DatePickerNode

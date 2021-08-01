@@ -79,6 +79,8 @@ public protocol Media: class, PostboxCoding {
     var indexableText: String? { get }
     
     func isLikelyToBeUpdated() -> Bool
+
+    func preventsAutomaticMessageSendingFailure() -> Bool
     
     func isEqual(to other: Media) -> Bool
     func isSemanticallyEqual(to other: Media) -> Bool
@@ -86,6 +88,10 @@ public protocol Media: class, PostboxCoding {
 
 public extension Media {
     func isLikelyToBeUpdated() -> Bool {
+        return false
+    }
+
+    func preventsAutomaticMessageSendingFailure() -> Bool {
         return false
     }
 

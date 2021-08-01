@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import MtProtoKit
 
-import SyncCore
 import EncryptionProvider
 
 private let keyUseCountThreshold: Int32 = 100

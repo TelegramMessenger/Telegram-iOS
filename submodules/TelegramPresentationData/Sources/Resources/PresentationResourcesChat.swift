@@ -3,7 +3,6 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import AppBundle
 
 private func generateLineImage(color: UIColor) -> UIImage? {
@@ -663,7 +662,7 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatInstantMessageInfoBackgroundImage.rawValue, { theme in
             return generateImage(CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.message.mediaDateAndStatusFillColor.cgColor)
+                context.setFillColor(theme.chat.message.mediaDateAndStatusFillColor.withAlphaComponent(0.3).cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             })?.stretchableImage(withLeftCapWidth: 12, topCapHeight: 12)
         })

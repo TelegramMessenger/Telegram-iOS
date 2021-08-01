@@ -3,7 +3,6 @@ import SwiftSignalKit
 import CoreMedia
 import AVFoundation
 import TelegramCore
-import SyncCore
 import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext
@@ -403,7 +402,7 @@ final class ManagedAudioRecorderContext {
                         strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
-            }, deactivate: { [weak self] in
+            }, deactivate: { [weak self] _ in
                 return Signal { subscriber in
                     queue.async {
                         if let strongSelf = self {

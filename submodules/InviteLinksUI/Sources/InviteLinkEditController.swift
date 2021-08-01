@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -387,7 +386,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
                         dismissAction()
                         dismissImpl?()
                         
-                        let _ = (revokePeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link)
+                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link)
                         |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                         |> deliverOnMainQueue).start(next: { invite in
                             switch invite {
@@ -444,7 +443,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
 
             let usageLimit = state.usage.value
             if invite == nil {
-                let _ = (createPeerExportedInvitation(account: context.account, peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
+                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -458,7 +457,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
             } else if let invite = invite {
-                let _ = (editPeerExportedInvitation(account: context.account, peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: usageLimit)
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: usageLimit)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)

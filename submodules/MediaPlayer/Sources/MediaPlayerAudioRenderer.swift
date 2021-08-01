@@ -3,7 +3,6 @@ import SwiftSignalKit
 import CoreMedia
 import AVFoundation
 import TelegramCore
-import SyncCore
 import TelegramAudio
 
 private enum AudioPlayerRendererState {
@@ -516,7 +515,7 @@ private final class AudioPlayerRendererContext {
         
         switch self.audioSession {
             case let .manager(manager):
-                self.audioSessionDisposable.set(manager.push(audioSessionType: self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play), outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
+                self.audioSessionDisposable.set(manager.push(audioSessionType: self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play), outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: self.ambient, manualActivate: { [weak self] control in
                     audioPlayerRendererQueue.async {
                         if let strongSelf = self {
                             strongSelf.audioSessionControl = control
@@ -533,13 +532,15 @@ private final class AudioPlayerRendererContext {
                             }
                         }
                     }
-                }, deactivate: { [weak self] in
+                }, deactivate: { [weak self] temporary in
                     return Signal { subscriber in
                         audioPlayerRendererQueue.async {
                             if let strongSelf = self {
                                 strongSelf.audioSessionControl = nil
-                                strongSelf.audioPaused()
-                                strongSelf.stop()
+                                if !temporary {
+                                    strongSelf.audioPaused()
+                                    strongSelf.stop()
+                                }
                                 subscriber.putCompletion()
                             }
                         }

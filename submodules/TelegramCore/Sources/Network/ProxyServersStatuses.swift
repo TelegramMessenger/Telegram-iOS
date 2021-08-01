@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 public enum ProxyServerStatus: Equatable {
     case checking

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
@@ -273,7 +272,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     return $0.avatar
                 }
                 if let _ = updatingAvatar {
-                    let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                    let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }).start()
                 }
@@ -329,7 +328,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: resource))
                     uploadedVideoAvatar = nil
                     updateState { current in
                         var current = current
@@ -363,7 +362,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                 return nil
                             }
                         }
-                        let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                        let uploadInterface = LegacyLiveUploadInterface(context: context)
                         let signal: SSignal
                         if let asset = asset as? AVAsset {
                             signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
@@ -427,7 +426,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                         }
                     }
                     
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: photoResource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: photoResource))
                     
                     let promise = Promise<UploadedPeerPhotoData?>()
                     promise.set(signal
@@ -436,7 +435,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     }
                     |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                         if let resource = resource {
-                            return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
+                            return context.engine.peers.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                         } else {
                             return .single(nil)
                         }

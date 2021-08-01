@@ -353,3 +353,24 @@ NumberPluralizationForm numberPluralizationForm(unsigned int lc, int n) {
     
     return NumberPluralizationFormOther;
 }
+
+NSString * _Nonnull formatNumberWithGroupingSeparator(NSString * _Nonnull groupingSeparator, int32_t value) {
+    NSString *string = [[NSString alloc] initWithFormat:@"%d", (int)value];
+
+    if (ABS(value) < 1000 || groupingSeparator.length == 0) {
+        return string;
+    } else {
+        NSMutableString *groupedString = [[NSMutableString alloc] init];
+
+        int numberOfPlaces = 0;
+        for (int i = ((int)string.length) - 1; i >= 0; i--) {
+            if (numberOfPlaces != 0 && numberOfPlaces % 3 == 0) {
+                [groupedString insertString:groupingSeparator atIndex:0];
+            }
+            [groupedString insertString:[string substringWithRange:NSMakeRange(i, 1)] atIndex:0];
+            numberOfPlaces++;
+        }
+
+        return groupedString;
+    }
+}

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -103,7 +102,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
@@ -234,7 +233,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         let geoPoint = currentProcessedResults.geoPoint.flatMap { geoPoint -> (Double, Double) in
             return (geoPoint.latitude, geoPoint.longitude)
         }
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((self.context.engine.messages.requestChatContextResults(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }

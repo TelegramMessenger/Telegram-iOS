@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import WebSearchUI
@@ -30,25 +29,14 @@ func paneGifSearchForQuery(context: AccountContext, query: String, offset: Strin
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
     }
-    |> mapToSignal { botName -> Signal<PeerId?, NoError> in
+    |> mapToSignal { botName -> Signal<EnginePeer?, NoError> in
         return context.engine.peers.resolvePeerByName(name: botName)
     }
-    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-        if let peerId = peerId {
-            return context.account.postbox.loadedPeerWithId(peerId)
-            |> map { peer -> Peer? in
-                return peer
-            }
-            |> take(1)
-        } else {
-            return .single(nil)
-        }
-    }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
-        if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-            let results = requestContextResults(account: context.account, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
+        if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+            let results = requestContextResults(context: context, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
             |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
-                return (.contextRequestResult(user, results?.results), results != nil, results?.isStale ?? false)
+                return (.contextRequestResult(.user(user), results?.results), results != nil, results?.isStale ?? false)
             }
             
             let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError>

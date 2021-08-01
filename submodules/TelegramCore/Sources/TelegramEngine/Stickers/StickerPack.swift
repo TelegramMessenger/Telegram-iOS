@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-import SyncCore
 import MtProtoKit
 
 func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32, thumbVersion: Int32?, sizes: [Api.PhotoSize]) -> (immediateThumbnail: Data?, representations: [TelegramMediaImageRepresentation]) {

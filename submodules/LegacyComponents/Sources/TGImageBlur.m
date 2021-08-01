@@ -1706,6 +1706,9 @@ UIImage *TGBlurredAlphaImage(UIImage *source, CGSize size)
 UIImage *TGBlurredRectangularImage(UIImage *source, bool more, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int))
 {
     CGSize fittedSize = fitSize(size, CGSizeMake(90, 90));
+    if ((int)(fittedSize.width) % 2 != 0) {
+        fittedSize.width += 1.0;
+    }
     CGSize fittedRenderSize = CGSizeMake(fittedSize.width / size.width * renderSize.width, fittedSize.height / size.height * renderSize.height);
     
     const struct { int width, height; } blurredContextSize = { (int)fittedSize.width, (int)fittedSize.height };
@@ -2288,12 +2291,12 @@ UIImage *TGCropBackdropImage(UIImage *source, CGSize size)
 
 UIImage *TGCameraPositionSwitchImage(UIImage *source, CGSize size)
 {
-    return TGBlurredRectangularImage(source, false, size, size, NULL, nil);
+    return TGBlurredRectangularImage(source, true, size, size, NULL, nil);
 }
 
 UIImage *TGCameraModeSwitchImage(UIImage *source, CGSize size)
 {
-    return TGBlurredRectangularImage(source, false, size, size, NULL, nil);
+    return TGBlurredRectangularImage(source, true, size, size, NULL, nil);
 }
 
 UIImage *TGScaleAndCropImageToPixelSize(UIImage *source, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int))

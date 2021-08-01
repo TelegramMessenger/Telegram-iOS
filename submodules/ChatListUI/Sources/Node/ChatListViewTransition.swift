@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import MergeLists

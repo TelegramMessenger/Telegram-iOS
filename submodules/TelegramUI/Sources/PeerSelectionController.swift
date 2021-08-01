@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -20,7 +19,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private var customTitle: String?
     
     public var peerSelected: ((Peer) -> Void)?
-    public var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)?
+    public var multiplePeersSelected: (([Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
     private let filter: ChatListNodePeersFilter
     
     private let attemptSelection: ((Peer) -> Void)?
@@ -151,14 +150,16 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     override public func loadDisplayNode() {
         self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, presentInGlobalOverlay: { [weak self] c, a in
+            self?.presentInGlobalOverlay(c, with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
         self.peerSelectionNode.navigationBar = self.navigationBar
         
-        self.peerSelectionNode.requestSend = { [weak self] peers, text in
-            self?.multiplePeersSelected?(peers, text)
+        self.peerSelectionNode.requestSend = { [weak self] peers, text, mode in
+            self?.multiplePeersSelected?(peers, text, mode)
         }
         
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in

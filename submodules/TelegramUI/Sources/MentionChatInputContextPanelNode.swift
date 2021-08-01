@@ -1,9 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -15,7 +13,7 @@ import ItemListUI
 
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
-    let peer: Peer
+    let peer: EnginePeer
     let revealed: Bool
     
     var stableId: Int64 {
@@ -23,15 +21,15 @@ private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.revealed == rhs.revealed
+        return lhs.index == rhs.index && lhs.peer == rhs.peer && lhs.revealed == rhs.revealed
     }
     
     static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, inverted: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (Peer) -> Void, removeRequested: @escaping (PeerId) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), inverted: inverted, peer: self.peer, revealed: self.revealed, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested)
+    func item(context: AccountContext, presentationData: PresentationData, inverted: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> ListViewItem {
+        return MentionChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), inverted: inverted, peer: self.peer._asPeer(), revealed: self.revealed, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested)
     }
 }
 
@@ -41,7 +39,7 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData, inverted: Bool, forceUpdate: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (Peer) -> Void, removeRequested: @escaping (PeerId) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData, inverted: Bool, forceUpdate: Bool, setPeerIdRevealed: @escaping (EnginePeer.Id?) -> Void, peerSelected: @escaping (EnginePeer) -> Void, removeRequested: @escaping (EnginePeer.Id) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -62,8 +60,8 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
     private var currentEntries: [MentionChatInputContextPanelEntry]?
     
-    private var currentResults: [Peer] = []
-    private var revealedPeerId: PeerId?
+    private var currentResults: [EnginePeer] = []
+    private var revealedPeerId: EnginePeer.Id?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -78,7 +76,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
@@ -93,7 +91,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
-    func updateResults(_ results: [Peer]) {
+    func updateResults(_ results: [EnginePeer]) {
         self.currentResults = results
         
         var entries: [MentionChatInputContextPanelEntry] = []
@@ -160,7 +158,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                             return (textInputState, inputMode)
                         }
                     case .search:
-                        interfaceInteraction.beginMessageSearch(.member(peer), "")
+                        interfaceInteraction.beginMessageSearch(.member(peer._asPeer()), "")
                 }
             }
         }, removeRequested: { [weak self] peerId in
@@ -228,7 +226,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
         
         return max(size.height - minimumItemHeights, 0.0)
     }

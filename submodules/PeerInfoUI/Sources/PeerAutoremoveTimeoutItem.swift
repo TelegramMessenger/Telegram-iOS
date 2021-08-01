@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
@@ -131,7 +130,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         
         self.disabledOverlayNode = ASDisplayNode()
         
-        self.titleNodes = (0 ..< 3).map { _ in
+        self.titleNodes = (0 ..< 4).map { _ in
             return TextNode()
         }
         
@@ -151,9 +150,9 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.lineSize = 2.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 2.0
+        sliderView.maximumValue = CGFloat(self.titleNodes.count - 1)
         sliderView.startValue = 0.0
-        sliderView.positionsCount = 3
+        sliderView.positionsCount = self.titleNodes.count
         sliderView.useLinesForPositions = true
         sliderView.minimumUndottedValue = 0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
@@ -196,7 +195,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                 if item.availableValues[index] == Int32.max {
                     text = item.presentationData.strings.AutoremoveSetup_TimerValueNever
                 } else {
-                    text = item.presentationData.strings.AutoremoveSetup_TimerValueAfter(timeIntervalString(strings: item.presentationData.strings, value: item.availableValues[index])).0
+                    text = timeIntervalString(strings: item.presentationData.strings, value: item.availableValues[index])
                 }
                 return makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
             }
@@ -265,19 +264,24 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
-                    
-                    zip(0 ..< titleLayouts.count, titleLayouts).forEach { index, layoutAndApply in
-                        let textNode = layoutAndApply.1()
-                        
-                        let size = layoutAndApply.0.size
-                        switch index {
-                        case 0:
-                            textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 13.0), size: size)
-                        case 1:
-                            textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - size.width) / 2.0), y: 13.0), size: size)
-                        default:
-                            textNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - size.width, y: 13.0), size: size)
+
+                    let usableWidth = params.width - (leftInset + 7.0) * 2.0
+
+                    for i in 0 ..< titleLayouts.count {
+                        let textNode = titleLayouts[i].1()
+
+                        let size = titleLayouts[i].0.size
+
+                        let nextX: CGFloat
+                        if i == 0 {
+                            nextX = leftInset
+                        } else if i == titleLayouts.count - 1 {
+                            nextX = params.width - leftInset - size.width
+                        } else {
+                            nextX = floor(leftInset + 7.0 + CGFloat(i) * usableWidth / CGFloat(titleLayouts.count - 1) - size.width / 2.0)
                         }
+
+                        textNode.frame = CGRect(origin: CGPoint(x: nextX, y: 13.0), size: size)
                     }
                     
                     if let sliderView = strongSelf.sliderView {
@@ -302,9 +306,8 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         if firstTime {
                             sliderView.value = value
                         }
-                        
-                        let sliderInset: CGFloat = leftInset
-                        sliderView.frame = CGRect(origin: CGPoint(x: sliderInset, y: 38.0), size: CGSize(width: params.width - sliderInset * 2.0, height: 44.0))
+
+                        sliderView.frame = CGRect(origin: CGPoint(x: leftInset, y: 38.0), size: CGSize(width: params.width - leftInset * 2.0, height: 44.0))
                     }
                 }
             })

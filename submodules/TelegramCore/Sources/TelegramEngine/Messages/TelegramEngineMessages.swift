@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import SyncCore
 
 public extension TelegramEngine {
     final class Messages {
@@ -150,6 +149,26 @@ public extension TelegramEngine {
 
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
             return _internal_exportMessageLink(account: self.account, peerId: peerId, messageId: messageId, isThread: isThread)
+        }
+
+        public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, replyToMessageId: MessageId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
+            return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, results: results, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
+        }
+
+        public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
+            return _internal_requestChatContextResults(account: self.account, botId: botId, peerId: peerId, query: query, location: location, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
+        }
+
+        public func removeRecentlyUsedHashtag(string: String) -> Signal<Void, NoError> {
+            return _internal_removeRecentlyUsedHashtag(postbox: self.account.postbox, string: string)
+        }
+
+        public func recentlyUsedHashtags() -> Signal<[String], NoError> {
+            return _internal_recentlyUsedHashtags(postbox: self.account.postbox)
+        }
+
+        public func topPeerActiveLiveLocationMessages(peerId: PeerId) -> Signal<(Peer?, [Message]), NoError> {
+            return _internal_topPeerActiveLiveLocationMessages(viewTracker: self.account.viewTracker, accountPeerId: self.account.peerId, peerId: peerId)
         }
     }
 }

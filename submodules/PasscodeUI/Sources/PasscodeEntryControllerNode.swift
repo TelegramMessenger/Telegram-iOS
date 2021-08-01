@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import LocalAuth
@@ -362,6 +361,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)
             self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
+            
+            Queue.mainQueue().after(0.45) {
+                self.hapticFeedback.impact(.medium)
+            }
         }
         
         self.subtitleNode.isHidden = true

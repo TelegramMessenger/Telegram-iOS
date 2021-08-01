@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 
 final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContentNode {
     private let contentNode: ChatMessageAttachedContentNode

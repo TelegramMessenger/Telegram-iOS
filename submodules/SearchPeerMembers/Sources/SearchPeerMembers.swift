@@ -1,7 +1,5 @@
 import Foundation
-import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 
@@ -10,32 +8,32 @@ public enum SearchPeerMembersScope {
     case mention
 }
 
-public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, query: String, scope: SearchPeerMembersScope) -> Signal<[Peer], NoError> {
+public func searchPeerMembers(context: AccountContext, peerId: EnginePeer.Id, chatLocation: ChatLocation, query: String, scope: SearchPeerMembersScope) -> Signal<[EnginePeer], NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
-        return context.account.postbox.transaction { transaction -> CachedChannelData? in
-            return transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData
-        }
-        |> mapToSignal { cachedData -> Signal<([Peer], Bool), NoError> in
-            if case .peer = chatLocation, let cachedData = cachedData, let memberCount = cachedData.participantsSummary.memberCount, memberCount <= 64 {
+        return context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
+        )
+        |> mapToSignal { participantCount -> Signal<([EnginePeer], Bool), NoError> in
+            if case .peer = chatLocation, let memberCount = participantCount, memberCount <= 64 {
                 return Signal { subscriber in
                     let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: nil, requestUpdate: false, updated: { state in
                         if case .ready = state.loadingState {
                             let normalizedQuery = query.lowercased()
-                            subscriber.putNext((state.list.compactMap { participant -> Peer? in
+                            subscriber.putNext((state.list.compactMap { participant -> EnginePeer? in
                                 if participant.peer.isDeleted {
                                     return nil
                                 }
                                 if normalizedQuery.isEmpty {
-                                    return participant.peer
+                                    return EnginePeer(participant.peer)
                                 }
                                 if normalizedQuery.isEmpty {
-                                    return participant.peer
+                                    return EnginePeer(participant.peer)
                                 } else {
                                     if participant.peer.indexName.matchesByTokens(normalizedQuery) {
-                                        return participant.peer
+                                        return EnginePeer(participant.peer)
                                     }
                                     if let addressName = participant.peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
-                                        return participant.peer
+                                        return EnginePeer(participant.peer)
                                     }
                                     
                                     return nil
@@ -60,7 +58,7 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
                                 if participant.peer.isDeleted {
                                     return nil
                                 }
-                                return participant.peer
+                                return EnginePeer(participant.peer)
                             }, true))
                         }
                     })
@@ -75,7 +73,7 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
                                 if participant.peer.isDeleted {
                                     return nil
                                 }
-                                return participant.peer
+                                return EnginePeer(participant.peer)
                             }, true))
                         }
                     })
@@ -86,16 +84,19 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
                 }
             } |> runOn(Queue.mainQueue())
         }
-        |> mapToSignal { result, isReady -> Signal<[Peer], NoError> in
+        |> mapToSignal { result, isReady -> Signal<[EnginePeer], NoError> in
             switch scope {
             case .mention:
                 return .single(result)
             case .memberSuggestion:
-                return context.account.postbox.transaction { transaction -> [Peer] in
+                return context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+                |> map { peer -> [EnginePeer] in
                     var result = result
                     let normalizedQuery = query.lowercased()
                     if isReady {
-                        if let channel = transaction.getPeer(peerId) as? TelegramChannel, case .group = channel.info {
+                        if case let .channel(channel) = peer, case .group = channel.info {
                             var matches = false
                             if normalizedQuery.isEmpty {
                                 matches = true
@@ -108,7 +109,7 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
                                 }
                             }
                             if matches {
-                                result.insert(channel, at: 0)
+                                result.insert(.channel(channel), at: 0)
                             }
                         }
                     }
@@ -118,5 +119,8 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
         }
     } else {
         return context.engine.peers.searchGroupMembers(peerId: peerId, query: query)
+        |> map { peers -> [EnginePeer] in
+            return peers.map(EnginePeer.init)
+        }
     }
 }

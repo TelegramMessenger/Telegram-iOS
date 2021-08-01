@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramApi
-import SyncCore
 import SwiftSignalKit
 
 public struct ContentSettings: Equatable {

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
@@ -21,6 +20,7 @@ import TextSelectionNode
 import UrlEscaping
 import UndoUI
 import ManagedAnimationNode
+import TelegramUniversalVideoContent
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -30,6 +30,9 @@ private let backwardImage = generateTintedImage(image:  UIImage(bundleImageName:
 private let forwardImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ForwardButton"), color: .white)
 
 private let cloudFetchIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: UIColor.white)
+
+private let fullscreenOnImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: .white)
+private let fullscreenOffImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Collapse"), color: .white)
 
 private let captionMaskImage = generateImage(CGSize(width: 1.0, height: 17.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
@@ -119,6 +122,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     private let contentNode: ASDisplayNode
     private let deleteButton: UIButton
+    private let fullscreenButton: UIButton
     private let actionButton: UIButton
     private let editButton: UIButton
     private let maskNode: ASDisplayNode
@@ -152,6 +156,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     var seekBackward: ((Double) -> Void)?
     var seekForward: ((Double) -> Void)?
     var setPlayRate: ((Double) -> Void)?
+    var toggleFullscreen: (() -> Void)?
     var fetchControl: (() -> Void)?
     
     var interacting: ((Bool) -> Void)?
@@ -161,7 +166,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var seekRate: Double = 1.0
     
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
-    var openActionOptions: ((GalleryControllerInteractionTapAction) -> Void)?
+    var openActionOptions: ((GalleryControllerInteractionTapAction, Message) -> Void)?
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
@@ -286,6 +291,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.contentNode = ASDisplayNode()
         
         self.deleteButton = UIButton()
+        self.fullscreenButton = UIButton()
         self.actionButton = UIButton()
         self.editButton = UIButton()
         
@@ -357,12 +363,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
         }
         self.textNode.longTapAttributeAction = { [weak self] attributes, index in
-            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index) {
-                strongSelf.openActionOptions?(action)
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index), let message = strongSelf.currentMessage {
+                strongSelf.openActionOptions?(action, message)
             }
         }
         
         self.contentNode.view.addSubview(self.deleteButton)
+        self.contentNode.view.addSubview(self.fullscreenButton)
         self.contentNode.view.addSubview(self.actionButton)
         self.contentNode.view.addSubview(self.editButton)
         self.contentNode.addSubnode(self.scrollWrapperNode)
@@ -381,6 +388,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.contentNode.addSubnode(self.statusButtonNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
+        self.fullscreenButton.addTarget(self, action: #selector(self.fullscreenButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
         self.editButton.addTarget(self, action: #selector(self.editButtonPressed), for: [.touchUpInside])
         
@@ -527,7 +535,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     func setup(origin: GalleryItemOriginData?, caption: NSAttributedString) {
         let titleText = origin?.title
-        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).0 }
+        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).string }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
@@ -559,6 +567,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         if origin == nil {
             self.editButton.isHidden = true
             self.deleteButton.isHidden = true
+            self.fullscreenButton.isHidden = true
             self.editButton.isHidden = true
         }
     }
@@ -568,12 +577,33 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         let canDelete: Bool
         var canShare = !message.containsSecretMedia
+
+        var canFullscreen = false
         
         var canEdit = false
         for media in message.media {
             if media is TelegramMediaImage {
                 canEdit = true
-                break
+            } else if let media = media as? TelegramMediaFile, !media.isAnimated {
+                for attribute in media.attributes {
+                    switch attribute {
+                    case .Video:
+                        canFullscreen = true
+                    default:
+                        break
+                    }
+                }
+            } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
+                let type = webEmbedType(content: content)
+                switch type {
+                    case .youtube, .vimeo:
+                        canFullscreen = true
+                    default:
+                        break
+                }
+                if let file = content.file, !file.isAnimated, file.isVideo {
+                    canFullscreen = true
+                }
             }
         }
         
@@ -610,7 +640,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         }
         
-        var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp).0
+        var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp).string
         if !displayInfo {
             authorNameText = ""
             dateText = ""
@@ -637,7 +667,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
         }
                         
-        if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
+        if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText
             
             if messageText.length == 0 {
@@ -654,8 +684,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.authorNameNode.attributedText = nil
             }
             self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
-            
-            self.deleteButton.isHidden = !canDelete
+
+            if canFullscreen {
+                self.fullscreenButton.isHidden = false
+                self.deleteButton.isHidden = true
+            } else {
+                self.deleteButton.isHidden = !canDelete
+                self.fullscreenButton.isHidden = true
+            }
+
             self.actionButton.isHidden = !canShare
             self.editButton.isHidden = !canEdit
             
@@ -683,6 +720,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         panelHeight += contentInset
         
         let isLandscape = size.width > size.height
+
+        self.fullscreenButton.setImage(isLandscape ? fullscreenOffImage : fullscreenOnImage, for: [.normal])
+
         let displayCaption: Bool
         if case .compact = metrics.widthClass {
             displayCaption = !self.textNode.isHidden && !isLandscape
@@ -776,10 +816,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         let deleteFrame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         var editFrame = CGRect(origin: CGPoint(x: width - 44.0 - 50.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
-        if self.deleteButton.isHidden {
+        if self.deleteButton.isHidden && self.fullscreenButton.isHidden {
             editFrame = deleteFrame
         }
         self.deleteButton.frame = deleteFrame
+        self.fullscreenButton.frame = deleteFrame
         self.editButton.frame = editFrame
 
         if let image = self.backwardButton.backgroundIconNode.image {
@@ -789,7 +830,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
         }
         
-        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0 - 2.0), size: CGSize(width: 44.0, height: 44.0))
         self.playPauseIconNode.frame = self.playbackControlButton.bounds.offsetBy(dx: 2.0, dy: 2.0)
         
         let statusSize = CGSize(width: 28.0, height: 28.0)
@@ -855,6 +896,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.dateNode.alpha = 1.0
         self.authorNameNode.alpha = 1.0
         self.deleteButton.alpha = 1.0
+        self.fullscreenButton.alpha = 1.0
         self.actionButton.alpha = 1.0
         self.editButton.alpha = 1.0
         self.backwardButton.alpha = 1.0
@@ -878,6 +920,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.dateNode.alpha = 0.0
         self.authorNameNode.alpha = 0.0
         self.deleteButton.alpha = 0.0
+        self.fullscreenButton.alpha = 0.0
         self.actionButton.alpha = 0.0
         self.editButton.alpha = 0.0
         self.backwardButton.alpha = 0.0
@@ -887,6 +930,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.scrollWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })
+    }
+
+    @objc func fullscreenButtonPressed() {
+        self.toggleFullscreen?()
     }
     
     @objc func deleteButtonPressed() {
@@ -991,7 +1038,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     if isChannel {
                         globalTitle = strongSelf.strings.Common_Delete
                     } else if let personalPeerName = personalPeerName {
-                        globalTitle = strongSelf.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                        globalTitle = strongSelf.strings.Conversation_DeleteMessagesFor(personalPeerName).string
                     } else {
                         globalTitle = strongSelf.strings.Conversation_DeleteMessagesForEveryone
                     }
@@ -1153,14 +1200,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                         } else {
                                             if peers.count == 1, let peer = peers.first {
                                                 let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                             } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                                                 let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                             } else if let peer = peers.first {
                                                 let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                                                text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                             } else {
                                                 text = ""
                                             }
@@ -1217,14 +1264,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                 } else {
                                                     if peers.count == 1, let peer = peers.first {
                                                         let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0 : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).0
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                                                         let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0 : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).0
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                                     } else if let peer = peers.first {
                                                         let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0 : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").0
+                                                        text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                                     } else {
                                                         text = ""
                                                     }
@@ -1342,14 +1389,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             } else {
                                 if peers.count == 1, let peer = peers.first {
                                     let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).0
+                                    text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                                     let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).0
+                                    text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
                                     let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").0
+                                    text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
                                 } else {
                                     text = ""
                                 }

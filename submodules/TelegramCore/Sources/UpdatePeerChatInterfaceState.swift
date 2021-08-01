@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 public func updatePeerChatInterfaceState(account: Account, peerId: PeerId, threadId: Int64?, state: SynchronizeableChatInterfaceState) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in

@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import AccountContext
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -178,7 +177,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
            
             var subtitle = timeString
             if let distance = item.distance {
-                let distanceString = item.presentationData.strings.Map_DistanceAway(shortStringForDistance(strings: item.presentationData.strings, distance: Int32(distance))).0
+                let distanceString = item.presentationData.strings.Map_DistanceAway(shortStringForDistance(strings: item.presentationData.strings, distance: Int32(distance))).string
                 subtitle = "\(timeString) • \(distanceString)"
             }
             

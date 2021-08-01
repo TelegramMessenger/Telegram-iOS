@@ -110,6 +110,62 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #endif
 @end
 
+@interface GroupCallDisposable : NSObject
+
+- (void)dispose;
+
+@end
+
+@protocol CallVideoFrameBuffer
+
+@end
+
+@interface CallVideoFrameNativePixelBuffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) CVPixelBufferRef _Nonnull pixelBuffer;
+
+@end
+
+@interface CallVideoFrameNV12Buffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull y;
+@property (nonatomic, readonly) int strideY;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull uv;
+@property (nonatomic, readonly) int strideUV;
+
+@end
+
+@interface CallVideoFrameI420Buffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull y;
+@property (nonatomic, readonly) int strideY;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull u;
+@property (nonatomic, readonly) int strideU;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull v;
+@property (nonatomic, readonly) int strideV;
+
+@end
+
+@interface CallVideoFrameData : NSObject
+
+@property (nonatomic, strong, readonly) id<CallVideoFrameBuffer> _Nonnull buffer;
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+@property (nonatomic, readonly) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) bool mirrorHorizontally;
+@property (nonatomic, readonly) bool mirrorVertically;
+
+@end
+
 @interface OngoingCallThreadLocalContextVideoCapturer : NSObject
 
 - (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape;
@@ -130,6 +186,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #if TARGET_OS_IOS
 - (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation;
 #endif
+
+- (GroupCallDisposable * _Nonnull)addVideoOutput:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;
 
 @end
 
@@ -165,6 +223,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)addSignalingData:(NSData * _Nonnull)data;
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+- (void)addExternalAudioData:(NSData * _Nonnull)data;
+
 @end
 
 typedef struct {
@@ -291,6 +351,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+- (GroupCallDisposable * _Nonnull)addVideoOutputWithEndpointId:(NSString * _Nonnull)endpointId sink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;
 
 - (void)addExternalAudioData:(NSData * _Nonnull)data;
 
