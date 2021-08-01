@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramCore
 import AccountContext
 import TelegramPresentationData
 import AvatarNode
@@ -156,7 +157,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
                     self.iconNode.isHidden = false
                     self.avatarNode.isHidden = true
                 case let .avatar(peer):
-                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
+                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: EnginePeer(peer))
                     self.iconNode.isHidden = true
                     self.avatarNode.isHidden = false
                     self.animationNode?.isHidden = true
@@ -174,7 +175,7 @@ final class VoiceChatHeaderButton: HighlightableButtonNode {
                     self.iconNode.isHidden = false
                     self.avatarNode.isHidden = true
                 case let .avatar(peer):
-                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: peer)
+                    self.avatarNode.setPeer(context: self.context, theme: self.theme, peer: EnginePeer(peer))
                     self.iconNode.isHidden = true
                     self.avatarNode.isHidden = false
                     self.animationNode?.isHidden = true

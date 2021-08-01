@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import AvatarNode
 import LocationResources
@@ -77,7 +76,7 @@ private func generateHeadingArrowImage() -> UIImage? {
 
 public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     public enum Mode {
-        case liveLocation(peer: Peer, active: Bool, latitude: Double, longitude: Double, heading: Int32?)
+        case liveLocation(peer: EnginePeer, active: Bool, latitude: Double, longitude: Double, heading: Int32?)
         case location(TelegramMediaMap?)
     }
     

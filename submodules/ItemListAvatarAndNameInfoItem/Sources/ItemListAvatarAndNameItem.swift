@@ -676,7 +676,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             overrideImage = .deletedIcon
                         }
                         
-                        strongSelf.avatarNode.setPeer(context: item.accountContext, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                        strongSelf.avatarNode.setPeer(context: item.accountContext, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floor((layout.contentSize.height - 66.0) / 2.0)), size: CGSize(width: 66.0, height: 66.0))

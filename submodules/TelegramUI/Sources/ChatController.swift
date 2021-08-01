@@ -593,7 +593,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
-                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled))
+                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled))
                             } else {
                                 var canManageGroupCalls = false
                                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
@@ -627,7 +627,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled))
+                                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled))
                                             }, error: { [weak self] error in
                                                 dismissStatus?()
                                                 
@@ -3062,7 +3062,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     } else {
                                         imageOverride = nil
                                     }
-                                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
+                                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: EnginePeer(peer), overrideImage: imageOverride)
                                     (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
                                     strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
                                 }
@@ -6750,7 +6750,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            strongSelf.joinGroupCall(peerId: peer.id, invite: nil, activeCall: activeCall)
+            strongSelf.joinGroupCall(peerId: peer.id, invite: nil, activeCall: EngineGroupCallDescription(activeCall))
         }, presentInviteMembers: { [weak self] in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
@@ -8257,7 +8257,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }))
                     } else {
                         if let _ = canClearForMyself ?? canClearForEveryone {
-                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: canClearCache), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .clearHistory(canClearCache: canClearCache), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                             
                             if let canClearForEveryone = canClearForEveryone {
                                 let text: String
@@ -8446,7 +8446,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         var items: [ActionSheetItem] = []
                         
-                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
+                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(peer), chatPeer: EnginePeer(peer), action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
                         
                         let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
                         
@@ -11733,7 +11733,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.controllerInteraction?.requestMessageActionUrlAuth(url, subject)
             }
         }, joinVoiceChat: { [weak self] peerId, invite, call in
-            self?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
+            self?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
@@ -12105,7 +12105,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         
-        items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: peer, chatPeer: peer, action: .clearCacheSuggestion, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+        items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: EnginePeer(peer), chatPeer: EnginePeer(peer), action: .clearCacheSuggestion, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
         
         var presented = false
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.ClearCache_FreeSpace, color: .accent, action: { [weak self, weak actionSheet] in
@@ -12442,7 +12442,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return inputShortcuts + otherShortcuts
     }
     
-    public override func joinGroupCall(peerId: PeerId, invite: String?, activeCall: CachedChannelData.ActiveCall) {
+    public override func joinGroupCall(peerId: PeerId, invite: String?, activeCall: EngineGroupCallDescription) {
         let proceed = {
             super.joinGroupCall(peerId: peerId, invite: invite, activeCall: activeCall)
         }

@@ -715,7 +715,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     }
                     var items: [ActionSheetItem] = []
                     
-                    items.append(DeleteChatPeerActionSheetItem(context: context, peer: peer, chatPeer: peer, action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
+                    items.append(DeleteChatPeerActionSheetItem(context: context, peer: EnginePeer(peer), chatPeer: EnginePeer(peer), action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
                     
                     let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
 

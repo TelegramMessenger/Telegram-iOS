@@ -357,7 +357,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
@@ -381,7 +381,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                     strongSelf.currentText = membersText
                                                             
-                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
+                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -458,7 +458,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
             
             updateAudioLevels = true
         }

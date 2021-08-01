@@ -803,7 +803,7 @@ public final class ShareController: ViewController {
             }
             var items: [ActionSheetItem] = []
             for info in strongSelf.switchableAccounts {
-                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
+                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: EnginePeer(info.peer), title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
                     dismissAction()
                     self?.switchToAccount(account: info.account, animateIn: true)
                 }))

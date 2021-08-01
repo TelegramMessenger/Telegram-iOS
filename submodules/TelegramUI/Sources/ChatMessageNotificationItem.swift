@@ -150,7 +150,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if firstMessage.id.peerId.isReplies, let author = firstMessage.forwardInfo?.author {
                 avatarPeer = author
             }
-            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: EnginePeer(avatarPeer), overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var updatedMedia: Media?

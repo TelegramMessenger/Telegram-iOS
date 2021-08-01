@@ -459,11 +459,11 @@ public protocol PresentationGroupCall: class {
     func loadMoreMembers(token: String)
 }
 
-public protocol PresentationCallManager: class {
+public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
     func scheduleGroupCall(context: AccountContext, peerId: PeerId, endCurrentIfAny: Bool) -> RequestScheduleGroupCallResult
 }

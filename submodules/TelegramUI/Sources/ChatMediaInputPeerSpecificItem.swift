@@ -150,7 +150,7 @@ final class ChatMediaInputPeerSpecificItemNode: ListViewItemNode {
         self.avatarNode.frame = self.avatarNode.frame
         expandTransition.updateFrame(node: self.highlightNode, frame: expanded ? titleFrame.insetBy(dx: -7.0, dy: -2.0) : CGRect(origin: CGPoint(x: self.avatarNode.position.x - highlightSize.width / 2.0, y: self.avatarNode.position.y - highlightSize.height / 2.0), size: highlightSize))
         
-        self.avatarNode.setPeer(context: context, theme: theme, peer: peer)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer))
     }
     
     func updateIsHighlighted() {

@@ -187,7 +187,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme
-                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: synchronousLoads)
+                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: EngineRenderedPeer(peer: EnginePeer(item.peer)), numberOfLines: 1, synchronousLoad: synchronousLoads)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

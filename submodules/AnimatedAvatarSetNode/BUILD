@@ -10,7 +10,6 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AvatarNode:AvatarNode",

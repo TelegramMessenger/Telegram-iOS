@@ -320,7 +320,7 @@ final class AvatarComponent: Component {
 
         func update(component: AvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.avatarNode.frame = CGRect(origin: CGPoint(), size: availableSize)
-            self.avatarNode.setPeer(context: component.context, theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: component.peer._asPeer(), synchronousLoad: true)
+            self.avatarNode.setPeer(context: component.context, theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: component.peer, synchronousLoad: true)
 
             return availableSize
         }

@@ -3945,7 +3945,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func requestCall(isVideo: Bool, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil, result: ((ContextMenuActionResult) -> Void)? = nil, backAction: ((ContextControllerProtocol) -> Void)? = nil) {
         let peerId = self.peerId
-        let requestCall: (PeerId?, CachedChannelData.ActiveCall?) -> Void = { [weak self] defaultJoinAsPeerId, activeCall in
+        let requestCall: (PeerId?, EngineGroupCallDescription?) -> Void = { [weak self] defaultJoinAsPeerId, activeCall in
             if let activeCall = activeCall {
                 self?.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: { completion in
                     if let defaultJoinAsPeerId = defaultJoinAsPeerId {
@@ -3963,10 +3963,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         if let cachedChannelData = self.data?.cachedData as? CachedChannelData {
-            requestCall(cachedChannelData.callJoinPeerId, cachedChannelData.activeCall)
+            requestCall(cachedChannelData.callJoinPeerId, cachedChannelData.activeCall.flatMap(EngineGroupCallDescription.init))
             return
         } else if let cachedGroupData = self.data?.cachedData as? CachedGroupData {
-            requestCall(cachedGroupData.callJoinPeerId, cachedGroupData.activeCall)
+            requestCall(cachedGroupData.callJoinPeerId, cachedGroupData.activeCall.flatMap(EngineGroupCallDescription.init))
             return
         }
         
@@ -4024,7 +4024,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     strongSelf.context.joinGroupCall(peerId: peerId, invite: nil, requestJoinAsPeerId: { result in
                         result(joinAsPeerId)
-                    }, activeCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                    }, activeCall: EngineGroupCallDescription(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: nil, subscribedToScheduled: false))
                 }, error: { [weak self] error in
                     guard let strongSelf = self else {
                         return

@@ -36,12 +36,16 @@ extension _AdaptedPostboxEncoder {
 
 extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
     func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable {
-        let typeHash: Int32 = murMurHashString32("\(type(of: value))")
-        let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
-        try! value.encode(to: innerEncoder)
+        if let value = value as? Data {
+            self.encoder.encodeData(value, forKey: key.stringValue)
+        } else {
+            let typeHash: Int32 = murMurHashString32("\(type(of: value))")
+            let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
+            try! value.encode(to: innerEncoder)
 
-        let (data, valueType) = innerEncoder.makeData()
-        self.encoder.encodeInnerObjectData(data, valueType: valueType, forKey: key.stringValue)
+            let (data, valueType) = innerEncoder.makeData()
+            self.encoder.encodeInnerObjectData(data, valueType: valueType, forKey: key.stringValue)
+        }
     }
 
     func encodeNil(forKey key: Key) throws {

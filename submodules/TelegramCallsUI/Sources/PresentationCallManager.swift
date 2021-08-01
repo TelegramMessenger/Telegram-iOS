@@ -728,7 +728,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .success
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
             if let requestJoinAsPeerId = requestJoinAsPeerId {
                 requestJoinAsPeerId({ joinAsPeerId in
@@ -772,7 +772,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         peerId: PeerId,
         invite: String?,
         joinAsPeerId: PeerId?,
-        initialCall: CachedChannelData.ActiveCall,
+        initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()

@@ -33,7 +33,7 @@ public extension TelegramEngine {
         }
 
         private func _subscribe(items: [AnyPostboxViewDataItem]) -> Signal<[Any], NoError> {
-            return self.account.postbox.combinedView(keys: items.map(\.key))
+            return self.account.postbox.combinedView(keys: Array(Set(items.map(\.key))))
             |> map { views -> [Any] in
                 var results: [Any] = []
 

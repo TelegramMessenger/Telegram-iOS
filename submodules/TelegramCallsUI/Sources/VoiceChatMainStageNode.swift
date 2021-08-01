@@ -637,7 +637,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 }
                 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: peer)
+                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: EnginePeer(peer))
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])

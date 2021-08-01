@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import PassKit
@@ -327,7 +326,7 @@ private func currentTotalPrice(paymentForm: BotPaymentForm?, validatedFormInfo: 
     return totalPrice
 }
 
-private func botCheckoutControllerEntries(presentationData: PresentationData, state: BotCheckoutControllerState, invoice: TelegramMediaInvoice, paymentForm: BotPaymentForm?, formInfo: BotPaymentRequestedInfo?, validatedFormInfo: BotPaymentValidatedFormInfo?, currentShippingOptionId: String?, currentPaymentMethod: BotCheckoutPaymentMethod?, currentTip: Int64?, botPeer: Peer?) -> [BotCheckoutEntry] {
+private func botCheckoutControllerEntries(presentationData: PresentationData, state: BotCheckoutControllerState, invoice: TelegramMediaInvoice, paymentForm: BotPaymentForm?, formInfo: BotPaymentRequestedInfo?, validatedFormInfo: BotPaymentValidatedFormInfo?, currentShippingOptionId: String?, currentPaymentMethod: BotCheckoutPaymentMethod?, currentTip: Int64?, botPeer: EnginePeer?) -> [BotCheckoutEntry] {
     var entries: [BotCheckoutEntry] = []
     
     var botName = ""
@@ -504,10 +503,10 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
 final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
     private weak var controller: BotCheckoutController?
     private let context: AccountContext
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
-    private let completed: (String, MessageId?) -> Void
+    private let completed: (String, EngineMessage.Id?) -> Void
     
     private var stateValue = BotCheckoutControllerState()
     private let state = ValuePromise(BotCheckoutControllerState(), ignoreRepeated: true)
@@ -538,7 +537,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
@@ -566,14 +565,22 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             ensureTipInputVisibleImpl?()
         })
 
-        let paymentBotPeer = paymentFormAndInfo.get()
-        |> map { paymentFormAndInfo -> PeerId? in
-            return paymentFormAndInfo?.0.paymentBotId
+        let paymentBotPeer: Signal<EnginePeer?, NoError> = paymentFormAndInfo.get()
+        |> map { paymentFormAndInfo -> EnginePeer.Id? in
+            if let paymentBotId = paymentFormAndInfo?.0.paymentBotId {
+                return paymentBotId
+            } else {
+                return nil
+            }
         }
         |> distinctUntilChanged
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return peerId.flatMap(transaction.getPeer)
+        |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
+            if let peerId = peerId {
+                return context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+            } else {
+                return .single(nil)
             }
         }
         
@@ -1124,9 +1131,10 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     let botPeerId = self.messageId.peerId
-                    let _ = (self.context.account.postbox.transaction({ transaction -> Peer? in
-                        return transaction.getPeer(botPeerId)
-                    }) |> deliverOnMainQueue).start(next: { [weak self] botPeer in
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: botPeerId)
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] botPeer in
                         if let strongSelf = self, let botPeer = botPeer {
                             let request = PKPaymentRequest()
                             
@@ -1192,10 +1200,17 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
         
         if !liabilityNoticeAccepted {
-            let botPeer: Signal<Peer?, NoError> = self.context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(paymentForm.paymentBotId)
-            }
-            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
+            let botPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId)
+            )
+            let providerPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.providerId)
+            )
+            let _ = (combineLatest(
+                ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId),
+                botPeer,
+                providerPeer
+            )
             |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
                 if let strongSelf = self, let botPeer = botPeer {
                     if value {
@@ -1203,7 +1218,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     } else {
                         let paymentText = strongSelf.presentationData.strings.Checkout_PaymentLiabilityAlert
                             .replacingOccurrences(of: "{target}", with: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
-                            .replacingOccurrences(of: "{payment_system}", with: providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            .replacingOccurrences(of: "{payment_system}", with: providerPeer?.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder) ?? "")
 
                         strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: paymentText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
@@ -1244,7 +1259,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         applePayController.presentingViewController?.dismiss(animated: true, completion: nil)
                     }
 
-                    let proceedWithCompletion: (Bool, MessageId?) -> Void = { success, receiptMessageId in
+                    let proceedWithCompletion: (Bool, EngineMessage.Id?) -> Void = { success, receiptMessageId in
                         guard let strongSelf = self else {
                             return
                         }

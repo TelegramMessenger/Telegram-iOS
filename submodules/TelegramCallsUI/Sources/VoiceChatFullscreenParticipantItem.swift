@@ -752,7 +752,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     var hadMicrophoneNode = false
                     var hadRaiseHandNode = false

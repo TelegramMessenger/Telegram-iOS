@@ -669,7 +669,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         super.init()
         
         self.addSubnode(self.avatarNode)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: title ?? peer.displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)

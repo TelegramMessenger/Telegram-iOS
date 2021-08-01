@@ -173,7 +173,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             }
             
             self.peerNode.theme = itemTheme
-            self.peerNode.setup(context: context, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
+            self.peerNode.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer), online: online, synchronousLoad: synchronousLoad)
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
             if let presence = presence as? TelegramUserPresence {

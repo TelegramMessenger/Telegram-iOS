@@ -7,7 +7,6 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",

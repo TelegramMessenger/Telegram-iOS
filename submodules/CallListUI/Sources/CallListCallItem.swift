@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -68,8 +67,8 @@ class CallListCallItem: ListViewItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let context: AccountContext
     let style: ItemListStyle
-    let topMessage: Message
-    let messages: [Message]
+    let topMessage: EngineMessage
+    let messages: [EngineMessage]
     let editing: Bool
     let revealed: Bool
     let interaction: CallListNodeInteraction
@@ -78,7 +77,7 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, displayHeader: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: EngineMessage, messages: [EngineMessage], editing: Bool, revealed: Bool, displayHeader: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.context = context
@@ -488,7 +487,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                         if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in

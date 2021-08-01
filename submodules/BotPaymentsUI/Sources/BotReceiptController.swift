@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -19,13 +18,13 @@ public final class BotReceiptController: ViewController {
     }
     
     private let context: AccountContext
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
     
-    public init(context: AccountContext, messageId: MessageId) {
+    public init(context: AccountContext, messageId: EngineMessage.Id) {
         self.context = context
         self.messageId = messageId
         

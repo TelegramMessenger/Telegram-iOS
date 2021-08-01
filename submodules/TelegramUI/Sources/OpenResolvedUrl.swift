@@ -471,7 +471,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         return
                     }
                     navigationController.currentWindow?.present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { [weak chatController] call in
-                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
+                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
                     }), on: .root, blockInteraction: false, completion: {})
                 }))
             }
