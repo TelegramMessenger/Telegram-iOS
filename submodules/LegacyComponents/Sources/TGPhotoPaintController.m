@@ -1414,7 +1414,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGFloat)_brushWeightForSize:(CGFloat)size
 {
-    return ([self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size) / _scrollView.zoomScale;
+    CGFloat scale = MAX(0.001, _scrollView.zoomScale);
+    return ([self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size) / scale;
 }
 
 + (CGSize)maximumPaintingSize
