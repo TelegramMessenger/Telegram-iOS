@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import ContextUI
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -145,19 +146,23 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                 strongSelf.listView.forEachItemNode { itemNode in
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
                         if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
-                            var menuItems: [PeekControllerMenuItem] = []
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { _, _ in
-                                return item.resultSelected(item.result, itemNode, itemNode.bounds)
-                            }))
+                            var menuItems: [ContextMenuItem] = []
+                            menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                f(.default)
+                                
+                                let _ = item.resultSelected(item.result, itemNode, itemNode.bounds)
+                            })))
                             for case let .Sticker(_, packReference, _) in file.attributes {
                                 guard let packReference = packReference else {
                                     continue
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
                                     if let strongSelf = self {
                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
                                             if let strongSelf = self {
-                                                return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceNode, sourceRect) ?? false
                                             } else {
                                                 return false
                                             }
@@ -166,21 +171,29 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                         strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
                                         strongSelf.interfaceInteraction?.presentController(controller, nil)
                                     }
-                                    return true
-                                }))
+                                })))
                             }
                             selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
-                            var menuItems: [PeekControllerMenuItem] = []
+                            var menuItems: [ContextMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: { _, _ in
+                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Preview_SaveGif, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    f(.dismissWithoutContent)
+                                    
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
                                     let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
-                                    return true
-                                }))
+                                })))
                             }
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { _, _ in
-                                return item.resultSelected(item.result, itemNode, itemNode.bounds)
-                            }))
+                            menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.ShareMenu_Send, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
+                                item.resultSelected(item.result, itemNode, itemNode.bounds)
+                            })))
                             selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
                     }
@@ -190,7 +203,8 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
@@ -303,12 +317,17 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: HorizontalListContextResultsOpaqueState(entryCount: transition.entryCount, hasMore: transition.hasMore), completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     let position = strongSelf.listView.position
-                    strongSelf.listView.isHidden = false
-                    strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + strongSelf.listView.bounds.size.width), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    
-                    strongSelf.separatorNode.isHidden = false
                     let separatorPosition = strongSelf.separatorNode.layer.position
-                    strongSelf.separatorNode.layer.animatePosition(from: CGPoint(x: separatorPosition.x, y: separatorPosition.y + strongSelf.listView.bounds.size.width), to: separatorPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    
+                    strongSelf.listView.isHidden = false
+                    strongSelf.separatorNode.isHidden = false
+                    
+                    strongSelf.listView.position = CGPoint(x: position.x, y: position.y + strongSelf.listView.bounds.size.width)
+                    strongSelf.separatorNode.position = CGPoint(x: separatorPosition.x, y: separatorPosition.y + strongSelf.listView.bounds.size.width)
+                    ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                        strongSelf.listView.position = position
+                        strongSelf.separatorNode.position = separatorPosition
+                    }
                 }
             })
         }

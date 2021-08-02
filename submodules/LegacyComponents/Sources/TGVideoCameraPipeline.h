@@ -15,13 +15,16 @@
 
 @property (nonatomic, copy) void (^micLevel)(CGFloat);
 
+@property (nonatomic, readonly) bool isZoomAvailable;
+@property (nonatomic, assign) CGFloat zoomLevel;
+
 - (instancetype)initWithDelegate:(id<TGVideoCameraPipelineDelegate>)delegate position:(AVCaptureDevicePosition)position callbackQueue:(dispatch_queue_t)queue liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
 
 - (void)startRunning;
 - (void)stopRunning;
 
 - (void)startRecording:(NSURL *)url preset:(TGMediaVideoConversionPreset)preset liveUpload:(bool)liveUpload;
-- (void)stopRecording:(void (^)())completed;
+- (void)stopRecording:(void (^)(bool))completed;
 
 - (CGAffineTransform)transformForOrientation:(AVCaptureVideoOrientation)orientation;
 

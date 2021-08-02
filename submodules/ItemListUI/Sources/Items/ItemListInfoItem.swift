@@ -111,7 +111,7 @@ public class ItemListInfoItem: InfoListItem, ItemListItem {
     }
 }
 
-class InfoItemNode: ListViewItemNode {
+public class InfoItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -128,7 +128,7 @@ class InfoItemNode: ListViewItemNode {
     
     private var item: InfoListItem?
     
-    override var canBeSelected: Bool {
+    public override var canBeSelected: Bool {
         return false
     }
     
@@ -178,7 +178,7 @@ class InfoItemNode: ListViewItemNode {
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -204,12 +204,12 @@ class InfoItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 15.0 + params.leftInset
-            let rightInset: CGFloat = 15.0 + params.rightInset
+            let leftInset: CGFloat = 16.0 + params.leftInset
+            let rightInset: CGFloat = 16.0 + params.rightInset
             
-            let titleFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)
-            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            let textBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            let titleFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
+            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
+            let textBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
             let badgeFont = Font.regular(15.0)
     
             var updatedTheme: PresentationTheme?
@@ -217,7 +217,7 @@ class InfoItemNode: ListViewItemNode {
             
             var updatedCloseIcon: UIImage?
             
-            let badgeDiameter: CGFloat = 20.0
+            let badgeDiameter: CGFloat = 22.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.presentationData.theme.list.itemDestructiveColor)
@@ -254,11 +254,11 @@ class InfoItemNode: ListViewItemNode {
                 }))
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 36.0)
+            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 38.0)
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
@@ -338,11 +338,11 @@ class InfoItemNode: ListViewItemNode {
                         strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
                     }
                     
-                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0 + floor((titleLayout.size.height - badgeDiameter) / 2.0)), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 1.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 2.0 + UIScreenPixel), size: labelLayout.size)
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: 15.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: 16.0), size: titleLayout.size)
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
                     
@@ -352,15 +352,15 @@ class InfoItemNode: ListViewItemNode {
         }
     }
 
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    public override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    public override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    public override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     

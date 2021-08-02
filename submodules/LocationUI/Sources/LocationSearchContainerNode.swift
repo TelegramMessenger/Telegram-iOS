@@ -165,7 +165,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         }
         |> mapToSignal { query -> Signal<([LocationSearchEntry], String)?, NoError> in
             if let query = query, !query.isEmpty {
-                let foundVenues = nearbyVenues(account: context.account, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
+                let foundVenues = nearbyVenues(context: context, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
                 |> afterCompleted {
                     isSearching.set(false)
                 }
@@ -224,7 +224,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
             }
         }))
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.interaction.dismissInput()
         }
     }

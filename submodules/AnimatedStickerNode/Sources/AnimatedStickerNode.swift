@@ -56,6 +56,7 @@ public enum AnimatedStickerPlaybackPosition {
     case start
     case end
     case timestamp(Double)
+    case frameIndex(Int)
 }
 
 public enum AnimatedStickerPlaybackMode {
@@ -94,6 +95,7 @@ public protocol AnimatedStickerFrameSource: class {
     
     func takeFrame(draw: Bool) -> AnimatedStickerFrame?
     func skipToEnd()
+    func skipToFrameIndex(_ index: Int)
 }
 
 private final class AnimatedStickerFrameSourceWrapper {
@@ -270,6 +272,9 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     }
     
     public func skipToEnd() {
+    }
+
+    public func skipToFrameIndex(_ index: Int) {
     }
 }
 
@@ -604,13 +609,13 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         return self.currentFrame % self.frameCount
     }
     
-    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, fitzModifier: EmojiFitzModifier?, currentFrame: Int) {
+    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, fitzModifier: EmojiFitzModifier?) {
         self.queue = queue
         self.data = data
         self.width = width
         self.height = height
-        self.bytesPerRow = (4 * Int(width) + 15) & (~15)
-        self.currentFrame = currentFrame
+        self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
+        self.currentFrame = 0
         let rawData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         let decompressedData = transformedWithFitzModifier(data: rawData, fitzModifier: fitzModifier)
         
@@ -655,6 +660,10 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     
     func skipToEnd() {
         self.currentFrame = self.frameCount - 1
+    }
+
+    func skipToFrameIndex(_ index: Int) {
+        self.currentFrame = index
     }
 }
 
@@ -748,6 +757,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public var completed: (Bool) -> Void = { _ in }
     public var frameUpdated: (Int, Int) -> Void = { _, _ in }
+    public private(set) var currentFrameIndex: Int = 0
+    private var playFromIndex: Int?
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
@@ -789,7 +800,6 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     private var completion: (() -> Void)?
     private var stopAtFrame: Int?
-    public private(set) var currentFrameIndex: Int = 0
     
     override public init() {
         self.queue = sharedQueue
@@ -846,7 +856,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         strongSelf.isSetUpForPlayback = false
                         strongSelf.isPlaying = true
                     }
-                    strongSelf.play()
+                    let fromIndex = strongSelf.playFromIndex
+                    strongSelf.playFromIndex = nil
+                    strongSelf.play(fromIndex: fromIndex)
                 } else if strongSelf.canDisplayFirstFrame {
                     strongSelf.play(firstFrame: true)
                 }
@@ -915,7 +927,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     private var isSetUpForPlayback = false
     
-    public func play(firstFrame: Bool = false, fromFrame: Int = 0) {
+    public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         switch self.playbackMode {
         case .once:
             self.isPlaying = true
@@ -936,7 +948,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 if maybeFrameSource == nil {
                     let notifyUpdated: (() -> Void)? = nil
                     if let directData = directData {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5, currentFrame: fromFrame)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
                     } else if let (cachedData, cachedDataComplete, _) = cachedData {
                         if #available(iOS 9.0, *) {
                             maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -952,6 +964,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 }
                 guard let frameSource = maybeFrameSource else {
                     return
+                }
+                if let fromIndex = fromIndex {
+                    frameSource.skipToFrameIndex(fromIndex)
                 }
                 let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
                     return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
@@ -982,6 +997,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             })
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
+                            strongSelf.currentFrameIndex = frame.index
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -1033,6 +1049,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
             self.isSetUpForPlayback = true
             let directData = self.directData
             let cachedData = self.cachedData
+            if directData == nil && cachedData == nil {
+                self.playFromIndex = fromIndex
+            }
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
@@ -1040,7 +1059,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5, currentFrame: fromFrame)
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
                 } else if let (cachedData, cachedDataComplete, _) = cachedData {
                     if #available(iOS 9.0, *) {
                         maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -1055,6 +1074,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 })
                 guard let frameSource = maybeFrameSource else {
                     return
+                }
+                if let fromIndex = fromIndex {
+                    frameSource.skipToFrameIndex(fromIndex)
                 }
                 let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
                     return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
@@ -1151,21 +1173,21 @@ public final class AnimatedStickerNode: ASDisplayNode {
         }
     }
     
-    public func finishAnimation(resume: Bool, fromFrame: Int = 0, completion: @escaping () -> Void) {
+    public func finishAnimation(resume: Bool, fromIndex: Int = 0, completion: @escaping () -> Void) {
         self.completion = completion
         self.playbackMode = .loop
         if resume {
-            self.play(firstFrame: false, fromFrame: fromFrame)
+            self.play(firstFrame: false, fromIndex: fromIndex)
         } else {
             self.playIfNeeded()
         }
     }
     
-    public func playTo(frame: Int, fromFrame: Int = 0, completion: @escaping () -> Void) {
+    public func playTo(frame: Int, fromIndex: Int = 0, completion: @escaping () -> Void) {
         self.completion = completion
         self.stopAtFrame = frame
         self.playbackMode = .loop
-        self.play(firstFrame: false, fromFrame: fromFrame)
+        self.play(firstFrame: false, fromIndex: fromIndex)
     }
     
     public func seekTo(_ position: AnimatedStickerPlaybackPosition) {
@@ -1181,7 +1203,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             if case .timestamp = position {
             } else {
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5, currentFrame: 0)
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
                     if case .end = position {
                         maybeFrameSource?.skipToEnd()
                     }
@@ -1213,6 +1235,21 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     return
                 }
                 
+                var delta = targetFrame - frameSource.frameIndex
+                if delta < 0 {
+                    delta = frameSource.frameCount + delta
+                }
+                for i in 0 ..< delta {
+                    maybeFrame = frameQueue.syncWith { frameQueue in
+                        return frameQueue.take(draw: i == delta - 1)
+                    }
+                }
+            } else if case let .frameIndex(frameIndex) = position {
+                let targetFrame = frameIndex
+                if targetFrame == frameSource.frameIndex {
+                    return
+                }
+
                 var delta = targetFrame - frameSource.frameIndex
                 if delta < 0 {
                     delta = frameSource.frameCount + delta

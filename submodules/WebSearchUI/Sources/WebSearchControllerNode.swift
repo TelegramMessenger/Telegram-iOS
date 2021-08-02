@@ -284,7 +284,7 @@ class WebSearchControllerNode: ASDisplayNode {
             }
         })
         
-        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
+        self.recentQueriesNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
@@ -350,10 +350,10 @@ class WebSearchControllerNode: ASDisplayNode {
         }
         
         if themeUpdated {
-            self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.segmentedSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
-            self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.toolbarSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         }
         

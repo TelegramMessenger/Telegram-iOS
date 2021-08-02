@@ -25,17 +25,17 @@ class PaneGifSearchForQueryResult {
     }
 }
 
-func paneGifSearchForQuery(account: Account, query: String, offset: String?, incompleteResults: Bool = false, staleCachedResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
-    let contextBot = account.postbox.transaction { transaction -> String in
+func paneGifSearchForQuery(context: AccountContext, query: String, offset: String?, incompleteResults: Bool = false, staleCachedResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
+    let contextBot = context.account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
     }
     |> mapToSignal { botName -> Signal<PeerId?, NoError> in
-        return resolvePeerByName(account: account, name: botName)
+        return context.engine.peers.resolvePeerByName(name: botName)
     }
     |> mapToSignal { peerId -> Signal<Peer?, NoError> in
         if let peerId = peerId {
-            return account.postbox.loadedPeerWithId(peerId)
+            return context.account.postbox.loadedPeerWithId(peerId)
             |> map { peer -> Peer? in
                 return peer
             }
@@ -46,7 +46,7 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
     }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
         if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
+            let results = requestContextResults(account: context.account, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
             |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
                 return (.contextRequestResult(user, results?.results), results != nil, results?.isStale ?? false)
             }
@@ -203,7 +203,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         
         let signal: Signal<([MultiplexedVideoNodeFile], String?)?, NoError>
         if !text.isEmpty {
-            signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: "", updateActivity: self.updateActivity)
+            signal = paneGifSearchForQuery(context: self.context, query: text, offset: "", updateActivity: self.updateActivity)
             |> map { result -> ([MultiplexedVideoNodeFile], String?)? in
                 if let result = result {
                     return (result.files, result.nextOffset)
@@ -252,7 +252,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         self.isLoadingNextResults = true
         
         let signal: Signal<([MultiplexedVideoNodeFile], String?)?, NoError>
-        signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: nextOffsetValue, updateActivity: self.updateActivity)
+        signal = paneGifSearchForQuery(context: self.context, query: text, offset: nextOffsetValue, updateActivity: self.updateActivity)
         |> map { result -> ([MultiplexedVideoNodeFile], String?)? in
             if let result = result {
                 return (result.files, result.nextOffset)
@@ -345,9 +345,9 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             
             multiplexedNode.fileSelected = { [weak self] file, sourceNode, sourceRect in
                 if let (collection, result) = file.contextResult {
-                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect)
+                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, false)
                 } else {
-                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect)
+                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, false, false)
                 }
             }
             

@@ -859,3 +859,59 @@ public final class EmptyMediaResource: TelegramMediaResource {
         return to is EmptyMediaResource
     }
 }
+
+public struct WallpaperDataResourceId: MediaResourceId {
+    public var uniqueId: String {
+        return "wallpaper-\(self.slug)"
+    }
+
+    public var hashValue: Int {
+        return self.slug.hashValue
+    }
+
+    public var slug: String
+
+    public init(slug: String) {
+        self.slug = slug
+    }
+
+    public func isEqual(to: MediaResourceId) -> Bool {
+        guard let to = to as? WallpaperDataResourceId else {
+            return false
+        }
+        if self.slug != to.slug {
+            return false
+        }
+        return true
+    }
+}
+
+public final class WallpaperDataResource: TelegramMediaResource {
+    public let slug: String
+
+    public init(slug: String) {
+        self.slug = slug
+    }
+
+    public init(decoder: PostboxDecoder) {
+        self.slug = decoder.decodeStringForKey("s", orElse: "")
+    }
+
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.slug, forKey: "s")
+    }
+
+    public var id: MediaResourceId {
+        return WallpaperDataResourceId(slug: self.slug)
+    }
+
+    public func isEqual(to: MediaResource) -> Bool {
+        guard let to = to as? WallpaperDataResource else {
+            return false
+        }
+        if self.slug != to.slug {
+            return false
+        }
+        return true
+    }
+}

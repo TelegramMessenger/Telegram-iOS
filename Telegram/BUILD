@@ -277,6 +277,9 @@ official_apple_pay_merchants = [
     "merchant.sberbank.test.ph.telegra.Telegraph",
     "merchant.privatbank.test.telergramios",
     "merchant.privatbank.prod.telergram",
+    "merchant.paymaster.test.telegramios",
+    "merchant.smartglocal.prod.telegramios",
+    "merchant.smartglocal.test.telegramios",
 ]
 
 official_bundle_ids = [
@@ -1431,6 +1434,96 @@ ios_extension(
 )
 
 plist_fragment(
+    name = "BroadcastUploadInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.BroadcastUpload</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.broadcast-services-upload</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>BroadcastUploadSampleHandler</string>
+        <key>RPBroadcastProcessMode</key>
+        <string>RPBroadcastProcessModeSampleBuffer</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+swift_library(
+    name = "BroadcastUploadExtensionLib",
+    module_name = "BroadcastUploadExtensionLib",
+    srcs = glob([
+        "BroadcastUpload/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/TelegramUI:TelegramUI",
+        "//submodules/TelegramVoip:TelegramVoip",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems",
+        "//submodules/BroadcastUploadHelpers:BroadcastUploadHelpers",
+    ],
+)
+
+genrule(
+    name = "SetMinOsVersionBroadcastUploadExtension",
+    cmd_bash =
+"""
+    name=BroadcastUploadExtension.appex
+    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/11\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionBroadcastUploadExtension.sh)
+""",
+    srcs = [
+        "PatchMinOSVersion.source.sh",
+    ],
+    outs = [
+        "SetMinOsVersionBroadcastUploadExtension.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
+ios_extension(
+    name = "BroadcastUploadExtension",
+    bundle_id = "{telegram_bundle_id}.BroadcastUpload".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":BroadcastUploadInfoPlist",
+        ":VersionInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    ipa_post_processor = ":SetMinOsVersionBroadcastUploadExtension",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:BroadcastUpload.mobileprovision",
+    }),
+    deps = [":BroadcastUploadExtensionLib"],
+    frameworks = [
+        ":TelegramUIFramework",
+        ":SwiftSignalKitFramework",
+    ],
+)
+
+plist_fragment(
     name = "NotificationServiceInfoPlist",
     extension = "plist",
     template = 
@@ -1718,6 +1811,7 @@ ios_application(
             ":NotificationServiceExtension",
             ":IntentsExtension",
             ":WidgetExtension",
+            ":BroadcastUploadExtension",
         ],
     }),
     watch_application = select({
@@ -1727,5 +1821,53 @@ ios_application(
     deps = [
         ":Main",
         ":Lib",
+    ],
+)
+
+# Temporary targets used to simplify webrtc build tests
+
+ios_application(
+    name = "webrtc_build_test",
+    bundle_id = "{telegram_bundle_id}".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = ["iphone", "ipad"],
+    minimum_os_version = "9.0",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
+    entitlements = ":TelegramEntitlements.entitlements",
+    infoplists = [
+        ":TelegramInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":UrlTypesInfoPlist",
+    ],
+    deps = [
+        "//third-party/webrtc:webrtc_lib",
+    ],
+)
+
+ios_application(
+    name = "libvpx_build_test",
+    bundle_id = "{telegram_bundle_id}".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = ["iphone", "ipad"],
+    minimum_os_version = "9.0",
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
+    entitlements = ":TelegramEntitlements.entitlements",
+    infoplists = [
+        ":TelegramInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":UrlTypesInfoPlist",
+    ],
+    deps = [
+        "//third-party/libvpx:vpx",
     ],
 )

@@ -60,7 +60,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
             switch search {
             case .recentPeers:
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
-                    let _ = (removeRecentPeer(account: context.account, peerId: peerId)
+                    let _ = (context.engine.peers.removeRecentPeer(peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })
@@ -68,7 +68,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 items.append(.separator)
             case .recentSearch:
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
-                    let _ = (removeRecentlySearchedPeer(postbox: context.account.postbox, peerId: peerId)
+                    let _ = (context.engine.peers.removeRecentlySearchedPeer(peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })
@@ -322,7 +322,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     isMuted = true
                 }
                 items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = (togglePeerMuted(account: context.account, peerId: peerId)
+                    let _ = (context.engine.peers.togglePeerMuted(peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })
@@ -332,7 +332,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
             if case .search = source {
                 if let _ = peer as? TelegramChannel {
                     items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_JoinChannel, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                        var createSignal = context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peerId, hash: nil)
+                        var createSignal = context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peerId, hash: nil)
                         var cancelImpl: (() -> Void)?
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

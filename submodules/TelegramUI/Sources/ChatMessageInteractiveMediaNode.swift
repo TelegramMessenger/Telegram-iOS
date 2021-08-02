@@ -299,7 +299,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 case .Fetching:
                     if let context = self.context, let message = self.message, message.flags.isSending {
                        let _ = context.account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: context.account.postbox.mediaBox, ids: [message.id])
+                            context.engine.messages.deleteMessages(transaction: transaction, ids: [message.id])
                         }).start()
                     } else if let media = media, let context = self.context, let message = message {
                         if let media = media as? TelegramMediaFile {
@@ -570,13 +570,28 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         emptyColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                     }
                     if let wallpaper = media as? WallpaperPreviewMedia {
-                        if case let .file(_, patternColor, patternBottomColor, rotation, _, _) = wallpaper.content {
+                        if case let .file(_, patternColors, rotation, intensity, _, _) = wallpaper.content {
                             var colors: [UIColor] = []
-                            colors.append(patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5))
-                            if let patternBottomColor = patternBottomColor {
-                                colors.append(patternBottomColor)
+                            var customPatternColor: UIColor? = nil
+                            var bakePatternAlpha: CGFloat = 1.0
+                            if let intensity = intensity, intensity < 0 {
+                                if patternColors.isEmpty {
+                                    colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                                } else {
+                                    colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
+                                }
+                                customPatternColor = UIColor(white: 0.0, alpha: 1.0 - CGFloat(abs(intensity)))
+                            } else {
+                                if patternColors.isEmpty {
+                                    colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                                } else {
+                                    colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
+                                }
+                                let isLight = UIColor.average(of: patternColors.map(UIColor.init(rgb:))).hsb.b > 0.3
+                                customPatternColor = isLight ? .black : .white
+                                bakePatternAlpha = CGFloat(intensity ?? 50) / 100.0
                             }
-                            patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation)
+                            patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation, customPatternColor: customPatternColor, bakePatternAlpha: bakePatternAlpha)
                         }
                     }
                     
@@ -723,7 +738,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource)))
                                             }
                                             if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
-                                                return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
+                                                return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .screen)
+                                                |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                                                    if let value = value {
+                                                        return .single(value)
+                                                    } else {
+                                                        return .complete()
+                                                    }
+                                                }
                                             } else {
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }
@@ -732,8 +754,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
                                     case let .color(color):
                                         return solidColorImage(color)
-                                    case let .gradient(topColor, bottomColor, rotation):
-                                        return gradientImage([topColor, bottomColor], rotation: rotation ?? 0)
+                                    case let .gradient(colors, rotation):
+                                        return gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
                                 }
                             }
                             

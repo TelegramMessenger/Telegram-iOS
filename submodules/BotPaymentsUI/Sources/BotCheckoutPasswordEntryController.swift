@@ -285,7 +285,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
         
         self.isVerifying = true
-        self.disposable.set((requestTemporaryTwoStepPasswordToken(account: self.context.account, password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
+        self.disposable.set((self.context.engine.auth.requestTemporaryTwoStepPasswordToken(password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
             if let strongSelf = self {
                 strongSelf.completion(token)
             }

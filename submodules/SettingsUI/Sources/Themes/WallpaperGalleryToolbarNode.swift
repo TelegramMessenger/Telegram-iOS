@@ -35,6 +35,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     private let cancelHighlightBackgroundNode = ASDisplayNode()
     private let doneButton = HighlightTrackingButtonNode()
     private let doneHighlightBackgroundNode = ASDisplayNode()
+    private let backgroundNode = NavigationBackgroundNode(color: .clear)
     private let separatorNode = ASDisplayNode()
     private let topSeparatorNode = ASDisplayNode()
     
@@ -51,7 +52,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneHighlightBackgroundNode.alpha = 0.0
         
         super.init()
-        
+
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.cancelHighlightBackgroundNode)
         self.addSubnode(self.cancelButton)
         self.addSubnode(self.doneHighlightBackgroundNode)
@@ -96,7 +98,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
-        self.backgroundColor = theme.rootController.tabBar.backgroundColor
+        self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.cancelHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
@@ -132,6 +134,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneHighlightBackgroundNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
         self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height + layout.intrinsicInsets.bottom))
         self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: UIScreenPixel))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.update(size: CGSize(width: size.width, height: size.height + layout.intrinsicInsets.bottom), transition: .immediate)
     }
     
     @objc func cancelPressed() {

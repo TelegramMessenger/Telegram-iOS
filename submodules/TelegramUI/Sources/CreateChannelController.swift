@@ -258,7 +258,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             }
             
             endEditingImpl?()
-            actionsDisposable.add((createChannel(account: context.account, title: title, description: description.isEmpty ? nil : description)
+            actionsDisposable.add((context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
             |> deliverOnMainQueue
             |> afterDisposed {
                 Queue.mainQueue().async {
@@ -326,7 +326,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             
             let completedChannelPhotoImpl: (UIImage) -> Void = { image in
                 if let data = image.jpegData(compressionQuality: 0.6) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
                     uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
@@ -341,7 +341,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             
             let completedChannelVideoImpl: (UIImage, Any?, TGVideoEditAdjustments?) -> Void = { image, asset, adjustments in
                 if let data = image.jpegData(compressionQuality: 0.6) {
-                    let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                    let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
                     updateState { state in
@@ -407,7 +407,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                         if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                             resource = LocalFileMediaResource(fileId: liveUploadData.id)
                                         } else {
-                                            resource = LocalFileMediaResource(fileId: arc4random64())
+                                            resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                         }
                                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                         subscriber.putNext(resource)

@@ -10,20 +10,27 @@
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
+#import "platform/darwin/VideoCameraCapturer.h"
 
 #ifndef WEBRTC_IOS
 #import "platform/darwin/VideoMetalViewMac.h"
 #import "platform/darwin/GLVideoViewMac.h"
+#import "platform/darwin/VideoSampleBufferViewMac.h"
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
 #define UIViewContentModeScaleAspect kCAGravityResizeAspect
 
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
+#import "platform/darwin/VideoSampleBufferView.h"
+#import "platform/darwin/VideoCaptureView.h"
+#import "platform/darwin/CustomExternalCapturer.h"
 #endif
 
 #import "group/GroupInstanceImpl.h"
 #import "group/GroupInstanceCustomImpl.h"
+
+#import "VideoCaptureInterfaceImpl.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
@@ -43,8 +50,26 @@
 
 @end
 
+@interface IsProcessingCustomSampleBufferFlag : NSObject
+
+@property (nonatomic) bool value;
+
+@end
+
+@implementation IsProcessingCustomSampleBufferFlag
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+    }
+    return self;
+}
+
+@end
+
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     std::shared_ptr<tgcalls::VideoCaptureInterface> _interface;
+    IsProcessingCustomSampleBufferFlag *_isProcessingCustomSampleBuffer;
 }
 
 @end
@@ -97,6 +122,10 @@
     }
 }
 
+- (void)updateIsEnabled:(bool)isEnabled {
+    [self setEnabled:isEnabled];
+}
+
 @end
 
 @interface GLVideoView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
@@ -140,15 +169,77 @@
     }
 }
 
+- (void)updateIsEnabled:(bool)__unused isEnabled {
+}
+
 @end
+
+@interface VideoSampleBufferView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
+
+@property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
+
+@end
+
+@implementation VideoSampleBufferView (VideoViewImpl)
+
+- (OngoingCallVideoOrientationWebrtc)orientation {
+    return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
+}
+
+- (CGFloat)aspect {
+    return self.internalAspect;
+}
+
+- (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
+    [self setInternalOrientation:(int)orientation];
+}
+
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated {
+    if (onOrientationUpdated) {
+        [self internalSetOnOrientationUpdated:^(int value, CGFloat aspect) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value, aspect);
+        }];
+    } else {
+        [self internalSetOnOrientationUpdated:nil];
+    }
+}
+
+- (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated {
+    if (onIsMirroredUpdated) {
+        [self internalSetOnIsMirroredUpdated:^(bool value) {
+            onIsMirroredUpdated(value);
+        }];
+    } else {
+        [self internalSetOnIsMirroredUpdated:nil];
+    }
+}
+
+- (void)updateIsEnabled:(bool)isEnabled {
+    [self setEnabled:isEnabled];
+}
+
+@end
+
 
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     bool _keepLandscape;
+    std::shared_ptr<std::vector<uint8_t>> _croppingBuffer;
 }
 
 @end
 
 @implementation OngoingCallThreadLocalContextVideoCapturer
+
+- (instancetype _Nonnull)initWithInterface:(std::shared_ptr<tgcalls::VideoCaptureInterface>)interface {
+    self = [super init];
+    if (self != nil) {
+        _interface = interface;
+        _isProcessingCustomSampleBuffer = [[IsProcessingCustomSampleBufferFlag alloc] init];
+        _croppingBuffer = std::make_shared<std::vector<uint8_t>>();
+    }
+    return self;
+}
 
 - (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape {
     self = [super init];
@@ -164,9 +255,62 @@
     return self;
 }
 
+#if TARGET_OS_IOS
+
+tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls::VideoCaptureInterface *videoCapture) {
+    return videoCapture
+        ? static_cast<tgcalls::VideoCaptureInterfaceImpl*>(videoCapture)->object()->getSyncAssumingSameThread()
+        : nullptr;
+}
+
++ (instancetype _Nonnull)capturerWithExternalSampleBufferProvider {
+    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom");
+    return [[OngoingCallThreadLocalContextVideoCapturer alloc] initWithInterface:interface];
+}
+#endif
 
 - (void)dealloc {
 }
+
+#if TARGET_OS_IOS
+- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation {
+    if (!pixelBuffer) {
+        return;
+    }
+    
+    RTCVideoRotation videoRotation = RTCVideoRotation_0;
+    switch (rotation) {
+    case OngoingCallVideoOrientation0:
+        videoRotation = RTCVideoRotation_0;
+        break;
+    case OngoingCallVideoOrientation90:
+        videoRotation = RTCVideoRotation_90;
+        break;
+    case OngoingCallVideoOrientation180:
+        videoRotation = RTCVideoRotation_180;
+        break;
+    case OngoingCallVideoOrientation270:
+        videoRotation = RTCVideoRotation_270;
+        break;
+    }
+
+    if (_isProcessingCustomSampleBuffer.value) {
+        return;
+    }
+    _isProcessingCustomSampleBuffer.value = true;
+
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
+        auto capture = GetVideoCaptureAssumingSameThread(interface.get());
+        auto source = capture->source();
+        if (source) {
+            [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer rotation:videoRotation toSource:source croppingBuffer:*croppingBuffer];
+        }
+        CFRelease(pixelBuffer);
+        isProcessingCustomSampleBuffer.value = false;
+    });
+}
+
+#endif
 
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId {
     std::string resolvedId = deviceId.UTF8String;
@@ -184,29 +328,91 @@
     return _interface;
 }
 
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
-    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = _interface;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([VideoMetalView isSupported]) {
-            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-            
-            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setOutput(sink);
-            
-            completion(remoteRenderer);
-        } else {
-            GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-#ifndef WEBRTC_IOS
-            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+-(void)setOnFatalError:(dispatch_block_t _Nullable)onError {
+#if TARGET_OS_IOS
+#else
+    _interface->setOnFatalError(onError);
 #endif
+}
 
-            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setOutput(sink);
-            
-            completion(remoteRenderer);
+-(void)setOnPause:(void (^)(bool))onPause {
+#if TARGET_OS_IOS
+#else
+    _interface->setOnPause(onPause);
+#endif
+}
+
+- (void)setOnIsActiveUpdated:(void (^)(bool))onIsActiveUpdated {
+    _interface->setOnIsActiveUpdated([onIsActiveUpdated](bool isActive) {
+        if (onIsActiveUpdated) {
+            onIsActiveUpdated(isActive);
         }
     });
+}
+
+- (void)makeOutgoingVideoView:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+    __weak OngoingCallThreadLocalContextVideoCapturer *weakSelf = self;
+
+    void (^makeDefault)() = ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong OngoingCallThreadLocalContextVideoCapturer *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+            std::shared_ptr<tgcalls::VideoCaptureInterface> interface = strongSelf->_interface;
+
+            if (false && requestClone) {
+                VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                interface->setOutput(sink);
+
+                VideoSampleBufferView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+#ifdef WEBRTC_IOS
+                    [remoteRenderer setCloneTarget:cloneRenderer];
+#endif
+                }
+
+                completion(remoteRenderer, cloneRenderer);
+            } else if ([VideoMetalView isSupported]) {
+                VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                VideoMetalView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#ifdef WEBRTC_IOS
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+                    [remoteRenderer setClone:cloneRenderer];
+#else
+                    cloneRenderer.videoContentMode = kCAGravityResizeAspectFill;
+#endif
+                }
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+
+                interface->setOutput(sink);
+
+                completion(remoteRenderer, cloneRenderer);
+            } else {
+                GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
+    #ifndef WEBRTC_IOS
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+    #endif
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                interface->setOutput(sink);
+
+                completion(remoteRenderer, nil);
+            }
+        });
+    };
+
+    makeDefault();
 }
 
 @end
@@ -433,7 +639,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath =  std::string(logPath.length == 0 ? "" : logPath.UTF8String),
+            .logPath = std::string(logPath.length == 0 ? "" : logPath.UTF8String),
             .statsLogPath = std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .enableHighBitrateVideo = true,
@@ -844,6 +1050,23 @@ private:
     id<OngoingGroupCallBroadcastPartTask> _task;
 };
 
+class RequestMediaChannelDescriptionTaskImpl : public tgcalls::RequestMediaChannelDescriptionTask {
+public:
+    RequestMediaChannelDescriptionTaskImpl(id<OngoingGroupCallMediaChannelDescriptionTask> task) {
+        _task = task;
+    }
+
+    virtual ~RequestMediaChannelDescriptionTaskImpl() {
+    }
+
+    virtual void cancel() override {
+        [_task cancel];
+    }
+
+private:
+    id<OngoingGroupCallMediaChannelDescriptionTask> _task;
+};
+
 }
 
 @interface GroupCallThreadLocalContext () {
@@ -859,7 +1082,17 @@ private:
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer incomingVideoSourcesUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))incomingVideoSourcesUpdated participantDescriptionsRequired:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))participantDescriptionsRequired requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit enableVideo:(bool)enableVideo enableNoiseSuppression:(bool)enableNoiseSuppression {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
+    networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated
+    audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated
+    inputDeviceId:(NSString * _Nonnull)inputDeviceId
+    outputDeviceId:(NSString * _Nonnull)outputDeviceId
+    videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
+    requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
+    requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart
+    outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
+    videoContentType:(OngoingGroupCallVideoContentType)videoContentType
+    enableNoiseSuppression:(bool)enableNoiseSuppression {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -867,9 +1100,41 @@ private:
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
         
+        tgcalls::VideoContentType _videoContentType;
+        switch (videoContentType) {
+            case OngoingGroupCallVideoContentTypeGeneric: {
+                _videoContentType = tgcalls::VideoContentType::Generic;
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeScreencast: {
+                _videoContentType = tgcalls::VideoContentType::Screencast;
+                break;
+            }
+            case OngoingGroupCallVideoContentTypeNone: {
+                _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
+            default: {
+                _videoContentType = tgcalls::VideoContentType::None;
+                break;
+            }
+        }
+        
+        std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+
+        int minOutgoingVideoBitrateKbit = 500;
+        bool disableOutgoingAudioProcessing = false;
+
+        tgcalls::GroupConfig config;
+        config.need_log = false;
+#if DEBUG
+        config.need_log = true;
+#endif
+
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
             .threads = tgcalls::StaticThreads::getThreads(),
+            .config = config,
             .networkStateUpdated = [weakSelf, queue, networkStateUpdated](tgcalls::GroupNetworkState networkState) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
@@ -894,20 +1159,6 @@ private:
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
-            .incomingVideoSourcesUpdated = [incomingVideoSourcesUpdated](std::vector<uint32_t> const &ssrcs) {
-                NSMutableArray<NSNumber *> *mappedSources = [[NSMutableArray alloc] init];
-                for (auto it : ssrcs) {
-                    [mappedSources addObject:@(it)];
-                }
-                incomingVideoSourcesUpdated(mappedSources);
-            },
-            .participantDescriptionsRequired = [participantDescriptionsRequired](std::vector<uint32_t> const &ssrcs) {
-                NSMutableArray<NSNumber *> *mappedSources = [[NSMutableArray alloc] init];
-                for (auto it : ssrcs) {
-                    [mappedSources addObject:@(it)];
-                }
-                participantDescriptionsRequired(mappedSources);
-            },
             .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
                 id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
@@ -944,8 +1195,43 @@ private:
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
-            .enableVideo = enableVideo,
-            .initialEnableNoiseSuppression = enableNoiseSuppression
+            .disableOutgoingAudioProcessing = disableOutgoingAudioProcessing,
+            .videoContentType = _videoContentType,
+            .videoCodecPreferences = videoCodecPreferences,
+            .initialEnableNoiseSuppression = enableNoiseSuppression,
+            .requestMediaChannelDescriptions = [requestMediaChannelDescriptions](std::vector<uint32_t> const &ssrcs, std::function<void(std::vector<tgcalls::MediaChannelDescription> &&)> completion) -> std::shared_ptr<tgcalls::RequestMediaChannelDescriptionTask> {
+                NSMutableArray<NSNumber *> *mappedSsrcs = [[NSMutableArray alloc] init];
+                for (auto ssrc : ssrcs) {
+                    [mappedSsrcs addObject:[NSNumber numberWithUnsignedInt:ssrc]];
+                }
+                id<OngoingGroupCallMediaChannelDescriptionTask> task = requestMediaChannelDescriptions(mappedSsrcs, ^(NSArray<OngoingGroupCallMediaChannelDescription *> *channels) {
+                    std::vector<tgcalls::MediaChannelDescription> mappedChannels;
+                    for (OngoingGroupCallMediaChannelDescription *channel in channels) {
+                        tgcalls::MediaChannelDescription mappedChannel;
+                        switch (channel.type) {
+                            case OngoingGroupCallMediaChannelTypeAudio: {
+                                mappedChannel.type = tgcalls::MediaChannelDescription::Type::Audio;
+                                break;
+                            }
+                            case OngoingGroupCallMediaChannelTypeVideo: {
+                                mappedChannel.type = tgcalls::MediaChannelDescription::Type::Video;
+                                break;
+                            }
+                            default: {
+                                continue;
+                            }
+                        }
+                        mappedChannel.audioSsrc = channel.audioSsrc;
+                        mappedChannel.videoInformation = channel.videoDescription.UTF8String ?: "";
+                        mappedChannels.push_back(std::move(mappedChannel));
+                    }
+
+                    completion(std::move(mappedChannels));
+                });
+
+                return std::make_shared<RequestMediaChannelDescriptionTaskImpl>(task);
+            },
+            .minOutgoingVideoBitrateKbit = minOutgoingVideoBitrateKbit
         }));
     }
     return self;
@@ -956,102 +1242,6 @@ private:
         _instance->stop();
         _instance.reset();
     }
-}
-
-static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonnull completion)(NSString * _Nonnull, uint32_t)) {
-    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-    
-    int32_t signedSsrc = *(int32_t *)&payload.ssrc;
-    
-    dict[@"ssrc"] = @(signedSsrc);
-    dict[@"ufrag"] = [NSString stringWithUTF8String:payload.ufrag.c_str()];
-    dict[@"pwd"] = [NSString stringWithUTF8String:payload.pwd.c_str()];
-    
-    NSMutableArray *fingerprints = [[NSMutableArray alloc] init];
-    for (auto &fingerprint : payload.fingerprints) {
-        [fingerprints addObject:@{
-            @"hash": [NSString stringWithUTF8String:fingerprint.hash.c_str()],
-            @"fingerprint": [NSString stringWithUTF8String:fingerprint.fingerprint.c_str()],
-            @"setup": [NSString stringWithUTF8String:fingerprint.setup.c_str()]
-        }];
-    }
-    
-    dict[@"fingerprints"] = fingerprints;
-    
-    NSMutableArray *parsedVideoSsrcGroups = [[NSMutableArray alloc] init];
-    NSMutableArray *parsedVideoSources = [[NSMutableArray alloc] init];
-    for (auto &group : payload.videoSourceGroups) {
-        NSMutableDictionary *parsedGroup = [[NSMutableDictionary alloc] init];
-        parsedGroup[@"semantics"] = [NSString stringWithUTF8String:group.semantics.c_str()];
-        NSMutableArray *sources = [[NSMutableArray alloc] init];
-        for (auto &source : group.ssrcs) {
-            [sources addObject:@(source)];
-            if (![parsedVideoSources containsObject:@(source)]) {
-                [parsedVideoSources addObject:@(source)];
-            }
-        }
-        parsedGroup[@"sources"] = sources;
-        [parsedVideoSsrcGroups addObject:parsedGroup];
-    }
-    if (parsedVideoSsrcGroups.count != 0) {
-        dict[@"ssrc-groups"] = parsedVideoSsrcGroups;
-    }
-    
-    NSMutableArray *videoPayloadTypes = [[NSMutableArray alloc] init];
-    for (auto &payloadType : payload.videoPayloadTypes) {
-        NSMutableDictionary *parsedType = [[NSMutableDictionary alloc] init];
-        parsedType[@"id"] = @(payloadType.id);
-        NSString *name = [NSString stringWithUTF8String:payloadType.name.c_str()];
-        parsedType[@"name"] = name;
-        parsedType[@"clockrate"] = @(payloadType.clockrate);
-        if (![name isEqualToString:@"rtx"]) {
-            parsedType[@"channels"] = @(payloadType.channels);
-        }
-        
-        NSMutableDictionary *parsedParameters = [[NSMutableDictionary alloc] init];
-        for (auto &it : payloadType.parameters) {
-            NSString *key = [NSString stringWithUTF8String:it.first.c_str()];
-            NSString *value = [NSString stringWithUTF8String:it.second.c_str()];
-            parsedParameters[key] = value;
-        }
-        if (parsedParameters.count != 0) {
-            parsedType[@"parameters"] = parsedParameters;
-        }
-        
-        if (![name isEqualToString:@"rtx"]) {
-            NSMutableArray *parsedFbs = [[NSMutableArray alloc] init];
-            for (auto &it : payloadType.feedbackTypes) {
-                NSMutableDictionary *parsedFb = [[NSMutableDictionary alloc] init];
-                parsedFb[@"type"] = [NSString stringWithUTF8String:it.type.c_str()];
-                if (it.subtype.size() != 0) {
-                    parsedFb[@"subtype"] = [NSString stringWithUTF8String:it.subtype.c_str()];
-                }
-                [parsedFbs addObject:parsedFb];
-            }
-            parsedType[@"rtcp-fbs"] = parsedFbs;
-        }
-        
-        [videoPayloadTypes addObject:parsedType];
-    }
-    if (videoPayloadTypes.count != 0) {
-        dict[@"payload-types"] = videoPayloadTypes;
-    }
-    
-    NSMutableArray *parsedExtensions = [[NSMutableArray alloc] init];
-    for (auto &it : payload.videoExtensionMap) {
-        NSMutableDictionary *parsedExtension = [[NSMutableDictionary alloc] init];
-        parsedExtension[@"id"] = @(it.first);
-        parsedExtension[@"uri"] = [NSString stringWithUTF8String:it.second.c_str()];
-        [parsedExtensions addObject:parsedExtension];
-    }
-    if (parsedExtensions.count != 0) {
-        dict[@"rtp-hdrexts"] = parsedExtensions;
-    }
-    
-    NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
-    NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    
-    completion(string, payload.ssrc);
 }
 
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
@@ -1081,184 +1271,15 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload payload) {
-            processJoinPayload(payload, completion);
+        _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload const &payload) {
+            completion([NSString stringWithUTF8String:payload.json.c_str()], payload.audioSsrc);
         });
     }
 }
 
-- (void)setJoinResponsePayload:(NSString * _Nonnull)payload participants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants {
-    tgcalls::GroupJoinResponsePayload result;
-    
-    NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
-    if (payloadData == nil) {
-        return;
-    }
-    
-    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:payloadData options:0 error:nil];
-    if (![dict isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSDictionary *transport = dict[@"transport"];
-    if (![transport isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSString *pwd = transport[@"pwd"];
-    if (![pwd isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    NSString *ufrag = transport[@"ufrag"];
-    if (![ufrag isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    result.pwd = [pwd UTF8String];
-    result.ufrag = [ufrag UTF8String];
-    
-    NSArray *fingerprintsValue = transport[@"fingerprints"];
-    if (![fingerprintsValue isKindOfClass:[NSArray class]]) {
-        //return;
-    }
-    
-    for (NSDictionary *fingerprintValue in fingerprintsValue) {
-        if (![fingerprintValue isKindOfClass:[NSDictionary class]]) {
-            continue;
-        }
-        NSString *hashValue = fingerprintValue[@"hash"];
-        if (![hashValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *fingerprint = fingerprintValue[@"fingerprint"];
-        if (![fingerprint isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *setup = fingerprintValue[@"setup"];
-        if (![setup isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        tgcalls::GroupJoinPayloadFingerprint parsed;
-        parsed.fingerprint = [fingerprint UTF8String];
-        parsed.setup = [setup UTF8String];
-        parsed.hash = [hashValue UTF8String];
-        result.fingerprints.push_back(parsed);
-    }
-    
-    NSArray *candidatesValue = transport[@"candidates"];
-    if (![candidatesValue isKindOfClass:[NSArray class]]) {
-        return;
-    }
-    
-    for (NSDictionary *candidateValue in candidatesValue) {
-        if (![candidateValue isKindOfClass:[NSDictionary class]]) {
-            continue;
-        }
-        
-        NSString *portValue = candidateValue[@"port"];
-        if (![portValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *protocolValue = candidateValue[@"protocol"];
-        if (![protocolValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *networkValue = candidateValue[@"network"];
-        if (![networkValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *generationValue = candidateValue[@"generation"];
-        if (![generationValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *idValue = candidateValue[@"id"];
-        if (![idValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *componentValue = candidateValue[@"component"];
-        if (![componentValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *foundationValue = candidateValue[@"foundation"];
-        if (![foundationValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *priorityValue = candidateValue[@"priority"];
-        if (![priorityValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *ipValue = candidateValue[@"ip"];
-        if (![ipValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        NSString *typeValue = candidateValue[@"type"];
-        if (![typeValue isKindOfClass:[NSString class]]) {
-            continue;
-        }
-        
-        NSString *tcpTypeValue = candidateValue[@"tcptype"];
-        if (![tcpTypeValue isKindOfClass:[NSString class]]) {
-            tcpTypeValue = @"";
-        }
-        NSString *relAddrValue = candidateValue[@"rel-addr"];
-        if (![relAddrValue isKindOfClass:[NSString class]]) {
-            relAddrValue = @"";
-        }
-        NSString *relPortValue = candidateValue[@"rel-port"];
-        if (![relPortValue isKindOfClass:[NSString class]]) {
-            relPortValue = @"";
-        }
-        
-        tgcalls::GroupJoinResponseCandidate candidate;
-        
-        candidate.port = [portValue UTF8String];
-        candidate.protocol = [protocolValue UTF8String];
-        candidate.network = [networkValue UTF8String];
-        candidate.generation = [generationValue UTF8String];
-        candidate.id = [idValue UTF8String];
-        candidate.component = [componentValue UTF8String];
-        candidate.foundation = [foundationValue UTF8String];
-        candidate.priority = [priorityValue UTF8String];
-        candidate.ip = [ipValue UTF8String];
-        candidate.type = [typeValue UTF8String];
-        
-        candidate.tcpType = [tcpTypeValue UTF8String];
-        candidate.relAddr = [relAddrValue UTF8String];
-        candidate.relPort = [relPortValue UTF8String];
-        
-        result.candidates.push_back(candidate);
-    }
-    
-    std::vector<tgcalls::GroupParticipantDescription> parsedParticipants;
-    for (OngoingGroupCallParticipantDescription *participant in participants) {
-        tgcalls::GroupParticipantDescription parsedParticipant;
-        parsedParticipant.audioSsrc = participant.audioSsrc;
-        
-        if (participant.jsonParams.length != 0) {
-            [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
-        }
-        parsedParticipants.push_back(parsedParticipant);
-    }
-
-    NSDictionary *video = dict[@"video"];
-    if ([video isKindOfClass:[NSDictionary class]]) {
-        NSArray *serverSources = video[@"server_sources"];
-        if ([serverSources isKindOfClass:[NSArray class]]) {
-            for (NSNumber *sourceNumber in serverSources) {
-                if ([sourceNumber isKindOfClass:[NSNumber class]]) {
-                    int32_t signedSource = [sourceNumber intValue];
-                    result.serverVideoBandwidthProbingSsrc = *(int32_t *)&signedSource;
-                } else if ([sourceNumber isKindOfClass:[NSString class]]) {
-                    uint32_t source = (uint32_t)[sourceNumber longLongValue];
-                    result.serverVideoBandwidthProbingSsrc = source;
-                }
-            }
-        }
-    }
-    
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload {
     if (_instance) {
-        _instance->setJoinResponsePayload(result, std::move(parsedParticipants));
+        _instance->setJoinResponsePayload(payload.UTF8String);
     }
 }
 
@@ -1272,152 +1293,9 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
-- (void)parseJsonIntoParticipant:(NSString *)payload participant:(tgcalls::GroupParticipantDescription &)participant {
-    NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
-    if (payloadData == nil) {
-        return;
-    }
-    
-    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:payloadData options:0 error:nil];
-    if (![dict isKindOfClass:[NSDictionary class]]) {
-        return;
-    }
-    
-    NSString *endpointId = dict[@"endpoint"];
-    if (![endpointId isKindOfClass:[NSString class]]) {
-        return;
-    }
-    
-    participant.endpointId = [endpointId UTF8String];
-    
-    NSArray *ssrcGroups = dict[@"ssrc-groups"];
-    if ([ssrcGroups isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *group in ssrcGroups) {
-            if (![group isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSString *semantics = group[@"semantics"];
-            if (![semantics isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            NSArray *sources = group[@"sources"];
-            if (![sources isKindOfClass:[NSArray class]]) {
-                continue;
-            }
-            tgcalls::GroupJoinPayloadVideoSourceGroup groupDesc;
-            for (NSNumber *nSsrc in sources) {
-                if ([nSsrc isKindOfClass:[NSNumber class]]) {
-                    groupDesc.ssrcs.push_back([nSsrc unsignedIntValue]);
-                }
-            }
-            groupDesc.semantics = [semantics UTF8String];
-            participant.videoSourceGroups.push_back(groupDesc);
-        }
-    }
-    
-    NSArray *hdrExts = dict[@"rtp-hdrexts"];
-    if ([hdrExts isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *extDict in hdrExts) {
-            if (![extDict isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSNumber *nId = extDict[@"id"];
-            if (![nId isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSString *uri = extDict[@"uri"];
-            if (![uri isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            participant.videoExtensionMap.push_back(std::make_pair((uint32_t)[nId unsignedIntValue], (std::string)[uri UTF8String]));
-        }
-    }
-    
-    NSArray *payloadTypes = dict[@"payload-types"];
-    if ([payloadTypes isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *payloadDict in payloadTypes) {
-            if (![payloadDict isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            NSNumber *nId = payloadDict[@"id"];
-            if (![nId isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSNumber *nClockrate = payloadDict[@"clockrate"];
-            if (nClockrate != nil && ![nClockrate isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSNumber *nChannels = payloadDict[@"channels"];
-            if (nChannels != nil && ![nChannels isKindOfClass:[NSNumber class]]) {
-                continue;
-            }
-            NSString *name = payloadDict[@"name"];
-            if (![name isKindOfClass:[NSString class]]) {
-                continue;
-            }
-            
-            tgcalls::GroupJoinPayloadVideoPayloadType parsedPayload;
-            parsedPayload.id = [nId unsignedIntValue];
-            parsedPayload.clockrate = [nClockrate unsignedIntValue];
-            parsedPayload.channels = [nChannels unsignedIntValue];
-            parsedPayload.name = [name UTF8String];
-            
-            NSArray *fbs = payloadDict[@"rtcp-fbs"];
-            if ([fbs isKindOfClass:[NSArray class]]) {
-                for (NSDictionary *fbDict in fbs) {
-                    if (![fbDict isKindOfClass:[NSDictionary class]]) {
-                        continue;
-                    }
-                    NSString *type = fbDict[@"type"];
-                    if (![type isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    
-                    NSString *subtype = fbDict[@"subtype"];
-                    if (subtype != nil && ![subtype isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    
-                    tgcalls::GroupJoinPayloadVideoPayloadFeedbackType parsedFeedback;
-                    parsedFeedback.type = [type UTF8String];
-                    if (subtype != nil) {
-                        parsedFeedback.subtype = [subtype UTF8String];
-                    }
-                    parsedPayload.feedbackTypes.push_back(parsedFeedback);
-                }
-            }
-            
-            NSDictionary *parameters = payloadDict[@"parameters"];
-            if ([parameters isKindOfClass:[NSDictionary class]]) {
-                for (NSString *nKey in parameters) {
-                    if (![nKey isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    NSString *value = parameters[nKey];
-                    if (![value isKindOfClass:[NSString class]]) {
-                        continue;
-                    }
-                    parsedPayload.parameters.push_back(std::make_pair((std::string)[nKey UTF8String], (std::string)[value UTF8String]));
-                }
-            }
-            participant.videoPayloadTypes.push_back(parsedPayload);
-        }
-    }
-}
-
-- (void)addParticipants:(NSArray<OngoingGroupCallParticipantDescription *> * _Nonnull)participants {
+- (void)removeIncomingVideoSource:(uint32_t)ssrc {
     if (_instance) {
-        std::vector<tgcalls::GroupParticipantDescription> parsedParticipants;
-        for (OngoingGroupCallParticipantDescription *participant in participants) {
-            tgcalls::GroupParticipantDescription parsedParticipant;
-            parsedParticipant.audioSsrc = participant.audioSsrc;
-            
-            if (participant.jsonParams.length != 0) {
-                [self parseJsonIntoParticipant:participant.jsonParams participant:parsedParticipant];
-            }
-            parsedParticipants.push_back(parsedParticipant);
-        }
-        _instance->addParticipants(std::move(parsedParticipants));
+        _instance->removeIncomingVideoSource(ssrc);
     }
 }
 
@@ -1435,17 +1313,13 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
 
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer completion:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->setVideoCapture([videoCapturer getInterface], [completion](auto payload){
-            processJoinPayload(payload, completion);
-        });
+        _instance->setVideoCapture([videoCapturer getInterface]);
     }
 }
 
 - (void)disableVideo:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->setVideoCapture(nullptr, [completion](auto payload){
-            processJoinPayload(payload, completion);
-        });
+        _instance->setVideoCapture(nullptr);
     }
 }
 
@@ -1455,9 +1329,58 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
-- (void)setFullSizeVideoSsrc:(uint32_t)ssrc {
+- (void)setRequestedVideoChannels:(NSArray<OngoingGroupCallRequestedVideoChannel *> * _Nonnull)requestedVideoChannels {
     if (_instance) {
-        _instance->setFullSizeVideoSsrc(ssrc);
+        std::vector<tgcalls::VideoChannelDescription> mappedChannels;
+        for (OngoingGroupCallRequestedVideoChannel *channel : requestedVideoChannels) {
+            tgcalls::VideoChannelDescription description;
+            description.audioSsrc = channel.audioSsrc;
+            description.endpointId = channel.endpointId.UTF8String ?: "";
+            for (OngoingGroupCallSsrcGroup *group in channel.ssrcGroups) {
+                tgcalls::MediaSsrcGroup parsedGroup;
+                parsedGroup.semantics = group.semantics.UTF8String ?: "";
+                for (NSNumber *ssrc in group.ssrcs) {
+                    parsedGroup.ssrcs.push_back([ssrc unsignedIntValue]);
+                }
+                description.ssrcGroups.push_back(std::move(parsedGroup));
+            }
+            switch (channel.minQuality) {
+                case OngoingGroupCallRequestedVideoQualityThumbnail: {
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Thumbnail;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityMedium: {
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Medium;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityFull: {
+                    description.minQuality = tgcalls::VideoChannelDescription::Quality::Full;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            switch (channel.maxQuality) {
+                case OngoingGroupCallRequestedVideoQualityThumbnail: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Thumbnail;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityMedium: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Medium;
+                    break;
+                }
+                case OngoingGroupCallRequestedVideoQualityFull: {
+                    description.maxQuality = tgcalls::VideoChannelDescription::Quality::Full;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            mappedChannels.push_back(std::move(description));
+        }
+        _instance->setRequestedVideoChannels(std::move(mappedChannels));
     }
 }
 
@@ -1472,29 +1395,70 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
     }
 }
 
-- (void)makeIncomingVideoViewWithSsrc:(uint32_t)ssrc completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+- (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
     if (_instance) {
         __weak GroupCallThreadLocalContext *weakSelf = self;
         id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
         dispatch_async(dispatch_get_main_queue(), ^{
-            if ([VideoMetalView isSupported]) {
+            BOOL useSampleBuffer = NO;
+#ifdef WEBRTC_IOS
+            useSampleBuffer = YES;
+#endif
+            if (useSampleBuffer) {
+                VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+
+                VideoSampleBufferView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+#ifdef WEBRTC_IOS
+                    [remoteRenderer setCloneTarget:cloneRenderer];
+#endif
+                }
+
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf && strongSelf->_instance) {
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
+                    }
+                }];
+
+                completion(remoteRenderer, cloneRenderer);
+            } else if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-#if TARGET_OS_IPHONE
+#ifdef WEBRTC_IOS
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
 #else
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+                remoteRenderer.videoContentMode = kCAGravityResizeAspectFill;
 #endif
+
+                VideoMetalView *cloneRenderer = nil;
+                if (requestClone) {
+                    cloneRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#ifdef WEBRTC_IOS
+                    cloneRenderer.videoContentMode = UIViewContentModeScaleToFill;
+#else
+                    cloneRenderer.videoContentMode = kCAGravityResizeAspectFill;
+#endif
+                }
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> cloneSink = [cloneRenderer getSink];
                 
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
+                        if (cloneSink) {
+                            strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, cloneSink);
+                        }
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, cloneRenderer);
             } else {
                 GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
              //   [remoteRenderer setVideoContentMode:kCAGravityResizeAspectFill];
@@ -1503,25 +1467,37 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                     if (strongSelf && strongSelf->_instance) {
-                        strongSelf->_instance->addIncomingVideoOutput(ssrc, sink);
+                        strongSelf->_instance->addIncomingVideoOutput(endpointId.UTF8String, sink);
                     }
                 }];
                 
-                completion(remoteRenderer);
+                completion(remoteRenderer, nil);
             }
         });
     }
 }
 
+- (void)addExternalAudioData:(NSData * _Nonnull)data {
+    if (_instance) {
+        std::vector<uint8_t> samples;
+        samples.resize(data.length);
+        [data getBytes:samples.data() length:data.length];
+        _instance->addExternalAudioSamples(std::move(samples));
+    }
+}
+
 @end
 
-@implementation OngoingGroupCallParticipantDescription
+@implementation OngoingGroupCallMediaChannelDescription
 
-- (instancetype _Nonnull)initWithAudioSsrc:(uint32_t)audioSsrc jsonParams:(NSString * _Nullable)jsonParams {
+- (instancetype _Nonnull)initWithType:(OngoingGroupCallMediaChannelType)type
+    audioSsrc:(uint32_t)audioSsrc
+    videoDescription:(NSString * _Nullable)videoDescription {
     self = [super init];
     if (self != nil) {
+        _type = type;
         _audioSsrc = audioSsrc;
-        _jsonParams = jsonParams;
+        _videoDescription = videoDescription;
     }
     return self;
 }
@@ -1537,6 +1513,35 @@ static void processJoinPayload(tgcalls::GroupJoinPayload &payload, void (^ _Nonn
         _responseTimestamp = responseTimestamp;
         _status = status;
         _oggData = oggData;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallSsrcGroup
+
+- (instancetype)initWithSemantics:(NSString * _Nonnull)semantics ssrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs {
+    self = [super init];
+    if (self != nil) {
+        _semantics = semantics;
+        _ssrcs = ssrcs;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallRequestedVideoChannel
+
+- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc endpointId:(NSString * _Nonnull)endpointId ssrcGroups:(NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull)ssrcGroups minQuality:(OngoingGroupCallRequestedVideoQuality)minQuality maxQuality:(OngoingGroupCallRequestedVideoQuality)maxQuality {
+    self = [super init];
+    if (self != nil) {
+        _audioSsrc = audioSsrc;
+        _endpointId = endpointId;
+        _ssrcGroups = ssrcGroups;
+        _minQuality = minQuality;
+        _maxQuality = maxQuality;
     }
     return self;
 }

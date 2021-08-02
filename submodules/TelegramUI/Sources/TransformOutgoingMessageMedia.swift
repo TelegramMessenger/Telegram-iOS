@@ -59,7 +59,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                         }*/
                                         let imageDimensions = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                                         
-                                        let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                                        let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                         postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                                         
                                         let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
@@ -99,7 +99,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                     } else if file.mimeType.hasPrefix("video/") {
                         return Signal { subscriber in
                             if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 320.0, height: 320.0)), let thumbnailData = scaledImage.jpegData(compressionQuality: 0.6) {
-                                let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                                let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                             
                                 let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
@@ -158,7 +158,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                             if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7) {
                                 var representations = image.representations
                                 
-                                let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                                let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
                                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(smallestSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
                                 let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])

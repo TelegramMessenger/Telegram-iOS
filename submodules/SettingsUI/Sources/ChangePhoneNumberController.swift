@@ -90,7 +90,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
             }
         }
         
-        loadServerCountryCodes(accountManager: self.context.sharedContext.accountManager, network: self.context.account.network, completion: { [weak self] in
+        loadServerCountryCodes(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine, completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateCountryCode()
             }
@@ -123,7 +123,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
         }
         if !number.isEmpty {
             self.inProgress = true
-            self.requestDisposable.set((requestChangeAccountPhoneNumberVerification(account: self.context.account, phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
+            self.requestDisposable.set((self.context.engine.accountData.requestChangeAccountPhoneNumberVerification(phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
                 if let strongSelf = self {
                     strongSelf.inProgress = false
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(changePhoneNumberCodeController(context: strongSelf.context, phoneNumber: strongSelf.controllerNode.currentNumber, codeData: next))

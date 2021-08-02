@@ -398,7 +398,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             })
         }
         
-        venuesPromise.set(nearbyVenues(account: context.account, latitude: latitude, longitude: longitude)
+        venuesPromise.set(nearbyVenues(context: context, latitude: latitude, longitude: longitude)
         |> map(Optional.init))
     }
     
@@ -425,9 +425,9 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let createSignal: Signal<PeerId?, CreateGroupError>
             switch mode {
                 case .generic:
-                    createSignal = createGroup(account: context.account, title: title, peerIds: peerIds)
+                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
                 case .supergroup:
-                    createSignal = createSupergroup(account: context.account, title: title, description: nil)
+                    createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                     |> map(Optional.init)
                     |> mapError { error -> CreateGroupError in
                         switch error {
@@ -454,7 +454,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         guard let address = address else {
                             return .complete()
                         }
-                        return createSupergroup(account: context.account, title: title, description: nil, location: (location.latitude, location.longitude, address))
+                        return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
                         |> map(Optional.init)
                         |> mapError { error -> CreateGroupError in
                             switch error {
@@ -573,7 +573,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             
             let completedGroupPhotoImpl: (UIImage) -> Void = { image in
                 if let data = image.jpegData(compressionQuality: 0.6) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
                     uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
@@ -588,7 +588,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             
             let completedGroupVideoImpl: (UIImage, Any?, TGVideoEditAdjustments?) -> Void = { image, asset, adjustments in
                 if let data = image.jpegData(compressionQuality: 0.6) {
-                    let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                    let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
                     updateState { state in
@@ -655,7 +655,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                         if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
                                             resource = LocalFileMediaResource(fileId: liveUploadData.id)
                                         } else {
-                                            resource = LocalFileMediaResource(fileId: arc4random64())
+                                            resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                         }
                                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                         subscriber.putNext(resource)

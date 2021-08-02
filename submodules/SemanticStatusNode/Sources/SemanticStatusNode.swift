@@ -234,11 +234,11 @@ private final class SemanticStatusNodeProgressTransition {
         self.initialValue = initialValue
     }
     
-    func valueAt(timestamp: Double, actualValue: CGFloat) -> CGFloat {
+    func valueAt(timestamp: Double, actualValue: CGFloat) -> (CGFloat, Bool) {
         let duration = 0.2
         var t = CGFloat((timestamp - self.beginTime) / duration)
         t = min(1.0, max(0.0, t))
-        return t * actualValue + (1.0 - t) * self.initialValue
+        return (t * actualValue + (1.0 - t) * self.initialValue, t >= 1.0 - 0.001)
     }
 }
 
@@ -388,7 +388,11 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         let resolvedValue: CGFloat?
         if let value = self.value {
             if let transition = self.transition {
-                resolvedValue = transition.valueAt(timestamp: timestamp, actualValue: value)
+                let (v, isCompleted) = transition.valueAt(timestamp: timestamp, actualValue: value)
+                resolvedValue = v
+                if isCompleted {
+                    self.transition = nil
+                }
             } else {
                 resolvedValue = value
             }
@@ -400,12 +404,12 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
     
     func updateValue(value: CGFloat?) {
         if value != self.value {
-            let previousValue = value
+            let previousValue = self.value
             self.value = value
             let timestamp = CACurrentMediaTime()
             if let _ = value, let previousValue = previousValue {
                 if let transition = self.transition {
-                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: previousValue))
+                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: previousValue).0)
                 } else {
                     self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: previousValue)
                 }
@@ -509,7 +513,11 @@ private final class SemanticStatusNodeCheckContext: SemanticStatusNodeStateConte
         
         let resolvedValue: CGFloat
         if let transition = self.transition {
-            resolvedValue = transition.valueAt(timestamp: timestamp, actualValue: value)
+            let (v, isCompleted) = transition.valueAt(timestamp: timestamp, actualValue: value)
+            resolvedValue = v
+            if isCompleted {
+                self.transition = nil
+            }
         } else {
             resolvedValue = value
         }
@@ -777,6 +785,16 @@ public final class SemanticStatusNode: ASControlNode {
     private var disposable: Disposable?
     private var backgroundNodeImage: UIImage?
     
+    private let hasLayoutPromise = ValuePromise(false, ignoreRepeated: true)
+    
+    public override func layout() {
+        super.layout()
+        
+        if !self.bounds.width.isZero {
+            self.hasLayoutPromise.set(true)
+        }
+    }
+    
     public init(backgroundNodeColor: UIColor, foregroundNodeColor: UIColor, image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil, overlayForegroundNodeColor: UIColor? = nil, cutout: CGRect? = nil) {
         self.state = .none
         self.stateContext = self.state.context(current: nil)
@@ -789,9 +807,8 @@ public final class SemanticStatusNode: ASControlNode {
         
         if let image = image {
             let start = CACurrentMediaTime()
-            self.disposable = (image
-            |> deliverOnMainQueue).start(next: { [weak self] transform in
-                guard let strongSelf = self else {
+            self.disposable = combineLatest(queue: Queue.mainQueue(), image, self.hasLayoutPromise.get()).start(next: { [weak self] transform, ready in
+                guard let strongSelf = self, ready else {
                     return
                 }
                 let context = transform(TransformImageArguments(corners: ImageCorners(radius: strongSelf.bounds.width / 2.0), imageSize: strongSelf.bounds.size, boundingSize: strongSelf.bounds.size, intrinsicInsets: UIEdgeInsets()))

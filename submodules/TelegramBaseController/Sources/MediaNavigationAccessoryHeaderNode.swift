@@ -80,7 +80,7 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     }
                     
                     if titleText == subtitleText {
-                        subtitleText = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: timestamp)
+                        subtitleText = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: timestamp).0
                     }
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
@@ -226,7 +226,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.rightMaskNode = ASImageNode()
         self.rightMaskNode.contentMode = .scaleToFill
         
-        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.opaqueBackgroundColor)
         self.leftMaskNode.image = maskImage
         self.rightMaskNode.image = maskImage
         
@@ -266,8 +266,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.scrollNode.addSubnode(self.previousItemNode)
         self.scrollNode.addSubnode(self.nextItemNode)
         
-        self.addSubnode(self.leftMaskNode)
-        self.addSubnode(self.rightMaskNode)
+        //self.addSubnode(self.leftMaskNode)
+        //self.addSubnode(self.rightMaskNode)
         
         self.addSubnode(self.closeButton)
         self.addSubnode(self.rateButton)
@@ -355,7 +355,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.nameDisplayOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
         
-        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.opaqueBackgroundColor)
         self.leftMaskNode.image = maskImage
         self.rightMaskNode.image = maskImage
         
@@ -415,6 +415,22 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             self.playNext?()
         }
     }
+
+    func animateIn(transition: ContainedViewLayoutTransition) {
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.animatePositionAdditive(node: self.separatorNode, offset: CGPoint(x: 0.0, y: size.height))
+    }
+
+    func animateOut(transition: ContainedViewLayoutTransition) {
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
+    }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
@@ -466,7 +482,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: minHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         self.accessibilityAreaNode.frame = CGRect(origin: CGPoint(x: self.actionButton.frame.maxX, y: 0.0), size: CGSize(width: self.rateButton.frame.minX - self.actionButton.frame.maxX, height: minHeight))
     }

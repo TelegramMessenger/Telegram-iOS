@@ -1110,15 +1110,17 @@ public final class MediaBox {
         }
     }
     
-    public func removeCachedResources(_ ids: Set<WrappedMediaResourceId>) -> Signal<Void, NoError> {
+    public func removeCachedResources(_ ids: Set<WrappedMediaResourceId>, force: Bool = false) -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 for id in ids {
-                    if self.fileContexts[id] != nil {
-                        continue
-                    }
-                    if self.keepResourceContexts[id] != nil {
-                        continue
+                    if !force {
+                        if self.fileContexts[id] != nil {
+                            continue
+                        }
+                        if self.keepResourceContexts[id] != nil {
+                            continue
+                        }
                     }
                     let paths = self.storePathsForId(id.id)
                     unlink(paths.complete)

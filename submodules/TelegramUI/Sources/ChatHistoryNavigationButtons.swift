@@ -59,10 +59,12 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         self.mentionsButton = ChatHistoryNavigationButtonNode(theme: theme, type: .mentions)
         self.mentionsButton.alpha = 0.0
+        self.mentionsButton.isHidden = true
         self.mentionsButtonTapNode = ASDisplayNode()
         
         self.downButton = ChatHistoryNavigationButtonNode(theme: theme, type: .down)
         self.downButton.alpha = 0.0
+        self.downButton.isHidden = true
         
         super.init()
         
@@ -100,19 +102,32 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         if self.displayDownButton {
             mentionsOffset = buttonSize.height + 12.0
+
+            self.downButton.isHidden = false
             transition.updateAlpha(node: self.downButton, alpha: 1.0)
             transition.updateTransformScale(node: self.downButton, scale: 1.0)
         } else {
-            transition.updateAlpha(node: self.downButton, alpha: 0.0)
+            transition.updateAlpha(node: self.downButton, alpha: 0.0, completion: { [weak self] completed in
+                guard let strongSelf = self, completed else {
+                    return
+                }
+                strongSelf.downButton.isHidden = true
+            })
             transition.updateTransformScale(node: self.downButton, scale: 0.2)
         }
         
         if self.mentionCount != 0 {
+            self.mentionsButton.isHidden = false
             transition.updateAlpha(node: self.mentionsButton, alpha: 1.0)
             transition.updateTransformScale(node: self.mentionsButton, scale: 1.0)
             self.mentionsButtonTapNode.isHidden = false
         } else {
-            transition.updateAlpha(node: self.mentionsButton, alpha: 0.0)
+            transition.updateAlpha(node: self.mentionsButton, alpha: 0.0, completion: { [weak self] completed in
+                guard let strongSelf = self, completed else {
+                    return
+                }
+                strongSelf.mentionsButton.isHidden = true
+            })
             transition.updateTransformScale(node: self.mentionsButton, scale: 0.2)
             self.mentionsButtonTapNode.isHidden = true
         }

@@ -497,7 +497,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     guard let name = configuration.imageBotUsername else {
                         return .single(nil)
                     }
-                    return resolvePeerByName(account: context.account, name: name)
+                    return context.engine.peers.resolvePeerByName(name: name)
                     |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                         if let peerId = peerId {
                             return context.account.postbox.loadedPeerWithId(peerId)
@@ -654,7 +654,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             }
         })
         
-        self.recentListNode.beganInteractiveDragging = { [weak self] in
+        self.recentListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
@@ -848,7 +848,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     }
     
     private func clearRecentSearch() {
-        let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox) |> deliverOnMainQueue).start()
+        let _ = (self.context.engine.peers.clearRecentlySearchedPeers() |> deliverOnMainQueue).start()
     }
     
     override func scrollToTop() {

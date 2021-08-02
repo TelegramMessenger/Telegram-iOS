@@ -187,7 +187,9 @@ public final class CallController: ViewController {
                             if port.type == .bluetooth {
                                 var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
                                 let portName = port.name.lowercased()
-                                if portName.contains("airpods pro") {
+                                if portName.contains("airpods max") {
+                                    image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
+                                } else if portName.contains("airpods pro") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
                                 } else if portName.contains("airpods") {
                                     image = UIImage(bundleImageName: "Call/CallAirpodsButton")
@@ -341,7 +343,7 @@ public final class CallController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

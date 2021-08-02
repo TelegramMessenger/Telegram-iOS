@@ -403,7 +403,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             throttledUserLocation(userLocation)
             |> mapToSignal { location -> Signal<[TelegramMediaMap]?, NoError> in
                 if let location = location, location.horizontalAccuracy > 0 {
-                    return combineLatest(nearbyVenues(account: context.account, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
+                    return combineLatest(nearbyVenues(context: context, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
                     |> map { nearbyVenues, personalVenues -> [TelegramMediaMap]? in
                         var resultVenues: [TelegramMediaMap] = []
                         if let personalVenues = personalVenues {
@@ -431,7 +431,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 if let coordinate = coordinate {
                     return (.single(nil)
                     |> then(
-                        nearbyVenues(account: context.account, latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        nearbyVenues(context: context, latitude: coordinate.latitude, longitude: coordinate.longitude)
                         |> map { venues -> ([TelegramMediaMap], CLLocation)? in
                             return (venues, CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
                         }
@@ -640,7 +640,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             strongSelf.layoutEmptyResultsPlaceholder(transition: listTransition)
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }

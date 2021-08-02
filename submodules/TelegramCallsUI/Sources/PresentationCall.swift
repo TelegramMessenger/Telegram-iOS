@@ -24,7 +24,7 @@ final class PresentationCallToneRenderer {
     private var toneRendererAudioSessionActivated = false
     private let audioLevelPipe = ValuePipe<Float>()
     
-    init(tone: PresentationCallTone) {
+    init(tone: PresentationCallTone, completed: (() -> Void)? = nil) {
         let queue = Queue.mainQueue()
         self.queue = queue
         
@@ -52,6 +52,7 @@ final class PresentationCallToneRenderer {
         let toneDataOffset = Atomic<Int>(value: 0)
         
         let toneData = Atomic<Data?>(value: nil)
+        let reportedCompletion = Atomic<Bool>(value: false)
         
         self.toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
             var data = toneData.with { $0 }
@@ -63,6 +64,9 @@ final class PresentationCallToneRenderer {
             }
             
             guard let toneData = data else {
+                if !reportedCompletion.swap(true) {
+                    completed?()
+                }
                 return .finished
             }
             
@@ -83,6 +87,11 @@ final class PresentationCallToneRenderer {
             
             if let takeOffset = takeOffset {
                 if let toneDataMaxOffset = toneDataMaxOffset, takeOffset >= toneDataMaxOffset {
+                    if !reportedCompletion.swap(true) {
+                        Queue.mainQueue().after(1.0, {
+                            completed?()
+                        })
+                    }
                     return .finished
                 }
                 
@@ -117,6 +126,9 @@ final class PresentationCallToneRenderer {
                 
                 let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: frameSize, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: frameSize, flags: 0, blockBufferOut: &blockBuffer)
                 if status != noErr {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
                 
@@ -127,15 +139,24 @@ final class PresentationCallToneRenderer {
                 var sampleBuffer: CMSampleBuffer?
                 var sampleSize = frameSize
                 guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
                 
                 if let sampleBuffer = sampleBuffer {
                     return .frame(MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer, resetDecoder: false, decoded: true))
                 } else {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
             } else {
+                if !reportedCompletion.swap(true) {
+                    completed?()
+                }
                 return .finished
             }
         })
@@ -927,6 +948,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -978,6 +1000,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {
@@ -992,11 +1017,12 @@ public final class PresentationCallImpl: PresentationCall {
             self.videoCapturer = videoCapturer
         }
         
-        self.videoCapturer?.makeOutgoingVideoView(completion: { view in
+        self.videoCapturer?.makeOutgoingVideoView(requestClone: false, completion: { view, _ in
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -1048,6 +1074,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {

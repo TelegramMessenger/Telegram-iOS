@@ -280,7 +280,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     
-    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController?, navigationBar: NavigationBar, context: AccountContext, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.dismissAnimated = dismissAnimated
         
@@ -296,7 +296,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         }
 
         self.actionButtonPanelNode = ASDisplayNode()
-        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
 
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
@@ -304,9 +304,9 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
         self.actionButton.setState(.active(self.presentationData.strings.Common_Done))
         
-        super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: controller, navigationBar: navigationBar, state: signal)
         
-        self.dataRequestDisposable = (requestBotPaymentReceipt(account: context.account, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
+        self.dataRequestDisposable = (context.engine.payments.requestBotPaymentReceipt(messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
                 UIView.transition(with: strongSelf.view, duration: 0.25, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
                 }, completion: nil)

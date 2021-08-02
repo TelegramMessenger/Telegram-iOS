@@ -153,6 +153,12 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                         } else if view.isAddedToChatList, let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
+                            if case .peer = chatLocation, !view.isAddedToChatList {
+                                if view.holeEarlier && view.entries.count <= 2 {
+                                    fadeIn = true
+                                    return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                                }
+                            }
                             if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
                                 fadeIn = true
                                 return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
@@ -335,7 +341,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
     case .channelPost(let messageId), .groupMessage(let messageId):
-        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
+        message = context.engine.messages.fetchChannelReplyThreadMessage(messageId: messageId, atMessageId: atMessageId)
     }
     
     return message

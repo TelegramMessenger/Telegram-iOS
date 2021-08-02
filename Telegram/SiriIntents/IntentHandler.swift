@@ -114,7 +114,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         
         self.rootPath = rootPath
         
-        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: arc4random64())
+        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let logsPath = rootPath + "/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -625,7 +625,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
             
             for (_, messageId) in maxMessageIdsToApply {
-                signals.append(applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
+                signals.append(TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0))
                 |> castError(IntentHandlingError.self))
             }
             
@@ -890,7 +890,7 @@ private final class WidgetIntentHandler {
         
         self.rootPath = rootPath
         
-        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: arc4random64())
+        TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let logsPath = rootPath + "/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -1060,7 +1060,7 @@ private final class WidgetIntentHandler {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [Friend] in
                     var peers: [Peer] = []
                     
-                    for id in getRecentPeers(transaction: transaction) {
+                    for id in _internal_getRecentPeers(transaction: transaction) {
                         if let peer = transaction.getPeer(id), !(peer is TelegramSecretChat), !peer.isDeleted {
                             peers.append(peer)
                         }

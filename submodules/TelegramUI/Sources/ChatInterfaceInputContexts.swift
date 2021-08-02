@@ -208,7 +208,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
             for inputQuery in inputQueries {
                 if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
-                    let baseFontSize: CGFloat = max(17.0, chatPresentationInterfaceState.fontSize.baseDisplaySize)
+                    let baseFontSize: CGFloat = max(chatTextInputMinFontSize, chatPresentationInterfaceState.fontSize.baseDisplaySize)
                     
                     let string = NSMutableAttributedString()
                     string.append(NSAttributedString(string: "@" + addressName, font: Font.regular(baseFontSize), textColor: UIColor.clear))
@@ -286,7 +286,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 if !extendedSearchLayout {
                     if case .scheduledMessages = chatPresentationInterfaceState.subject {
                     } else if chatPresentationInterfaceState.renderedPeer?.peerId != context.account.peerId {
-                        if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                        if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                             accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                         } else if currentAutoremoveTimeout != nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                             accessoryItems.append(.messageAutoremoveTimeout(currentAutoremoveTimeout))
@@ -312,13 +312,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             stickersEnabled = false
                         }
                     }
-                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo {
-                        accessoryItems.append(.commands)
-                    } else if chatPresentationInterfaceState.hasBots {
+//                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo {
+//                        accessoryItems.append(.commands)
+//                    } else
+                    if chatPresentationInterfaceState.hasBots {
                         accessoryItems.append(.commands)
                     }
                     accessoryItems.append(.stickers(stickersEnabled))
-                    if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {
+                    if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
                         accessoryItems.append(.inputButtons)
                     }
                 }

@@ -331,7 +331,8 @@ class TabBarNode: ASDisplayNode {
     private var centered: Bool = false
     
     private var badgeImage: UIImage
-    
+
+    let backgroundNode: NavigationBackgroundNode
     let separatorNode: ASDisplayNode
     private var tabBarNodeContainers: [TabBarNodeContainer] = []
     
@@ -342,6 +343,8 @@ class TabBarNode: ASDisplayNode {
         self.contextAction = contextAction
         self.swipeAction = swipeAction
         self.theme = theme
+
+        self.backgroundNode = NavigationBackgroundNode(color: theme.tabBarBackgroundColor)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
@@ -354,9 +357,10 @@ class TabBarNode: ASDisplayNode {
         
         self.isAccessibilityContainer = false
         
-        self.isOpaque = true
-        self.backgroundColor = theme.tabBarBackgroundColor
-        
+        self.isOpaque = false
+        self.backgroundColor = nil
+
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
     }
     
@@ -389,7 +393,7 @@ class TabBarNode: ASDisplayNode {
             self.theme = theme
             
             self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
-            self.backgroundColor = theme.tabBarBackgroundColor
+            self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
             
             self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, strokeColor: theme.tabBarBadgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)!
             for container in self.tabBarNodeContainers {
@@ -539,6 +543,9 @@ class TabBarNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset, additionalSideInsets, bottomInset)
+
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.backgroundNode.update(size: size, transition: transition)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight), size: CGSize(width: size.width, height: separatorHeight)))
         

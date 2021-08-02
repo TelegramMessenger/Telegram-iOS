@@ -34,33 +34,46 @@ import CoreSpotlight
 import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
-
-#if canImport(BackgroundTasks)
 import BackgroundTasks
+
+#if canImport(AppCenter)
+import AppCenter
+import AppCenterCrashes
 #endif
 
 private let handleVoipNotifications = false
 
 private var testIsLaunched = false
 
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
+private func isKeyboardWindow(window: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: window))
+    if #available(iOS 9.0, *) {
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("RemoteKeyboardWindow") {
+            return true
+        }
+    } else {
+        if typeName.hasPrefix("UI") && typeName.hasSuffix("TextEffectsWindow") {
+            return true
+        }
     }
-    return result
+    return false
 }
 
-private let keyboardViewClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuIptuWjfx", -1))!
-private let keyboardViewContainerClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuDpoubjofsWjfx", -1))!
-
-private let keyboardWindowClass: AnyClass? = {
-    if #available(iOS 9.0, *) {
-        return NSClassFromString(encodeText("VJSfnpufLfzcpbseXjoepx", -1))
-    } else {
-        return NSClassFromString(encodeText("VJUfyuFggfdutXjoepx", -1))
+private func isKeyboardView(view: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: view))
+    if typeName.hasPrefix("UI") && typeName.hasSuffix("InputSetHostView") {
+        return true
     }
-}()
+    return false
+}
+
+private func isKeyboardViewContainer(view: NSObject) -> Bool {
+    let typeName = NSStringFromClass(type(of: view))
+    if typeName.hasPrefix("UI") && typeName.hasSuffix("InputSetContainerView") {
+        return true
+    }
+    return false
+}
 
 private class ApplicationStatusBarHost: StatusBarHost {
     private let application = UIApplication.shared
@@ -86,20 +99,20 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
-        self.application.setStatusBarStyle(style, animated: animated)
+        if self.shouldChangeStatusBarStyle?(style) ?? true {
+            self.application.setStatusBarStyle(style, animated: animated)
+        }
     }
+    
+    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
     
     func setStatusBarHidden(_ value: Bool, animated: Bool) {
         self.application.setStatusBarHidden(value, with: animated ? .fade : .none)
     }
     
     var keyboardWindow: UIWindow? {
-        guard let keyboardWindowClass = keyboardWindowClass else {
-            return nil
-        }
-        
         for window in UIApplication.shared.windows {
-            if window.isKind(of: keyboardWindowClass) {
+            if isKeyboardWindow(window: window) {
                 return window
             }
         }
@@ -107,14 +120,14 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var keyboardView: UIView? {
-        guard let keyboardWindow = self.keyboardWindow, let keyboardViewContainerClass = keyboardViewContainerClass, let keyboardViewClass = keyboardViewClass else {
+        guard let keyboardWindow = self.keyboardWindow else {
             return nil
         }
         
         for view in keyboardWindow.subviews {
-            if view.isKind(of: keyboardViewContainerClass) {
+            if isKeyboardViewContainer(view: view) {
                 for subview in view.subviews {
-                    if subview.isKind(of: keyboardViewClass) {
+                    if isKeyboardView(view: subview) {
                         return subview
                     }
                 }
@@ -436,7 +449,7 @@ final class SharedApplicationContext {
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
-        TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: arc4random64())
+        TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let logsPath = rootPath + "/logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -487,14 +500,7 @@ final class SharedApplicationContext {
         telegramUIDeclareEncodables()
         
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
-        
         GlobalExperimentalSettings.enableFeed = false
-        #if DEBUG
-            //GlobalExperimentalSettings.enableFeed = true
-            #if targetEnvironment(simulator)
-                //GlobalTelegramCoreConfiguration.readMessages = false
-            #endif
-        #endif
         
         self.window?.makeKeyAndVisible()
         
@@ -502,7 +508,7 @@ final class SharedApplicationContext {
         
         initializeAccountManagement()
         
-        let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
+        let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
             if let parsed = parsedUrl {
                 if parsed.scheme == nil || parsed.scheme!.isEmpty {
@@ -641,6 +647,8 @@ final class SharedApplicationContext {
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                        PresentationAppIcon(name: "New2", imageName: "New2_180x180"),
+                        PresentationAppIcon(name: "New1", imageName: "New1_180x180"),
                         PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
                         PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
                         PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
@@ -787,7 +795,6 @@ final class SharedApplicationContext {
             self.mainWindow?.hostView.containerView.backgroundColor =  initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
             let legacyBasePath = appGroupUrl.path
-            let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
@@ -795,7 +802,7 @@ final class SharedApplicationContext {
             })
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -856,7 +863,7 @@ final class SharedApplicationContext {
                 }
                 var exists = false
                 strongSelf.mainWindow.forEachViewController({ controller in
-                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
+                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController || controller is ThemePreviewController {
                         exists = true
                     }
                     return true
@@ -1371,6 +1378,14 @@ final class SharedApplicationContext {
         }*/
         
         self.maybeCheckForUpdates()
+
+        #if canImport(AppCenter)
+        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
+            AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
+                Crashes.self
+            ])
+        }
+        #endif
         
         return true
     }
@@ -2049,9 +2064,9 @@ final class SharedApplicationContext {
                     |> deliverOnMainQueue
                     |> mapToSignal { account -> Signal<Void, NoError> in
                         if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
-                            let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
+                            let _ = TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0)).start()
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil

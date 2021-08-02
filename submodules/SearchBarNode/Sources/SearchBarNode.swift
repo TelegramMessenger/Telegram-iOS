@@ -26,7 +26,6 @@ private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> 
     }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-
 public struct SearchBarToken {
     public struct Style {
         public let backgroundColor: UIColor
@@ -620,9 +619,9 @@ public final class SearchBarNodeTheme: Equatable {
         self.keyboard = keyboard
     }
     
-    public init(theme: PresentationTheme, hasSeparator: Bool = true) {
-        self.background = theme.rootController.navigationBar.backgroundColor
-        self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
+    public init(theme: PresentationTheme, hasBackground: Bool = true, hasSeparator: Bool = true) {
+        self.background = hasBackground ? theme.rootController.navigationBar.blurredBackgroundColor : .clear
+        self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.blurredBackgroundColor
         self.inputFill = theme.rootController.navigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.navigationSearchBar.inputPlaceholderTextColor
         self.primaryText = theme.rootController.navigationSearchBar.inputTextColor
@@ -714,7 +713,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     public var tokensUpdated: (([SearchBarToken]) -> Void)?
     
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let textBackgroundNode: ASDisplayNode
     private var activityIndicator: ActivityIndicator?
@@ -808,13 +807,14 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private var strings: PresentationStrings?
     private let cancelText: String?
     
-    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, cancelText: String? = nil) {
+    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, displayBackground: Bool = true, cancelText: String? = nil) {
         self.fieldStyle = fieldStyle
         self.forceSeparator = forceSeparator
         self.cancelText = cancelText
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode = NavigationBackgroundNode(color: theme.background)
+        self.backgroundNode.isUserInteractionEnabled = false
+        self.backgroundNode.isHidden = !displayBackground
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -887,7 +887,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
         }
         if self.theme != theme {
-            self.backgroundNode.backgroundColor = theme.background
+            self.backgroundNode.updateColor(color: theme.background, transition: .immediate) 
             if self.fieldStyle != .modern || self.forceSeparator {
                 self.separatorNode.backgroundColor = theme.separator
             }
@@ -914,6 +914,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.validLayout = (boundingSize, leftInset, rightInset)
         
         self.backgroundNode.frame = self.bounds
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: .immediate)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height), size: CGSize(width: self.bounds.size.width, height: UIScreenPixel)))
         
         let verticalOffset: CGFloat = boundingSize.height - 82.0
@@ -1044,7 +1045,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             separatorCompleted = true
             intermediateCompletion()
         })
-        
+
+        self.textBackgroundNode.isHidden = true
+
         self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { _ in
             textBackgroundCompleted = true
             intermediateCompletion()
@@ -1056,7 +1059,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         transitionBackgroundNode.backgroundColor = node.backgroundNode.backgroundColor
         transitionBackgroundNode.cornerRadius = node.backgroundNode.cornerRadius
         self.insertSubnode(transitionBackgroundNode, aboveSubnode: self.textBackgroundNode)
-        transitionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0, removeOnCompletion: false)
+        //transitionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0, removeOnCompletion: false)
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let textFieldFrame = self.textField.frame

@@ -32,6 +32,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/WallpaperResources:WallpaperResources",
     ],
     visibility = [
         "//visibility:public",

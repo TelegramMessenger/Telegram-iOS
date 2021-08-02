@@ -23,6 +23,7 @@ import ShareController
 import ChatInterfaceState
 import TelegramCallsUI
 import UndoUI
+import ImportStickerPackUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -66,18 +67,18 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let _ = (addGroupMember(account: context.account, peerId: peerId, memberId: botPeerId)
+                        let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })
                     } else {
-                        let _ = (addChannelMember(account: context.account, peerId: peerId, memberId: botPeerId)
+                        let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })
                     }
                 } else {
-                    let _ = (requestStartBotInGroup(account: context.account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                    let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in
                         if let navigationController = navigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
@@ -96,8 +97,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             dismissInput()
             navigationController?.pushViewController(controller)
-        case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil))
+        case let .channelMessage(peerId, messageId, timecode):
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true, timecode: timecode), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):
             if let navigationController = navigationController {
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
@@ -184,7 +185,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             present(controller, nil)
-            let _ = (requestCancelAccountResetData(network: context.account.network, hash: hash)
+            let _ = (context.engine.auth.requestCancelAccountResetData(hash: hash)
             |> deliverOnMainQueue).start(next: { [weak controller] data in
                 controller?.dismiss()
                 present(confirmPhoneNumberCodeController(context: context, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -241,7 +242,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             if let to = to {
                 if to.hasPrefix("@") {
-                    let _ = (resolvePeerByName(account: context.account, name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
+                    let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
                     |> deliverOnMainQueue).start(next: { peerId in
                         if let peerId = peerId {
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
@@ -293,30 +294,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
-            var topColor: UIColor?
-            var bottomColor: UIColor?
+            var colors: [UInt32] = []
             var intensity: Int32?
             var rotation: Int32?
             switch parameter {
-                case let .slug(slug, wallpaperOptions, firstColor, secondColor, intensityValue, rotationValue):
+                case let .slug(slug, wallpaperOptions, colorsValue, intensityValue, rotationValue):
                     signal = getWallpaper(network: context.account.network, slug: slug)
                     options = wallpaperOptions
-                    topColor = firstColor
-                    bottomColor = secondColor
+                    colors = colorsValue
                     intensity = intensityValue
                     rotation = rotationValue
                     controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
                     signal = .single(.color(color.argb))
-                case let .gradient(topColor, bottomColor, rotation):
-                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)))
+                case let .gradient(colors, rotation):
+                    signal = .single(.gradient(nil, colors, WallpaperSettings(rotation: rotation)))
             }
             
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, topColor, bottomColor, intensity, rotation, nil))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, colors, intensity, rotation, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
@@ -399,7 +398,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController?.pushViewController(previewController)
                     }
                 } else if let settings = dataAndTheme.1 {
-                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
+                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
                         let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
                         navigationController?.pushViewController(previewController)
                     }
@@ -439,8 +438,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 case .devices:
                     if let navigationController = navigationController {
                         let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
-                            let activeSessionsContext = ActiveSessionsContext(account: context.account)
-                            let webSessionsContext = WebSessionsContext(account: context.account)
+                            let activeSessionsContext = context.engine.privacy.activeSessions()
+                            let webSessionsContext = context.engine.privacy.webSessions()
                             let otherSessionCount = activeSessionsContext.state
                             |> map { state -> Int in
                                 return state.sessions.filter({ !$0.isCurrent }).count
@@ -479,6 +478,17 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
                     }), on: .root, blockInteraction: false, completion: {})
                 }))
+            }
+        case .importStickers:
+            dismissInput()
+            if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerset"), let stickerPack = ImportStickerPack(data: data), !stickerPack.stickers.isEmpty {
+                for controller in navigationController.overlayControllers {
+                    if controller is ImportStickerPackController {
+                        controller.dismiss()
+                    }
+                }
+                let controller = ImportStickerPackController(context: context, stickerPack: stickerPack, parentNavigationController: navigationController)
+                present(controller, nil)
             }
     }
 }

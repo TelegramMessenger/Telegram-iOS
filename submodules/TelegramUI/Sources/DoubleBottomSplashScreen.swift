@@ -43,7 +43,8 @@ public final class DoubleBottomSplashScreen: FlowViewController {
         self.mode = mode
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
+        
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
         
@@ -87,11 +88,19 @@ public final class DoubleBottomSplashScreen: FlowViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if let displayNode = self.displayNode as? DoubleBottomSplashScreenNode {
-            displayNode.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+            displayNode.containerLayoutUpdated(
+                layout: layout,
+                navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY,
+                transition: transition
+            )
         }
         
         if let displayNode = self.displayNode as? DoubleBottomSwitchScreenNode {
-            displayNode.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+            displayNode.containerLayoutUpdated(
+                layout: layout,
+                navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY,
+                transition: transition
+            )
         }
     }
     
@@ -179,7 +188,7 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
             strongSelf.switchNode.isUserInteractionEnabled = false
             
             if isOn {
-                strongSelf.animationNode2.finishAnimation(resume: true, fromFrame: 69) { [weak self] in
+                strongSelf.animationNode2.finishAnimation(resume: true, fromIndex: 69) { [weak self] in
                     guard let strongSelf = self else { return }
                     
                     strongSelf.animationNode2.pause()
@@ -196,14 +205,14 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
                 } else if frame < 90 {
                     frame = 90
                 }
-                strongSelf.animationNode.finishAnimation(resume: true, fromFrame: frame) { [weak self] in
+                strongSelf.animationNode.finishAnimation(resume: true, fromIndex: frame) { [weak self] in
                     guard let strongSelf = self else { return }
                     
                     strongSelf.animationNode.stop()
                     strongSelf.animationNode2.visibility = true
                     strongSelf.animationNode2.alpha = 1.0
                     strongSelf.animationNode.alpha = 0.0
-                    strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
+                    strongSelf.animationNode2.playTo(frame: 69, fromIndex: 0) { [weak self] in
                         guard let strongSelf = self else { return }
                         
                         strongSelf.switchNode.isUserInteractionEnabled = true
@@ -251,7 +260,7 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         let switchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - switchSize.width) / 2.0), y: floor(layout.size.height / 2.0) + titleCenterOffset), size: switchSize)
         transition.updateFrameAdditive(node: self.switchNode, frame: switchFrame)
@@ -314,9 +323,9 @@ private final class DoubleBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.DoubleBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.DoubleBottom_AddOneMoreAccount_Button
             
-            if let source = source {
+            if let _ = source {
                 self.animationSize = UIScreen.main.isIphone4 ? CGSize(width: 70.0, height: 139.0) : CGSize(width: 87.0, height: 174.0)
-        }
+            }
             
         case .setMasterPasscode:
             title = presentationData.strings.DoubleBottom_SetMasterPasscode_Title
@@ -409,7 +418,7 @@ private final class DoubleBottomSplashScreenNode: ViewControllerTracingNode {
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: floor((layout.size.height) / 2.0 + titleCenterOffset)), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
@@ -431,7 +440,7 @@ private extension UIColor {
         let green = color.green * 255
         let blue = color.blue * 255
         
-        var luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        let luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
         
         return luma < 40
     }

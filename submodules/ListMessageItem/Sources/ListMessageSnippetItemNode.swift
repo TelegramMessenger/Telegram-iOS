@@ -16,8 +16,9 @@ import UrlHandling
 import UrlWhitelist
 import AccountContext
 import TelegramStringFormatting
+import WallpaperResources
 
-private let iconFont = Font.with(size: 30.0, design: .round, traits: [.bold])
+private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
 
 private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
 
@@ -253,6 +254,9 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             var primaryUrl: String?
             
             var isInstantView = false
+
+            var previewWallpaper: TelegramWallpaper?
+            var previewWallpaperFileReference: FileMediaReference?
             
             var selectedMedia: TelegramMediaWebpage?
             var processed = false
@@ -283,6 +287,17 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: image), representation)
                             }
                         } else if let file = content.file {
+                            if content.type == "telegram_background" {
+                                if let wallpaper = parseWallpaperUrl(content.url) {
+                                    switch wallpaper {
+                                    case let .slug(slug, _, colors, intensity, angle):
+                                        previewWallpaperFileReference = .message(message: MessageReference(item.message), media: file)
+                                        previewWallpaper = .file(id: file.fileId.id, accessHash: 0, isCreator: false, isDefault: false, isPattern: true, isDark: false, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, colors: colors, intensity: intensity, rotation: angle))
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
                             if let representation = smallestImageRepresentation(file.previewRepresentations) {
                                 iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: file), representation)
                             }
@@ -508,7 +523,9 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             }
             
             if currentIconImageRepresentation != iconImageReferenceAndRepresentation?.1 {
-                if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
+                if let previewWallpaper = previewWallpaper, let fileReference = previewWallpaperFileReference {
+                    updateIconImageSignal = wallpaperThumbnail(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: fileReference, wallpaper: previewWallpaper, synchronousLoad: false)
+                } else if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                     if let imageReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaImage.self) {
                         updateIconImageSignal = chatWebpageSnippetPhoto(account: item.context.account, photoReference: imageReference)
                     } else if let fileReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaFile.self) {

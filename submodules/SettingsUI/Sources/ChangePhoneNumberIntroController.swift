@@ -11,6 +11,7 @@ import AlertUI
 import PresentationDataUtils
 import AppBundle
 import Markdown
+import PhoneNumberFormat
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var presentationData: PresentationData
@@ -101,7 +102,8 @@ public final class ChangePhoneNumberIntroController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.title = phoneNumber
+        let formattedPhone = formatPhoneNumber(phoneNumber)
+        self.title = formattedPhone
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         //self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
     }
@@ -133,7 +135,7 @@ public final class ChangePhoneNumberIntroController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! ChangePhoneNumberIntroControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! ChangePhoneNumberIntroControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func cancelPressed() {
@@ -141,7 +143,7 @@ public final class ChangePhoneNumberIntroController: ViewController {
     }
     
     func proceed() {
-        self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+        self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.TwoFactorSetup_Email_Action, action: { [weak self] in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
             }

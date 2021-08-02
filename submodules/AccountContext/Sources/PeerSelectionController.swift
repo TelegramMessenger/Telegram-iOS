@@ -57,6 +57,7 @@ public final class PeerSelectionControllerParams {
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

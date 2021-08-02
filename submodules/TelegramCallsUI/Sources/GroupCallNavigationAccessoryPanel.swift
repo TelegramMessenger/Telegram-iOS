@@ -130,7 +130,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let avatarsNode: AnimatedAvatarSetNode
     private var audioLevelGenerators: [PeerId: FakeAudioLevelGenerator] = [:]
     private var audioLevelGeneratorTimer: SwiftSignalKit.Timer?
-    
+
+    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     
     private let membersDisposable = MetaDisposable()
@@ -174,13 +175,17 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
+
+        self.backgroundNode = ASDisplayNode()
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
         super.init()
-        
+
         self.addSubnode(self.contentNode)
+
+        self.contentNode.addSubnode(self.backgroundNode)
         
         self.tapButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -279,8 +284,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
-        
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isScheduled ? .white : presentationData.theme.chat.inputPanel.actionControlForegroundColor)
@@ -527,10 +531,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             isScheduled = true
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0) })).0
             } else {
                 title = self.strings.Conversation_ScheduledVoiceChat
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0) })).0
             }
             
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -629,7 +633,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton.isHidden = self.currentData?.groupCall != nil
         self.micButton.isHidden = self.currentData?.groupCall == nil
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: panelHeight)))
     }
     
     public func animateIn(_ transition: ContainedViewLayoutTransition) {
@@ -638,6 +643,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.animatePositionAdditive(node: self.separatorNode, offset: CGPoint(x: 0.0, y: size.height))
     }
     
     public func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -647,6 +658,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self?.clipsToBounds = false
             completion()
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
     }
     
     func rightButtonSnapshotViews() -> (background: UIView, foreground: UIView)? {

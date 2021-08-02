@@ -55,6 +55,7 @@ private enum ShareAuthorizationError {
 }
 
 public struct ShareRootControllerInitializationData {
+    public let appBundleId: String
     public let appGroupPath: String
     public let apiId: Int32
     public let apiHash: String
@@ -63,7 +64,8 @@ public struct ShareRootControllerInitializationData {
     public let appVersion: String
     public let bundleData: Data?
     
-    public init(appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public init(appBundleId: String, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+        self.appBundleId = appBundleId
         self.appGroupPath = appGroupPath
         self.apiId = apiId
         self.apiHash = apiHash
@@ -169,14 +171,14 @@ public class ShareRootControllerImpl {
             let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
             performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
             
-            TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: arc4random64())
+            TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
             
             let logsPath = rootPath + "/share-logs"
             let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
             
             setupSharedLogger(rootPath: rootPath, path: logsPath)
             
-            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tg", openUrl: { _ in
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, appBundleId: self.initializationData.appBundleId, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tg", openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
                 return
@@ -232,7 +234,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openDoubleBottomFlow: {})
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openDoubleBottomFlow: {})
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -450,7 +452,7 @@ public class ShareRootControllerImpl {
                                         let fileExtension = (fileName as NSString).pathExtension
                                         
                                         var archivePathValue: String?
-                                        var otherEntries: [(SSZipEntry, String, ChatHistoryImport.MediaType)] = []
+                                        var otherEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)] = []
                                         var mainFile: TempBoxFile?
                                         
                                         let appConfiguration = context.currentAppConfiguration.with({ $0 })
@@ -535,7 +537,7 @@ public class ShareRootControllerImpl {
                                                     } else {
                                                         let entryFileName = (entryPath as NSString).lastPathComponent
                                                         if !entryFileName.isEmpty {
-                                                            let mediaType: ChatHistoryImport.MediaType
+                                                            let mediaType: TelegramEngine.HistoryImport.MediaType
                                                             let fullRange = NSRange(entryFileName.startIndex ..< entryFileName.endIndex, in: entryFileName)
                                                             if photoRegex.firstMatch(in: entryFileName, options: [], range: fullRange) != nil {
                                                                 mediaType = .photo
@@ -637,7 +639,8 @@ public class ShareRootControllerImpl {
                                                     super.containerLayoutUpdated(layout, transition: transition)
                                                     
                                                     let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: self.navigationHeight + floor((layout.size.height - self.navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
+                                                    let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: navigationHeight + floor((layout.size.height - navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
                                                 }
                                             }
                                             
@@ -647,7 +650,7 @@ public class ShareRootControllerImpl {
                                             navigationController.viewControllers = [TempController(context: context)]
                                             strongSelf.mainWindow?.present(navigationController, on: .root)
                                             
-                                            let _ = (ChatHistoryImport.getInfo(account: context.account, header: mainFileHeader)
+                                            let _ = (context.engine.historyImport.getInfo(header: mainFileHeader)
                                             |> deliverOnMainQueue).start(next: { parseInfo in
                                                 switch parseInfo {
                                                 case let .group(groupTitle):
@@ -701,7 +704,7 @@ public class ShareRootControllerImpl {
                                                             strongSelf.mainWindow?.present(controller, on: .root)
                                                         } else {
                                                             controller.inProgress = true
-                                                            let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                            let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                             |> deliverOnMainQueue).start(next: { result in
                                                                 controller.inProgress = false
                                                                 
@@ -784,7 +787,7 @@ public class ShareRootControllerImpl {
                                                             resolvedGroupTitle = "Group"
                                                         }
                                                         let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                                                            var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
+                                                            var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
                                                                 return .single(nil)
@@ -852,7 +855,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
-                                                        let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                        let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                         |> deliverOnMainQueue).start(next: { result in
                                                             controller?.inProgress = false
                                                             
@@ -927,7 +930,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     attemptSelectionImpl = { [weak controller] peer in
                                                         controller?.inProgress = true
-                                                        let _ = (ChatHistoryImport.checkPeerImport(account: context.account, peerId: peer.id)
+                                                        let _ = (context.engine.historyImport.checkPeerImport(peerId: peer.id)
                                                         |> deliverOnMainQueue).start(next: { result in
                                                             controller?.inProgress = false
                                                             
@@ -1028,7 +1031,7 @@ public class ShareRootControllerImpl {
                                                             resolvedGroupTitle = "Group"
                                                         }
                                                         let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
-                                                            var signal: Signal<PeerId?, NoError> = createSupergroup(account: context.account, title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
+                                                            var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
                                                                 return .single(nil)

@@ -1408,7 +1408,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
         
         self.snappedBackgroundNode = ASDisplayNode()
-        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.snappedBackgroundNode.alpha = 0.0
         
         self.separatorNode = ASDisplayNode()
@@ -1467,7 +1467,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.theme = theme
         
         self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
-        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         
         let titleFont = Font.regular(13.0)

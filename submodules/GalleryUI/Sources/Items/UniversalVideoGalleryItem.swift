@@ -188,7 +188,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.addSubnode(self.wrapperNode)
         self.wrapperNode.addSubnode(self.fullscreenNode)
         
-        self.fullscreenNode.addTarget(self, action: #selector(self.soundButtonPressed), forControlEvents: .touchUpInside)
+        self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -227,7 +227,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         }
     }
     
-    @objc func soundButtonPressed() {
+    @objc func toggleFullscreenPressed() {
         var toLandscape = false
         if let (size, _, _, _ ,_) = self.validLayout, size.width < size.height {
             toLandscape = true
@@ -337,7 +337,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.overlayContentNode.action = { [weak self] toLandscape in
             self?.updateControlsVisibility(!toLandscape)
-            context.sharedContext.applicationBindings.forceOrientation(toLandscape ? .landscapeRight : .portrait)
+            self?.updateOrientation(toLandscape ? .landscapeRight : .portrait)
         }
         
         self.scrubberView.seek = { [weak self] timecode in
@@ -639,7 +639,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
-                        if let status = status, status.duration >= 60.0 * 20.0 {
+                        if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
                                 timestamp = status.timestamp
@@ -1637,7 +1637,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.isInteractingPromise.set(true)
             
-            let signal = stickerPacksAttachedToMedia(account: self.context.account, media: media)
+            let signal = self.context.engine.stickers.stickerPacksAttachedToMedia(media: media)
             |> afterDisposed {
                 Queue.mainQueue().async {
                     progressDisposable.dispose()

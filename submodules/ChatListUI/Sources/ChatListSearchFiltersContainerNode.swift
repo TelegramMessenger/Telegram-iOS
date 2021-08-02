@@ -211,7 +211,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         let previousContentWidth = self.scrollNode.view.contentSize.width
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
-            self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+            //self.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
             self.selectedLineNode.image = generateImage(CGSize(width: 5.0, height: 3.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)

@@ -3,12 +3,40 @@ import UIKit
 import TelegramCore
 import SyncCore
 import TelegramUIPreferences
+import Postbox
+import SwiftSignalKit
 
-public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
+public func selectDateFillStaticColor(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIColor {
+    if case .color(0xffffff) = wallpaper {
+        return theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic
+    } else if case .builtin = wallpaper {
+        return UIColor(rgb: 0x748391, alpha: 0.45)
+    } else {
+        return theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
+    }
+}
+
+public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
+    if case .builtin = wallpaper {
+        return false
+    } else if case .color = wallpaper {
+        return false
+    } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper {
+        if isPattern, let intensity = settings.intensity, intensity < 0 {
+            return false
+        } else {
+            return true
+        }
+    } else {
+        return true
+    }
+}
+
+public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -30,7 +58,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             let accentColor = accentColor ?? defaultDayAccentColor
             bubbleColors = (accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98), accentColor)
         } else {
-            if let accentColor = accentColor {
+            if let accentColor = accentColor, !accentColor.alpha.isZero {
                 let hsb = accentColor.hsb
                 bubbleColors = (UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
                 if accentColor.lightness > 0.705 {
@@ -38,13 +66,11 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 } else {
                     outgoingAccent = accentColor
                 }
-                
-                let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
-                let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
+
+                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .builtin(WallpaperSettings())
+                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
             }
         }
     }
@@ -201,11 +227,11 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     var defaultWallpaper: TelegramWallpaper?
     if let forcedWallpaper = forcedWallpaper {
         defaultWallpaper = forcedWallpaper
-    } else if let backgroundColors = backgroundColors {
-        if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
+    } else if !backgroundColors.isEmpty {
+        if backgroundColors.count >= 2 {
+            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(backgroundColors.0.argb)
+            defaultWallpaper = .color(backgroundColors[0])
         }
     } else if let forcedWallpaper = suggestedWallpaper {
         defaultWallpaper = forcedWallpaper
@@ -319,6 +345,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
 
 public func makeDefaultDayPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, serviceBackgroundColor: UIColor?, day: Bool, preview: Bool) -> PresentationTheme {
     var serviceBackgroundColor = serviceBackgroundColor ?? defaultServiceBackgroundColor
+
+    if !day {
+        serviceBackgroundColor = UIColor(white: 0.0, alpha: 0.2)
+    }
     
     let intro = PresentationThemeIntro(
         statusBarStyle: .black,
@@ -333,9 +363,30 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x46739e), bottomColor: UIColor(rgb: 0x2a5982)),
         buttonColor: .clear
     )
-     
+    
+    let rootNavigationBar = PresentationThemeRootNavigationBar(
+        buttonColor: UIColor(rgb: 0x007ee5),
+        disabledButtonColor: UIColor(rgb: 0xd0d0d0),
+        primaryTextColor: UIColor(rgb: 0x000000),
+        secondaryTextColor: UIColor(rgb: 0x787878),
+        controlColor: UIColor(rgb: 0x7e8791),
+        accentTextColor: UIColor(rgb: 0x007ee5),
+        blurredBackgroundColor: UIColor(rgb: 0xf2f2f2, alpha: 0.9),
+        opaqueBackgroundColor: UIColor(rgb: 0xf7f7f7).mixedWith(.white, alpha: 0.14),
+        separatorColor: UIColor(rgb: 0xc8c7cc),
+        badgeBackgroundColor: UIColor(rgb: 0xff3b30),
+        badgeStrokeColor: UIColor(rgb: 0xff3b30),
+        badgeTextColor: UIColor(rgb: 0xffffff),
+        segmentedBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.06),
+        segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
+        segmentedTextColor: UIColor(rgb: 0x000000),
+        segmentedDividerColor: UIColor(rgb: 0xd6d6dc),
+        clearButtonBackgroundColor: UIColor(rgb: 0xE3E3E3, alpha: 0.78),
+        clearButtonForegroundColor: UIColor(rgb: 0x7f7f7f)
+    )
+
     let rootTabBar = PresentationThemeRootTabBar(
-        backgroundColor: UIColor(rgb: 0xf7f7f7),
+        backgroundColor: rootNavigationBar.blurredBackgroundColor,
         separatorColor: UIColor(rgb: 0xa3a3a3),
         iconColor: UIColor(rgb: 0x959595),
         selectedIconColor: UIColor(rgb: 0x007ee5),
@@ -346,30 +397,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         badgeTextColor: UIColor(rgb: 0xffffff)
     )
     
-    let rootNavigationBar = PresentationThemeRootNavigationBar(
-        buttonColor: UIColor(rgb: 0x007ee5),
-        disabledButtonColor: UIColor(rgb: 0xd0d0d0),
-        primaryTextColor: UIColor(rgb: 0x000000),
-        secondaryTextColor: UIColor(rgb: 0x787878),
-        controlColor: UIColor(rgb: 0x7e8791),
-        accentTextColor: UIColor(rgb: 0x007ee5),
-        backgroundColor: UIColor(rgb: 0xf7f7f7),
-        separatorColor: UIColor(rgb: 0xc8c7cc),
-        badgeBackgroundColor: UIColor(rgb: 0xff3b30),
-        badgeStrokeColor: UIColor(rgb: 0xff3b30),
-        badgeTextColor: UIColor(rgb: 0xffffff),
-        segmentedBackgroundColor: UIColor(rgb: 0xe9e9e9),
-        segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
-        segmentedTextColor: UIColor(rgb: 0x000000),
-        segmentedDividerColor: UIColor(rgb: 0xd6d6dc),
-        clearButtonBackgroundColor: UIColor(rgb: 0xE3E3E3, alpha: 0.78),
-        clearButtonForegroundColor: UIColor(rgb: 0x7f7f7f)
-    )
-    
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
         backgroundColor: UIColor(rgb: 0xffffff),
         accentColor: UIColor(rgb: 0x007ee5),
-        inputFillColor: UIColor(rgb: 0xe9e9e9),
+        inputFillColor: UIColor(rgb: 0x000000, alpha: 0.06),
         inputTextColor: UIColor(rgb: 0x000000),
         inputPlaceholderTextColor: UIColor(rgb: 0x8e8e93),
         inputIconColor: UIColor(rgb: 0x8e8e93),
@@ -493,7 +524,12 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
-    let bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
+    let bubbleStrokeColor: UIColor
+    if day {
+        bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
+    } else {
+        bubbleStrokeColor = UIColor(white: 0.0, alpha: 0.2)
+    }
 
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
@@ -556,7 +592,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         selectionControlColors: PresentationThemeFillStrokeForeground(fillColor: UIColor(rgb: 0x007ee5), strokeColor: UIColor(rgb: 0xc7c7cc), foregroundColor: UIColor(rgb: 0xffffff)),
         deliveryFailedColors: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xff3b30), foregroundColor: UIColor(rgb: 0xffffff)),
         mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
-        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor.withAlphaComponent(0.3), withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.25)),
+        stickerPlaceholderColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.25)),
         stickerPlaceholderShimmerColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.2), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.1))
     )
     
@@ -629,7 +665,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x939fab, alpha: 0.5), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: UIColor(rgb: 0x748391, alpha: 0.45), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x939fab, alpha: 0.5), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: UIColor(rgb: 0x000000, alpha: 0.2), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xffffff), dateFillStatic: UIColor(rgb: 0x000000, alpha: 0.2), dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
         unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
         unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
         unreadBarTextColor: UIColor(rgb: 0x86868d),
@@ -637,7 +673,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let serviceMessageDay = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8d8e93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xff3b30), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xff3b30), dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8d8e93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xff3b30), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: UIColor(rgb: 0xff3b30), dateFillStatic: UIColor(rgb: 0x000000, alpha: 0.2), dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
         unreadBarFillColor: UIColor(rgb: 0xffffff),
         unreadBarStrokeColor: UIColor(rgb: 0xffffff),
         unreadBarTextColor: UIColor(rgb: 0x8d8e93),
@@ -651,15 +687,15 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let inputPanel = PresentationThemeChatInputPanel(
-        panelBackgroundColor: UIColor(rgb: 0xf7f7f7),
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff),
+        panelBackgroundColor: rootNavigationBar.blurredBackgroundColor,
+        panelBackgroundColorNoWallpaper: rootNavigationBar.blurredBackgroundColor,
         panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: UIColor(rgb: 0x007ee5),
         panelControlColor: UIColor(rgb: 0x858e99),
         panelControlDisabledColor: UIColor(rgb: 0x727b87, alpha: 0.5),
         panelControlDestructiveColor: UIColor(rgb: 0xff3b30),
         inputBackgroundColor: UIColor(rgb: 0xffffff),
-        inputStrokeColor: UIColor(rgb: 0xd9dcdf),
+        inputStrokeColor: UIColor(rgb: 0x000000, alpha: 0.1),
         inputPlaceholderColor: UIColor(rgb: 0xbebec0),
         inputTextColor: UIColor(rgb: 0x000000),
         inputControlColor: UIColor(rgb: 0xa0a7b0),
@@ -702,9 +738,11 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         badgeStrokeColor: UIColor(rgb: 0x007ee5),
         badgeTextColor: UIColor(rgb: 0xffffff)
     )
-    
+
+    let defaultPatternWallpaper: TelegramWallpaper = defaultBuiltinWallpaper(data: .default, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb))
+
     let chat = PresentationThemeChat(
-        defaultWallpaper: day ? .color(0xffffff) : .builtin(WallpaperSettings()),
+        defaultWallpaper: day ? .color(0xffffff) : defaultPatternWallpaper,
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,
@@ -795,5 +833,271 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         inAppNotification: inAppNotification,
         chart: chart,
         preview: preview
+    )
+}
+
+public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
+    UIColor(rgb: 0xdbddbb),
+    UIColor(rgb: 0x6ba587),
+    UIColor(rgb: 0xd5d88d),
+    UIColor(rgb: 0x88b884)
+]
+
+public struct BuiltinWallpaperData {
+    var wallpaperId: Int64
+    var wallpaperAccessHash: Int64
+    var slug: String
+    var fileId: Int64
+    var fileAccessHash: Int64
+    var datacenterId: Int
+    var fileSize: Int
+}
+
+public extension BuiltinWallpaperData {
+    static let `default` = BuiltinWallpaperData(
+        wallpaperId: 5951821522514477057,
+        wallpaperAccessHash: 542913527008942388,
+        slug: "fqv01SQemVIBAAAApND8LDRUhRU",
+        fileId: 5789658100176783156,
+        fileAccessHash: 2106033778341319685,
+        datacenterId: 4,
+        fileSize: 183832
+    )
+    static let variant1 = BuiltinWallpaperData(
+        wallpaperId: 5784984711902265347,
+        wallpaperAccessHash: -7073897034484875424,
+        slug: "RlZs2PJkSFADAAAAElGaGwgJBgU",
+        fileId: 5924571028763183790,
+        fileAccessHash: 8131740629580593134,
+        datacenterId: 4,
+        fileSize: 175995
+    )
+    static let variant2 = BuiltinWallpaperData(
+        wallpaperId: 5785171457080295426,
+        wallpaperAccessHash: 7299737721761177260,
+        slug: "9LW_RcoOSVACAAAAFTk3DTyXN-M",
+        fileId: 5927041584146156278,
+        fileAccessHash: -5921024951834087382,
+        datacenterId: 4,
+        fileSize: 134539
+    )
+    static let variant3 = BuiltinWallpaperData(
+        wallpaperId: 5785191424383254532,
+        wallpaperAccessHash: 6428855567842967483,
+        slug: "CJNyxPMgSVAEAAAAvW9sMwc51cw",
+        fileId: 5785343895722264360,
+        fileAccessHash: 3407562549390786397,
+        datacenterId: 4,
+        fileSize: 312605
+    )
+    static let variant4 = BuiltinWallpaperData(
+        wallpaperId: 5785123761468473345,
+        wallpaperAccessHash: -6430405714673464374,
+        slug: "BQqgrGnjSFABAAAA8mQDBXQcARE",
+        fileId: 5924847998319201207,
+        fileAccessHash: 6746675725325490532,
+        datacenterId: 4,
+        fileSize: 55699
+    )
+    static let variant5 = BuiltinWallpaperData(
+        wallpaperId: 5785021373743104005,
+        wallpaperAccessHash: -1374597781576365315,
+        slug: "MIo6r0qGSFAFAAAAtL8TsDzNX60",
+        fileId: 5782630687571969871,
+        fileAccessHash: 8944679612701303524,
+        datacenterId: 4,
+        fileSize: 100992
+    )
+    static let variant6 = BuiltinWallpaperData(
+        wallpaperId: 5782920928576929793,
+        wallpaperAccessHash: -2397741670740938317,
+        slug: "9iklpvIPQVABAAAAORQXKur_Eyc",
+        fileId: 5924714386181589959,
+        fileAccessHash: -316419094644368953,
+        datacenterId: 4,
+        fileSize: 106249
+    )
+    static let variant7 = BuiltinWallpaperData(
+        wallpaperId: 5931406765567508492,
+        wallpaperAccessHash: 7991333610111953175,
+        slug: "H6rz6geXUFIMAAAAuUs7m6cXbcc",
+        fileId: 5931433527508732666,
+        fileAccessHash: -8637914243010610774,
+        datacenterId: 4,
+        fileSize: 76332
+    )
+    static let variant8 = BuiltinWallpaperData(
+        wallpaperId: 5785007509588672513,
+        wallpaperAccessHash: 8437532349638900210,
+        slug: "kO4jyq55SFABAAAA0WEpcLfahXk",
+        fileId: 5925009274341165314,
+        fileAccessHash: 5091210796362176800,
+        datacenterId: 4,
+        fileSize: 78338
+    )
+    static let variant9 = BuiltinWallpaperData(
+        wallpaperId: 5785068300555780101,
+        wallpaperAccessHash: -4335874468273472323,
+        slug: "mP3FG_iwSFAFAAAA2AklJO978pA",
+        fileId: 5924664689115007842,
+        fileAccessHash: -4490072684673383370,
+        datacenterId: 4,
+        fileSize: 51705
+    )
+    static let variant10 = BuiltinWallpaperData(
+        wallpaperId: 5785165465600917506,
+        wallpaperAccessHash: 4563443115749434444,
+        slug: "Ujx2TFcJSVACAAAARJ4vLa50MkM",
+        fileId: 5924792752154872619,
+        fileAccessHash: -2210879717040856036,
+        datacenterId: 4,
+        fileSize: 114694
+    )
+    static let variant11 = BuiltinWallpaperData(
+        wallpaperId: 5785225431934304257,
+        wallpaperAccessHash: 3814946612408881045,
+        slug: "RepJ5uE_SVABAAAAr4d0YhgB850",
+        fileId: 5927262354055105101,
+        fileAccessHash: -435932841948252811,
+        datacenterId: 4,
+        fileSize: 66465
+    )
+    static let variant12 = BuiltinWallpaperData(
+        wallpaperId: 5785328386595356675,
+        wallpaperAccessHash: -5900784223259948847,
+        slug: "9GcNVISdSVADAAAAUcw5BYjELW4",
+        fileId: 5926924928539429325,
+        fileAccessHash: -5306472339097647861,
+        datacenterId: 4,
+        fileSize: 57262
+    )
+    static let variant13 = BuiltinWallpaperData(
+        wallpaperId: 6041986402319597570,
+        wallpaperAccessHash: -8909137552203056986,
+        slug: "-Xc-np9y2VMCAAAARKr0yNNPYW0",
+        fileId: 5789856918507882132,
+        fileAccessHash: 2327344847690632249,
+        datacenterId: 4,
+        fileSize: 104932
+    )
+    static let variant14 = BuiltinWallpaperData(
+        wallpaperId: 5784981280223395841,
+        wallpaperAccessHash: 8334701614156015552,
+        slug: "JrNEYdNhSFABAAAA9WtRdJkPRbY",
+        fileId: 5924784243824658746,
+        fileAccessHash: -2563505106174626287,
+        datacenterId: 4,
+        fileSize: 122246
+    )
+
+    static func generate(account: Account) {
+        let slugToName: [(String, String)] = [
+            ("fqv01SQemVIBAAAApND8LDRUhRU", "`default`"),
+            ("RlZs2PJkSFADAAAAElGaGwgJBgU", "variant1"),
+            ("9LW_RcoOSVACAAAAFTk3DTyXN-M", "variant2"),
+            ("CJNyxPMgSVAEAAAAvW9sMwc51cw", "variant3"),
+            ("BQqgrGnjSFABAAAA8mQDBXQcARE", "variant4"),
+            ("MIo6r0qGSFAFAAAAtL8TsDzNX60", "variant5"),
+            ("9iklpvIPQVABAAAAORQXKur_Eyc", "variant6"),
+            ("H6rz6geXUFIMAAAAuUs7m6cXbcc", "variant7"),
+            ("kO4jyq55SFABAAAA0WEpcLfahXk", "variant8"),
+            ("mP3FG_iwSFAFAAAA2AklJO978pA", "variant9"),
+            ("Ujx2TFcJSVACAAAARJ4vLa50MkM", "variant10"),
+            ("RepJ5uE_SVABAAAAr4d0YhgB850", "variant11"),
+            ("9GcNVISdSVADAAAAUcw5BYjELW4", "variant12"),
+            ("-Xc-np9y2VMCAAAARKr0yNNPYW0", "variant13"),
+            ("JrNEYdNhSFABAAAA9WtRdJkPRbY", "variant14"),
+        ]
+
+        var signals: [Signal<String?, GetWallpaperError>] = []
+        for (slug, name) in slugToName {
+            signals.append(getWallpaper(network: account.network, slug: slug)
+            |> map { wallpaper -> String? in
+                switch wallpaper {
+                case let .file(id, accessHash, _, _, _, _, _, file, _):
+                    guard let resource = file.resource as? CloudDocumentMediaResource else {
+                        return nil
+                    }
+                    guard let size = file.size else {
+                        return nil
+                    }
+                    return """
+static let \(name) = BuiltinWallpaperData(
+    wallpaperId: \(id),
+    wallpaperAccessHash: \(accessHash),
+    slug: "\(slug)",
+    fileId: \(file.fileId.id),
+    fileAccessHash: \(resource.accessHash),
+    datacenterId: \(resource.datacenterId),
+    fileSize: \(size)
+)
+"""
+                default:
+                    return nil
+                }
+            })
+        }
+
+        let _ = (combineLatest(signals)
+        |> map { strings -> String in
+            var result = ""
+            for case let string? in strings {
+                if !result.isEmpty {
+                    result.append("\n")
+                }
+                result.append(string)
+            }
+            return result
+        }
+        |> deliverOnMainQueue).start(next: { result in
+            print("\(result)")
+        })
+    }
+}
+
+public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32], intensity: Int32 = 50, rotation: Int32? = nil) -> TelegramWallpaper {
+    return .file(
+        id: data.wallpaperId,
+        accessHash: data.wallpaperAccessHash,
+        isCreator: false,
+        isDefault: false,
+        isPattern: true,
+        isDark: false,
+        slug: data.slug,
+        file: TelegramMediaFile(
+            fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: data.fileId),
+            partialReference: nil,
+            resource: CloudDocumentMediaResource(
+                datacenterId: data.datacenterId,
+                fileId: data.fileId,
+                accessHash: data.fileAccessHash,
+                size: data.fileSize,
+                fileReference: Data(),
+                fileName: "pattern.tgv"
+            ),
+            previewRepresentations: [
+                TelegramMediaImageRepresentation(
+                    dimensions: PixelDimensions(width: 155, height: 320),
+                    resource: CloudDocumentSizeMediaResource(
+                        datacenterId: 1,
+                        documentId: data.fileId,
+                        accessHash: data.fileAccessHash,
+                        sizeSpec: "m",
+                        fileReference: Data()
+                    ),
+                    progressiveSizes: [],
+                    immediateThumbnailData: nil
+                )
+            ],
+            videoThumbnails: [],
+            immediateThumbnailData: nil,
+            mimeType: "application/x-tgwallpattern",
+            size: data.fileSize,
+            attributes: [
+                .ImageSize(size: PixelDimensions(width: 1440, height: 2960)),
+                .FileName(fileName: "pattern.tgv")
+            ]
+        ),
+        settings: WallpaperSettings(colors: colors, intensity: intensity, rotation: rotation)
     )
 }

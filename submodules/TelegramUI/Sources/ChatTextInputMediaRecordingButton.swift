@@ -98,7 +98,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     private let context: AccountContext
     private let account: Account?
     private let presentController: (ViewController) -> Void
-    private let container: ChatTextInputMediaRecordingButtonPresenterContainer
+    let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
     private var applicationInForegroundDisposable: Disposable?
     
@@ -171,6 +171,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
     var context: AccountContext?
+    var account: Account?
     let presentController: (ViewController) -> Void
     var recordingDisabled: () -> Void = { }
     var beginRecording: () -> Void = { }
@@ -191,6 +192,16 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
+
+    private weak var currentPresenter: UIView?
+
+    var contentContainer: (UIView, CGRect)? {
+        if let _ = self.currentPresenter {
+            return (self.micDecoration, self.micDecoration.bounds)
+        } else {
+            return nil
+        }
+    }
     
     var audioRecorder: ManagedAudioRecorder? {
         didSet {
@@ -425,7 +436,12 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
-        return ChatTextInputMediaRecordingButtonPresenter(context: self.context!, presentController: self.presentController)
+        let presenter = ChatTextInputMediaRecordingButtonPresenter(
+            context: self.context!,
+            presentController: self.presentController
+        )
+        self.currentPresenter = presenter.view()
+        return presenter
     }
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
@@ -442,7 +458,8 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     override func animateIn() {
         super.animateIn()
-        
+
+        micDecoration.isHidden = false
         micDecoration.startAnimating()
 
         innerIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)

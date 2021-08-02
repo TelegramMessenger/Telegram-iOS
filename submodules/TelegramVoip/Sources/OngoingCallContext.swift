@@ -334,54 +334,122 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
 
 public final class OngoingCallVideoCapturer {
     internal let impl: OngoingCallThreadLocalContextVideoCapturer
+
+    private let isActivePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
+    public var isActive: Signal<Bool, NoError> {
+        return self.isActivePromise.get()
+    }
     
-    public init(keepLandscape: Bool = false) {
-        self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
+    public init(keepLandscape: Bool = false, isCustom: Bool = false) {
+        if isCustom {
+            self.impl = OngoingCallThreadLocalContextVideoCapturer.withExternalSampleBufferProvider()
+        } else {
+            self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
+        }
+        let isActivePromise = self.isActivePromise
+        self.impl.setOnIsActiveUpdated({ value in
+            isActivePromise.set(value)
+        })
     }
     
     public func switchVideoInput(isFront: Bool) {
         self.impl.switchVideoInput(isFront ? "" : "back")
     }
     
-    public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-        self.impl.makeOutgoingVideoView { view in
-            if let view = view {
-                completion(OngoingCallContextPresentationCallVideoView(
-                    view: view,
-                    setOnFirstFrameReceived: { [weak view] f in
-                        view?.setOnFirstFrameReceived(f)
+    public func makeOutgoingVideoView(requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+        self.impl.makeOutgoingVideoView(requestClone, completion: { mainView, cloneView in
+            if let mainView = mainView {
+                let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                    view: mainView,
+                    setOnFirstFrameReceived: { [weak mainView] f in
+                        mainView?.setOnFirstFrameReceived(f)
                     },
-                    getOrientation: { [weak view] in
-                        if let view = view {
-                            return OngoingCallVideoOrientation(view.orientation)
+                    getOrientation: { [weak mainView] in
+                        if let mainView = mainView {
+                            return OngoingCallVideoOrientation(mainView.orientation)
                         } else {
                             return .rotation0
                         }
                     },
-                    getAspect: { [weak view] in
-                        if let view = view {
-                            return view.aspect
+                    getAspect: { [weak mainView] in
+                        if let mainView = mainView {
+                            return mainView.aspect
                         } else {
                             return 0.0
                         }
                     },
-                    setOnOrientationUpdated: { [weak view] f in
-                        view?.setOnOrientationUpdated { value, aspect in
+                    setOnOrientationUpdated: { [weak mainView] f in
+                        mainView?.setOnOrientationUpdated { value, aspect in
                             f?(OngoingCallVideoOrientation(value), aspect)
                         }
                     },
-                    setOnIsMirroredUpdated: { [weak view] f in
-                        view?.setOnIsMirroredUpdated(f)
+                    setOnIsMirroredUpdated: { [weak mainView] f in
+                        mainView?.setOnIsMirroredUpdated(f)
+                    },
+                    updateIsEnabled: { [weak mainView] value in
+                        mainView?.updateIsEnabled(value)
                     }
-                ))
+                )
+                var cloneVideoView: OngoingCallContextPresentationCallVideoView?
+                if let cloneView = cloneView {
+                    cloneVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: cloneView,
+                        setOnFirstFrameReceived: { [weak cloneView] f in
+                            cloneView?.setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak cloneView] in
+                            if let cloneView = cloneView {
+                                return OngoingCallVideoOrientation(cloneView.orientation)
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak cloneView] in
+                            if let cloneView = cloneView {
+                                return cloneView.aspect
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { [weak cloneView] f in
+                            cloneView?.setOnOrientationUpdated { value, aspect in
+                                f?(OngoingCallVideoOrientation(value), aspect)
+                            }
+                        },
+                        setOnIsMirroredUpdated: { [weak cloneView] f in
+                            cloneView?.setOnIsMirroredUpdated(f)
+                        },
+                        updateIsEnabled: { [weak cloneView] value in
+                            cloneView?.updateIsEnabled(value)
+                        }
+                    )
+                }
+                completion(mainVideoView, cloneVideoView)
             } else {
-                completion(nil)
+                completion(nil, nil)
             }
-        }
+        })
     }
     
     public func setIsVideoEnabled(_ value: Bool) {
         self.impl.setIsVideoEnabled(value)
+    }
+
+    public func injectPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: CGImagePropertyOrientation) {
+        var videoRotation: OngoingCallVideoOrientation = .rotation0
+        switch rotation {
+            case .up:
+                videoRotation = .rotation0
+            case .left:
+                videoRotation = .rotation90
+            case .right:
+                videoRotation = .rotation270
+            case .down:
+                videoRotation = .rotation180
+            default:
+                videoRotation = .rotation0
+        }
+        self.impl.submitPixelBuffer(pixelBuffer, rotation: videoRotation.orientation)
     }
 }
 
@@ -487,6 +555,21 @@ extension OngoingCallVideoOrientation {
             self = .rotation0
         }
     }
+    
+    var orientation: OngoingCallVideoOrientationWebrtc {
+        switch self {
+        case .rotation0:
+            return .orientation0
+        case .rotation90:
+            return .orientation90
+        case .rotation180:
+            return .orientation180
+        case  .rotation270:
+            return .orientation270
+        @unknown default:
+            return .orientation0
+        }
+    }
 }
 
 public final class OngoingCallContextPresentationCallVideoView {
@@ -496,6 +579,7 @@ public final class OngoingCallContextPresentationCallVideoView {
     public let getAspect: () -> CGFloat
     public let setOnOrientationUpdated: (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
+    public let updateIsEnabled: (Bool) -> Void
     
     public init(
         view: UIView,
@@ -503,7 +587,8 @@ public final class OngoingCallContextPresentationCallVideoView {
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
         getAspect: @escaping () -> CGFloat,
         setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void,
-        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void,
+        updateIsEnabled: @escaping (Bool) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
@@ -511,6 +596,7 @@ public final class OngoingCallContextPresentationCallVideoView {
         self.getAspect = getAspect
         self.setOnOrientationUpdated = setOnOrientationUpdated
         self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
+        self.updateIsEnabled = updateIsEnabled
     }
 }
 
@@ -729,19 +815,20 @@ public final class OngoingCallContext {
                         }
                     })
                 }
+
+                strongSelf.signalingDataDisposable = callSessionManager.beginReceivingCallSignalingData(internalId: internalId, { [weak self] dataList in
+                    queue.async {
+                        self?.withContext { context in
+                            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                for data in dataList {
+                                    context.addSignaling(data)
+                                }
+                            }
+                        }
+                    }
+                })
             }
         }))
-        
-        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)).start(next: { [weak self] data in
-            print("data received")
-            queue.async {
-                self?.withContext { context in
-                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                        context.addSignaling(data)
-                    }
-                }
-            }
-        })
     }
     
     deinit {
@@ -817,7 +904,7 @@ public final class OngoingCallContext {
                 if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
                     if sendDebugLogs {
-                        let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: dataString).start()
+                        let _ = TelegramEngine(account: self.account).calls.saveCallDebugLog(callId: callId, log: dataString).start()
                     }
                 }
             }
@@ -905,6 +992,9 @@ public final class OngoingCallContext {
                                 view?.setOnIsMirroredUpdated { value in
                                     f?(value)
                                 }
+                            },
+                            updateIsEnabled: { [weak view] value in
+                                view?.updateIsEnabled(value)
                             }
                         ))
                     } else {

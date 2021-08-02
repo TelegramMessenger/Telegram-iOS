@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import LegacyComponents
 import AnimationUI
 import AppBundle
 import ManagedAnimationNode
@@ -14,8 +13,8 @@ private let subtitleFont = Font.regular(13.0)
 private let white = UIColor(rgb: 0xffffff)
 private let greyColor = UIColor(rgb: 0x2c2c2e)
 private let secondaryGreyColor = UIColor(rgb: 0x1c1c1e)
-private let blue = UIColor(rgb: 0x0078ff)
-private let lightBlue = UIColor(rgb: 0x59c7f8)
+private let blue = UIColor(rgb: 0x007fff)
+private let lightBlue = UIColor(rgb: 0x00affe)
 private let green = UIColor(rgb: 0x33c659)
 private let activeBlue = UIColor(rgb: 0x00a0b9)
 private let purple = UIColor(rgb: 0x3252ef)
@@ -61,6 +60,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: VoiceChatActionButtonBackgroundNode
     private let iconNode: VoiceChatActionButtonIconNode
+    private let labelContainerNode: ASDisplayNode
     let titleLabel: ImmediateTextNode
     private let subtitleLabel: ImmediateTextNode
     private let buttonTitleLabel: ImmediateTextNode
@@ -68,9 +68,9 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButton.State, dark: Bool, small: Bool, title: String, subtitle: String, snap: Bool)?
     
     private var activePromise = ValuePromise<Bool>(false)
-    private var outerColorPromise = ValuePromise<UIColor?>(nil)
-    var outerColor: Signal<UIColor?, NoError> {
-        return outerColorPromise.get()
+    private var outerColorPromise = Promise<(UIColor?, UIColor?)>((nil, nil))
+    var outerColor: Signal<(UIColor?, UIColor?), NoError> {
+        return self.outerColorPromise.get()
     }
     
     var connectingColor: UIColor = UIColor(rgb: 0xb6b6bb) {
@@ -138,6 +138,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
         self.iconNode = VoiceChatActionButtonIconNode(isColored: false)
         
+        self.labelContainerNode = ASDisplayNode()
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
         self.buttonTitleLabel = ImmediateTextNode()
@@ -147,9 +148,10 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         super.init()
     
         self.addSubnode(self.bottomNode)
-        self.addSubnode(self.titleLabel)
-        self.addSubnode(self.subtitleLabel)
-
+        self.labelContainerNode.addSubnode(self.titleLabel)
+        self.labelContainerNode.addSubnode(self.subtitleLabel)
+        self.addSubnode(self.labelContainerNode)
+        
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.iconNode)
@@ -169,7 +171,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                         if small {
                             transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale * 0.9)
-                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale * 0.9)
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: smallIconScale * 0.9)
                         } else {
                             transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 0.9)
                         }
@@ -182,7 +184,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
                         if small {
                             transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallScale)
-                            transition.updateTransformScale(node: strongSelf.backgroundNode, scale: smallIconScale)
+                            transition.updateTransformScale(node: strongSelf.iconNode, scale: smallIconScale)
                         } else {
                             transition.updateTransformScale(node: strongSelf.iconNode, scale: snap ? 0.5 : 1.0)
                         }
@@ -195,8 +197,8 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             self?.activePromise.set(active)
         }
         
-        self.backgroundNode.updatedOuterColor = { [weak self] color in
-            self?.outerColorPromise.set(color)
+        self.backgroundNode.updatedColors = { [weak self] outerColor, activeColor in
+            self?.outerColorPromise.set(.single((outerColor, activeColor)))
         }
     }
     
@@ -204,7 +206,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.activeDisposable.dispose()
     }
     
-    func updateLevel(_ level: CGFloat) {
+    func updateLevel(_ level: CGFloat, immediately: Bool = false) {
         self.backgroundNode.audioLevel = level
     }
     
@@ -242,9 +244,16 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         let subtitleSize = self.subtitleLabel.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let totalHeight = titleSize.height + subtitleSize.height + 1.0
 
-        self.titleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
-        self.subtitleLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: self.titleLabel.frame.maxY + 1.0), size: subtitleSize)
-
+        self.labelContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        let titleLabelFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - totalHeight) / 2.0) + 84.0), size: titleSize)
+        let subtitleLabelFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleLabelFrame.maxY + 1.0), size: subtitleSize)
+    
+        self.titleLabel.bounds = CGRect(origin: CGPoint(), size: titleLabelFrame.size)
+        self.titleLabel.position = titleLabelFrame.center
+        self.subtitleLabel.bounds = CGRect(origin: CGPoint(), size: subtitleLabelFrame.size)
+        self.subtitleLabel.position = subtitleLabelFrame.center
+        
         self.bottomNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
@@ -272,17 +281,24 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 0.0)
         } else {
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-            
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             if small {
-                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.05)
-                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.05)
+                transition.updateTransformScale(node: self.backgroundNode, scale: self.pressing ? smallScale * 0.9 : smallScale, delay: 0.0)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? smallIconScale * 0.9 : smallIconScale, delay: 0.0)
+                transition.updateAlpha(node: self.titleLabel, alpha: 0.0)
+                transition.updateAlpha(node: self.subtitleLabel, alpha: 0.0)
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint(x: 0.0, y: -43.0))
+                transition.updateTransformScale(node: self.titleLabel, scale: 0.8)
+                transition.updateTransformScale(node: self.subtitleLabel, scale: 0.8)
             } else {
-                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.05)
-                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.05)
+                transition.updateTransformScale(node: self.backgroundNode, scale: 1.0, delay: 0.0)
+                transition.updateTransformScale(node: self.iconNode, scale: self.pressing ? 0.9 : 1.0, delay: 0.0)
+                transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
+                transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
+                transition.updateSublayerTransformOffset(layer: self.labelContainerNode.layer, offset: CGPoint())
+                transition.updateTransformScale(node: self.titleLabel, scale: 1.0)
+                transition.updateTransformScale(node: self.subtitleLabel, scale: 1.0)
             }
-            transition.updateAlpha(node: self.titleLabel, alpha: 1.0, delay: 0.05)
-            transition.updateAlpha(node: self.subtitleLabel, alpha: 1.0, delay: 0.05)
             transition.updateAlpha(layer: self.backgroundNode.maskProgressLayer, alpha: 1.0)
         }
         
@@ -293,7 +309,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     
     private var previousIcon: VoiceChatActionButtonIconAnimationState?
     private func applyIconParams() {
-        guard let (_, _, state, _, _, _, _, snap) = self.currentParams else {
+        guard let (_, _, state, _, _, _, _, _) = self.currentParams else {
             return
         }
         
@@ -336,7 +352,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
             self.currentParams = (previous.size, previous.buttonSize, previous.state, previous.dark, previous.small, previous.title, previous.subtitle, snap)
             
             self.backgroundNode.isSnap = snap
-            self.backgroundNode.glowHidden = snap
+            self.backgroundNode.glowHidden = snap || previous.small
             self.backgroundNode.updateColors()
             self.applyParams(animated: animated)
             self.applyIconParams()
@@ -388,6 +404,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
         self.applyIconParams()
         
+        self.backgroundNode.glowHidden = (self.currentParams?.snap ?? false) || small
         self.backgroundNode.isDark = dark
         self.backgroundNode.update(state: backgroundState, animated: animated)
         
@@ -528,12 +545,14 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     var audioLevel: CGFloat = 0.0  {
         didSet {
-            self.maskBlobView.updateLevel(audioLevel)
+            self.maskBlobView.updateLevel(self.audioLevel, immediately: false)
         }
     }
     
+    
+    
     var updatedActive: ((Bool) -> Void)?
-    var updatedOuterColor: ((UIColor?) -> Void)?
+    var updatedColors: ((UIColor?, UIColor?) -> Void)?
     
     private let backgroundCircleLayer = CAShapeLayer()
     private let foregroundCircleLayer = CAShapeLayer()
@@ -589,7 +608,7 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         self.foregroundGradientLayer.type = .radial
         self.foregroundGradientLayer.colors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
-        self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
+        self.foregroundGradientLayer.locations = [0.0, 0.55, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
@@ -773,27 +792,32 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let initialColors = self.foregroundGradientLayer.colors
         
         let outerColor: UIColor?
+        let activeColor: UIColor?
         let targetColors: [CGColor]
         let targetScale: CGFloat
         switch type {
             case .speaking:
                 targetColors = [activeBlue.cgColor, green.cgColor, green.cgColor]
                 targetScale = 0.89
-                outerColor = UIColor(rgb: 0x21674f)
+                outerColor = UIColor(rgb: 0x134b22)
+                activeColor = green
             case .active:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x1d588d)
+                outerColor = UIColor(rgb: 0x002e5d)
+                activeColor = blue
             case .connecting:
                 targetColors = [lightBlue.cgColor, blue.cgColor, blue.cgColor]
                 targetScale = 0.3
                 outerColor = nil
+                activeColor = blue
             case .muted:
                 targetColors = [pink.cgColor, purple.cgColor, purple.cgColor]
                 targetScale = 0.85
-                outerColor = UIColor(rgb: 0x3b3474)
+                outerColor = UIColor(rgb: 0x24306b)
+                activeColor = purple
         }
-        self.updatedOuterColor?(outerColor)
+        self.updatedColors?(outerColor, activeColor)
         
         self.maskGradientLayer.transform = CATransform3DMakeScale(targetScale, targetScale, 1.0)
         if let _ = previousType {
@@ -1273,17 +1297,20 @@ private final class VoiceBlobView: UIView {
     }
     
     public func setColor(_ color: UIColor) {
-        mediumBlob.setColor(color.withAlphaComponent(0.55))
-        bigBlob.setColor(color.withAlphaComponent(0.35))
+        mediumBlob.setColor(color.withAlphaComponent(0.5))
+        bigBlob.setColor(color.withAlphaComponent(0.21))
     }
     
-    public func updateLevel(_ level: CGFloat) {
+    public func updateLevel(_ level: CGFloat, immediately: Bool) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
         mediumBlob.updateSpeedLevel(to: normalizedLevel)
         bigBlob.updateSpeedLevel(to: normalizedLevel)
         
         audioLevel = normalizedLevel
+        if immediately {
+            presentationAudioLevel = normalizedLevel
+        }
     }
     
     public func startAnimating() {
@@ -1347,12 +1374,14 @@ final class BlobView: UIView {
     
     var level: CGFloat = 0 {
         didSet {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            let lv = minScale + (maxScale - minScale) * level
-            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
-            self.scaleUpdated?(level)
-            CATransaction.commit()
+            if abs(self.level - oldValue) > 0.01 {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                let lv = self.minScale + (self.maxScale - self.minScale) * self.level
+                self.shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+                self.scaleUpdated?(self.level)
+                CATransaction.commit()
+            }
         }
     }
     
@@ -1364,30 +1393,7 @@ final class BlobView: UIView {
         layer.strokeColor = nil
         return layer
     }()
-    
-    private var transition: CGFloat = 0 {
-        didSet {
-            guard let currentPoints = currentPoints else { return }
-            
-            shapeLayer.path = UIBezierPath.smoothCurve(through: currentPoints, length: bounds.width, smoothness: smoothness).cgPath
-        }
-    }
-    
-    private var fromPoints: [CGPoint]?
-    private var toPoints: [CGPoint]?
-    
-    private var currentPoints: [CGPoint]? {
-        guard let fromPoints = fromPoints, let toPoints = toPoints else { return nil }
         
-        return fromPoints.enumerated().map { offset, fromPoint in
-            let toPoint = toPoints[offset]
-            return CGPoint(
-                x: fromPoint.x + (toPoint.x - fromPoint.x) * transition,
-                y: fromPoint.y + (toPoint.y - fromPoint.y) * transition
-            )
-        }
-    }
-    
     init(
         pointsCount: Int,
         minRandomness: CGFloat,
@@ -1410,9 +1416,9 @@ final class BlobView: UIView {
         
         super.init(frame: .zero)
         
-        layer.addSublayer(shapeLayer)
+        self.layer.addSublayer(self.shapeLayer)
         
-        shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+        self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
     }
     
     required init?(coder: NSCoder) {
@@ -1420,11 +1426,11 @@ final class BlobView: UIView {
     }
     
     func setColor(_ color: UIColor) {
-        shapeLayer.fillColor = color.cgColor
+        self.shapeLayer.fillColor = color.cgColor
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        speedLevel = max(speedLevel, newSpeedLevel)
+        self.speedLevel = max(self.speedLevel, newSpeedLevel)
         
 //        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
 //            animateToNewShape()
@@ -1432,57 +1438,41 @@ final class BlobView: UIView {
     }
     
     func startAnimating() {
-        animateToNewShape()
+        self.animateToNewShape()
     }
     
     func stopAnimating() {
-        fromPoints = currentPoints
-        toPoints = nil
-        pop_removeAnimation(forKey: "blob")
+        self.shapeLayer.removeAnimation(forKey: "path")
     }
     
     private func animateToNewShape() {
-        if pop_animation(forKey: "blob") != nil {
-            fromPoints = currentPoints
-            toPoints = nil
-            pop_removeAnimation(forKey: "blob")
+        if self.shapeLayer.path == nil {
+            let points = generateNextBlob(for: self.bounds.size)
+            self.shapeLayer.path = UIBezierPath.smoothCurve(through: points, length: bounds.width, smoothness: smoothness).cgPath
         }
         
-        if fromPoints == nil {
-            fromPoints = generateNextBlob(for: bounds.size)
-        }
-        if toPoints == nil {
-            toPoints = generateNextBlob(for: bounds.size)
-        }
+        let nextPoints = generateNextBlob(for: self.bounds.size)
+        let nextPath = UIBezierPath.smoothCurve(through: nextPoints, length: bounds.width, smoothness: smoothness).cgPath
         
-        let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "blob.transition", initializer: { property in
-            property?.readBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                values.pointee = blobView.transition
-            }
-            property?.writeBlock = { blobView, values in
-                guard let blobView = blobView as? BlobView, let values = values else { return }
-                
-                blobView.transition = values.pointee
-            }
-        })  as? POPAnimatableProperty
-        animation.completionBlock = { [weak self] animation, finished in
+        let animation = CABasicAnimation(keyPath: "path")
+        let previousPath = self.shapeLayer.path
+        self.shapeLayer.path = nextPath
+        animation.duration = CFTimeInterval(1.0 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.fromValue = previousPath
+        animation.toValue = nextPath
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .forwards
+        animation.completion = { [weak self] finished in
             if finished {
-                self?.fromPoints = self?.currentPoints
-                self?.toPoints = nil
                 self?.animateToNewShape()
             }
         }
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
-        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        animation.fromValue = 0
-        animation.toValue = 1
-        pop_add(animation, forKey: "blob")
+
+        self.shapeLayer.add(animation, forKey: "path")
         
-        lastSpeedLevel = speedLevel
-        speedLevel = 0
+        self.lastSpeedLevel = self.speedLevel
+        self.speedLevel = 0
     }
     
     // MARK: Helpers

@@ -478,7 +478,7 @@ open class LegacyController: ViewController, PresentableController {
         
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         if let legacyTelegramController = self.legacyController as? TGViewController {
             var duration: TimeInterval = 0.0
             if case let .animated(transitionDuration, _) = transition {

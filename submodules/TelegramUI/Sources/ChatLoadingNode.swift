@@ -8,18 +8,12 @@ import TelegramPresentationData
 import ActivityIndicator
 
 final class ChatLoadingNode: ASDisplayNode {
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: NavigationBackgroundNode
     private let activityIndicator: ActivityIndicator
     private let offset: CGPoint
     
     init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
-        
-        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper, bubbleCorners: bubbleCorners)
-        self.backgroundNode.image = graphics.chatLoadingIndicatorBackgroundImage
+        self.backgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper), enableBlur: dateFillNeedsBlur(theme: theme, wallpaper: chatWallpaper))
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
         self.activityIndicator = ActivityIndicator(type: .custom(serviceColor.primaryText, 22.0, 2.0, false), speed: .regular)
@@ -37,10 +31,10 @@ final class ChatLoadingNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
-        
-        if let image = self.backgroundNode.image {
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - image.size.width) / 2.0), y: displayRect.minY + floor((displayRect.height - image.size.height) / 2.0)), size: image.size))
-        }
+
+        let backgroundSize: CGFloat = 30.0
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - backgroundSize) / 2.0), y: displayRect.minY + floor((displayRect.height - backgroundSize) / 2.0)), size: CGSize(width: backgroundSize, height: backgroundSize)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: transition)
         
         let activitySize = self.activityIndicator.measure(size)
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0) + self.offset.x, y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0) + self.offset.y), size: activitySize))

@@ -532,7 +532,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             controller?.dismissAnimated()
         }
         let removeAction: (RemoveStickerPackOption) -> Void = { action in
-            let _ = (removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: action)
+            let _ = (context.engine.stickers.removeStickerPackInteractively(id: archivedItem.info.id, option: action)
             |> deliverOnMainQueue).start(next: { indexAndItems in
                 guard let (positionInList, items) = indexAndItems else {
                     return
@@ -548,9 +548,9 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                     }
                 }
                 
-                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: action == .archive ? presentationData.strings.StickerPackActionInfo_ArchivedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).0, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: action == .archive ? presentationData.strings.StickerPackActionInfo_ArchivedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).0, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
                     if case .undo = action {
-                        let _ = addStickerPackInteractively(postbox: context.account.postbox, info: archivedItem.info, items: items, positionInList: positionInList).start()
+                        let _ = context.engine.stickers.addStickerPackInteractively(info: archivedItem.info, items: items, positionInList: positionInList).start()
                     }
                     return true
                 }))
@@ -581,7 +581,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openStickersBot: {
-        resolveDisposable.set((resolvePeerByName(account: context.account, name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
             if let peerId = peerId {
                 navigateToChatControllerImpl?(peerId)
             }
@@ -655,10 +655,10 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     switch mode {
         case .general, .modal:
             featured.set(context.account.viewTracker.featuredStickerPacks())
-            archivedPromise.set(.single(archivedPacks) |> then(archivedStickerPacks(account: context.account) |> map(Optional.init)))
+            archivedPromise.set(.single(archivedPacks) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
         case .masks:
             featured.set(.single([]))
-            archivedPromise.set(.single(nil) |> then(archivedStickerPacks(account: context.account, namespace: .masks) |> map(Optional.init)))
+            archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .masks) |> map(Optional.init)))
     }
 
     var previousPackCount: Int?
@@ -686,10 +686,10 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         var rightNavigationButton: ItemListNavigationButton?
         var toolbarItem: ItemListToolbarItem?
         if let packCount = packCount, packCount != 0 {
-            if case .modal = mode {
-                rightNavigationButton = nil
-            } else {
-                if state.editing {
+            if state.editing {
+                if case .modal = mode {
+                    rightNavigationButton = nil
+                } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
@@ -698,75 +698,97 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                             dismissImpl?()
                         }
                     })
-                    
-                    let selectedCount = Int32(state.selectedPackIds?.count ?? 0)
-                    toolbarItem = StickersToolbarItem(selectedCount: selectedCount, actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
-                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                           
+                }
+                
+                let selectedCount = Int32(state.selectedPackIds?.count ?? 0)
+                toolbarItem = StickersToolbarItem(selectedCount: selectedCount, actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                       
+                        if case .modal = mode {
+                            updateState {
+                                $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(nil)
+                            }
+                        } else {
                             updateState {
                                 $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                             }
-                            
-                            var packIds: [ItemCollectionId] = []
-                            for entry in stickerPacks {
-                                if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
-                                    packIds.append(entry.id)
-                                }
+                        }
+                        
+                        var packIds: [ItemCollectionId] = []
+                        for entry in stickerPacks {
+                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                                packIds.append(entry.id)
                             }
-                                                        
-                            let _ = removeStickerPacksInteractively(postbox: context.account.postbox, ids: packIds, option: .delete).start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        presentControllerImpl?(actionSheet, nil)
-                    }), .init(title: presentationData.strings.StickerPacks_ActionArchive, isEnabled: selectedCount > 0, action: {
-                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_ArchiveStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                        }
+                                                    
+                        let _ = context.engine.stickers.removeStickerPacksInteractively(ids: packIds, option: .delete).start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                           
+                        })
+                    ])])
+                    presentControllerImpl?(actionSheet, nil)
+                }), .init(title: presentationData.strings.StickerPacks_ActionArchive, isEnabled: selectedCount > 0, action: {
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_ArchiveStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                       
+                        if case .modal = mode {
+                            updateState {
+                                $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(nil)
+                            }
+                        } else {
                             updateState {
                                 $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                             }
-                            
-                            var packIds: [ItemCollectionId] = []
-                            for entry in stickerPacks {
-                                if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
-                                    packIds.append(entry.id)
-                                }
+                        }
+                        
+                        var packIds: [ItemCollectionId] = []
+                        for entry in stickerPacks {
+                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                                packIds.append(entry.id)
                             }
-                                                        
-                            let _ = removeStickerPacksInteractively(postbox: context.account.postbox, ids: packIds, option: .archive).start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        presentControllerImpl?(actionSheet, nil)
-                    }), .init(title: presentationData.strings.StickerPacks_ActionShare, isEnabled: selectedCount > 0, action: {
+                        }
+                                                    
+                        let _ = context.engine.stickers.removeStickerPacksInteractively(ids: packIds, option: .archive).start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    presentControllerImpl?(actionSheet, nil)
+                }), .init(title: presentationData.strings.StickerPacks_ActionShare, isEnabled: selectedCount > 0, action: {
+                    if case .modal = mode {
+                        updateState {
+                            $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(nil)
+                        }
+                    } else {
                         updateState {
                             $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
-                        
-                        var packNames: [String] = []
-                        for entry in stickerPacks {
-                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
-                                if let info = entry.info as? StickerPackCollectionInfo {
-                                    packNames.append(info.shortName)
-                                }
+                    }
+                    
+                    var packNames: [String] = []
+                    for entry in stickerPacks {
+                        if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.id) {
+                            if let info = entry.info as? StickerPackCollectionInfo {
+                                packNames.append(info.shortName)
                             }
                         }
-                        let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
-                        let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
-                        presentControllerImpl?(shareController, nil)
-                    })])
+                    }
+                    let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
+                    let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
+                    presentControllerImpl?(shareController, nil)
+                })])
+            } else {
+                if case .modal = mode {
+                    rightNavigationButton = nil
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
@@ -954,13 +976,13 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                     }
                     switch action {
                     case .add:
-                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                             return true
                         }))
                     case let .remove(positionInList):
-                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
                             if case .undo = action {
-                                let _ = addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items, positionInList: positionInList).start()
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
                             }
                             return true
                         }))

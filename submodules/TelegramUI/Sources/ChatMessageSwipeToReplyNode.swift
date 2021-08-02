@@ -11,25 +11,18 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         case unlike
     }
     
-    private let backgroundNode: ASImageNode
+    private let backgroundNode: NavigationBackgroundNode
+    private let foregroundNode: ASImageNode
     
-    init(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor, action: ChatMessageSwipeToReplyNode.Action) {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+    init(fillColor: UIColor, enableBlur: Bool, foregroundColor: UIColor, action: ChatMessageSwipeToReplyNode.Action) {
+        self.backgroundNode = NavigationBackgroundNode(color: fillColor, enableBlur: enableBlur)
+        self.backgroundNode.isUserInteractionEnabled = false
+
+        self.foregroundNode = ASImageNode()
+        self.foregroundNode.isUserInteractionEnabled = false
+
+        self.foregroundNode.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(fillColor.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            
-            let lineWidth: CGFloat = 1.0
-            let halfLineWidth = lineWidth / 2.0
-            var strokeAlpha: CGFloat = 0.0
-            strokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
-            if !strokeAlpha.isZero {
-                context.setStrokeColor(strokeColor.cgColor)
-                context.setLineWidth(lineWidth)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
-            }
             
             switch action {
             case .reply:
@@ -65,7 +58,10 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.foregroundNode)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 33.0, height: 33.0))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
+        self.foregroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 33.0, height: 33.0))
     }
 }
 

@@ -36,7 +36,7 @@ public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Si
             if let firstEntry = entries.first {
                 return context.account.postbox.loadedPeerWithId(peerId)
                 |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry])?, NoError>in
-                    return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
+                    return fetchedAvatarGalleryEntries(engine: context.engine, account: context.account, peer: peer, firstEntry: firstEntry)
                     |> map(Optional.init)
                 }
             } else {
@@ -210,7 +210,7 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
     }
 }
 
-public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
+public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
     return initialAvatarGalleryEntries(account: account, peer: peer)
     |> map { entries -> [AvatarGalleryEntry] in
         return entries ?? []
@@ -218,7 +218,7 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
     |> mapToSignal { initialEntries in
         return .single(initialEntries)
         |> then(
-            requestPeerPhotos(postbox: account.postbox, network: account.network, peerId: peer.id)
+            engine.peers.requestPeerPhotos(peerId: peer.id)
             |> map { photos -> [AvatarGalleryEntry] in
                 var result: [AvatarGalleryEntry] = []
                 if photos.isEmpty {
@@ -269,11 +269,11 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
     }
 }
 
-public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
+public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
     let initialEntries = [firstEntry]
     return Signal<(Bool, [AvatarGalleryEntry]), NoError>.single((false, initialEntries))
     |> then(
-        requestPeerPhotos(postbox: account.postbox, network: account.network, peerId: peer.id)
+        engine.peers.requestPeerPhotos(peerId: peer.id)
         |> map { photos -> (Bool, [AvatarGalleryEntry]) in
             var result: [AvatarGalleryEntry] = []
             let initialEntries = [firstEntry]
@@ -403,7 +403,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         if let remoteEntries = remoteEntries {
             remoteEntriesSignal = remoteEntries.get()
         } else {
-            remoteEntriesSignal = fetchedAvatarGalleryEntries(account: context.account, peer: peer)
+            remoteEntriesSignal = fetchedAvatarGalleryEntries(engine: context.engine, account: context.account, peer: peer)
         }
         
         let initialSignal = initialAvatarGalleryEntries(account: context.account, peer: peer)
@@ -689,7 +689,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         
         if !self.adjustedForInitialPreviewingLayout && self.isPresentedInPreviewingContext() {
             self.adjustedForInitialPreviewingLayout = true
@@ -885,7 +885,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         }
                     } else {
                         if let messageId = messageId {
-                            let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
+                            let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: [messageId], type: .forEveryone).start()
                         }
                         
                         if entry == self.entries.first {

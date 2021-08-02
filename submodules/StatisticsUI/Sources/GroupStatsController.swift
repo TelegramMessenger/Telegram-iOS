@@ -901,7 +901,7 @@ public func groupStatsController(context: AccountContext, peerId: PeerId, cached
     }
     promotePeerImpl = { [weak controller] participantPeerId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = (fetchChannelParticipant(account: context.account, peerId: peerId, participantId: participantPeerId)
+            let _ = (context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: participantPeerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { participant in
                 if let participant = participant, let controller = context.sharedContext.makeChannelAdminController(context: context, peerId: peerId, adminId: participantPeerId, initialParticipant: participant) {

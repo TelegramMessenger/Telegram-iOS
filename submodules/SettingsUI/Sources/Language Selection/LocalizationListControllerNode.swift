@@ -174,7 +174,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
                 }
             })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }
@@ -418,7 +418,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             let transition = preparedLanguageListNodeTransition(presentationData: presentationData, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openSearch: openSearch, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) >= entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
             strongSelf.enqueueTransition(transition)
         })
-        self.updatedDisposable = synchronizedLocalizationListState(postbox: context.account.postbox, network: context.account.network).start()
+        self.updatedDisposable = context.engine.localization.synchronizedLocalizationListState().start()
     }
     
     deinit {
@@ -501,7 +501,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.applyingCode.set(.single(info.languageCode))
-            strongSelf.applyDisposable.set((downloadAndApplyLocalization(accountManager: strongSelf.context.sharedContext.accountManager, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, languageCode: info.languageCode)
+            strongSelf.applyDisposable.set((strongSelf.context.engine.localization.downloadAndApplyLocalization(accountManager: strongSelf.context.sharedContext.accountManager, languageCode: info.languageCode)
                 |> deliverOnMainQueue).start(completed: {
                     self?.applyingCode.set(.single(nil))
                 }))

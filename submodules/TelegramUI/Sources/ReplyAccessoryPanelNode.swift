@@ -48,10 +48,12 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.displaysAsynchronously = false
+        self.titleNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
         
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 1
         self.textNode.displaysAsynchronously = false
+        self.textNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -73,7 +75,15 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.set((context.account.postbox.messageView(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] messageView in
             if let strongSelf = self {
+                if messageView.message == nil {
+                    Queue.mainQueue().justDispatch {
+                        strongSelf.interfaceInteraction?.setupReplyMessage(nil, { _ in })
+                    }
+                    return
+                }
+
                 let message = messageView.message
+
                 var authorName = ""
                 var text = ""
                 if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
@@ -162,8 +172,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     isMedia = false
                 }
                 
-                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
+                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
@@ -239,20 +249,28 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
-        
-        self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+
+        if self.lineNode.supernode == self {
+            self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        }
         
         var imageTextInset: CGFloat = 0.0
         if !self.imageNode.isHidden {
             imageTextInset = 9.0 + 35.0
         }
-        self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
+        if self.imageNode.supernode == self {
+            self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
+        if self.titleNode.supernode == self {
+            self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.titleNode.insets.left, y: 7.0 - self.titleNode.insets.top), size: titleSize)
+        }
         
         let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
-        self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 25.0), size: textSize)
+        if self.textNode.supernode == self {
+            self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
+        }
     }
     
     @objc func closePressed() {

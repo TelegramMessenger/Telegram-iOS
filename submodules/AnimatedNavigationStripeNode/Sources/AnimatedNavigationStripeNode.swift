@@ -61,26 +61,35 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
     private let foregroundLineNode: ASImageNode
     private var backgroundLineNodes: [Int: BackgroundLineNode] = [:]
     private var removingBackgroundLineNodes: [BackgroundLineNode] = []
-    
+
+    private let maskContainerNode: ASDisplayNode
     private let topShadowNode: ASImageNode
     private let bottomShadowNode: ASImageNode
+    private let middleShadowNode: ASDisplayNode
     
     private var currentForegroundImage: UIImage?
     private var currentBackgroundImage: UIImage?
     private var currentClearBackgroundImage: UIImage?
     
     override public init() {
+        self.maskContainerNode = ASDisplayNode()
+
         self.foregroundLineNode = ASImageNode()
         self.topShadowNode = ASImageNode()
         self.bottomShadowNode = ASImageNode()
+        self.middleShadowNode = ASDisplayNode()
+        self.middleShadowNode.backgroundColor = .white
         
         super.init()
         
         self.clipsToBounds = true
-        
+
+        self.addSubnode(self.maskContainerNode)
         self.addSubnode(self.foregroundLineNode)
-        self.addSubnode(self.topShadowNode)
-        self.addSubnode(self.bottomShadowNode)
+        self.maskContainerNode.addSubnode(self.topShadowNode)
+        self.maskContainerNode.addSubnode(self.bottomShadowNode)
+        self.maskContainerNode.addSubnode(self.middleShadowNode)
+        self.layer.mask = self.maskContainerNode.layer
     }
     
     public func update(colors: Colors, configuration: Configuration, transition: ContainedViewLayoutTransition) {
@@ -123,7 +132,7 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 var locations: [CGFloat] = [1.0, 0.0]
-                let colors: [CGColor] = [colors.clearBackground.cgColor, colors.clearBackground.withAlphaComponent(0.0).cgColor]
+                let colors: [CGColor] = [UIColor.white.withAlphaComponent(0.0).cgColor, UIColor.white.cgColor]
                 
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
@@ -135,7 +144,7 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 var locations: [CGFloat] = [1.0, 0.0]
-                let colors: [CGColor] = [colors.clearBackground.cgColor, colors.clearBackground.withAlphaComponent(0.0).cgColor]
+                let colors: [CGColor] = [UIColor.white.withAlphaComponent(0.0).cgColor, UIColor.white.cgColor]
                 
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
@@ -161,6 +170,8 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
             
             transition.updateFrame(node: self.topShadowNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: defaultVerticalInset)))
             transition.updateFrame(node: self.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: configuration.height - defaultVerticalInset), size: CGSize(width: 2.0, height: defaultVerticalInset)))
+            transition.updateFrame(node: self.middleShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: defaultVerticalInset), size: CGSize(width: 2.0, height: configuration.height - defaultVerticalInset * 2.0)))
+            transition.updateFrame(node: self.maskContainerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: configuration.height)))
             
             let availableVerticalHeight: CGFloat = configuration.height - defaultVerticalInset * 2.0
             
@@ -214,7 +225,7 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
                     itemNode.overlayNode.image = self.currentClearBackgroundImage
                     self.backgroundLineNodes[index] = itemNode
                     self.insertSubnode(itemNode.lineNode, belowSubnode: self.foregroundLineNode)
-                    self.insertSubnode(itemNode.overlayNode, belowSubnode: self.topShadowNode)
+                    self.topShadowNode.supernode?.insertSubnode(itemNode.overlayNode, belowSubnode: self.topShadowNode)
                     backgroundItemNodesToOffset.append(itemNode)
                 }
                 itemNodeTransition.updateFrame(node: itemNode.lineNode, frame: itemFrame, beginWithCurrentState: true)

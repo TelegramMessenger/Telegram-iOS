@@ -165,7 +165,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             }
         }, removeRequested: { [weak self] peerId in
             if let strongSelf = self {
-                let _ = removeRecentlyUsedInlineBot(account: strongSelf.context.account, peerId: peerId).start()
+                let _ = strongSelf.context.engine.peers.removeRecentlyUsedInlineBot(peerId: peerId).start()
                 
                 strongSelf.revealedPeerId = nil
                 strongSelf.currentResults = strongSelf.currentResults.filter { $0.id != peerId }
@@ -217,7 +217,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                 }
             })
@@ -283,5 +286,15 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let listViewFrame = self.listView.frame
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
+    }
+    
+    override var topItemFrame: CGRect? {
+        var topItemFrame: CGRect?
+        self.listView.forEachItemNode { itemNode in
+            if topItemFrame == nil {
+                topItemFrame = itemNode.frame
+            }
+        }
+        return topItemFrame
     }
 }

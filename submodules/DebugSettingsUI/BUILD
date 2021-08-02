@@ -19,6 +19,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",

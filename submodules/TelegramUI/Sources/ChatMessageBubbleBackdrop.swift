@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 private let maskInset: CGFloat = 1.0
 
@@ -54,17 +55,21 @@ func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThe
 }
 
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
-    private let backgroundContent: ASDisplayNode
+    private var backgroundContent: WallpaperBackgroundNode.BubbleBackgroundNode?
     
     private var currentType: ChatMessageBackgroundType?
     private var currentMaskMode: Bool?
     private var theme: ChatPresentationThemeData?
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
+    private weak var backgroundNode: WallpaperBackgroundNode?
     
     private var maskView: UIImageView?
+    private var fixedMaskMode: Bool?
+
+    private var absolutePosition: (CGRect, CGSize)?
     
     var hasImage: Bool {
-        return self.backgroundContent.contents != nil
+        return self.backgroundContent != nil
     }
     
     override var frame: CGRect {
@@ -75,30 +80,40 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                     maskView.frame = maskFrame
                 }
             }
+            if let backgroundContent = self.backgroundContent {
+                backgroundContent.frame = self.bounds
+                if let (rect, containerSize) = self.absolutePosition {
+                    var backgroundFrame = backgroundContent.frame
+                    backgroundFrame.origin.x += rect.minX
+                    backgroundFrame.origin.y += rect.minY
+                    backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                }
+            }
         }
     }
     
     override init() {
-        self.backgroundContent = ASDisplayNode()
-        
         super.init()
         
         self.clipsToBounds = true
-        
-        self.addSubnode(self.backgroundContent)
     }
     
     func setMaskMode(_ maskMode: Bool, mediaBox: MediaBox) {
-        if let currentType = self.currentType, let theme = self.theme, let essentialGraphics = self.essentialGraphics {
-            self.setType(type: currentType, theme: theme, mediaBox: mediaBox, essentialGraphics: essentialGraphics, maskMode: maskMode)
+        if let currentType = self.currentType, let theme = self.theme, let essentialGraphics = self.essentialGraphics, let backgroundNode = self.backgroundNode {
+            self.setType(type: currentType, theme: theme, essentialGraphics: essentialGraphics, maskMode: maskMode, backgroundNode: backgroundNode)
         }
     }
     
-    func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, mediaBox: MediaBox, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode: Bool) {
-        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics {
+    func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode inputMaskMode: Bool, backgroundNode: WallpaperBackgroundNode?) {
+        let maskMode = self.fixedMaskMode ?? inputMaskMode
+
+        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics || self.backgroundNode !== backgroundNode {
+            let typeUpdated = self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.backgroundNode !== backgroundNode
+
             self.currentType = type
             self.theme = theme
             self.essentialGraphics = essentialGraphics
+            self.backgroundNode = backgroundNode
             
             if maskMode != self.currentMaskMode {
                 self.currentMaskMode = maskMode
@@ -120,14 +135,51 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                     }
                 }
             }
-            
-            switch type {
-            case .none:
-                self.backgroundContent.contents = nil
-            case .incoming:
-                self.backgroundContent.contents = essentialGraphics.incomingBubbleGradientImage?.cgImage
-            case .outgoing:
-                self.backgroundContent.contents = essentialGraphics.outgoingBubbleGradientImage?.cgImage
+
+            if let backgroundContent = self.backgroundContent {
+                backgroundContent.frame = self.bounds
+                if let (rect, containerSize) = self.absolutePosition {
+                    var backgroundFrame = backgroundContent.frame
+                    backgroundFrame.origin.x += rect.minX
+                    backgroundFrame.origin.y += rect.minY
+                    backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                }
+            }
+
+            if typeUpdated {
+                if let backgroundContent = self.backgroundContent {
+                    self.backgroundContent = nil
+                    backgroundContent.removeFromSupernode()
+                }
+
+                switch type {
+                case .none:
+                    break
+                case .incoming:
+                    if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .incoming) {
+                        backgroundContent.frame = self.bounds
+                        if let (rect, containerSize) = self.absolutePosition {
+                            var backgroundFrame = backgroundContent.frame
+                            backgroundFrame.origin.x += rect.minX
+                            backgroundFrame.origin.y += rect.minY
+                            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                        }
+                        self.backgroundContent = backgroundContent
+                        self.insertSubnode(backgroundContent, at: 0)
+                    }
+                case .outgoing:
+                    if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .outgoing) {
+                        backgroundContent.frame = self.bounds
+                        if let (rect, containerSize) = self.absolutePosition {
+                            var backgroundFrame = backgroundContent.frame
+                            backgroundFrame.origin.x += rect.minX
+                            backgroundFrame.origin.y += rect.minY
+                            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                        }
+                        self.backgroundContent = backgroundContent
+                        self.insertSubnode(backgroundContent, at: 0)
+                    }
+                }
             }
             
             if let maskView = self.maskView {
@@ -137,22 +189,66 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     }
     
     func update(rect: CGRect, within containerSize: CGSize) {
-        self.backgroundContent.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+        }
     }
     
-    func offset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
-        transition.animatePositionAdditive(node: self.backgroundContent, offset: CGPoint(x: 0.0, y: -value))
+    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        self.backgroundContent?.offset(value: value, animationCurve: animationCurve, duration: duration)
     }
     
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-        self.backgroundContent.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+        self.backgroundContent?.offsetSpring(value: value, duration: duration, damping: damping)
     }
     
-    func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition) {
+    func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if let maskView = self.maskView {
-            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width + maskInset * 2.0, height: value.size.height + maskInset * 2.0)))
+            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
         }
-        transition.updateFrame(node: self, frame: value)
+        if let backgroundContent = self.backgroundContent {
+            transition.updateFrame(layer: backgroundContent.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }
+        }
+        transition.updateFrame(node: self, frame: value, completion: { _ in
+            completion()
+        })
+    }
+
+    func updateFrame(_ value: CGRect, transition: CombinedTransition, completion: @escaping () -> Void = {}) {
+        if let maskView = self.maskView {
+            transition.updateFrame(layer: maskView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))
+        }
+        if let backgroundContent = self.backgroundContent {
+            transition.updateFrame(layer: backgroundContent.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)))
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }
+        }
+        transition.updateFrame(layer: self.layer, frame: value, completion: { _ in
+            completion()
+        })
+    }
+
+    func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: CombinedTransition) {
+        if transition.isAnimated {
+            let previousFrame = self.frame
+            self.updateFrame(CGRect(origin: CGPoint(x: previousFrame.minX, y: sourceView.frame.minY), size: sourceView.frame.size), transition: .immediate)
+            self.updateFrame(previousFrame, transition: transition)
+
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        }
     }
 }

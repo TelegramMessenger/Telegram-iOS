@@ -88,7 +88,7 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
         return nil
     }
 }
-private let extensionFont = Font.with(size: 15.0, design: .round, traits: [.bold])
+private let extensionFont = Font.with(size: 15.0, design: .round, weight: .bold)
 
 private struct FetchControls {
     let fetch: () -> Void

@@ -20,9 +20,8 @@ public struct Font {
             self.rawValue = 0
         }
         
-        public static let bold = Traits(rawValue: 1 << 0)
-        public static let italic = Traits(rawValue: 1 << 1)
-        public static let monospacedNumbers = Traits(rawValue: 1 << 2)
+        public static let italic = Traits(rawValue: 1 << 0)
+        public static let monospacedNumbers = Traits(rawValue: 1 << 1)
     }
     
     public enum Weight {
@@ -31,15 +30,42 @@ public struct Font {
         case medium
         case semibold
         case bold
+        
+        var isBold: Bool {
+            switch self {
+                case .medium, .semibold, .bold:
+                    return true
+                default:
+                    return false
+            }
+        }
+        
+        var weight: UIFont.Weight {
+            switch self {
+                case .light:
+                    return .light
+                case .medium:
+                    return .medium
+                case .semibold:
+                    return .semibold
+                case .bold:
+                    return .bold
+                default:
+                    return .regular
+            }
+        }
     }
     
     public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
         if #available(iOS 13.0, *) {
-            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
-            var symbolicTraits = descriptor.symbolicTraits
-            if traits.contains(.bold) {
-                symbolicTraits.insert(.traitBold)
+            let descriptor: UIFontDescriptor
+            if #available(iOS 14.0, *) {
+                descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+            } else {
+                descriptor = UIFont.systemFont(ofSize: size, weight: weight.weight).fontDescriptor
             }
+
+            var symbolicTraits = descriptor.symbolicTraits
             if traits.contains(.italic) {
                 symbolicTraits.insert(.traitItalic)
             }
@@ -63,23 +89,12 @@ public struct Font {
                 default:
                     updatedDescriptor = updatedDescriptor?.withDesign(.default)
             }
-            if weight != .regular {
-                let fontWeight: UIFont.Weight
-                switch weight {
-                    case .light:
-                        fontWeight = .light
-                    case .medium:
-                        fontWeight = .medium
-                    case .semibold:
-                        fontWeight = .semibold
-                    case .bold:
-                        fontWeight = .bold
-                    default:
-                        fontWeight = .regular
+            if #available(iOS 14.0, *) {
+                if weight != .regular {
+                    updatedDescriptor = updatedDescriptor?.addingAttributes([
+                        UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: weight.weight]
+                    ])
                 }
-                updatedDescriptor = updatedDescriptor?.addingAttributes([
-                    UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.weight: fontWeight]
-                ])
             }
          
             if let updatedDescriptor = updatedDescriptor {
@@ -90,27 +105,19 @@ public struct Font {
         } else {
             switch design {
                 case .regular:
-                    if traits.contains(.bold) && traits.contains(.italic) {
-                        if let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor.withSymbolicTraits([.traitBold, .traitItalic]) {
+                    if traits.contains(.italic) {
+                        if let descriptor = UIFont.systemFont(ofSize: size, weight: weight.weight).fontDescriptor.withSymbolicTraits([.traitItalic]) {
                             return UIFont(descriptor: descriptor, size: size)
                         } else {
                             return UIFont.italicSystemFont(ofSize: size)
                         }
-                    } else if traits.contains(.bold) {
-                        if #available(iOS 8.2, *) {
-                            return UIFont.boldSystemFont(ofSize: size)
-                        } else {
-                            return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, size, nil)
-                        }
-                    } else if traits.contains(.italic) {
-                        return UIFont.italicSystemFont(ofSize: size)
                     } else {
-                        return UIFont.systemFont(ofSize: size)
+                        return UIFont.systemFont(ofSize: size, weight: weight.weight)
                     }
                 case .serif:
-                    if traits.contains(.bold) && traits.contains(.italic) {
+                    if weight.isBold && traits.contains(.italic) {
                         return UIFont(name: "Georgia-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
-                    } else if traits.contains(.bold) {
+                    } else if weight.isBold {
                         return UIFont(name: "Georgia-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if traits.contains(.italic) {
                         return UIFont(name: "Georgia-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
@@ -118,9 +125,9 @@ public struct Font {
                         return UIFont(name: "Georgia", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     }
                 case .monospace:
-                    if traits.contains(.bold) && traits.contains(.italic) {
+                    if weight.isBold && traits.contains(.italic) {
                         return UIFont(name: "Menlo-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
-                    } else if traits.contains(.bold) {
+                    } else if weight.isBold {
                         return UIFont(name: "Menlo-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if traits.contains(.italic) {
                         return UIFont(name: "Menlo-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)

@@ -808,7 +808,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
-            let _ = markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: item.message.id).start()
+            let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).start()
         }
     }
 }

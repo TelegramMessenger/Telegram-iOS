@@ -466,7 +466,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                 }
                             }
                             
-                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
+                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil, nil) as Any
                         } else {
                             return SSignal.complete()
                         }

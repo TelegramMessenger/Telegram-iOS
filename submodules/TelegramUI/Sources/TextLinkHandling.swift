@@ -58,9 +58,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         context.sharedContext.applicationBindings.openUrl(url)
                     case let .peer(peerId, navigation):
                         openResolvedPeerImpl(peerId, navigation)
-                    case let .channelMessage(peerId, messageId):
+                    case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = controller.navigationController as? NavigationController {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true)))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: timecode)))
                         }
                     case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {
@@ -91,7 +91,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     }
     
     let openPeerMentionImpl: (String) -> Void = { mention in
-        navigateDisposable.set((resolvePeerByName(account: context.account, name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+        navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
             openResolvedPeerImpl(peerId, .default)
         }))
     }

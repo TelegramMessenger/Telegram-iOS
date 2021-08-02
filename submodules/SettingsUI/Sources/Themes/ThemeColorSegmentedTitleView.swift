@@ -31,7 +31,7 @@ final class ThemeColorSegmentedTitleView: UIView {
     init(theme: PresentationTheme, strings: PresentationStrings, selectedSection: ThemeColorSection) {
         self.theme = theme
         
-        let sections = [strings.Theme_Colors_Accent, strings.Theme_Colors_Background, strings.Theme_Colors_Messages]
+        let sections = [strings.Theme_Colors_Background, strings.Theme_Colors_Accent, strings.Theme_Colors_Messages]
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: sections.map { SegmentedControlItem(title: $0) }, selectedIndex: selectedSection.rawValue)
         
         super.init(frame: CGRect())

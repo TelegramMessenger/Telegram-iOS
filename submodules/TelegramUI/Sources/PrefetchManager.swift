@@ -6,6 +6,7 @@ import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import PhotoResources
+import StickerResources
 import Emoji
 import UniversalMediaPlayer
 
@@ -21,18 +22,23 @@ public enum PrefetchMediaItem {
     case animatedEmojiSticker(TelegramMediaFile)
 }
 
-private final class PrefetchManagerImpl {
+private final class PrefetchManagerInnerImpl {
     private let queue: Queue
     private let account: Account
+    private let engine: TelegramEngine
     private let fetchManager: FetchManager
     
     private var listDisposable: Disposable?
     
     private var contexts: [MediaId: PrefetchMediaContext] = [:]
-    
-    init(queue: Queue, sharedContext: SharedAccountContext, account: Account, fetchManager: FetchManager) {
+
+    private let preloadGreetingStickerDisposable = MetaDisposable()
+    fileprivate let preloadedGreetingStickerPromise = Promise<TelegramMediaFile?>(nil)
+
+    init(queue: Queue, sharedContext: SharedAccountContext, account: Account, engine: TelegramEngine, fetchManager: FetchManager) {
         self.queue = queue
         self.account = account
+        self.engine = engine
         self.fetchManager = fetchManager
         
         let networkType = account.networkType
@@ -52,7 +58,7 @@ private final class PrefetchManagerImpl {
             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
         }
         
-        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false), appConfiguration)
+        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, TelegramEngine(account: account).stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), appConfiguration)
         |> map { orderedPreloadMedia, stickerPack, appConfiguration -> [PrefetchMediaItem] in
             let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: account)
             let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
@@ -226,18 +232,63 @@ private final class PrefetchManagerImpl {
             }
         }
     }
+    
+    fileprivate func prepareNextGreetingSticker() {
+        let account = self.account
+        let engine = self.engine
+        self.preloadedGreetingStickerPromise.set(.single(nil)
+        |> then(engine.stickers.randomGreetingSticker()
+        |> map { item in
+            return item?.file
+        }))
+        
+        self.preloadGreetingStickerDisposable.set((self.preloadedGreetingStickerPromise.get()
+        |> mapToSignal { sticker -> Signal<Void, NoError> in
+            if let sticker = sticker {
+                let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: sticker)).start()
+                return chatMessageAnimationData(postbox: account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            } else {
+                return .complete()
+            }
+        }).start())
+    }
 }
 
-final class PrefetchManager {
+final class PrefetchManagerImpl: PrefetchManager {
     private let queue: Queue
     
-    private let impl: QueueLocalObject<PrefetchManagerImpl>
+    private let impl: QueueLocalObject<PrefetchManagerInnerImpl>
+    private let uuid = Atomic<UUID>(value: UUID())
     
-    init(sharedContext: SharedAccountContext, account: Account, fetchManager: FetchManager) {
+    init(sharedContext: SharedAccountContext, account: Account, engine: TelegramEngine, fetchManager: FetchManager) {
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return PrefetchManagerImpl(queue: queue, sharedContext: sharedContext, account: account, fetchManager: fetchManager)
+            return PrefetchManagerInnerImpl(queue: queue, sharedContext: sharedContext, account: account, engine: engine, fetchManager: fetchManager)
         })
+    }
+    
+    var preloadedGreetingSticker: ChatGreetingData {
+        let signal: Signal<TelegramMediaFile?, NoError> = Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set((impl.preloadedGreetingStickerPromise.get() |> take(1)).start(next: { file in
+                    subscriber.putNext(file)
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+        return ChatGreetingData(uuid: uuid.with { $0 }, sticker: signal)
+    }
+    
+    func prepareNextGreetingSticker() {
+        let _ = uuid.swap(UUID())
+        self.impl.with { impl in
+            impl.prepareNextGreetingSticker()
+        }
     }
 }

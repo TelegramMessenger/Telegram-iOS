@@ -91,9 +91,9 @@ final class DoubleBottomFlowContext {
         }).start()
             
         if shouldEnableNotification {
-            let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .enableEveryone(disableFor: [:])).start()
+            let _ = context.context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .voiceCalls, settings: .enableEveryone(disableFor: [:])).start()
         } else {
-            let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
+            let _ = context.context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
         }
     }
 }

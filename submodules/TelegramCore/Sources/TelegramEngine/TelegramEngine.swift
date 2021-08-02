@@ -20,7 +20,68 @@ public final class TelegramEngine {
         return Payments(account: self.account)
     }()
 
-    public lazy var peerNames: PeerNames = {
-        return PeerNames(account: self.account)
+    public lazy var peers: Peers = {
+        return Peers(account: self.account)
     }()
+
+    public lazy var auth: Auth = {
+        return Auth(account: self.account)
+    }()
+
+    public lazy var accountData: AccountData = {
+        return AccountData(account: self.account)
+    }()
+
+    public lazy var stickers: Stickers = {
+        return Stickers(account: self.account)
+    }()
+
+    public lazy var peerManagement: PeerManagement = {
+        return PeerManagement(account: self.account)
+    }()
+
+    public lazy var localization: Localization = {
+        return Localization(account: self.account)
+    }()
+
+    public lazy var messages: Messages = {
+        return Messages(account: self.account)
+    }()
+
+    public lazy var privacy: Privacy = {
+        return Privacy(account: self.account)
+    }()
+
+    public lazy var calls: Calls = {
+        return Calls(account: self.account)
+    }()
+
+    public lazy var historyImport: HistoryImport = {
+        return HistoryImport(account: self.account)
+    }()
+
+    public lazy var contacts: Contacts = {
+        return Contacts(account: self.account)
+    }()
+}
+
+public final class TelegramEngineUnauthorized {
+    public let account: UnauthorizedAccount
+
+    public init(account: UnauthorizedAccount) {
+        self.account = account
+    }
+
+    public lazy var auth: Auth = {
+        return Auth(account: self.account)
+    }()
+
+    public lazy var localization: Localization = {
+        return Localization(account: self.account)
+    }()
+}
+
+public enum SomeTelegramEngine {
+    case unauthorized(TelegramEngineUnauthorized)
+    case authorized(TelegramEngine)
 }

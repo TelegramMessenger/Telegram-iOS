@@ -8,16 +8,31 @@ import SyncCore
 extension WallpaperSettings {
     init(apiWallpaperSettings: Api.WallPaperSettings) {
         switch apiWallpaperSettings {
-            case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, intensity, rotation):
-                self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, color: backgroundColor.flatMap { UInt32(bitPattern: $0) }, bottomColor: secondBackgroundColor.flatMap { UInt32(bitPattern: $0) }, intensity: intensity, rotation: rotation)
+        case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, intensity, rotation):
+            var colors: [UInt32] = []
+            if let backgroundColor = backgroundColor {
+                colors.append(UInt32(bitPattern: backgroundColor))
+            }
+            if let secondBackgroundColor = secondBackgroundColor {
+                colors.append(UInt32(bitPattern: secondBackgroundColor))
+            }
+            if let thirdBackgroundColor = thirdBackgroundColor {
+                colors.append(UInt32(bitPattern: thirdBackgroundColor))
+            }
+            if let fourthBackgroundColor = fourthBackgroundColor {
+                colors.append(UInt32(bitPattern: fourthBackgroundColor))
+            }
+            self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, colors: colors, intensity: intensity, rotation: rotation)
         }
     }
 }
 
 func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPaperSettings {
     var flags: Int32 = 0
-    if let _ = wallpaperSettings.color {
+    var backgroundColor: Int32?
+    if wallpaperSettings.colors.count >= 1 {
         flags |= (1 << 0)
+        backgroundColor = Int32(bitPattern: wallpaperSettings.colors[0])
     }
     if wallpaperSettings.blur {
         flags |= (1 << 1)
@@ -28,10 +43,22 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if let _ = wallpaperSettings.intensity {
         flags |= (1 << 3)
     }
-    if let _ = wallpaperSettings.bottomColor {
+    var secondBackgroundColor: Int32?
+    if wallpaperSettings.colors.count >= 2 {
         flags |= (1 << 4)
+        secondBackgroundColor = Int32(bitPattern: wallpaperSettings.colors[1])
     }
-    return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color.flatMap { Int32(bitPattern: $0) }, secondBackgroundColor: wallpaperSettings.bottomColor.flatMap { Int32(bitPattern: $0) }, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0)
+    var thirdBackgroundColor: Int32?
+    if wallpaperSettings.colors.count >= 3 {
+        flags |= (1 << 5)
+        thirdBackgroundColor = Int32(bitPattern: wallpaperSettings.colors[2])
+    }
+    var fourthBackgroundColor: Int32?
+    if wallpaperSettings.colors.count >= 4 {
+        flags |= (1 << 6)
+        fourthBackgroundColor = Int32(bitPattern: wallpaperSettings.colors[3])
+    }
+    return .wallPaperSettings(flags: flags, backgroundColor: backgroundColor, secondBackgroundColor: secondBackgroundColor, thirdBackgroundColor: thirdBackgroundColor, fourthBackgroundColor: fourthBackgroundColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0)
 }
 
 extension TelegramWallpaper {
@@ -50,12 +77,15 @@ extension TelegramWallpaper {
                     //assertionFailure()
                     self = .color(0xffffff)
                 }
-            case let .wallPaperNoFile(flags, settings):
-                if let settings = settings, case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, intensity, rotation) = settings {
-                    if let color = backgroundColor, let bottomColor = secondBackgroundColor {
-                        self = .gradient(UInt32(bitPattern: color), UInt32(bitPattern: bottomColor), WallpaperSettings(rotation: rotation))
-                    } else if let color = backgroundColor {
-                        self = .color(UInt32(bitPattern: color))
+            case let .wallPaperNoFile(id, _, settings):
+                if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation) = settings {
+                    let colors: [UInt32] = ([backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor] as [Int32?]).compactMap({ color -> UInt32? in
+                        return color.flatMap(UInt32.init(bitPattern:))
+                    })
+                    if colors.count > 1 {
+                        self = .gradient(id, colors, WallpaperSettings(rotation: rotation))
+                    } else if colors.count == 1 {
+                        self = .color(UInt32(bitPattern: colors[0]))
                     } else {
                         self = .color(0xffffff)
                     }
@@ -68,16 +98,16 @@ extension TelegramWallpaper {
     
     var apiInputWallpaperAndSettings: (Api.InputWallPaper?, Api.WallPaperSettings)? {
         switch self {
-            case .builtin:
-                return nil
-            case let .file(file):
-                return (.inputWallPaperSlug(slug: file.slug), apiWallpaperSettings(file.settings))
-            case let .color(color):
-                return (.inputWallPaperNoFile, apiWallpaperSettings(WallpaperSettings(color: color)))
-            case let .gradient(topColor, bottomColor, settings):
-                return (.inputWallPaperNoFile, apiWallpaperSettings(WallpaperSettings(color: topColor, bottomColor: bottomColor, rotation: settings.rotation)))
-            default:
-                return nil
+        case .builtin:
+            return nil
+        case let .file(_, _, _, _, _, _, slug, _, settings):
+            return (.inputWallPaperSlug(slug: slug), apiWallpaperSettings(settings))
+        case let .color(color):
+            return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(colors: [color])))
+        case let .gradient(id, colors, settings):
+            return (.inputWallPaperNoFile(id: id ?? 0), apiWallpaperSettings(WallpaperSettings(colors: colors, rotation: settings.rotation)))
+        default:
+            return nil
         }
     }
 }

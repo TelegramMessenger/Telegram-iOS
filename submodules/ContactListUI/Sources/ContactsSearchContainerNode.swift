@@ -269,7 +269,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 if categories.contains(.global) {
                     foundRemoteContacts = .single(previousFoundRemoteContacts.with({ $0 }))
                     |> then(
-                        searchPeers(account: context.account, query: query)
+                        context.engine.peers.searchPeers(query: query)
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
@@ -414,7 +414,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
             }
         }))
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

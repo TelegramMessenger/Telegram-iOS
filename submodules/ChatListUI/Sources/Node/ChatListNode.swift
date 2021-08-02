@@ -51,7 +51,7 @@ public final class ChatListNodeInteraction {
     let activateSearch: () -> Void
     let peerSelected: (Peer, ChatListNodeEntryPromoInfo?) -> Void
     let disabledPeerSelected: (Peer) -> Void
-    let togglePeerSelected: (PeerId) -> Void
+    let togglePeerSelected: (Peer) -> Void
     let additionalCategorySelected: (Int) -> Void
     let messageSelected: (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void
     let groupSelected: (PeerGroupId) -> Void
@@ -70,7 +70,7 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId, Bool) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (Peer) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId, Bool) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -111,13 +111,17 @@ public struct ChatListNodeState: Equatable {
     public var archiveShouldBeTemporaryRevealed: Bool
     public var selectedAdditionalCategoryIds: Set<Int>
     public var hiddenPsaPeerId: PeerId?
+    public var foundPeers: [Peer]
+    public var selectedPeerMap: [PeerId: Peer]
     
-    public init(presentationData: ChatListPresentationData, editing: Bool, peerIdWithRevealedOptions: PeerId?, selectedPeerIds: Set<PeerId>, selectedAdditionalCategoryIds: Set<Int>, peerInputActivities: ChatListNodePeerInputActivities?, pendingRemovalPeerIds: Set<PeerId>, pendingClearHistoryPeerIds: Set<PeerId>, archiveShouldBeTemporaryRevealed: Bool, hiddenPsaPeerId: PeerId?) {
+    public init(presentationData: ChatListPresentationData, editing: Bool, peerIdWithRevealedOptions: PeerId?, selectedPeerIds: Set<PeerId>, foundPeers: [Peer], selectedPeerMap: [PeerId: Peer], selectedAdditionalCategoryIds: Set<Int>, peerInputActivities: ChatListNodePeerInputActivities?, pendingRemovalPeerIds: Set<PeerId>, pendingClearHistoryPeerIds: Set<PeerId>, archiveShouldBeTemporaryRevealed: Bool, hiddenPsaPeerId: PeerId?) {
         self.presentationData = presentationData
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
         self.selectedPeerIds = selectedPeerIds
         self.selectedAdditionalCategoryIds = selectedAdditionalCategoryIds
+        self.foundPeers = foundPeers
+        self.selectedPeerMap = selectedPeerMap
         self.peerInputActivities = peerInputActivities
         self.pendingRemovalPeerIds = pendingRemovalPeerIds
         self.pendingClearHistoryPeerIds = pendingClearHistoryPeerIds
@@ -136,6 +140,12 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.selectedPeerIds != rhs.selectedPeerIds {
+            return false
+        }
+        if arePeerArraysEqual(lhs.foundPeers, rhs.foundPeers) {
+            return false
+        }
+        if arePeerDictionariesEqual(lhs.selectedPeerMap, rhs.selectedPeerMap) {
             return false
         }
         if lhs.selectedAdditionalCategoryIds != rhs.selectedAdditionalCategoryIds {
@@ -283,7 +293,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
 
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
-                                nodeInteraction.peerSelected(chatPeer, nil)
+                                if editing {
+                                    nodeInteraction.togglePeerSelected(chatPeer)
+                                } else {
+                                    nodeInteraction.peerSelected(chatPeer, nil)
+                                }
                             }
                         }, disabledAction: { _ in
                             if let chatPeer = chatPeer {
@@ -360,7 +374,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
-                                nodeInteraction.peerSelected(chatPeer, nil)
+                                if editing {
+                                    nodeInteraction.togglePeerSelected(chatPeer)
+                                } else {
+                                    nodeInteraction.peerSelected(chatPeer, nil)
+                                }
                             }
                         }, disabledAction: { _ in
                             if let chatPeer = chatPeer {
@@ -545,6 +563,7 @@ public final class ChatListNode: ListView {
     let preloadItems = Promise<[ChatHistoryPreloadItem]>([])
     
     var didBeginSelectingChats: (() -> Void)?
+    public var selectionCountChanged: ((Int) -> Void)?
     
     public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
@@ -559,7 +578,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalPeerIds: Set(), pendingClearHistoryPeerIds: Set(), archiveShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil)
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalPeerIds: Set(), pendingClearHistoryPeerIds: Set(), archiveShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -583,22 +602,26 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {
                 disabledPeerSelected(peer)
             }
-        }, togglePeerSelected: { [weak self] peerId in
+        }, togglePeerSelected: { [weak self] peer in
             var didBeginSelecting = false
+            var count = 0
             self?.updateState { state in
                 var state = state
-                if state.selectedPeerIds.contains(peerId) {
-                    state.selectedPeerIds.remove(peerId)
+                if state.selectedPeerIds.contains(peer.id) {
+                    state.selectedPeerIds.remove(peer.id)
                 } else {
                     if state.selectedPeerIds.count < 100 {
                         if state.selectedPeerIds.isEmpty {
                             didBeginSelecting = true
                         }
-                        state.selectedPeerIds.insert(peerId)
+                        state.selectedPeerIds.insert(peer.id)
+                        state.selectedPeerMap[peer.id] = peer
                     }
                 }
+                count = state.selectedPeerIds.count
                 return state
             }
+            self?.selectionCountChanged?(count)
             if didBeginSelecting {
                 self?.didBeginSelectingChats?()
             }
@@ -665,7 +688,7 @@ public final class ChatListNode: ListView {
                 return
             }
             strongSelf.setCurrentRemovingPeerId(peerId)
-            let _ = (togglePeerMuted(account: context.account, peerId: peerId)
+            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -772,7 +795,7 @@ public final class ChatListNode: ListView {
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode)
             let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(_, _, _, _, _, _, peer, _, _, _, _, _, _, _, _, _):
@@ -875,7 +898,7 @@ public final class ChatListNode: ListView {
             
             let removingPeerId = currentRemovingPeerId.with { $0 }
             
-            var disableAnimations = state.presentationData.disableAnimations
+            var disableAnimations = true
             if previousState.editing != state.editing {
                 disableAnimations = false
             } else {
@@ -1197,7 +1220,7 @@ public final class ChatListNode: ListView {
         }
         var startedScrollingAtUpperBound = false
         
-        self.beganInteractiveDragging = { [weak self] in
+        self.beganInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -1332,7 +1355,7 @@ public final class ChatListNode: ListView {
     }
     
     public func updateThemeAndStrings(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
-        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || dateTimeFormat != self.currentState.presentationData.dateTimeFormat || disableAnimations != self.currentState.presentationData.disableAnimations {
+        if theme !== self.currentState.presentationData.theme || strings !== self.currentState.presentationData.strings || dateTimeFormat != self.currentState.presentationData.dateTimeFormat {
             self.theme = theme
             if self.keepTopItemOverscrollBackground != nil {
                 self.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color:  theme.chatList.pinnedItemBackgroundColor, direction: true)

@@ -578,8 +578,11 @@
     [super loadView];
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    if (iosMajorVersion() >= 11) {
+        if (@available(iOS 11.0, *)) {
+            hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+        }
+    }
     
     CGFloat inset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation hasOnScreenNavigation:hasOnScreenNavigation].bottom;
     _toolbarView = [[TGMediaPickerToolbarView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - TGMediaPickerToolbarHeight - inset, self.view.frame.size.width, TGMediaPickerToolbarHeight + inset)];
@@ -648,7 +651,9 @@
               return;
 
             [strongController dismissAnimated:true manual:false completion:nil];
+        if (@available(iOS 14, *)) {
             [[PHPhotoLibrary sharedPhotoLibrary] presentLimitedLibraryPickerFromViewController:strongSelf];
+        }
       }],
      [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Media.LimitedAccessChangeSettings") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
       {
@@ -725,8 +730,11 @@
         orientation = UIInterfaceOrientationLandscapeLeft;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    if (iosMajorVersion() >= 11) {
+        if (@available(iOS 11.0, *)) {
+            hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+        }
+    }
     
     _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     _accessView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
@@ -810,7 +818,7 @@
     }
 }
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
@@ -827,7 +835,7 @@
     return value;
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = selectionContext.selectedItems ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
@@ -945,7 +953,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                         return generatedItem;
                     }] catch:^SSignal *(id error)
                     {
@@ -971,7 +979,7 @@
                             if (groupedId != nil)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                             return generatedItem;
                         }];
                     }]];
@@ -998,7 +1006,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                         return generatedItem;
                     }];
                     
@@ -1074,7 +1082,7 @@
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
                                 
-                                id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                                id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                                 return generatedItem;
                             }];
                         }]];
@@ -1156,7 +1164,7 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                             return generatedItem;
                         }] catch:^SSignal *(__unused id error)
                         {
@@ -1197,7 +1205,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1267,7 +1275,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1345,7 +1353,7 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
                     return generatedItem;
                 }]];
                 
@@ -1399,8 +1407,8 @@
     if (_searchController == nil)
         return;
     
-    UIView *backArrow = [self _findBackArrow:self.navigationBar];
-    UIView *backButton = [self _findBackButton:self.navigationBar parentView:self.navigationBar];
+    UIView *backArrow = nil;
+    UIView *backButton = nil;
     
     if ([viewController isKindOfClass:[TGPhotoEditorController class]])
     {
@@ -1432,48 +1440,11 @@
         _searchSnapshotView = nil;
         _searchController.view.hidden = false;
         
-        UIView *backArrow = [self _findBackArrow:self.navigationBar];
-        UIView *backButton = [self _findBackButton:self.navigationBar parentView:self.navigationBar];
+        UIView *backArrow = nil;
+        UIView *backButton = nil;
         backArrow.alpha = 1.0f;
         backButton.alpha = 1.0f;
     }
-}
-
-- (UIView *)_findBackArrow:(UIView *)view
-{
-    Class backArrowClass = NSClassFromString(TGEncodeText(@"`VJObwjhbujpoCbsCbdlJoejdbupsWjfx", -1));
-    
-    if ([view isKindOfClass:backArrowClass])
-        return view;
-    
-    for (UIView *subview in view.subviews)
-    {
-        UIView *result = [self _findBackArrow:subview];
-        if (result != nil)
-            return result;
-    }
-    
-    return nil;
-}
-
-- (UIView *)_findBackButton:(UIView *)view parentView:(UIView *)parentView
-{
-    Class backButtonClass = NSClassFromString(TGEncodeText(@"VJObwjhbujpoJufnCvuupoWjfx", -1));
-    
-    if ([view isKindOfClass:backButtonClass])
-    {
-        if (view.center.x < parentView.frame.size.width / 2.0f)
-            return view;
-    }
-    
-    for (UIView *subview in view.subviews)
-    {
-        UIView *result = [self _findBackButton:subview parentView:parentView];
-        if (result != nil)
-            return result;
-    }
-    
-    return nil;
 }
 
 #pragma mark -

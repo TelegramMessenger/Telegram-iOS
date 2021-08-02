@@ -353,7 +353,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         |> delay(0.15, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
-        let signal = stickerPacksAttachedToMedia(account: context.account, media: media)
+        let signal = context.engine.stickers.stickerPacksAttachedToMedia(media: media)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
@@ -487,7 +487,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.frame = transformedSurfaceFrame
         }
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        //self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)

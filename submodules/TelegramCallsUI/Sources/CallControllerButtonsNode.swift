@@ -11,6 +11,7 @@ enum CallControllerButtonsSpeakerMode: Equatable {
         case generic
         case airpods
         case airpodsPro
+        case airpodsMax
     }
     
     case none
@@ -51,6 +52,7 @@ private enum ButtonDescription: Equatable {
         case bluetooth
         case airpods
         case airpodsPro
+        case airpodsMax
         case headphones
     }
     
@@ -215,6 +217,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
                             soundOutput = .airpods
                         case .airpodsPro:
                             soundOutput = .airpodsPro
+                        case .airpodsMax:
+                            soundOutput = .airpodsMax
                 }
             }
             
@@ -306,6 +310,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
                                 soundOutput = .airpods
                             case .airpodsPro:
                                 soundOutput = .airpodsPro
+                            case .airpodsMax:
+                                soundOutput = .airpodsMax
                     }
                 }
                 
@@ -362,6 +368,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
                                 soundOutput = .airpods
                             case .airpodsPro:
                                 soundOutput = .airpodsPro
+                            case .airpodsMax:
+                                soundOutput = .airpodsMax
                     }
                 }
                 
@@ -467,6 +475,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     title = strings.Call_Audio
                 case .airpodsPro:
                     image = .airpodsPro
+                    title = strings.Call_Audio
+                case .airpodsMax:
+                    image = .airpodsMax
                     title = strings.Call_Audio
                 case .headphones:
                     image = .headphones

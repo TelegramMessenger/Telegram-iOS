@@ -2402,22 +2402,21 @@ enum GCDAsyncSocketConfig
 	int nosigpipe = 1;
 	setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe));
     
-    /*int32_t rcvBuf = 400 * 1024;
+    int32_t rcvBuf = 1024 * 1024;
     setsockopt(socketFD, SOL_SOCKET, SO_RCVBUF, &rcvBuf, 4);
     
     int32_t checkRcvBuf = 0;
     unsigned int checkRcvBufLen = sizeof(checkRcvBuf);
     getsockopt(socketFD, SOL_SOCKET, SO_RCVBUF, &checkRcvBuf, &checkRcvBufLen);
     
-    int32_t sndBuf = 400 * 1024;
+    int32_t sndBuf = 1024 * 1024;
     setsockopt(socketFD, SOL_SOCKET, SO_SNDBUF, &sndBuf, 4);
     
     int32_t checkSndBuf = 0;
     unsigned int checkSndBufLen = sizeof(checkSndBuf);
     getsockopt(socketFD, SOL_SOCKET, SO_SNDBUF, &checkSndBuf, &checkSndBufLen);
-    */
     
-    if (_useTcpNodelay)
+    if (_useTcpNodelay || true)
     {
         int flag = 1;
         setsockopt(socketFD, SOL_SOCKET, TCP_NODELAY, &flag, sizeof(flag));

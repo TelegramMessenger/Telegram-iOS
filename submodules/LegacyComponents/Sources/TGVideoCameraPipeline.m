@@ -135,7 +135,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     {
 		_running = false;
 		
-		[self stopRecording:^{}];
+		[self stopRecording:^(__unused bool success) {}];
 		
 		[_captureSession stopRunning];
 		[self captureSessionDidStopRunning];
@@ -300,7 +300,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)captureSessionDidStopRunning
 {
-	[self stopRecording:^{}];
+	[self stopRecording:^(__unused bool success) {}];
 	[self destroyVideoPipeline];
 }
 
@@ -701,7 +701,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	[recorder prepareToRecord];
 }
 
-- (void)stopRecording:(void (^)())completed
+- (void)stopRecording:(void (^)(bool))completed
 {
     [[TGVideoCameraPipeline cameraQueue] dispatch:^
     {
@@ -709,7 +709,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
         {
             if (_recordingStatus != TGVideoCameraRecordingStatusRecording) {
                 if (completed) {
-                    completed();
+                    completed(false);
                 }
                 return;
             }
@@ -721,7 +721,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
         [_recorder finishRecording:^{
             __unused __auto_type description = [self description];
             if (completed) {
-                completed();
+                completed(true);
             }
         }];
     }];
@@ -862,6 +862,52 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
 - (NSTimeInterval)videoDuration
 {
     return _recorder.videoDuration;
+}
+
+- (CGFloat)zoomLevel
+{
+    if (![_videoDevice respondsToSelector:@selector(videoZoomFactor)])
+        return 1.0f;
+    
+    return (_videoDevice.videoZoomFactor - 1.0f) / ([self _maximumZoomFactor] - 1.0f);
+}
+
+- (CGFloat)_maximumZoomFactor
+{
+    return MIN(5.0f, _videoDevice.activeFormat.videoMaxZoomFactor);
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel
+{
+    zoomLevel = MAX(0.0f, MIN(1.0f, zoomLevel));
+    
+    __weak TGVideoCameraPipeline *weakSelf = self;
+    [[TGVideoCameraPipeline cameraQueue] dispatch:^
+    {
+        __strong TGVideoCameraPipeline *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [self _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
+            device.videoZoomFactor = MAX(1.0f, MIN([strongSelf _maximumZoomFactor], 1.0f + ([strongSelf _maximumZoomFactor] - 1.0f) * zoomLevel));
+        }];
+    }];
+}
+
+- (bool)isZoomAvailable
+{
+    return [TGVideoCameraPipeline _isZoomAvailableForDevice:_videoDevice];
+}
+
++ (bool)_isZoomAvailableForDevice:(AVCaptureDevice *)device
+{
+    if (![device respondsToSelector:@selector(setVideoZoomFactor:)])
+        return false;
+    
+    if (device.position == AVCaptureDevicePositionFront)
+        return false;
+    
+    return true;
 }
 
 - (void)setCameraPosition:(AVCaptureDevicePosition)position

@@ -27,8 +27,18 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
             itemIds.reverse()
         }
         return fetch(forceFetch ? 0 : hashForIds(itemIds))
-            |> mapToSignal { items in
-                if let items = items {
+            |> mapToSignal { sourceItems in
+                var items: [OrderedItemListEntry] = []
+                if let sourceItems = sourceItems {
+                    var existingIds = Set<Data>()
+                    for item in sourceItems {
+                        let id = item.id.makeData()
+                        if !existingIds.contains(id) {
+                            existingIds.insert(id)
+                            items.append(item)
+                        }
+                    }
+
                     return postbox.transaction { transaction -> Void in
                         transaction.replaceOrderedItemListItems(collectionId: collectionId, items: items)
                     }

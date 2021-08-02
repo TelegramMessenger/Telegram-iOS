@@ -112,6 +112,7 @@ final class PeerInfoState {
 
 final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
+    let suggestPasswordConfirmation: Bool
     let accountsAndPeers: [(Account, Peer, Int32)]
     let activeSessionsContext: ActiveSessionsContext?
     let webSessionsContext: WebSessionsContext?
@@ -130,6 +131,7 @@ final class TelegramGlobalSettings {
     
     init(
         suggestPhoneNumberConfirmation: Bool,
+        suggestPasswordConfirmation: Bool,
         accountsAndPeers: [(Account, Peer, Int32)],
         activeSessionsContext: ActiveSessionsContext?,
         webSessionsContext: WebSessionsContext?,
@@ -147,6 +149,7 @@ final class TelegramGlobalSettings {
         enableQRLogin: Bool
     ) {
         self.suggestPhoneNumberConfirmation = suggestPhoneNumberConfirmation
+        self.suggestPasswordConfirmation = suggestPasswordConfirmation
         self.accountsAndPeers = accountsAndPeers
         self.activeSessionsContext = activeSessionsContext
         self.webSessionsContext = webSessionsContext
@@ -397,9 +400,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
         combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
-        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+        getServerProvidedSuggestions(account: context.account)
         )
-        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences -> PeerInfoScreenData in
+        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions -> PeerInfoScreenData in
             let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
             let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
             
@@ -416,7 +420,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 enableQRLogin = true
             }
             
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: false, accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
+            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), suggestPasswordConfirmation: suggestions.contains(.validatePassword), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
             
             return PeerInfoScreenData(
                 peer: peerView.peers[peerId],
@@ -688,10 +692,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
                     if let isLarge = isLarge {
                         if isLarge {
-                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
                             |> map(Optional.init)
                         } else {
-                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
                             |> map(Optional.init)
                         }
                     } else {
@@ -876,7 +880,9 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     } else if member.id != accountPeerId {
         if let channel = peer as? TelegramChannel {
             if channel.flags.contains(.isCreator) {
-                result.insert(.restrict)
+                if !channel.flags.contains(.isGigagroup) {
+                    result.insert(.restrict)
+                }
                 result.insert(.promote)
             } else {
                 switch member {
@@ -887,13 +893,15 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                     case let .member(member):
                         if let adminInfo = member.adminInfo {
                             if adminInfo.promotedBy == accountPeerId {
-                                result.insert(.restrict)
+                                if !channel.flags.contains(.isGigagroup) {
+                                    result.insert(.restrict)
+                                }
                                 if channel.hasPermission(.addAdmins) {
                                     result.insert(.promote)
                                 }
                             }
                         } else {
-                            if channel.hasPermission(.banMembers) {
+                            if channel.hasPermission(.banMembers) && !channel.flags.contains(.isGigagroup) {
                                 result.insert(.restrict)
                             }
                             if channel.hasPermission(.addAdmins) {
@@ -942,7 +950,27 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: PeerInfoHeaderButtonKey, isOpenedFromChat: Bool) -> Bool {
+    var hiddenWhileExpanded = false
+    if isOpenedFromChat {
+        switch buttonKey {
+        case .message, .search, .videoCall, .addMember, .leave, .discussion:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    } else {
+        switch buttonKey {
+        case .search, .call, .videoCall, .addMember, .leave, .discussion:
+            hiddenWhileExpanded = true
+        default:
+            hiddenWhileExpanded = false
+        }
+    }
+    return hiddenWhileExpanded
+}
+
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
@@ -986,7 +1014,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.flags.contains(.hasVoiceChat) {
             hasVoiceChat = true
         }
-        if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+        if channel.flags.contains(.isCreator) {
             displayMore = true
         }
         switch channel.info {
@@ -998,7 +1026,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 hasDiscussion = true
             }
         case .group:
-            displayLeave = false
             if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                 result.append(.addMember)
             }
@@ -1015,9 +1042,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         default:
             displayLeave = false
         }
-        if canViewStats {
-            displayLeave = false
-        }
         result.append(.mute)
         if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
@@ -1026,13 +1050,8 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.discussion)
         }
         result.append(.search)
-        if displayLeave {
+        if displayLeave && result.count < 4 {
             result.append(.leave)
-        }
-        if displayLeave && !channel.flags.contains(.isCreator) {
-            if let _ = channel.adminRights {
-                displayMore = false
-            }
         }
         var canReport = true
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
@@ -1090,6 +1109,12 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         result.append(.search)
         result.append(.more)
+    }
+    if isExpanded && result.count > 3 {
+        result = result.filter { !peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: $0, isOpenedFromChat: isOpenedFromChat) }
+        if !result.contains(.more) {
+            result.append(.more)
+        }
     }
     return result
 }

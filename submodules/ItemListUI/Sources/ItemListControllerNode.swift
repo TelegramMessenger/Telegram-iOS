@@ -227,7 +227,7 @@ public final class ItemListControllerNodeView: UITracingLayerView {
     weak var controller: ItemListController?
 }
 
-open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
+open class ItemListControllerNode: ASDisplayNode {
     private var _ready = ValuePromise<Bool>()
     open var ready: Signal<Bool, NoError> {
         return self._ready.get()
@@ -261,8 +261,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var appliedEnsureVisibleItemTag: ItemListItemTag?
     
     private var afterLayoutActions: [() -> Void] = []
-    
-    public let updateNavigationOffset: (CGFloat) -> Void
+
     public var dismiss: (() -> Void)?
     
     public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries) -> Void)?
@@ -282,9 +281,8 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     var alwaysSynchronous = false
     
-    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
+    public init(controller: ItemListController?, navigationBar: NavigationBar, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
-        self.updateNavigationOffset = updateNavigationOffset
         
         self.listNode = ListView()
         self.leftOverlayNode = ASDisplayNode()
@@ -349,7 +347,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self?.contentOffsetChanged?(offset, inVoiceOver)
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.beganInteractiveDragging?()
             }
@@ -818,11 +816,6 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     open func scrollToTop() {
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.searchNode?.scrollToTop()
-    }
-    
-    open func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
-        self.updateNavigationOffset(-distanceFromEquilibrium)
     }
     
     open func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {

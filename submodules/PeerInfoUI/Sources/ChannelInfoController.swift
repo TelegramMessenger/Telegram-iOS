@@ -732,7 +732,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 
                 let completedImpl: (UIImage) -> Void = { image in
                     if let data = image.jpegData(compressionQuality: 0.6) {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
                         updateState {
@@ -836,11 +836,11 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             }
             let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
                 let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
-                    let _ = updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound).start()
+                    let _ = context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound).start()
                 })
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, updateSettings: { value in
-                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: value).start())
+                changeMuteSettingsDisposable.set(context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
@@ -918,7 +918,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, aboutLinkAction: { action, itemLink in
         aboutLinkActionImpl?(action, itemLink)
     }, toggleSignatures: { enabled in
-        actionsDisposable.add(toggleShouldChannelMessagesSignatures(account: context.account, peerId: peerId, enabled: enabled).start())
+        actionsDisposable.add(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: enabled).start())
     })
 
     var wasEditing: Bool?

@@ -402,7 +402,7 @@ public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small:
                 return nil
             }
             
-            if file.immediateThumbnailData != nil && fullSizeData == nil {
+            if file.immediateThumbnailData != nil && thumbnailData == nil && fullSizeData == nil {
                 return nil
             }
             

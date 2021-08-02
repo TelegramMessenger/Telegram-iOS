@@ -65,7 +65,7 @@ final class SecureIdAuthControllerInteraction {
 }
 
 public enum SecureIdAuthControllerMode {
-    case form(peerId: PeerId, scope: String, publicKey: String, callbackUrl: String, opaquePayload: Data, opaqueNonce: Data)
+    case form(peerId: PeerId, scope: String, publicKey: String, callbackUrl: String?, opaquePayload: Data, opaqueNonce: Data)
     case list
 }
 
@@ -122,7 +122,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
         }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
-        self.challengeDisposable.set((twoStepAuthData(context.account.network)
+        self.challengeDisposable.set((context.engine.auth.twoStepAuthData()
         |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self {
                 let storedPassword = context.getStoredSecureIdPassword()
@@ -366,7 +366,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
@@ -423,8 +423,8 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     @objc private func cancelPressed() {
         self.dismiss()
         
-        if case let .form(reqForm) = self.mode {
-            self.openUrl(secureIdCallbackUrl(with: reqForm.callbackUrl, peerId: reqForm.peerId, result: .cancel, parameters: [:]))
+        if case let .form(peerId, _, _, maybeCallbackUrl, _, _) = self.mode, let callbackUrl = maybeCallbackUrl {
+            self.openUrl(secureIdCallbackUrl(with: callbackUrl, peerId: peerId, result: .cancel, parameters: [:]))
         }
     }
     
@@ -512,13 +512,13 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.recoveryDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: strongSelf.context.account.network)
+                strongSelf.recoveryDisposable.set((strongSelf.context.engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
                 |> deliverOnMainQueue).start(next: { emailPattern in
                     guard let strongSelf = self else {
                         return
                     }
                     var completionImpl: (() -> Void)?
-                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: {
+                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: { _ in
                         completionImpl?()
                     })
                     completionImpl = { [weak controller] in
@@ -558,7 +558,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 return
             }
             switch update {
-                case .noPassword:
+                case .noPassword, .pendingPasswordReset:
                     strongSelf.updateState(animated: false, { state in
                         var state = state
                         if let verificationState = state.verificationState, case .noChallenge = verificationState {
@@ -639,13 +639,15 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     @objc private func grantAccess() {
         switch self.state {
             case let .form(form):
-                if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
+                if case let .form(peerId, scope, publicKey, callbackUrl, opaquePayload, opaqueNonce) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
                     let values = parseRequestedFormFields(formData.requestedFields, values: formData.values, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry).map({ $0.1 }).flatMap({ $0 })
                     
-                    let _ = (grantSecureIdAccess(network: self.context.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
+                    let _ = (grantSecureIdAccess(network: self.context.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: publicKey, scope: scope, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         self?.dismiss()
-                        self?.openUrl(secureIdCallbackUrl(with: reqForm.callbackUrl, peerId: reqForm.peerId, result: .success, parameters: [:]))
+                        if let callbackUrl = callbackUrl {
+                            self?.openUrl(secureIdCallbackUrl(with: callbackUrl, peerId: peerId, result: .success, parameters: [:]))
+                        }
                     })
                 }
             case .list:

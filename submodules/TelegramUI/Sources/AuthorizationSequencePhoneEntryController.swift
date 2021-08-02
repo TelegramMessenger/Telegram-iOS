@@ -140,7 +140,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             self?.nextPressed()
         }
         
-        loadServerCountryCodes(accountManager: sharedContext.accountManager, network: account.network, completion: { [weak self] in
+        loadServerCountryCodes(accountManager: sharedContext.accountManager, engine: TelegramEngineUnauthorized(account: self.account), completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateCountryCode()
             }
@@ -162,7 +162,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func nextPressed() {

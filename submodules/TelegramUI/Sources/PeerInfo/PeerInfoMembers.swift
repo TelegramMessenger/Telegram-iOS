@@ -147,7 +147,7 @@ private final class PeerInfoMembersContextImpl {
         self.pushState()
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
+            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
                 queue.async {
                     guard let strongSelf = self else {
                         return
@@ -230,10 +230,10 @@ private final class PeerInfoMembersContextImpl {
         if removingMemberIds[memberId] == nil {
             let signal: Signal<Never, NoError>
             if self.peerId.namespace == Namespaces.Peer.CloudChannel {
-                signal = context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: self.context.account, peerId: self.peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                signal = context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: self.context.engine, peerId: self.peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                 |> ignoreValues
             } else {
-                signal = removePeerMember(account: self.context.account, peerId: self.peerId, memberId: memberId)
+                signal = self.context.engine.peers.removePeerMember(peerId: self.peerId, memberId: memberId)
                 |> ignoreValues
             }
             let completed: () -> Void = { [weak self] in

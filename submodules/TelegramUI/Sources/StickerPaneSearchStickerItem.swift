@@ -107,8 +107,8 @@ private let textFont = Font.regular(20.0)
 
 final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var currentState: (Account, FoundStickerItem, CGSize)?
-    private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    let imageNode: TransformImageNode
+    private(set) var animationNode: AnimatedStickerNode?
     private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()

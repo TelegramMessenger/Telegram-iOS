@@ -419,20 +419,38 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         } else {
             let membersState = Promise<ChannelMemberListState>()
             
-            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
                 membersState.set(.single(state))
             })
             
             additionalDisposable.set((combineLatest(queue: .mainQueue(),
                membersState.get(),
+               context.account.postbox.peerView(id: peerId),
                context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)
-            ).start(next: { [weak self] state, contactsView in
+            ).start(next: { [weak self] state, peerView, contactsView in
                 guard let strongSelf = self else {
                     return
                 }
                 var entries: [ChannelMembersSearchEntry] = []
                 
-                if case .inviteToCall = mode, !filters.contains(where: { filter in
+                var canInviteByLink = false
+                if let peer = peerViewMainPeer(peerView) {
+                    if !(peer.addressName?.isEmpty ?? true) {
+                        canInviteByLink = true
+                    } else if let peer = peer as? TelegramChannel {
+                        if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
+                            canInviteByLink = true
+                        }
+                    } else if let peer = peer as? TelegramGroup {
+                        if case .creator = peer.role {
+                            canInviteByLink = true
+                        } else if case let .admin(rights, _) = peer.role, rights.rights.contains(.canInviteUsers) {
+                            canInviteByLink = true
+                        }
+                    }
+                }
+                
+                if case .inviteToCall = mode, canInviteByLink, !filters.contains(where: { filter in
                     if case .excludeNonMembers = filter {
                         return true
                     } else {
@@ -563,7 +581,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             }
         }
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.view.endEditing(true)
         }
     }

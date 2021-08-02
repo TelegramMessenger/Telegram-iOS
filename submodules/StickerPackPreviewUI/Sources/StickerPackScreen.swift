@@ -11,6 +11,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import ShimmerEffect
+import ContextUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -99,6 +100,8 @@ private final class StickerPackContainer: ASDisplayNode {
     private var isDismissed: Bool = false
     
     private let interaction: StickerPackPreviewInteraction
+    
+    private weak var peekController: PeekController?
     
     init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
         self.index = index
@@ -238,7 +241,7 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        self.itemsDisposable = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: false)
+        self.itemsDisposable = (context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: false)
         |> deliverOnMainQueue).start(next: { [weak self] contents in
             guard let strongSelf = self else {
                 return
@@ -276,28 +279,27 @@ private final class StickerPackContainer: ASDisplayNode {
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self {
-                            var menuItems: [PeekControllerMenuItem] = []
+                            var menuItems: [ContextMenuItem] = []
                             if let (info, _, _) = strongSelf.currentStickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
-                                        if let strongSelf = self {
-                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                        } else {
-                                            return false
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
                                         }
-                                    }))
+                                        f(.default)
+                                    })))
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
-                                        if let strongSelf = self {
-                                            if isStarred {
-                                                let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                            } else {
-                                                let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                            }
+                                menuItems.append(.action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
+                                    if let strongSelf = self {
+                                        if isStarred {
+                                            let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
+                                        } else {
+                                            let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                         }
-                                    return true
-                                }))
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true }))
+                                    }
+                                })))
                             }
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {
@@ -309,9 +311,10 @@ private final class StickerPackContainer: ASDisplayNode {
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
+                strongSelf.peekController = controller
                 strongSelf.presentInGlobalOverlay(controller, nil)
                 return controller
             }
@@ -340,9 +343,9 @@ private final class StickerPackContainer: ASDisplayNode {
                 return
             }
             if installed {
-                let _ = removeStickerPackInteractively(postbox: strongSelf.context.account.postbox, id: info.id, option: .delete).start()
+                let _ = strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete).start()
             } else {
-                let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items).start()
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
             }
             
             switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {

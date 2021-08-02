@@ -150,23 +150,31 @@ public struct ReplyMarkupMessageFlags: OptionSet {
 public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {
     public let rows: [ReplyMarkupRow]
     public let flags: ReplyMarkupMessageFlags
+    public let placeholder: String?
     
-    public init(rows: [ReplyMarkupRow], flags: ReplyMarkupMessageFlags) {
+    public init(rows: [ReplyMarkupRow], flags: ReplyMarkupMessageFlags, placeholder: String?) {
         self.rows = rows
         self.flags = flags
+        self.placeholder = placeholder
     }
     
     public required init(decoder: PostboxDecoder) {
         self.rows = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.flags = ReplyMarkupMessageFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.placeholder = decoder.decodeOptionalStringForKey("pl")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.rows, forKey: "r")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+        if let placeholder = self.placeholder {
+            encoder.encodeString(placeholder, forKey: "pl")
+        } else {
+            encoder.encodeNil(forKey: "pl")
+        }
     }
     
     public static func ==(lhs: ReplyMarkupMessageAttribute, rhs: ReplyMarkupMessageAttribute) -> Bool {
-        return lhs.flags == rhs.flags && lhs.rows == rhs.rows
+        return lhs.flags == rhs.flags && lhs.rows == rhs.rows && lhs.placeholder == rhs.placeholder
     }
 }
