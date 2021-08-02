@@ -39,7 +39,7 @@ private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: 
         return .ambient
     case .play:
         return .playback
-        case .record, .recordWithOthers, .voiceCall, .videoCall:
+    case .record, .recordWithOthers, .voiceCall, .videoCall:
         return .playAndRecord
     case .playWithPossiblePortOverride:
         if headphones {
@@ -568,7 +568,7 @@ public final class ManagedAudioSession {
                 index += 1
             }
             
-            let lastIsRecordWithOthers = self.holders.last?.audioSessionType == .recordWithOthers
+            let lastIsRecordWithOthers = false // self.holders.last?.audioSessionType == .recordWithOthers
             if !deactivating {
                 if let activeIndex = activeIndex {
                     var deactivate = false
@@ -745,9 +745,9 @@ public final class ManagedAudioSession {
                     case .videoCall:
                         mode = .videoChat
                         options.insert(.mixWithOthers)
-                    case .recordWithOthers:
-                        mode = .videoRecording
-                        options.insert(.mixWithOthers)
+//                    case .recordWithOthers:
+//                        mode = .videoRecording
+//                        options.insert(.mixWithOthers)
                     default:
                         mode = .default
                 }
