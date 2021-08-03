@@ -75,11 +75,11 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DebugAccountsControllerArguments
         switch self {
-            case let .record(theme, record, current):
+            case let .record(_, record, current):
                 return ItemListCheckboxItem(presentationData: presentationData, title: "\(UInt64(bitPattern: record.id.int64))", style: .left, checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.switchAccount(record.id)
                 })
-            case let .loginNewAccount(theme):
+            case .loginNewAccount:
                 return ItemListActionItem(presentationData: presentationData, title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.loginNewAccount()
                 })

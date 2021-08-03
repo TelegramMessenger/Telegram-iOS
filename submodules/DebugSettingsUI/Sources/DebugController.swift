@@ -617,7 +617,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         let databasePath = context.account.basePath + "/postbox/db"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
                         exit(0)
-                        preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -640,7 +639,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         let databasePath = context.account.basePath + "/postbox"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
                         exit(0)
-                        preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in

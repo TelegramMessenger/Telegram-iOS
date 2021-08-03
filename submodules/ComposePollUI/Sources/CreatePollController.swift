@@ -260,8 +260,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return CreatePollEntryTag.text
-        case let .option(option):
-            return CreatePollEntryTag.option(option.id)
+        case let .option(id, _, _, _, _, _, _, _, _):
+            return CreatePollEntryTag.option(id)
         default:
             break
         }
@@ -276,8 +276,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return .text
         case .optionsHeader:
             return .optionsHeader
-        case let .option(option):
-            return .option(option.id)
+        case let .option(id, _, _, _, _, _, _, _, _):
+            return .option(id)
         case .optionsInfo:
             return .optionsInfo
         case .anonymousVotes:
@@ -305,7 +305,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return 1
         case .optionsHeader:
             return 2
-        case let .option(option):
+        case .option:
             return 3
         case .optionsInfo:
             return 1001
@@ -328,10 +328,10 @@ private enum CreatePollEntry: ItemListNodeEntry {
     
     static func <(lhs: CreatePollEntry, rhs: CreatePollEntry) -> Bool {
         switch lhs {
-        case let .option(lhsOption):
+        case let .option(_, lhsOrdering, _, _, _, _, _, _, _):
             switch rhs {
-            case let .option(rhsOption):
-                return lhsOption.ordering < rhsOption.ordering
+            case let .option(_, rhsOrdering, _, _, _, _, _, _, _):
+                return lhsOrdering < rhsOrdering
             default:
                 break
             }
@@ -992,17 +992,16 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     }
     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
-        guard case let .option(option) = fromEntry else {
+        guard case let .option(id, _, _, _, _, _, _, _, _) = fromEntry else {
             return .single(false)
         }
-        let id = option.id
         var referenceId: Int?
         var beforeAll = false
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-                case let .option(toOption):
-                    referenceId = toOption.id
+                case let .option(toId, _, _, _, _, _, _, _, _):
+                    referenceId = toId
                 default:
                     if entries[toIndex] < fromEntry {
                         beforeAll = true

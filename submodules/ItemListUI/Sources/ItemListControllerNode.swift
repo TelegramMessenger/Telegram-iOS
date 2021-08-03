@@ -7,7 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import MergeLists
 
-public protocol ItemListHeaderItemNode: class {
+public protocol ItemListHeaderItemNode: AnyObject {
     func updateTheme(theme: PresentationTheme)
 }
 

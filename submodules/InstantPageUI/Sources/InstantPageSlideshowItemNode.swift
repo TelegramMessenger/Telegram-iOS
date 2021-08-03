@@ -183,7 +183,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         let contentNode: ASDisplayNode
         if let _ = media.media as? TelegramMediaImage {
             contentNode = InstantPageImageNode(context: self.context, sourcePeerType: self.sourcePeerType, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia, activatePinchPreview: nil, pinchPreviewFinished: nil)
-        } else if let file = media.media as? TelegramMediaFile {
+        } else if let _ = media.media as? TelegramMediaFile {
             contentNode = ASDisplayNode()
         } else {
             contentNode = ASDisplayNode()
@@ -233,7 +233,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         if self.itemNodes.isEmpty {
             let node = self.makeNodeForItem(at: self.centralItemIndex ?? 0)
             node.frame = CGRect(origin: CGPoint(), size: scrollView.bounds.size)
-            if let containerLayout = self.containerLayout {
+            if let _ = self.containerLayout {
                 //node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
             }
             self.addVisibleItemNode(node)
@@ -248,7 +248,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
                 if self.visibleItemNode(at: centralItemIndex - 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex - 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: -centralItemNode.frame.size.width - self.pageGap, dy: 0.0)
-                    if let containerLayout = self.containerLayout {
+                    if let _ = self.containerLayout {
                         //node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
                     }
                     self.addVisibleItemNode(node)
@@ -259,7 +259,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
                 if self.visibleItemNode(at: centralItemIndex + 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex + 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: centralItemNode.frame.size.width + self.pageGap, dy: 0.0)
-                    if let containerLayout = self.containerLayout {
+                    if let _ = self.containerLayout {
                         //node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
                     }
                     self.addVisibleItemNode(node)
@@ -291,7 +291,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
                     if self.visibleItemNode(at: centralItemCandidateNode.index - 1) == nil {
                         let node = self.makeNodeForItem(at: centralItemCandidateNode.index - 1)
                         node.frame = centralItemCandidateNode.frame.offsetBy(dx: -centralItemCandidateNode.frame.size.width - self.pageGap, dy: 0.0)
-                        if let containerLayout = self.containerLayout {
+                        if let _ = self.containerLayout {
                             //node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
                         }
                         self.addVisibleItemNode(node)
@@ -302,7 +302,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
                     if self.visibleItemNode(at: centralItemCandidateNode.index + 1) == nil {
                         let node = self.makeNodeForItem(at: centralItemCandidateNode.index + 1)
                         node.frame = centralItemCandidateNode.frame.offsetBy(dx: centralItemCandidateNode.frame.size.width + self.pageGap, dy: 0.0)
-                        if let containerLayout = self.containerLayout {
+                        if let _ = self.containerLayout {
                             //node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
                         }
                         self.addVisibleItemNode(node)

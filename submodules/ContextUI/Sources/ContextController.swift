@@ -1010,10 +1010,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             var completedEffect = false
             var completedContentNode = false
             var completedActionsNode = false
-            var targetNode: ASDisplayNode?
             
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
-                targetNode = sourceNode
                 let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
@@ -1090,17 +1088,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 animateOutToItem = false
             }
             
-            if animateOutToItem, let targetNode = targetNode, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
+            if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
-                
-                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true), false {
-                    self.view.addSubview(snapshotView)
-                    snapshotView.layer.animatePosition(from: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0), to: localSourceFrame.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
-                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
-                    })
-                }
                 
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
                 let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
@@ -1724,7 +1714,7 @@ public final class ContextControllerReferenceViewInfo {
     }
 }
 
-public protocol ContextReferenceContentSource: class {
+public protocol ContextReferenceContentSource: AnyObject {
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
@@ -1750,7 +1740,7 @@ public final class ContextControllerPutBackViewInfo {
     }
 }
 
-public protocol ContextExtractedContentSource: class {
+public protocol ContextExtractedContentSource: AnyObject {
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
@@ -1781,7 +1771,7 @@ public final class ContextControllerTakeControllerInfo {
     }
 }
 
-public protocol ContextControllerContentSource: class {
+public protocol ContextControllerContentSource: AnyObject {
     var controller: ViewController { get }
     var navigationController: NavigationController? { get }
     var passthroughTouches: Bool { get }

@@ -156,7 +156,7 @@ public protocol SharedMediaPlaylistLocation {
     func isEqual(to: SharedMediaPlaylistLocation) -> Bool
 }
 
-public protocol SharedMediaPlaylist: class {
+public protocol SharedMediaPlaylist: AnyObject {
     var id: SharedMediaPlaylistId { get }
     var location: SharedMediaPlaylistLocation { get }
     var state: Signal<SharedMediaPlaylistState, NoError> { get }

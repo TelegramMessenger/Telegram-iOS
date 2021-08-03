@@ -736,7 +736,6 @@ public final class InviteLinkInviteController: ViewController {
             
             let rawControlsOffset = offset + listTopInset - controlsHeight
             let controlsOffset = max(layoutTopInset, rawControlsOffset)
-            let isOverscrolling = rawControlsOffset <= layoutTopInset
             let controlsFrame = CGRect(origin: CGPoint(x: 0.0, y: controlsOffset), size: CGSize(width: validLayout.size.width, height: controlsHeight))
             
             let previousFrame = self.headerNode.frame

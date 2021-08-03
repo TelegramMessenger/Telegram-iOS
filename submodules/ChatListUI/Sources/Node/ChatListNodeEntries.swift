@@ -64,8 +64,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(index)
         case .ArchiveIntro:
             return .index(ChatListIndex.absoluteUpperBound.successor)
-        case let .AdditionalCategory(additionalCategory):
-            return .additionalCategory(additionalCategory.index)
+        case let .AdditionalCategory(index, _, _, _, _, _, _):
+            return .additionalCategory(index)
         }
     }
     
@@ -81,8 +81,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .GroupId(groupId)
         case .ArchiveIntro:
             return .ArchiveIntro
-        case let .AdditionalCategory(additionalCategory):
-            return .additionalCategory(additionalCategory.id)
+        case let .AdditionalCategory(_, id, _, _, _, _, _):
+            return .additionalCategory(id)
         }
     }
     

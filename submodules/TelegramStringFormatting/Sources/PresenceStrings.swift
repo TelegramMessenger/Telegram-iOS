@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 
@@ -222,9 +221,9 @@ public enum RelativeUserPresenceStatus {
     case lastMonth
 }
 
-public func relativeUserPresenceStatus(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> RelativeUserPresenceStatus {
+public func relativeUserPresenceStatus(_ presence: EnginePeer.Presence, relativeTo timestamp: Int32) -> RelativeUserPresenceStatus {
     switch presence.status {
-    case .none:
+    case .longTimeAgo:
         return .offline
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {

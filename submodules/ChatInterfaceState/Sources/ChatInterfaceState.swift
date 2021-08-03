@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TextFormat
 import AccountContext
@@ -12,13 +11,13 @@ public enum ChatTextInputMediaRecordingButtonMode: Int32 {
 }
 
 public struct ChatInterfaceSelectionState: Codable, Equatable {
-    public let selectedIds: Set<MessageId>
+    public let selectedIds: Set<EngineMessage.Id>
     
     public static func ==(lhs: ChatInterfaceSelectionState, rhs: ChatInterfaceSelectionState) -> Bool {
         return lhs.selectedIds == rhs.selectedIds
     }
     
-    public init(selectedIds: Set<MessageId>) {
+    public init(selectedIds: Set<EngineMessage.Id>) {
         self.selectedIds = selectedIds
     }
 
@@ -26,7 +25,7 @@ public struct ChatInterfaceSelectionState: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         if let data = try? container.decodeIfPresent(Data.self, forKey: "i") {
-            self.selectedIds = Set(MessageId.decodeArrayFromBuffer(ReadBuffer(data: data)))
+            self.selectedIds = Set(EngineMessage.Id.decodeArrayFromData(data))
         } else {
             self.selectedIds = Set()
         }
@@ -35,20 +34,19 @@ public struct ChatInterfaceSelectionState: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        let buffer = WriteBuffer()
-        MessageId.encodeArrayToBuffer(Array(selectedIds), buffer: buffer)
+        let data = EngineMessage.Id.encodeArrayToData(Array(selectedIds))
 
-        try container.encode(buffer.makeData(), forKey: "i")
+        try container.encode(data, forKey: "i")
     }
 }
 
 public struct ChatEditMessageState: Codable, Equatable {
-    public let messageId: MessageId
+    public let messageId: EngineMessage.Id
     public let inputState: ChatTextInputState
     public let disableUrlPreview: String?
     public let inputTextMaxLength: Int32?
     
-    public init(messageId: MessageId, inputState: ChatTextInputState, disableUrlPreview: String?, inputTextMaxLength: Int32?) {
+    public init(messageId: EngineMessage.Id, inputState: ChatTextInputState, disableUrlPreview: String?, inputTextMaxLength: Int32?) {
         self.messageId = messageId
         self.inputState = inputState
         self.disableUrlPreview = disableUrlPreview
@@ -58,8 +56,8 @@ public struct ChatEditMessageState: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.messageId = MessageId(
-            peerId: PeerId((try? container.decode(Int64.self, forKey: "mp")) ?? 0),
+        self.messageId = EngineMessage.Id(
+            peerId: EnginePeer.Id((try? container.decode(Int64.self, forKey: "mp")) ?? 0),
             namespace: (try? container.decode(Int32.self, forKey: "mn")) ?? 0,
             id: (try? container.decode(Int32.self, forKey: "mi")) ?? 0
         )
@@ -102,10 +100,10 @@ public struct ChatEditMessageState: Codable, Equatable {
 }
 
 public struct ChatInterfaceMessageActionsState: Codable, Equatable {
-    public var closedButtonKeyboardMessageId: MessageId?
-    public var dismissedButtonKeyboardMessageId: MessageId?
-    public var processedSetupReplyMessageId: MessageId?
-    public var closedPinnedMessageId: MessageId?
+    public var closedButtonKeyboardMessageId: EngineMessage.Id?
+    public var dismissedButtonKeyboardMessageId: EngineMessage.Id?
+    public var processedSetupReplyMessageId: EngineMessage.Id?
+    public var closedPinnedMessageId: EngineMessage.Id?
     public var closedPeerSpecificPackSetup: Bool = false
     public var dismissedAddContactPhoneNumber: String?
     
@@ -122,7 +120,7 @@ public struct ChatInterfaceMessageActionsState: Codable, Equatable {
         self.dismissedAddContactPhoneNumber = nil
     }
     
-    public init(closedButtonKeyboardMessageId: MessageId?, dismissedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool, dismissedAddContactPhoneNumber: String?) {
+    public init(closedButtonKeyboardMessageId: EngineMessage.Id?, dismissedButtonKeyboardMessageId: EngineMessage.Id?, processedSetupReplyMessageId: EngineMessage.Id?, closedPinnedMessageId: EngineMessage.Id?, closedPeerSpecificPackSetup: Bool, dismissedAddContactPhoneNumber: String?) {
         self.closedButtonKeyboardMessageId = closedButtonKeyboardMessageId
         self.dismissedButtonKeyboardMessageId = dismissedButtonKeyboardMessageId
         self.processedSetupReplyMessageId = processedSetupReplyMessageId
@@ -135,25 +133,25 @@ public struct ChatInterfaceMessageActionsState: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         if let closedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "cb.p"), let closedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "cb.n"), let closedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "cb.i") {
-            self.closedButtonKeyboardMessageId = MessageId(peerId: PeerId(closedMessageIdPeerId), namespace: closedMessageIdNamespace, id: closedMessageIdId)
+            self.closedButtonKeyboardMessageId = EngineMessage.Id(peerId: EnginePeer.Id(closedMessageIdPeerId), namespace: closedMessageIdNamespace, id: closedMessageIdId)
         } else {
             self.closedButtonKeyboardMessageId = nil
         }
 
         if let messageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "dismissedbuttons.p"), let messageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "dismissedbuttons.n"), let messageIdId = try? container.decodeIfPresent(Int32.self, forKey: "dismissedbuttons.i") {
-            self.dismissedButtonKeyboardMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
+            self.dismissedButtonKeyboardMessageId = EngineMessage.Id(peerId: EnginePeer.Id(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
         } else {
             self.dismissedButtonKeyboardMessageId = nil
         }
         
         if let processedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "pb.p"), let processedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "pb.n"), let processedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "pb.i") {
-            self.processedSetupReplyMessageId = MessageId(peerId: PeerId(processedMessageIdPeerId), namespace: processedMessageIdNamespace, id: processedMessageIdId)
+            self.processedSetupReplyMessageId = EngineMessage.Id(peerId: EnginePeer.Id(processedMessageIdPeerId), namespace: processedMessageIdNamespace, id: processedMessageIdId)
         } else {
             self.processedSetupReplyMessageId = nil
         }
         
         if let closedPinnedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "cp.p"), let closedPinnedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "cp.n"), let closedPinnedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "cp.i") {
-            self.closedPinnedMessageId = MessageId(peerId: PeerId(closedPinnedMessageIdPeerId), namespace: closedPinnedMessageIdNamespace, id: closedPinnedMessageIdId)
+            self.closedPinnedMessageId = EngineMessage.Id(peerId: EnginePeer.Id(closedPinnedMessageIdPeerId), namespace: closedPinnedMessageIdNamespace, id: closedPinnedMessageIdId)
         } else {
             self.closedPinnedMessageId = nil
         }
@@ -217,10 +215,10 @@ public struct ChatInterfaceMessageActionsState: Codable, Equatable {
 }
 
 public struct ChatInterfaceHistoryScrollState: Codable, Equatable {
-    public let messageIndex: MessageIndex
+    public let messageIndex: EngineMessage.Index
     public let relativeOffset: Double
     
-    public init(messageIndex: MessageIndex, relativeOffset: Double) {
+    public init(messageIndex: EngineMessage.Index, relativeOffset: Double) {
         self.messageIndex = messageIndex
         self.relativeOffset = relativeOffset
     }
@@ -228,9 +226,9 @@ public struct ChatInterfaceHistoryScrollState: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.messageIndex = MessageIndex(
-            id: MessageId(
-                peerId: PeerId((try? container.decode(Int64.self, forKey: "m.p")) ?? 0),
+        self.messageIndex = EngineMessage.Index(
+            id: EngineMessage.Id(
+                peerId: EnginePeer.Id((try? container.decode(Int64.self, forKey: "m.p")) ?? 0),
                 namespace: (try? container.decode(Int32.self, forKey: "m.n")) ?? 0,
                 id: (try? container.decode(Int32.self, forKey: "m.i")) ?? 0
             ),
@@ -264,8 +262,8 @@ public final class ChatInterfaceState: Codable, Equatable {
     public let timestamp: Int32
     public let composeInputState: ChatTextInputState
     public let composeDisableUrlPreview: String?
-    public let replyMessageId: MessageId?
-    public let forwardMessageIds: [MessageId]?
+    public let replyMessageId: EngineMessage.Id?
+    public let forwardMessageIds: [EngineMessage.Id]?
     public let editMessage: ChatEditMessageState?
     public let selectionState: ChatInterfaceSelectionState?
     public let messageActionsState: ChatInterfaceMessageActionsState
@@ -290,7 +288,7 @@ public final class ChatInterfaceState: Codable, Equatable {
         return result
     }
     
-    public var historyScrollMessageIndex: MessageIndex? {
+    public var historyScrollMessageIndex: EngineMessage.Index? {
         return self.historyScrollState?.messageIndex
     }
     
@@ -317,7 +315,7 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.inputLanguage = nil
     }
     
-    public init(timestamp: Int32, composeInputState: ChatTextInputState, composeDisableUrlPreview: String?, replyMessageId: MessageId?, forwardMessageIds: [MessageId]?, editMessage: ChatEditMessageState?, selectionState: ChatInterfaceSelectionState?, messageActionsState: ChatInterfaceMessageActionsState, historyScrollState: ChatInterfaceHistoryScrollState?, mediaRecordingMode: ChatTextInputMediaRecordingButtonMode, silentPosting: Bool, inputLanguage: String?) {
+    public init(timestamp: Int32, composeInputState: ChatTextInputState, composeDisableUrlPreview: String?, replyMessageId: EngineMessage.Id?, forwardMessageIds: [EngineMessage.Id]?, editMessage: ChatEditMessageState?, selectionState: ChatInterfaceSelectionState?, messageActionsState: ChatInterfaceMessageActionsState, historyScrollState: ChatInterfaceHistoryScrollState?, mediaRecordingMode: ChatTextInputMediaRecordingButtonMode, silentPosting: Bool, inputLanguage: String?) {
         self.timestamp = timestamp
         self.composeInputState = composeInputState
         self.composeDisableUrlPreview = composeDisableUrlPreview
@@ -350,12 +348,12 @@ public final class ChatInterfaceState: Codable, Equatable {
         let replyMessageIdNamespace: Int32? = try? container.decodeIfPresent(Int32.self, forKey: "r.n")
         let replyMessageIdId: Int32? = try? container.decodeIfPresent(Int32.self, forKey: "r.i")
         if let replyMessageIdPeerId = replyMessageIdPeerId, let replyMessageIdNamespace = replyMessageIdNamespace, let replyMessageIdId = replyMessageIdId {
-            self.replyMessageId = MessageId(peerId: PeerId(replyMessageIdPeerId), namespace: replyMessageIdNamespace, id: replyMessageIdId)
+            self.replyMessageId = EngineMessage.Id(peerId: EnginePeer.Id(replyMessageIdPeerId), namespace: replyMessageIdNamespace, id: replyMessageIdId)
         } else {
             self.replyMessageId = nil
         }
         if let forwardMessageIdsData = try? container.decodeIfPresent(Data.self, forKey: "fm") {
-            self.forwardMessageIds = MessageId.decodeArrayFromBuffer(ReadBuffer(data: forwardMessageIdsData))
+            self.forwardMessageIds = EngineMessage.Id.decodeArrayFromData(forwardMessageIdsData)
         } else {
             self.forwardMessageIds = nil
         }
@@ -404,9 +402,7 @@ public final class ChatInterfaceState: Codable, Equatable {
             try container.encodeNil(forKey: "r.i")
         }
         if let forwardMessageIds = self.forwardMessageIds {
-            let buffer = WriteBuffer()
-            MessageId.encodeArrayToBuffer(forwardMessageIds, buffer: buffer)
-            try container.encode(buffer.makeData(), forKey: "fm")
+            try container.encode(EngineMessage.Id.encodeArrayToData(forwardMessageIds), forKey: "fm")
         } else {
             try container.encodeNil(forKey: "fm")
         }
@@ -490,16 +486,16 @@ public final class ChatInterfaceState: Codable, Equatable {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: updatedEditMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
-    public func withUpdatedReplyMessageId(_ replyMessageId: MessageId?) -> ChatInterfaceState {
+    public func withUpdatedReplyMessageId(_ replyMessageId: EngineMessage.Id?) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
-    public func withUpdatedForwardMessageIds(_ forwardMessageIds: [MessageId]?) -> ChatInterfaceState {
+    public func withUpdatedForwardMessageIds(_ forwardMessageIds: [EngineMessage.Id]?) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
-    public func withUpdatedSelectedMessages(_ messageIds: [MessageId]) -> ChatInterfaceState {
-        var selectedIds = Set<MessageId>()
+    public func withUpdatedSelectedMessages(_ messageIds: [EngineMessage.Id]) -> ChatInterfaceState {
+        var selectedIds = Set<EngineMessage.Id>()
         if let selectionState = self.selectionState {
             selectedIds.formUnion(selectionState.selectedIds)
         }
@@ -509,8 +505,8 @@ public final class ChatInterfaceState: Codable, Equatable {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
-    public func withToggledSelectedMessages(_ messageIds: [MessageId], value: Bool) -> ChatInterfaceState {
-        var selectedIds = Set<MessageId>()
+    public func withToggledSelectedMessages(_ messageIds: [EngineMessage.Id], value: Bool) -> ChatInterfaceState {
+        var selectedIds = Set<EngineMessage.Id>()
         if let selectionState = self.selectionState {
             selectedIds.formUnion(selectionState.selectedIds)
         }
@@ -560,20 +556,20 @@ public final class ChatInterfaceState: Codable, Equatable {
         guard let opaqueData = state.opaqueData else {
             return ChatInterfaceState().withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
         }
-        guard var decodedState = try? AdaptedPostboxDecoder().decode(ChatInterfaceState.self, from: opaqueData) else {
+        guard var decodedState = try? EngineDecoder.decode(ChatInterfaceState.self, from: opaqueData) else {
             return ChatInterfaceState().withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
         }
         decodedState = decodedState.withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
         return decodedState
     }
 
-    public static func update(engine: TelegramEngine, peerId: PeerId, threadId: Int64?, _ f: @escaping (ChatInterfaceState) -> ChatInterfaceState) -> Signal<Never, NoError> {
+    public static func update(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?, _ f: @escaping (ChatInterfaceState) -> ChatInterfaceState) -> Signal<Never, NoError> {
         return engine.peers.getOpaqueChatInterfaceState(peerId: peerId, threadId: threadId)
         |> mapToSignal { previousOpaqueState -> Signal<Never, NoError> in
             let previousState = previousOpaqueState.flatMap(ChatInterfaceState.parse)
             let updatedState = f(previousState ?? ChatInterfaceState())
 
-            let updatedOpaqueData = try? AdaptedPostboxEncoder().encode(updatedState)
+            let updatedOpaqueData = try? EngineEncoder.encode(updatedState)
 
             return engine.peers.setOpaqueChatInterfaceState(
                 peerId: peerId,

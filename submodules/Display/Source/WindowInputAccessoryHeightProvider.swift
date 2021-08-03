@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
 
-public protocol WindowInputAccessoryHeightProvider: class {
+public protocol WindowInputAccessoryHeightProvider: AnyObject {
     func getWindowInputAccessoryHeight() -> CGFloat
 }

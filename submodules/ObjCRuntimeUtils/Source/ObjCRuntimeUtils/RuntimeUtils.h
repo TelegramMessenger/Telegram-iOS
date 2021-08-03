@@ -24,3 +24,5 @@ typedef enum {
 - (void)setClass:(Class)newClass;
 
 @end
+
+SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string);

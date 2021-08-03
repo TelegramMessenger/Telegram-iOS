@@ -122,3 +122,7 @@ static Class freedomMakeClass(Class superclass, Class subclass, SEL *copySelecto
 }
 
 @end
+
+SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string) {
+    return NSSelectorFromString(string);
+}

@@ -48,7 +48,7 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
     
     public var composedTitle: String {
         switch self {
-        case let .personName(firstName, lastName, phone):
+        case let .personName(firstName, lastName, _):
             if !firstName.isEmpty && !lastName.isEmpty {
                 return firstName + " " + lastName
             } else if !firstName.isEmpty {
@@ -74,16 +74,6 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
                 return lastName
             } else if !phone.isEmpty {
                 return formatPhoneNumber("+\(phone)")
-            } else {
-                return strings.User_DeletedAccount
-            }
-            
-            if !firstName.isEmpty && !lastName.isEmpty {
-                return firstName + " " + lastName
-            } else if !firstName.isEmpty {
-                return firstName
-            } else if !lastName.isEmpty {
-                return lastName
             } else {
                 return strings.User_DeletedAccount
             }

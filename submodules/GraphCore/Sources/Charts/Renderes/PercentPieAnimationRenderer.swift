@@ -125,7 +125,6 @@ class PercentPieAnimationRenderer: BaseChartRenderer {
                                                        offset: animationFractionD)
             
             let startDestinationPoint = lineCenterPoint + CGPoint(x: destinationRadius, y: 0)
-            let centerDestinationPoint = lineCenterPoint + CGPoint(x: 0, y: destinationRadius)
             let endDestinationPoint = lineCenterPoint + CGPoint(x: -destinationRadius, y: 0)
             let initialStartDestinationAngle: CGFloat = 0
             let initialCenterDestinationAngle: CGFloat = .pi / 2

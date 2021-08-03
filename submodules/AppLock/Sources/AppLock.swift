@@ -150,7 +150,7 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(nil)
                 strongSelf.autolockReportTimeout.set(nil)
             } else {
-                if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
+                if let _ = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
                 
@@ -184,7 +184,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
@@ -203,7 +203,7 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
-                            if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                            if let _ = rootViewController.presentedViewController as? UIActivityViewController {
                             } else {
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
@@ -227,14 +227,14 @@ public final class AppLockContextImpl: AppLockContext {
                     window.coveringView = coveringView
                     
                     if let rootViewController = strongSelf.rootController {
-                        if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                        if let _ = rootViewController.presentedViewController as? UIActivityViewController {
                         } else {
                             rootViewController.dismiss(animated: false, completion: nil)
                         }
                     }
                 }
             } else {
-                if let coveringView = strongSelf.coveringView {
+                if let _ = strongSelf.coveringView {
                     strongSelf.coveringView = nil
                     strongSelf.window?.coveringView = nil
                 }

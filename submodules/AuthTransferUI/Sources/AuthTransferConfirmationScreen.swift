@@ -253,11 +253,9 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset + 20.0), height: 500.0)
         let animationSize = self.animationNode?.preferredSize()?.fitted(animationFitSize) ?? animationFitSize
         let iconSize: CGSize = animationSize
-        var iconOffset = CGPoint()
+        let iconOffset = CGPoint()
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        
-        let hasRTL = self.badgeTextNodes.first?.cachedLayout?.hasRTL ?? false
         
         var badgeTextSizes: [CGSize] = []
         var textSizes: [CGSize] = []
@@ -290,9 +288,9 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        var maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
+        let maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
         
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         

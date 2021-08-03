@@ -12,12 +12,12 @@ enum ChatListNodeLocation: Equatable {
     
     var filter: ChatListFilter? {
         switch self {
-        case let .initial(initial):
-            return initial.filter
-        case let .navigation(navigation):
-            return navigation.filter
-        case let .scroll(scroll):
-            return scroll.filter
+        case let .initial(_, filter):
+            return filter
+        case let .navigation(_, filter):
+            return filter
+        case let .scroll(_, _, _, _, filter):
+            return filter
         }
     }
 }

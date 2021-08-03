@@ -643,7 +643,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.selectionIconNode.image = image
                                 strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             }
-                        case let .check(checked):
+                        case .check:
                             strongSelf.installationActionNode.isHidden = true
                             strongSelf.installationActionImageNode.isHidden = true
                             strongSelf.selectionIconNode.isHidden = true

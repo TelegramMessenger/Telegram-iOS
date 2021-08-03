@@ -321,7 +321,7 @@ final class CallListControllerNode: ASDisplayNode {
         }, openInfo: { [weak self] peerId, messages in
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
-            guard let strongSelf = self, let peerId = messageIds.first?.peerId else {
+            guard let peerId = messageIds.first?.peerId else {
                 return
             }
             let _ = (context.engine.data.get(

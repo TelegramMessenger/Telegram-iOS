@@ -536,7 +536,7 @@ public enum CreateGroupMode {
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
 }
 
-public protocol AppLockContext: class {
+public protocol AppLockContext: AnyObject {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     
@@ -545,10 +545,10 @@ public protocol AppLockContext: class {
     func failedUnlockAttempt()
 }
 
-public protocol RecentSessionsController: class {
+public protocol RecentSessionsController: AnyObject {
 }
 
-public protocol SharedAccountContext: class {
+public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -703,16 +703,16 @@ public final class TonContext {
 public protocol ComposeController: ViewController {
 }
 
-public protocol ChatLocationContextHolder: class {
+public protocol ChatLocationContextHolder: AnyObject {
 }
 
-public protocol AccountGroupCallContext: class {
+public protocol AccountGroupCallContext: AnyObject {
 }
 
-public protocol AccountGroupCallContextCache: class {
+public protocol AccountGroupCallContextCache: AnyObject {
 }
 
-public protocol AccountContext: class {
+public protocol AccountContext: AnyObject {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
     var engine: TelegramEngine { get }
