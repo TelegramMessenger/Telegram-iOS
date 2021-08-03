@@ -24,7 +24,7 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestu
         
         self.backgroundNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode(presentationData: self.presentationData)
+        self.headerNode = MediaNavigationAccessoryHeaderNode(context: context)
         
         super.init()
 

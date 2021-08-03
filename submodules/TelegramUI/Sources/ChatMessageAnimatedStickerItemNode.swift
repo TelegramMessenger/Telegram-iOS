@@ -1080,7 +1080,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let viaBotNode = viaBotApply()
                         if strongSelf.viaBotNode == nil {
                             strongSelf.viaBotNode = viaBotNode
-                            strongSelf.addSubnode(viaBotNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(viaBotNode)
                         }
                         let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 14.0)), y: 8.0), size: viaBotLayout.size)
                         viaBotNode.frame = viaBotFrame
@@ -1161,7 +1161,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else {
                             let forwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.forwardBackgroundNode = forwardBackgroundNode
-                            strongSelf.addSubnode(forwardBackgroundNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(forwardBackgroundNode)
                         }
                     }
                     
@@ -1169,7 +1169,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let forwardInfoNode = forwardInfoApply(forwardInfoSize.width)
                         if strongSelf.forwardInfoNode == nil {
                             strongSelf.forwardInfoNode = forwardInfoNode
-                            strongSelf.addSubnode(forwardInfoNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                         forwardInfoNode.frame = forwardInfoFrame

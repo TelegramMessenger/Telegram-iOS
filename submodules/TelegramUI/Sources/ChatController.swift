@@ -11010,7 +11010,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var attemptSelectionImpl: ((Peer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: filter, attemptSelection: { peer in
                 attemptSelectionImpl?(peer)
-            }, multipleSelection: true))
+            }, multipleSelection: true, forwardedMessagesCount: messages.count))
             let context = self.context
             attemptSelectionImpl = { [weak controller] peer in
                 guard let controller = controller else {

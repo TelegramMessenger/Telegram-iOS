@@ -27,6 +27,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",
