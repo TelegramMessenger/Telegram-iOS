@@ -64,6 +64,7 @@ import TelegramPermissionsUI
 import Speak
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
+import ChatListUI
 
 #if DEBUG
 import os.signpost
@@ -212,6 +213,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var validLayout: ContainerViewLayout?
     
     public weak var parentController: ViewController?
+
+    private let currentChatListFilter: ChatListFilterData?
     
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
@@ -282,6 +285,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var preloadHistoryPeerId: PeerId?
     private let preloadHistoryPeerIdDisposable = MetaDisposable()
+
+    private var preloadNextChatPeerId: PeerId?
+    private let preloadNextChatPeerIdDisposable = MetaDisposable()
     
     private let botCallbackAlertMessage = Promise<String?>(nil)
     private var botCallbackAlertMessageDisposable: Disposable?
@@ -459,7 +465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     private var nextChannelToReadDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: ChatListFilterData? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -470,6 +476,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.subject = subject
         self.botStart = botStart
         self.peekData = peekData
+        self.currentChatListFilter = chatListFilter
 
         var useSharedAnimationPhase = false
         switch mode {
@@ -3306,16 +3313,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                         if let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
                             if strongSelf.nextChannelToReadDisposable == nil {
-                                strongSelf.nextChannelToReadDisposable = (strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id)
-                                |> deliverOnMainQueue
+                                strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
+                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, filter: strongSelf.currentChatListFilter.flatMap(chatListFilterPredicate)),
+                                    ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                                )
                                 |> then(.complete() |> delay(1.0, queue: .mainQueue()))
-                                |> restart).start(next: { nextPeer in
+                                |> restart).start(next: { nextPeer, nextChatSuggestionTip in
                                     guard let strongSelf = self else {
                                         return
                                     }
 
                                     strongSelf.chatDisplayNode.historyNode.offerNextChannelToRead = true
                                     strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+
+                                    let nextPeerId = nextPeer?.id
+
+                                    if strongSelf.preloadNextChatPeerId != nextPeerId {
+                                        strongSelf.preloadNextChatPeerId = nextPeerId
+                                        if let nextPeerId = nextPeerId {
+                                            let combinedDisposable = DisposableSet()
+                                            strongSelf.preloadNextChatPeerIdDisposable.set(combinedDisposable)
+                                            combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: nextPeerId).start())
+                                            combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: nextPeerId))
+                                        } else {
+                                            strongSelf.preloadNextChatPeerIdDisposable.set(nil)
+                                        }
+                                    }
                                 })
                             }
                         }
@@ -3878,6 +3902,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
         self.preloadHistoryPeerIdDisposable.dispose()
+        self.preloadNextChatPeerIdDisposable.dispose()
         self.reportIrrelvantGeoDisposable?.dispose()
         self.reminderActivity?.invalidate()
         self.updateSlowmodeStatusDisposable.dispose()
@@ -7053,11 +7078,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let navigationController = strongSelf.effectiveNavigationController {
+                ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+
                 let snapshotState = strongSelf.chatDisplayNode.prepareSnapshotState(
                     titleViewSnapshotState: strongSelf.chatTitleView?.prepareSnapshotState(),
                     avatarSnapshotState: (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.prepareSnapshotState()
                 )
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, completion: { nextController in
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: strongSelf.currentChatListFilter, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }))
             }

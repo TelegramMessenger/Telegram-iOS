@@ -28,7 +28,7 @@ struct ChatListNodeViewUpdate {
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
 
-func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
+public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
     var includePeers = Set(filter.includePeers.peers)
     var excludePeers = Set(filter.excludePeers)
     

@@ -551,6 +551,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var overscrollView: ComponentHostView<Empty>?
     var nextChannelToRead: EnginePeer?
     var offerNextChannelToRead: Bool = false
+    var nextChannelToReadDisplayName: Bool = false
     private var currentOverscrollExpandProgress: CGFloat = 0.0
     private var feedback: HapticFeedback?
     var openNextChannelToRead: ((EnginePeer) -> Void)?
@@ -1217,15 +1218,25 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.view.addSubview(overscrollView)
             }
 
-            let expandProgress: CGFloat = min(1.0, max(-offset, 0.0) / 110.0)
+            let expandDistance = max(-offset - 12.0, 0.0)
+            let expandProgress: CGFloat = min(1.0, expandDistance / 90.0)
 
             let text: String
-            if self.nextChannelToRead != nil {
-                if expandProgress >= 0.99 {
-                    //TODO:localize
-                    text = "Release to go to the next unread channel"
+            if let nextChannelToRead = nextChannelToRead {
+                if self.nextChannelToReadDisplayName {
+                    if expandProgress >= 0.99 {
+                        //TODO:localize
+                        text = "Release to go to \(nextChannelToRead.compactDisplayTitle)"
+                    } else {
+                        text = "Swipe up to go to \(nextChannelToRead.compactDisplayTitle)"
+                    }
                 } else {
-                    text = "Swipe up to go to the next unread channel"
+                    if expandProgress >= 0.99 {
+                        //TODO:localize
+                        text = "Release to go to the next unread channel"
+                    } else {
+                        text = "Swipe up to go to the next unread channel"
+                    }
                 }
 
                 let previousType = self.currentOverscrollExpandProgress >= 0.99
@@ -1251,7 +1262,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     foregroundColor: bubbleVariableColor(variableColor: self.currentPresentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: self.currentPresentationData.theme.wallpaper),
                     peer: self.nextChannelToRead,
                     context: self.context,
-                    expandProgress: expandProgress
+                    expandDistance: expandDistance
                 )),
                 environment: {},
                 containerSize: CGSize(width: self.bounds.width, height: 200.0)

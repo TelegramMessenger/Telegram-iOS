@@ -495,16 +495,19 @@ public extension TelegramEngine {
             return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
 
-        public func getNextUnreadChannel(peerId: PeerId) -> Signal<EnginePeer?, NoError> {
+        public func getNextUnreadChannel(peerId: PeerId, filter: ChatListFilterPredicate?) -> Signal<EnginePeer?, NoError> {
             return self.account.postbox.transaction { transaction -> EnginePeer? in
-                var peers: [RenderedPeer] = []
-                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: .root, count: 100))
-                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: Namespaces.PeerGroup.archive, count: 100))
-
                 var results: [(EnginePeer, Int32)] = []
 
-                for peer in peers {
-                    guard let channel = peer.chatMainPeer as? TelegramChannel, case .broadcast = channel.info else {
+                var peerIds: [PeerId] = []
+                peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: filter))
+                peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: filter))
+
+                for listId in peerIds {
+                    guard let peer = transaction.getPeer(listId) else {
+                        continue
+                    }
+                    guard let channel = peer as? TelegramChannel, case .broadcast = channel.info else {
                         continue
                     }
                     if channel.id == peerId {
@@ -516,6 +519,7 @@ public extension TelegramEngine {
                     guard let topMessageIndex = transaction.getTopPeerMessageIndex(peerId: channel.id) else {
                         continue
                     }
+
                     results.append((EnginePeer(channel), topMessageIndex.timestamp))
                 }
 
