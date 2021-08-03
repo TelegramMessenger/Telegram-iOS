@@ -22,12 +22,22 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
             let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
                 switch type {
                 case .yuva:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
+                    data.withUnsafeBytes { bytes -> Void in
+                        guard let baseAddress = bytes.baseAddress else {
+                            return
+                        }
+                        if bytesPerRow * height > bytes.count {
+                            assert(false)
+                            return
+                        }
+                        decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
                     }
                 case .argb:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        memcpy(pixelData, bytes, data.count)
+                    data.withUnsafeBytes { bytes -> Void in
+                        guard let baseAddress = bytes.baseAddress else {
+                            return
+                        }
+                        memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
                     }
                 }
             })
