@@ -222,14 +222,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 
                 if let textInputState = textInputState {
-                    let _ = (context.account.postbox.transaction({ transaction -> Void in
-                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                            if let currentState = currentState as? ChatInterfaceState {
-                                return currentState.withUpdatedComposeInputState(textInputState)
-                            } else {
-                                return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
-                            }
-                        })
+                    let _ = (ChatInterfaceState.update(engine: context.engine, peerId: peerId, threadId: nil, { currentState in
+                        return currentState.withUpdatedComposeInputState(textInputState)
                     })
                     |> deliverOnMainQueue).start(completed: {
                         navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))

@@ -110,7 +110,7 @@ private func addOperation(_ operation: ChatListOperation, groupId: PeerGroupId, 
 }
 
 public enum ChatListNamespaceEntry {
-    case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: PeerChatInterfaceState?)
+    case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: StoredPeerChatInterfaceState?)
     case hole(MessageIndex)
     
     public var index: ChatListIndex {
@@ -294,12 +294,12 @@ final class ChatListTable: Table {
         return result
     }
     
-    func replay(historyOperationsByPeerId: [PeerId: [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [PeerGroupId: [ChatListOperation]]) {
+    func replay(historyOperationsByPeerId: [PeerId: [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: Set<PeerId>, updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [PeerGroupId: [ChatListOperation]]) {
         var changedPeerIds = Set<PeerId>()
         for peerId in historyOperationsByPeerId.keys {
             changedPeerIds.insert(peerId)
         }
-        for peerId in updatedPeerChatListEmbeddedStates.keys {
+        for peerId in updatedPeerChatListEmbeddedStates {
             changedPeerIds.insert(peerId)
         }
         for peerId in updatedChatListInclusions.keys {
@@ -315,19 +315,19 @@ final class ChatListTable: Table {
             }
             
             let topMessage = messageHistoryTable.topIndex(peerId: peerId)
-            let embeddedChatState = peerChatInterfaceStateTable.get(peerId)?.chatListEmbeddedState
+            let embeddedChatStateOverrideTimestamp = peerChatInterfaceStateTable.get(peerId)?.overrideChatTimestamp
             
             let rawTopMessageIndex: MessageIndex?
             let topMessageIndex: MessageIndex?
             if let topMessage = topMessage {
                 var updatedTimestamp = topMessage.timestamp
                 rawTopMessageIndex = MessageIndex(id: topMessage.id, timestamp: topMessage.timestamp)
-                if let embeddedChatState = embeddedChatState {
-                    updatedTimestamp = max(updatedTimestamp, embeddedChatState.timestamp)
+                if let embeddedChatStateOverrideTimestamp = embeddedChatStateOverrideTimestamp {
+                    updatedTimestamp = max(updatedTimestamp, embeddedChatStateOverrideTimestamp)
                 }
                 topMessageIndex = MessageIndex(id: topMessage.id, timestamp: updatedTimestamp)
-            } else if let embeddedChatState = embeddedChatState, embeddedChatState.timestamp != 0 {
-                topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: embeddedChatState.timestamp)
+            } else if let embeddedChatStateOverrideTimestamp = embeddedChatStateOverrideTimestamp, embeddedChatStateOverrideTimestamp != 0 {
+                topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: embeddedChatStateOverrideTimestamp)
                 rawTopMessageIndex = nil
             } else {
                 topMessageIndex = nil

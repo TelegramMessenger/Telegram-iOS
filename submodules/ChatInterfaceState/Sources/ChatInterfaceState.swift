@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import TextFormat
 import AccountContext
+import SwiftSignalKit
 
 public enum ChatTextInputMediaRecordingButtonMode: Int32 {
     case audio = 0
@@ -31,7 +32,6 @@ public struct ChatInterfaceSelectionState: Codable, Equatable {
         }
     }
 
-
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
@@ -40,20 +40,6 @@ public struct ChatInterfaceSelectionState: Codable, Equatable {
 
         try container.encode(buffer.makeData(), forKey: "i")
     }
-    
-    /*public init(decoder: PostboxDecoder) {
-        if let data = decoder.decodeBytesForKeyNoCopy("i") {
-            self.selectedIds = Set(MessageId.decodeArrayFromBuffer(data))
-        } else {
-            self.selectedIds = Set()
-        }
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        let buffer = WriteBuffer()
-        MessageId.encodeArrayToBuffer(Array(selectedIds), buffer: buffer)
-        encoder.encodeBytes(buffer, forKey: "i")
-    }*/
 }
 
 public struct ChatEditMessageState: Codable, Equatable {
@@ -102,34 +88,6 @@ public struct ChatEditMessageState: Codable, Equatable {
         try container.encodeIfPresent(self.inputTextMaxLength, forKey: "tl")
     }
     
-    /*public init(decoder: PostboxDecoder) {
-        self.messageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("mp", orElse: 0)), namespace: decoder.decodeInt32ForKey("mn", orElse: 0), id: decoder.decodeInt32ForKey("mi", orElse: 0))
-        if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
-            self.inputState = inputState
-        } else {
-            self.inputState = ChatTextInputState()
-        }
-        self.disableUrlPreview = decoder.decodeOptionalStringForKey("dup")
-        self.inputTextMaxLength = decoder.decodeOptionalInt32ForKey("tl")
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.messageId.peerId.toInt64(), forKey: "mp")
-        encoder.encodeInt32(self.messageId.namespace, forKey: "mn")
-        encoder.encodeInt32(self.messageId.id, forKey: "mi")
-        encoder.encodeObject(self.inputState, forKey: "is")
-        if let disableUrlPreview = self.disableUrlPreview {
-            encoder.encodeString(disableUrlPreview, forKey: "dup")
-        } else {
-            encoder.encodeNil(forKey: "dup")
-        }
-        if let inputTextMaxLength = self.inputTextMaxLength {
-            encoder.encodeInt32(inputTextMaxLength, forKey: "ml")
-        } else {
-            encoder.encodeNil(forKey: "ml")
-        }
-    }*/
-    
     public static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
         return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview && lhs.inputTextMaxLength == rhs.inputTextMaxLength
     }
@@ -143,7 +101,7 @@ public struct ChatEditMessageState: Codable, Equatable {
     }
 }
 
-public struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
+public struct ChatInterfaceMessageActionsState: Codable, Equatable {
     public var closedButtonKeyboardMessageId: MessageId?
     public var dismissedButtonKeyboardMessageId: MessageId?
     public var processedSetupReplyMessageId: MessageId?
@@ -173,86 +131,92 @@ public struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
         self.dismissedAddContactPhoneNumber = dismissedAddContactPhoneNumber
     }
     
-    public init(decoder: PostboxDecoder) {
-        if let closedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("cb.p"), let closedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("cb.n"), let closedMessageIdId = decoder.decodeOptionalInt32ForKey("cb.i") {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let closedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "cb.p"), let closedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "cb.n"), let closedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "cb.i") {
             self.closedButtonKeyboardMessageId = MessageId(peerId: PeerId(closedMessageIdPeerId), namespace: closedMessageIdNamespace, id: closedMessageIdId)
         } else {
             self.closedButtonKeyboardMessageId = nil
         }
 
-        if let messageIdPeerId = decoder.decodeOptionalInt64ForKey("dismissedbuttons.p"), let messageIdNamespace = decoder.decodeOptionalInt32ForKey("dismissedbuttons.n"), let messageIdId = decoder.decodeOptionalInt32ForKey("dismissedbuttons.i") {
+        if let messageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "dismissedbuttons.p"), let messageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "dismissedbuttons.n"), let messageIdId = try? container.decodeIfPresent(Int32.self, forKey: "dismissedbuttons.i") {
             self.dismissedButtonKeyboardMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
         } else {
             self.dismissedButtonKeyboardMessageId = nil
         }
         
-        if let processedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("pb.p"), let processedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("pb.n"), let processedMessageIdId = decoder.decodeOptionalInt32ForKey("pb.i") {
+        if let processedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "pb.p"), let processedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "pb.n"), let processedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "pb.i") {
             self.processedSetupReplyMessageId = MessageId(peerId: PeerId(processedMessageIdPeerId), namespace: processedMessageIdNamespace, id: processedMessageIdId)
         } else {
             self.processedSetupReplyMessageId = nil
         }
         
-        if let closedPinnedMessageIdPeerId = decoder.decodeOptionalInt64ForKey("cp.p"), let closedPinnedMessageIdNamespace = decoder.decodeOptionalInt32ForKey("cp.n"), let closedPinnedMessageIdId = decoder.decodeOptionalInt32ForKey("cp.i") {
+        if let closedPinnedMessageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "cp.p"), let closedPinnedMessageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "cp.n"), let closedPinnedMessageIdId = try? container.decodeIfPresent(Int32.self, forKey: "cp.i") {
             self.closedPinnedMessageId = MessageId(peerId: PeerId(closedPinnedMessageIdPeerId), namespace: closedPinnedMessageIdNamespace, id: closedPinnedMessageIdId)
         } else {
             self.closedPinnedMessageId = nil
         }
         
-        self.closedPeerSpecificPackSetup = decoder.decodeInt32ForKey("cpss", orElse: 0) != 0
+        self.closedPeerSpecificPackSetup = ((try? container.decode(Int32.self, forKey: "cpss")) ?? 0) != 0
+
+        self.dismissedAddContactPhoneNumber = try? container.decodeIfPresent(String.self, forKey: "dismissedAddContactPhoneNumber")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         if let closedButtonKeyboardMessageId = self.closedButtonKeyboardMessageId {
-            encoder.encodeInt64(closedButtonKeyboardMessageId.peerId.toInt64(), forKey: "cb.p")
-            encoder.encodeInt32(closedButtonKeyboardMessageId.namespace, forKey: "cb.n")
-            encoder.encodeInt32(closedButtonKeyboardMessageId.id, forKey: "cb.i")
+            try container.encode(closedButtonKeyboardMessageId.peerId.toInt64(), forKey: "cb.p")
+            try container.encode(closedButtonKeyboardMessageId.namespace, forKey: "cb.n")
+            try container.encode(closedButtonKeyboardMessageId.id, forKey: "cb.i")
         } else {
-            encoder.encodeNil(forKey: "cb.p")
-            encoder.encodeNil(forKey: "cb.n")
-            encoder.encodeNil(forKey: "cb.i")
+            try container.encodeNil(forKey: "cb.p")
+            try container.encodeNil(forKey: "cb.n")
+            try container.encodeNil(forKey: "cb.i")
         }
 
         if let dismissedButtonKeyboardMessageId = self.dismissedButtonKeyboardMessageId {
-            encoder.encodeInt64(dismissedButtonKeyboardMessageId.peerId.toInt64(), forKey: "dismissedbuttons.p")
-            encoder.encodeInt32(dismissedButtonKeyboardMessageId.namespace, forKey: "dismissedbuttons.n")
-            encoder.encodeInt32(dismissedButtonKeyboardMessageId.id, forKey: "dismissedbuttons.i")
+            try container.encode(dismissedButtonKeyboardMessageId.peerId.toInt64(), forKey: "dismissedbuttons.p")
+            try container.encode(dismissedButtonKeyboardMessageId.namespace, forKey: "dismissedbuttons.n")
+            try container.encode(dismissedButtonKeyboardMessageId.id, forKey: "dismissedbuttons.i")
         } else {
-            encoder.encodeNil(forKey: "dismissedbuttons.p")
-            encoder.encodeNil(forKey: "dismissedbuttons.n")
-            encoder.encodeNil(forKey: "dismissedbuttons.i")
+            try container.encodeNil(forKey: "dismissedbuttons.p")
+            try container.encodeNil(forKey: "dismissedbuttons.n")
+            try container.encodeNil(forKey: "dismissedbuttons.i")
         }
         
         if let processedSetupReplyMessageId = self.processedSetupReplyMessageId {
-            encoder.encodeInt64(processedSetupReplyMessageId.peerId.toInt64(), forKey: "pb.p")
-            encoder.encodeInt32(processedSetupReplyMessageId.namespace, forKey: "pb.n")
-            encoder.encodeInt32(processedSetupReplyMessageId.id, forKey: "pb.i")
+            try container.encode(processedSetupReplyMessageId.peerId.toInt64(), forKey: "pb.p")
+            try container.encode(processedSetupReplyMessageId.namespace, forKey: "pb.n")
+            try container.encode(processedSetupReplyMessageId.id, forKey: "pb.i")
         } else {
-            encoder.encodeNil(forKey: "pb.p")
-            encoder.encodeNil(forKey: "pb.n")
-            encoder.encodeNil(forKey: "pb.i")
+            try container.encodeNil(forKey: "pb.p")
+            try container.encodeNil(forKey: "pb.n")
+            try container.encodeNil(forKey: "pb.i")
         }
         
         if let closedPinnedMessageId = self.closedPinnedMessageId {
-            encoder.encodeInt64(closedPinnedMessageId.peerId.toInt64(), forKey: "cp.p")
-            encoder.encodeInt32(closedPinnedMessageId.namespace, forKey: "cp.n")
-            encoder.encodeInt32(closedPinnedMessageId.id, forKey: "cp.i")
+            try container.encode(closedPinnedMessageId.peerId.toInt64(), forKey: "cp.p")
+            try container.encode(closedPinnedMessageId.namespace, forKey: "cp.n")
+            try container.encode(closedPinnedMessageId.id, forKey: "cp.i")
         } else {
-            encoder.encodeNil(forKey: "cp.p")
-            encoder.encodeNil(forKey: "cp.n")
-            encoder.encodeNil(forKey: "cp.i")
+            try container.encodeNil(forKey: "cp.p")
+            try container.encodeNil(forKey: "cp.n")
+            try container.encodeNil(forKey: "cp.i")
         }
         
-        encoder.encodeInt32(self.closedPeerSpecificPackSetup ? 1 : 0, forKey: "cpss")
+        try container.encode((self.closedPeerSpecificPackSetup ? 1 : 0) as Int32, forKey: "cpss")
         
         if let dismissedAddContactPhoneNumber = self.dismissedAddContactPhoneNumber {
-            encoder.encodeString(dismissedAddContactPhoneNumber, forKey: "dismissedAddContactPhoneNumber")
+            try container.encode(dismissedAddContactPhoneNumber, forKey: "dismissedAddContactPhoneNumber")
         } else {
-            encoder.encodeNil(forKey: "dismissedAddContactPhoneNumber")
+            try container.encodeNil(forKey: "dismissedAddContactPhoneNumber")
         }
     }
 }
 
-public struct ChatInterfaceHistoryScrollState: PostboxCoding, Equatable {
+public struct ChatInterfaceHistoryScrollState: Codable, Equatable {
     public let messageIndex: MessageIndex
     public let relativeOffset: Double
     
@@ -261,17 +225,28 @@ public struct ChatInterfaceHistoryScrollState: PostboxCoding, Equatable {
         self.relativeOffset = relativeOffset
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.messageIndex = MessageIndex(id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0)), timestamp: decoder.decodeInt32ForKey("m.t", orElse: 0))
-        self.relativeOffset = decoder.decodeDoubleForKey("ro", orElse: 0.0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.messageIndex = MessageIndex(
+            id: MessageId(
+                peerId: PeerId((try? container.decode(Int64.self, forKey: "m.p")) ?? 0),
+                namespace: (try? container.decode(Int32.self, forKey: "m.n")) ?? 0,
+                id: (try? container.decode(Int32.self, forKey: "m.i")) ?? 0
+            ),
+            timestamp: (try? container.decode(Int32.self, forKey: "m.t")) ?? 0
+        )
+        self.relativeOffset = (try? container.decode(Double.self, forKey: "ro")) ?? 0.0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.messageIndex.timestamp, forKey: "m.t")
-        encoder.encodeInt64(self.messageIndex.id.peerId.toInt64(), forKey: "m.p")
-        encoder.encodeInt32(self.messageIndex.id.namespace, forKey: "m.n")
-        encoder.encodeInt32(self.messageIndex.id.id, forKey: "m.i")
-        encoder.encodeDouble(self.relativeOffset, forKey: "ro")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.messageIndex.timestamp, forKey: "m.t")
+        try container.encode(self.messageIndex.id.peerId.toInt64(), forKey: "m.p")
+        try container.encode(self.messageIndex.id.namespace, forKey: "m.n")
+        try container.encode(self.messageIndex.id.id, forKey: "m.i")
+        try container.encode(self.relativeOffset, forKey: "ro")
     }
     
     public static func ==(lhs: ChatInterfaceHistoryScrollState, rhs: ChatInterfaceHistoryScrollState) -> Bool {
@@ -285,7 +260,7 @@ public struct ChatInterfaceHistoryScrollState: PostboxCoding, Equatable {
     }
 }
 
-public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equatable {
+public final class ChatInterfaceState: Codable, Equatable {
     public let timestamp: Int32
     public let composeInputState: ChatTextInputState
     public let composeDisableUrlPreview: String?
@@ -299,40 +274,24 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
     public let silentPosting: Bool
     public let inputLanguage: String?
     
-    public var associatedMessageIds: [MessageId] {
-        var ids: [MessageId] = []
-        if let editMessage = self.editMessage {
-            ids.append(editMessage.messageId)
-        }
-        return ids
-    }
-    
-    public var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
-        if self.composeInputState.inputText.length != 0 && self.timestamp != 0 {
-            return ChatEmbeddedInterfaceState(timestamp: self.timestamp, text: self.composeInputState.inputText)
-        } else {
-            return nil
-        }
-    }
-    
     public var synchronizeableInputState: SynchronizeableChatInputState? {
         if self.composeInputState.inputText.length == 0 {
             return nil
         } else {
-            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, entities: generateChatInputTextEntities(self.composeInputState.inputText), timestamp: self.timestamp)
+            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, entities: generateChatInputTextEntities(self.composeInputState.inputText), timestamp: self.timestamp, textSelection: self.composeInputState.selectionRange)
         }
     }
-    
-    public var historyScrollMessageIndex: MessageIndex? {
-        return self.historyScrollState?.messageIndex
-    }
-    
-    public func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
+
+    public func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> ChatInterfaceState {
         var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(state?.text ?? "", entities: state?.entities ?? []))).withUpdatedReplyMessageId(state?.replyToMessageId)
         if let timestamp = state?.timestamp {
             result = result.withUpdatedTimestamp(timestamp)
         }
         return result
+    }
+    
+    public var historyScrollMessageIndex: MessageIndex? {
+        return self.historyScrollState?.messageIndex
     }
     
     public var effectiveInputState: ChatTextInputState {
@@ -373,114 +332,110 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
         self.inputLanguage = inputLanguage
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.timestamp = decoder.decodeInt32ForKey("ts", orElse: 0)
-        if let inputState = decoder.decode(ChatTextInputState.self, forKey: "is") {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.timestamp = (try? container.decode(Int32.self, forKey: "ts")) ?? 0
+        if let inputState = try? container.decode(ChatTextInputState.self, forKey: "is") {
             self.composeInputState = inputState
         } else {
             self.composeInputState = ChatTextInputState()
         }
-        if let composeDisableUrlPreview = decoder.decodeOptionalStringForKey("dup") {
+        if let composeDisableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup") {
             self.composeDisableUrlPreview = composeDisableUrlPreview
         } else {
             self.composeDisableUrlPreview = nil
         }
-        let replyMessageIdPeerId: Int64? = decoder.decodeOptionalInt64ForKey("r.p")
-        let replyMessageIdNamespace: Int32? = decoder.decodeOptionalInt32ForKey("r.n")
-        let replyMessageIdId: Int32? = decoder.decodeOptionalInt32ForKey("r.i")
+        let replyMessageIdPeerId: Int64? = try? container.decodeIfPresent(Int64.self, forKey: "r.p")
+        let replyMessageIdNamespace: Int32? = try? container.decodeIfPresent(Int32.self, forKey: "r.n")
+        let replyMessageIdId: Int32? = try? container.decodeIfPresent(Int32.self, forKey: "r.i")
         if let replyMessageIdPeerId = replyMessageIdPeerId, let replyMessageIdNamespace = replyMessageIdNamespace, let replyMessageIdId = replyMessageIdId {
             self.replyMessageId = MessageId(peerId: PeerId(replyMessageIdPeerId), namespace: replyMessageIdNamespace, id: replyMessageIdId)
         } else {
             self.replyMessageId = nil
         }
-        if let forwardMessageIdsData = decoder.decodeBytesForKeyNoCopy("fm") {
-            self.forwardMessageIds = MessageId.decodeArrayFromBuffer(forwardMessageIdsData)
+        if let forwardMessageIdsData = try? container.decodeIfPresent(Data.self, forKey: "fm") {
+            self.forwardMessageIds = MessageId.decodeArrayFromBuffer(ReadBuffer(data: forwardMessageIdsData))
         } else {
             self.forwardMessageIds = nil
         }
-        if let editMessage = decoder.decode(ChatEditMessageState.self, forKey: "em") {
+        if let editMessage = try? container.decodeIfPresent(ChatEditMessageState.self, forKey: "em") {
             self.editMessage = editMessage
         } else {
             self.editMessage = nil
         }
-        if let selectionState = decoder.decode(ChatInterfaceSelectionState.self, forKey: "ss") {
+        if let selectionState = try? container.decodeIfPresent(ChatInterfaceSelectionState.self, forKey: "ss") {
             self.selectionState = selectionState
         } else {
             self.selectionState = nil
         }
-        
-        if let messageActionsState = decoder.decodeObjectForKey("as", decoder: { ChatInterfaceMessageActionsState(decoder: $0) }) as? ChatInterfaceMessageActionsState {
+
+        if let messageActionsState = try? container.decodeIfPresent(ChatInterfaceMessageActionsState.self, forKey: "as") {
             self.messageActionsState = messageActionsState
         } else {
             self.messageActionsState = ChatInterfaceMessageActionsState()
         }
+
+        self.historyScrollState = try? container.decodeIfPresent(ChatInterfaceHistoryScrollState.self, forKey: "hss")
         
-        self.historyScrollState = decoder.decodeObjectForKey("hss", decoder: { ChatInterfaceHistoryScrollState(decoder: $0) }) as? ChatInterfaceHistoryScrollState
+        self.mediaRecordingMode = ChatTextInputMediaRecordingButtonMode(rawValue: (try? container.decodeIfPresent(Int32.self, forKey: "mrm")) ?? 0) ?? .audio
         
-        self.mediaRecordingMode = ChatTextInputMediaRecordingButtonMode(rawValue: decoder.decodeInt32ForKey("mrm", orElse: 0))!
-        
-        self.silentPosting = decoder.decodeInt32ForKey("sip", orElse: 0) != 0
-        self.inputLanguage = decoder.decodeOptionalStringForKey("inputLanguage")
+        self.silentPosting = ((try? container.decode(Int32.self, forKey: "sip")) ?? 0) != 0
+        self.inputLanguage = try? container.decodeIfPresent(String.self, forKey: "inputLanguage")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.timestamp, forKey: "ts")
-        encoder.encode(self.composeInputState, forKey: "is")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.timestamp, forKey: "ts")
+        try container.encode(self.composeInputState, forKey: "is")
         if let composeDisableUrlPreview = self.composeDisableUrlPreview {
-            encoder.encodeString(composeDisableUrlPreview, forKey: "dup")
+            try container.encode(composeDisableUrlPreview, forKey: "dup")
         } else {
-            encoder.encodeNil(forKey: "dup")
+            try container.encodeNil(forKey: "dup")
         }
         if let replyMessageId = self.replyMessageId {
-            encoder.encodeInt64(replyMessageId.peerId.toInt64(), forKey: "r.p")
-            encoder.encodeInt32(replyMessageId.namespace, forKey: "r.n")
-            encoder.encodeInt32(replyMessageId.id, forKey: "r.i")
+            try container.encode(replyMessageId.peerId.toInt64(), forKey: "r.p")
+            try container.encode(replyMessageId.namespace, forKey: "r.n")
+            try container.encode(replyMessageId.id, forKey: "r.i")
         } else {
-            encoder.encodeNil(forKey: "r.p")
-            encoder.encodeNil(forKey: "r.n")
-            encoder.encodeNil(forKey: "r.i")
+            try container.encodeNil(forKey: "r.p")
+            try container.encodeNil(forKey: "r.n")
+            try container.encodeNil(forKey: "r.i")
         }
         if let forwardMessageIds = self.forwardMessageIds {
             let buffer = WriteBuffer()
             MessageId.encodeArrayToBuffer(forwardMessageIds, buffer: buffer)
-            encoder.encodeBytes(buffer, forKey: "fm")
+            try container.encode(buffer.makeData(), forKey: "fm")
         } else {
-            encoder.encodeNil(forKey: "fm")
+            try container.encodeNil(forKey: "fm")
         }
         if let editMessage = self.editMessage {
-            encoder.encode(editMessage, forKey: "em")
+            try container.encode(editMessage, forKey: "em")
         } else {
-            encoder.encodeNil(forKey: "em")
+            try container.encodeNil(forKey: "em")
         }
         if let selectionState = self.selectionState {
-            encoder.encode(selectionState, forKey: "ss")
+            try container.encode(selectionState, forKey: "ss")
         } else {
-            encoder.encodeNil(forKey: "ss")
+            try container.encodeNil(forKey: "ss")
         }
         if self.messageActionsState.isEmpty {
-            encoder.encodeNil(forKey: "as")
+            try container.encodeNil(forKey: "as")
         } else {
-            encoder.encodeObject(self.messageActionsState, forKey: "as")
+            try container.encode(self.messageActionsState, forKey: "as")
         }
         if let historyScrollState = self.historyScrollState {
-            encoder.encodeObject(historyScrollState, forKey: "hss")
+            try container.encode(historyScrollState, forKey: "hss")
         } else {
-            encoder.encodeNil(forKey: "hss")
+            try container.encodeNil(forKey: "hss")
         }
-        encoder.encodeInt32(self.mediaRecordingMode.rawValue, forKey: "mrm")
-        encoder.encodeInt32(self.silentPosting ? 1 : 0, forKey: "sip")
+        try container.encode(self.mediaRecordingMode.rawValue, forKey: "mrm")
+        try container.encode((self.silentPosting ? 1 : 0) as Int32, forKey: "sip")
         if let inputLanguage = self.inputLanguage {
-            encoder.encodeString(inputLanguage, forKey: "inputLanguage")
+            try container.encode(inputLanguage, forKey: "inputLanguage")
         } else {
-            encoder.encodeNil(forKey: "inputLanguage")
-        }
-    }
-    
-    public func isEqual(to: PeerChatInterfaceState) -> Bool {
-        if let to = to as? ChatInterfaceState, self == to {
-            return true
-        } else {
-            return false
+            try container.encodeNil(forKey: "inputLanguage")
         }
     }
     
@@ -599,5 +554,35 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
     
     public func withUpdatedInputLanguage(_ inputLanguage: String?) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: inputLanguage)
+    }
+
+    public static func parse(_ state: OpaqueChatInterfaceState) -> ChatInterfaceState {
+        guard let opaqueData = state.opaqueData else {
+            return ChatInterfaceState().withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
+        }
+        guard var decodedState = try? AdaptedPostboxDecoder().decode(ChatInterfaceState.self, from: opaqueData) else {
+            return ChatInterfaceState().withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
+        }
+        decodedState = decodedState.withUpdatedSynchronizeableInputState(state.synchronizeableInputState)
+        return decodedState
+    }
+
+    public static func update(engine: TelegramEngine, peerId: PeerId, threadId: Int64?, _ f: @escaping (ChatInterfaceState) -> ChatInterfaceState) -> Signal<Never, NoError> {
+        return engine.peers.getOpaqueChatInterfaceState(peerId: peerId, threadId: threadId)
+        |> mapToSignal { previousOpaqueState -> Signal<Never, NoError> in
+            let previousState = previousOpaqueState.flatMap(ChatInterfaceState.parse)
+            let updatedState = f(previousState ?? ChatInterfaceState())
+
+            let updatedOpaqueData = try? AdaptedPostboxEncoder().encode(updatedState)
+
+            return engine.peers.setOpaqueChatInterfaceState(
+                peerId: peerId,
+                threadId: threadId,
+                state: OpaqueChatInterfaceState(
+                    opaqueData: updatedOpaqueData,
+                    historyScrollMessageIndex: updatedState.historyScrollMessageIndex,
+                    synchronizeableInputState: updatedState.synchronizeableInputState
+                ))
+        }
     }
 }

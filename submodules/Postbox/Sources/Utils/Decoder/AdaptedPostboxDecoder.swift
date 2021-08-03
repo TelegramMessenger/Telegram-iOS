@@ -10,7 +10,10 @@ final public class AdaptedPostboxDecoder {
         case dataArray
     }
 
-    func decode<T>(_ type: T.Type, from data: Data) throws -> T where T : Decodable {
+    public init() {
+    }
+
+    public func decode<T>(_ type: T.Type, from data: Data) throws -> T where T : Decodable {
         return try self.decode(type, from: data, contentType: .object)
     }
 

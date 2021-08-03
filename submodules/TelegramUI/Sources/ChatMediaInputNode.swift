@@ -761,16 +761,20 @@ final class ChatMediaInputNode: ChatInputNode {
         let inputNodeInteraction = self.inputNodeInteraction!
         let peerSpecificPack: Signal<(PeerSpecificPackData?, CanInstallPeerSpecificPack), NoError>
         if let peerId = peerId {
-            self.dismissedPeerSpecificStickerPack.set(context.account.postbox.transaction { transaction -> Bool in
-                guard let state = transaction.getPeerChatInterfaceState(peerId) as? ChatInterfaceState else {
+            self.dismissedPeerSpecificStickerPack.set(
+                context.engine.peers.getOpaqueChatInterfaceState(peerId: peerId, threadId: nil)
+                |> map { opaqueState -> Bool in
+                    guard let opaqueState = opaqueState else {
+                        return false
+                    }
+                    let interfaceState = ChatInterfaceState.parse(opaqueState)
+
+                    if interfaceState.messageActionsState.closedPeerSpecificPackSetup {
+                        return true
+                    }
                     return false
                 }
-                if state.messageActionsState.closedPeerSpecificPackSetup {
-                    return true
-                }
-                
-                return false
-            })
+            )
             peerSpecificPack = combineLatest(context.engine.peers.peerSpecificStickerPack(peerId: peerId), context.account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
             |> map { packData, peersView, dismissedPeerSpecificPack -> (PeerSpecificPackData?, CanInstallPeerSpecificPack) in
                 if let peer = peersView.peers[peerId] {
@@ -2094,17 +2098,11 @@ final class ChatMediaInputNode: ChatInputNode {
             return
         }
         self.dismissedPeerSpecificStickerPack.set(.single(true))
-        let _ = (self.context.account.postbox.transaction { transaction -> Void in
-            transaction.updatePeerChatInterfaceState(peerId, update: { current in
-                if let current = current as? ChatInterfaceState {
-                    return current.withUpdatedMessageActionsState({ value in
-                        var value = value
-                        value.closedPeerSpecificPackSetup = true
-                        return value
-                    })
-                } else {
-                    return current
-                }
+        let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: nil, { current in
+            return current.withUpdatedMessageActionsState({ value in
+                var value = value
+                value.closedPeerSpecificPackSetup = true
+                return value
             })
         }).start()
     }

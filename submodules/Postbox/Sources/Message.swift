@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxCoding {
+public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxCoding, Codable {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
@@ -94,7 +94,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
     }
 }
 
-public struct MessageIndex: Comparable, Hashable {
+public struct MessageIndex: Codable, Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
     
@@ -514,7 +514,7 @@ public struct MessageForwardInfo: Equatable {
     }
 }
 
-public protocol MessageAttribute: class, PostboxCoding {
+public protocol MessageAttribute: AnyObject, PostboxCoding {
     var associatedPeerIds: [PeerId] { get }
     var associatedMessageIds: [MessageId] { get }
     var automaticTimestampBasedAttribute: (UInt16, Int32)? { get }

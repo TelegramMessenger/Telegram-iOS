@@ -3803,7 +3803,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        if case let .peer(peerId) = self.chatLocation {
+        /*if case let .peer(peerId) = self.chatLocation {
             self.importStateDisposable = (ChatHistoryImportTasks.importState(peerId: peerId)
             |> distinctUntilChanged
             |> deliverOnMainQueue).start(next: { [weak self] state in
@@ -3817,7 +3817,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     $0.updatedImportState(mappedState)
                 })
             })
-        }
+        }*/
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -4282,7 +4282,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let combinedInitialData = combinedInitialData else {
                 return
             }
-            if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
+
+            if let opaqueState = (combinedInitialData.initialData?.storedInterfaceState).flatMap(_internal_decodeStoredChatInterfaceState) {
+                let interfaceState = ChatInterfaceState.parse(opaqueState)
+
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = true
@@ -7515,7 +7518,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
         }
         interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
-        let _ = updatePeerChatInterfaceState(account: self.context.account, peerId: peerId, threadId: threadId, state: interfaceState).start()
+        let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: threadId, { _ in
+            return interfaceState
+        }).start()
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -11173,16 +11178,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     }
-                    
-                    let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                            if let currentState = currentState as? ChatInterfaceState {
-                                return currentState.withUpdatedForwardMessageIds(messages.map { $0.id })
-                            } else {
-                                return ChatInterfaceState().withUpdatedForwardMessageIds(messages.map { $0.id })
-                            }
-                        })
-                    }) |> deliverOnMainQueue).start(completed: {
+
+                    let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                        return currentState.withUpdatedForwardMessageIds(messages.map { $0.id })
+                    })
+                    |> deliverOnMainQueue).start(completed: {
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                             
@@ -11266,14 +11266,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }))
                             case let .chat(textInputState, subject, peekData):
                                 if let textInputState = textInputState {
-                                    let _ = (self.context.account.postbox.transaction({ transaction -> Void in
-                                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                            if let currentState = currentState as? ChatInterfaceState {
-                                                return currentState.withUpdatedComposeInputState(textInputState)
-                                            } else {
-                                                return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
-                                            }
-                                        })
+                                    let _ = (ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: nil, { currentState in
+                                        return currentState.withUpdatedComposeInputState(textInputState)
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
                                         if let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController {
@@ -11308,15 +11302,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             })
                                             strongController.dismiss()
                                         } else {
-                                            let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                                                transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                                    if let currentState = currentState as? ChatInterfaceState {
-                                                        return currentState.withUpdatedComposeInputState(textInputState)
-                                                    } else {
-                                                        return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
-                                                    }
-                                                })
-                                            }) |> deliverOnMainQueue).start(completed: {
+                                            let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                                                return currentState.withUpdatedComposeInputState(textInputState)
+                                            })
+                                            |> deliverOnMainQueue).start(completed: {
                                                 if let strongSelf = self {
                                                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                                                     

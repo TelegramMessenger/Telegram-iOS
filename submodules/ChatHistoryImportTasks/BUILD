@@ -7,9 +7,6 @@ swift_library(
 		"Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/Postbox:Postbox",
-        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

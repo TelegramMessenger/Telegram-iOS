@@ -17,9 +17,10 @@ import PeerPresenceStatusManager
 import PhotoResources
 import ChatListSearchItemNode
 import ContextUI
+import ChatInterfaceState
 
 public enum ChatListItemContent {
-    case peer(messages: [Message], peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
+    case peer(messages: [Message], peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: StoredPeerChatInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
     case groupReference(groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -813,7 +814,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let unreadCount: (count: Int32, unread: Bool, muted: Bool, mutedCount: Int32?)
             let isRemovedFromTotalUnreadCount: Bool
             let peerPresence: PeerPresence?
-            let embeddedState: PeerChatListEmbeddedInterfaceState?
+            let embeddedState: StoredPeerChatInterfaceState?
             let summaryInfo: ChatListMessageTagSummaryInfo
             let inputActivities: [(Peer, PeerInputActivity)]?
             let isPeerGroup: Bool
@@ -1021,11 +1022,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         chatListText = (text, messageText)
                     }
                     
-                    if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
+                    if inlineAuthorPrefix == nil, let embeddedState = embeddedState, embeddedState.overrideChatTimestamp != nil, let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        let interfaceState = ChatInterfaceState.parse(opaqueState)
+
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+
+                        let draftText: String = interfaceState.composeInputState.inputText.string
                         
-                        attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
+                        attributedText = NSAttributedString(string: foldLineBreaks(draftText.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
