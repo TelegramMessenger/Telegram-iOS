@@ -311,6 +311,15 @@ public final class OngoingGroupCallContext {
             self.mirrorVertically = frameData.mirrorVertically
         }
     }
+
+    public struct Stats {
+        public struct IncomingVideoStats {
+            public var receivingQuality: Int
+            public var availableQuality: Int
+        }
+
+        public var incomingVideoStats: [String: IncomingVideoStats]
+    }
     
     private final class Impl {
         let queue: Queue
@@ -732,6 +741,16 @@ public final class OngoingGroupCallContext {
         func addExternalAudioData(data: Data) {
             self.context.addExternalAudioData(data)
         }
+
+        func getStats(completion: @escaping (Stats) -> Void) {
+            self.context.getStats({ stats in
+                var incomingVideoStats: [String: Stats.IncomingVideoStats] = [:]
+                for (key, value) in stats.incomingVideoStats {
+                    incomingVideoStats[key] = Stats.IncomingVideoStats(receivingQuality: Int(value.receivingQuality), availableQuality: Int(value.availableQuality))
+                }
+                completion(Stats(incomingVideoStats: incomingVideoStats))
+            })
+        }
     }
     
     private let queue = Queue()
@@ -907,6 +926,12 @@ public final class OngoingGroupCallContext {
     public func addExternalAudioData(data: Data) {
         self.impl.with { impl in
             impl.addExternalAudioData(data: data)
+        }
+    }
+
+    public func getStats(completion: @escaping (Stats) -> Void) {
+        self.impl.with { impl in
+            impl.getStats(completion: completion)
         }
     }
 }

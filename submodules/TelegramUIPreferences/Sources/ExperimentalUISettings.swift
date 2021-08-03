@@ -16,7 +16,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var enableVoipTcp: Bool
     public var demoVideoChats: Bool
     public var experimentalCompatibility: Bool
-    public var enableNoiseSuppression: Bool
+    public var enableDebugDataDisplay: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -33,7 +33,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             enableVoipTcp: false,
             demoVideoChats: false,
             experimentalCompatibility: false,
-            enableNoiseSuppression: false
+            enableDebugDataDisplay: false
         )
     }
     
@@ -51,7 +51,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         enableVoipTcp: Bool,
         demoVideoChats: Bool,
         experimentalCompatibility: Bool,
-        enableNoiseSuppression: Bool
+        enableDebugDataDisplay: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -66,7 +66,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.enableVoipTcp = enableVoipTcp
         self.demoVideoChats = demoVideoChats
         self.experimentalCompatibility = experimentalCompatibility
-        self.enableNoiseSuppression = enableNoiseSuppression
+        self.enableDebugDataDisplay = enableDebugDataDisplay
     }
     
     public init(decoder: PostboxDecoder) {
@@ -83,7 +83,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.enableVoipTcp = decoder.decodeInt32ForKey("enableVoipTcp", orElse: 0) != 0
         self.demoVideoChats = decoder.decodeInt32ForKey("demoVideoChats", orElse: 0) != 0
         self.experimentalCompatibility = decoder.decodeInt32ForKey("experimentalCompatibility", orElse: 0) != 0
-        self.enableNoiseSuppression = decoder.decodeInt32ForKey("enableNoiseSuppression", orElse: 0) != 0
+        self.enableDebugDataDisplay = decoder.decodeInt32ForKey("enableDebugDataDisplay", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -102,7 +102,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.enableVoipTcp ? 1 : 0, forKey: "enableVoipTcp")
         encoder.encodeInt32(self.demoVideoChats ? 1 : 0, forKey: "demoVideoChats")
         encoder.encodeInt32(self.experimentalCompatibility ? 1 : 0, forKey: "experimentalCompatibility")
-        encoder.encodeInt32(self.enableNoiseSuppression ? 1 : 0, forKey: "enableNoiseSuppression")
+        encoder.encodeInt32(self.enableDebugDataDisplay ? 1 : 0, forKey: "enableDebugDataDisplay")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

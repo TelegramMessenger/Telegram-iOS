@@ -95,12 +95,12 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
     private let call: PresentationGroupCall
-    private var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
+    private(set) var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
     private var currentPeerEntry: VoiceChatPeerEntry?
         
     var callState: PresentationGroupCallState?
     
-    private var currentVideoNode: GroupVideoNode?
+    private(set) var currentVideoNode: GroupVideoNode?
         
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
