@@ -19,7 +19,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 break
             }
             
-            let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
+            let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
                 switch type {
                 case .yuva:
                     data.withUnsafeBytes { bytes -> Void in
@@ -30,7 +30,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                             assert(false)
                             return
                         }
-                        decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
+                        decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
                     }
                 case .argb:
                     data.withUnsafeBytes { bytes -> Void in
