@@ -4776,7 +4776,6 @@ public final class VoiceChatController: ViewController {
             
             let speakingPeersUpdated = self.currentSpeakingPeers != speakingPeers
             self.currentCallMembers = callMembers
-            self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
             
             var entries: [ListEntry] = []
@@ -5081,9 +5080,10 @@ public final class VoiceChatController: ViewController {
                 self.updateMainVideo(waitForFullSize: true, entries: fullscreenEntries, force: true)
                 return
             }
-            
+                        
             self.updateRequestedVideoChannels()
             
+            self.currentSpeakingPeers = speakingPeers
             self.peerIdToEndpointId = peerIdToEndpointId
                     
             var updateLayout = false

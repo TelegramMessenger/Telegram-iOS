@@ -2251,6 +2251,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     _dismissing = true;
     self.view.userInteractionEnabled = false;
     
+    
     _focusControl.active = false;
     _rectangleView.hidden = true;
     
@@ -2267,6 +2268,15 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         referenceFrame = self.beginTransitionOut();
     
     __weak TGCameraController *weakSelf = self;
+    [_camera captureNextFrameCompletion:^(UIImage *frameImage) {
+        CGFloat minSize = MIN(frameImage.size.width, frameImage.size.height);
+        CGFloat maxSize = MAX(frameImage.size.width, frameImage.size.height);
+        
+        UIImage *image = TGPhotoEditorCrop(frameImage, nil, UIImageOrientationUp, 0.0f, CGRectMake((maxSize - minSize) / 2.0f, 0.0f, minSize, minSize), false, CGSizeMake(240.0f, 240.0f), frameImage.size, true);
+        
+        UIImage *startImage = TGSecretBlurredAttachmentImage(image, image.size, NULL, false, 0);
+        [TGCameraController saveStartImage:startImage];
+    }];
     if (_standalone)
     {
         [self simpleTransitionOutWithVelocity:velocity completion:^
@@ -2757,11 +2767,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
 }
 
-+ (bool)useLegacyCamera
-{
-    return false;
-}
-
 + (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
@@ -3142,6 +3147,26 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     int64_t value;
     arc4random_buf(&value, sizeof(int64_t));
     return value;
+}
+
+#pragma mark - Start Image
+
+static UIImage *startImage = nil;
+
++ (UIImage *)startImage
+{
+    if (startImage == nil)
+        startImage = TGComponentsImageNamed (@"VideoMessagePlaceholder.jpg");
+    
+    return startImage;
+}
+
++ (void)saveStartImage:(UIImage *)image
+{
+    if (image == nil)
+        return;
+    
+    startImage = image;
 }
 
 @end

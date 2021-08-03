@@ -524,6 +524,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasExpandedCaptionPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
@@ -701,12 +702,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get())
-        |> mapToSignal { isPlaying, isIntracting, controlsVisible, isShowingContextMenu -> Signal<Void, NoError> in
-            if isShowingContextMenu {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || hasExpandedCaptionPromise {
                 return .complete()
             }
-            if isPlaying && !isIntracting && controlsVisible {
+            if isPlaying && !isInteracting && controlsVisible {
                 return .single(Void())
                 |> delay(4.0, queue: Queue.mainQueue())
             } else {

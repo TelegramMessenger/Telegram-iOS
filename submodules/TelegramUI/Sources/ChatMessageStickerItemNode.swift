@@ -719,7 +719,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         let viaBotNode = viaBotApply()
                         if strongSelf.viaBotNode == nil {
                             strongSelf.viaBotNode = viaBotNode
-                            strongSelf.addSubnode(viaBotNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(viaBotNode)
                         }
                         viaBotNode.frame = viaBotFrame
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {

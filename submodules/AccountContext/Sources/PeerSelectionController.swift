@@ -40,8 +40,9 @@ public final class PeerSelectionControllerParams {
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
+    public let forwardedMessagesCount: Int
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessagesCount: Int = 0) {
         self.context = context
         self.filter = filter
         self.hasChatListSelector = hasChatListSelector
@@ -52,6 +53,7 @@ public final class PeerSelectionControllerParams {
         self.createNewGroup = createNewGroup
         self.pretendPresentedInModal = pretendPresentedInModal
         self.multipleSelection = multipleSelection
+        self.forwardedMessagesCount = forwardedMessagesCount
     }
 }
 
