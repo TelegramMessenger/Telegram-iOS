@@ -219,7 +219,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                 
                 shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: self.bounds.size)
             }
-]
+
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
             if let presence = presence as? TelegramUserPresence {
