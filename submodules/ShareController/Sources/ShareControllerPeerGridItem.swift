@@ -164,7 +164,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     }
     
     override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
-        var rect = absoluteRect
+        let rect = absoluteRect
         self.absoluteLocation = (rect, containerSize)
         if let shimmerNode = self.placeholderNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)

@@ -39,7 +39,7 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
                     assert(yuvaPixelsPerAlphaRow % 2 == 0)
                     
                     let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
-                    var yuvaFrameData = malloc(yuvaLength)!
+                    let yuvaFrameData = malloc(yuvaLength)!
                     memset(yuvaFrameData, 0, yuvaLength)
                     
                     defer {
@@ -109,7 +109,6 @@ private let threadPool: ThreadPool = {
     return ThreadPool(threadCount: 3, threadPriority: 0.5)
 }()
 
-@available(iOS 9.0, *)
 public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         let cancelled = Atomic<Bool>(value: false)
@@ -118,8 +117,7 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
             if cancelled.with({ $0 }) {
                 return
             }
-            
-            let startTime = CACurrentMediaTime()
+
             var drawingTime: Double = 0
             var appendingTime: Double = 0
             var deltaTime: Double = 0
@@ -146,7 +144,7 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                     }
                     
                     func writeData(_ data: UnsafeRawPointer, length: Int) {
-                        file.write(data, count: length)
+                        let _ = file.write(data, count: length)
                     }
                     
                     func commitData() {
@@ -234,7 +232,10 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         deltaTime += CACurrentMediaTime() - deltaStartTime
                         
                         let compressionStartTime = CACurrentMediaTime()
-                        compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        compressedFrameData.withUnsafeMutableBytes { buffer -> Void in
+                            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                return
+                            }
                             let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
                             var frameLengthValue: Int32 = Int32(length)
                             writeData(&frameLengthValue, length: 4)

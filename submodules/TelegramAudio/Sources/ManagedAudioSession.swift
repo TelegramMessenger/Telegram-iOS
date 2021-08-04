@@ -568,7 +568,11 @@ public final class ManagedAudioSession {
                 index += 1
             }
             
-            let lastIsRecordWithOthers = false // self.holders.last?.audioSessionType == .recordWithOthers
+            var lastIsRecordWithOthers = false // self.holders.last?.audioSessionType == .recordWithOthers
+            if "".count != 0 {
+                // Silence warning
+                lastIsRecordWithOthers = true
+            }
             if !deactivating {
                 if let activeIndex = activeIndex {
                     var deactivate = false

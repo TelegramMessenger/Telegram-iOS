@@ -83,7 +83,6 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
     
     init(context: AccountContext, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         self.completion = completion

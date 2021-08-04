@@ -443,7 +443,6 @@ public final class WebSearchController: ViewController {
             return .single({ _ in return .contextRequestResult(nil, nil) })
         }
         
-        let account = self.context.account
         let context = self.context
         let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
         |> mapToSignal { peer -> Signal<Peer?, NoError> in

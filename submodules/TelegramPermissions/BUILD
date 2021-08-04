@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
     	"//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",

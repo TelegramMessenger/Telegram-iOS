@@ -38,15 +38,6 @@ private enum GroupStickerPackEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
     
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
-    
     static func ==(lhs: GroupStickerPackEntryId, rhs: GroupStickerPackEntryId) -> Bool {
         switch lhs {
             case let .index(index):
@@ -240,8 +231,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 })
             case let .currentPack(_, theme, strings, content):
                 return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.account, content: content, sectionId: self.section, action: {
-                    if case let .found(found) = content {
-                        arguments.openStickerPack(found.packInfo)
+                    if case let .found(packInfo, _, _) = content {
+                        arguments.openStickerPack(packInfo)
                     }
                 })
         }

@@ -206,8 +206,7 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
     let updateState: ((WidgetSetupScreenControllerState) -> WidgetSetupScreenControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
-    
-    var dismissImpl: (() -> Void)?
+
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -372,11 +371,6 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
     }
     
     let controller = ItemListController(context: context, state: signal)
-    dismissImpl = { [weak controller] in
-        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            navigationController.filterController(controller, animated: true)
-        }
-    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

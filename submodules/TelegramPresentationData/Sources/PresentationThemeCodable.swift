@@ -132,33 +132,33 @@ extension TelegramWallpaper: Codable {
                     components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))
-            case let .file(file):
+            case let .file(_, _, _, _, _, _, slug, _, settings):
                 var components: [String] = []
-                components.append(file.slug)
+                components.append(slug)
                 if self.isPattern {
-                    if file.settings.colors.count >= 1 {
-                        components.append(String(format: "%06x", file.settings.colors[0]))
+                    if settings.colors.count >= 1 {
+                        components.append(String(format: "%06x", settings.colors[0]))
                     }
-                    if let intensity = file.settings.intensity {
+                    if let intensity = settings.intensity {
                         components.append("\(intensity)")
                     }
-                    if file.settings.colors.count >= 2 {
-                        components.append(String(format: "%06x", file.settings.colors[1]))
+                    if settings.colors.count >= 2 {
+                        components.append(String(format: "%06x", settings.colors[1]))
                     }
-                    if file.settings.colors.count >= 3 {
-                        components.append(String(format: "%06x", file.settings.colors[2]))
+                    if settings.colors.count >= 3 {
+                        components.append(String(format: "%06x", settings.colors[2]))
                     }
-                    if file.settings.colors.count >= 4 {
-                        components.append(String(format: "%06x", file.settings.colors[3]))
+                    if settings.colors.count >= 4 {
+                        components.append(String(format: "%06x", settings.colors[3]))
                     }
-                    if let rotation = file.settings.rotation, rotation != 0 {
+                    if let rotation = settings.rotation, rotation != 0 {
                         components.append("\(rotation)")
                     }
                 }
-                if file.settings.motion {
+                if settings.motion {
                     components.append("motion")
                 }
-                if file.settings.blur {
+                if settings.blur {
                     components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))

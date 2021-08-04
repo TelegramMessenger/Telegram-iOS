@@ -119,7 +119,7 @@ public final class LocationPickerController: ViewController {
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 strongSelf.context.sharedContext.applicationBindings.openSettings()
-            }) { [weak self] authorized in
+            }, { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
@@ -160,7 +160,7 @@ public final class LocationPickerController: ViewController {
                     ])
                 ])
                 strongSelf.present(controller, in: .window(.root))
-            }
+            })
         }, sendVenue: { [weak self] venue in
             guard let strongSelf = self else {
                 return

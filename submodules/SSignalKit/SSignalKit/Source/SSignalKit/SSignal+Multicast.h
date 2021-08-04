@@ -2,6 +2,6 @@
 
 @interface SSignal (Multicast)
 
-- (SSignal *)multicast;
+- (SSignal * _Nonnull)multicast;
 
 @end

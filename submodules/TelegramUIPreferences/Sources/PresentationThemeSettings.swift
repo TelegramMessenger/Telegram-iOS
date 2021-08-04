@@ -242,7 +242,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
 
 public func coloredThemeIndex(reference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?) -> Int64 {
     if let accentColor = accentColor {
-        if case let .builtin(theme) = reference {
+        if case .builtin = reference {
             return reference.index * 1000 &+ Int64(accentColor.index)
         } else {
             return reference.index &+ Int64(accentColor.index)

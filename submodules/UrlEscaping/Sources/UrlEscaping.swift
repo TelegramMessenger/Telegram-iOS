@@ -47,10 +47,9 @@ public func explicitUrl(_ url: String) -> String {
 
 public func urlEncodedStringFromString(_ string: String) -> String {
     var nsString: NSString = string as NSString
-    if let value = nsString.replacingPercentEscapes(using: String.Encoding.utf8.rawValue) {
+    if let value = nsString.removingPercentEncoding {
         nsString = value as NSString
     }
-    
-    let result = CFURLCreateStringByAddingPercentEscapes(nil, nsString as CFString, nil, "?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ " as CFString, CFStringConvertNSStringEncodingToEncoding(String.Encoding.utf8.rawValue))!
-    return result as String
+
+    return nsString.addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ ")) ?? ""
 }

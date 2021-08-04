@@ -244,7 +244,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
-        self.buttonNode.updateLayout(width: layout.size.width - sideInset * 2.0, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: layout.size.width - sideInset * 2.0, transition: transition)
         transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: CGSize(width: layout.size.width, height: buttonHeight)))
         
         return buttonHeight + verticalInset * 2.0 + insets.bottom

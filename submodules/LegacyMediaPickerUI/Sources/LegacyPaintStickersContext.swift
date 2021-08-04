@@ -26,11 +26,17 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
         switch type {
             case .yuva:
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                data.withUnsafeBytes { buffer -> Void in
+                    guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
                 }
             case .argb:
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                data.withUnsafeBytes { buffer -> Void in
+                    guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     memcpy(pixelData, bytes, data.count)
                 }
         }

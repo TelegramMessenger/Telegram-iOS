@@ -3522,7 +3522,7 @@ public final class VoiceChatController: ViewController {
                                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
                                 }
                             }
-                        }, switchCamera: { [weak self] in
+                        }, switchCamera: {
                             Queue.mainQueue().after(0.1) {
                                 isFrontCamera = !isFrontCamera
                                 videoCapturer.switchVideoInput(isFront: isFrontCamera)
@@ -6044,15 +6044,15 @@ public final class VoiceChatController: ViewController {
                 } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
-                            subscriber?.putNext(duration)
-                            subscriber?.putCompletion()
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
                         })
                         
                         return SBlockDisposable(block: {
                             disposable.dispose()
                         })
                     })
-                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
                             return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                         } else {

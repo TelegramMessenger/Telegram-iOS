@@ -71,12 +71,12 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
 }
 
 public func updateCachedWallpaper(account: Account, wallpaper: TelegramWallpaper) {
-    guard case let .file(file) = wallpaper, file.id != 0 else {
+    guard case let .file(id, _, _, _, _, _, slug, _, _) = wallpaper, id != 0 else {
         return
     }
     let _ = (account.postbox.transaction { transaction in
         let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: file.slug.persistentHashValue))
+        key.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
         let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
         transaction.putItemCacheEntry(id: id, entry: CachedWallpaper(wallpaper: wallpaper), collectionSpec: collectionSpec)
     }).start()

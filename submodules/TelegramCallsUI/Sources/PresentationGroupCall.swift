@@ -2884,7 +2884,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             case generic
         }
         
-        let account = self.account
         let context = self.accountContext
         let currentCall: Signal<GroupCallInfo?, CallError>
         if let initialCall = self.initialCall {

@@ -31,8 +31,8 @@ public extension TelegramWallpaper {
     
     var isPattern: Bool {
         switch self {
-        case let .file(file):
-            return file.isPattern || file.file.mimeType == "application/x-tgwallpattern"
+        case let .file(_, _, _, _, isPattern, _, _, file, _):
+            return isPattern || file.mimeType == "application/x-tgwallpattern"
         default:
             return false
         }
@@ -48,8 +48,8 @@ public extension TelegramWallpaper {
     }
     
     var dimensions: CGSize? {
-        if case let .file(file) = self {
-            return file.file.dimensions?.cgSize
+        if case let .file(_, _, _, _, _, _, _, file, _) = self {
+            return file.dimensions?.cgSize
         } else {
             return nil
         }

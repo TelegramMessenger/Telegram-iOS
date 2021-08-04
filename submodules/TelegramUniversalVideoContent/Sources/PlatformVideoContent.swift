@@ -343,7 +343,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
             self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
             self._status.set(self.statusValue)
         } else if keyPath == "status" {
-            if let playerItem = self.playerItem, false {
+            /*if let playerItem = self.playerItem, false {
                 switch playerItem.status {
                 case .failed:
                     switch self.content {
@@ -356,7 +356,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
                 default:
                     break
                 }
-            }
+            }*/
         }
     }
     

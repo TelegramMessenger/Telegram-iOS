@@ -124,14 +124,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.subtitle = subtitle
         
         if let background = background as? CustomPasscodeBackground {
-            if false, background.inverted {
-                let gradientBackgroundNode = background.makeForegroundNode(backgroundNode: background.makeBackgroundNode())
-                self.gradientBackgroundNode = gradientBackgroundNode as? GradientBackgroundNode.CloneNode
-            } else {
-                let blurredBackgroundColor = (background.inverted ? UIColor(rgb: 0xffffff, alpha: 0.1) : UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
-                let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
-                self.blurredBackgroundNode = blurredBackgroundNode
-            }
+            let blurredBackgroundColor = (background.inverted ? UIColor(rgb: 0xffffff, alpha: 0.1) : UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
+            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
+            self.blurredBackgroundNode = blurredBackgroundNode
         }
         
         self.backgroundNode = ASImageNode()

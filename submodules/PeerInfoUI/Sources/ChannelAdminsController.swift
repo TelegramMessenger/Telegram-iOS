@@ -43,32 +43,6 @@ private enum ChannelAdminsSection: Int32 {
 private enum ChannelAdminsEntryStableId: Hashable {
     case index(Int32)
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChannelAdminsEntryStableId, rhs: ChannelAdminsEntryStableId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ChannelAdminsEntry: ItemListNodeEntry {
@@ -203,13 +177,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
-            case let .recentActions(theme, text):
+            case let .recentActions(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openRecentActions()
                 })
-            case let .adminsHeader(theme, title):
+            case let .adminsHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
+            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
                 let peerText: String
                 var action: (() -> Void)?
                 switch participant.participant {
@@ -244,7 +218,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addAdmin()
                 })
-            case let .adminsInfo(theme, text):
+            case let .adminsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -826,11 +800,9 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
             return
         }
-        
-        var replacedSelf = false
+
         rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController, replace: { c in
             if c === controller {
-                replacedSelf = true
                 return channelAdminsController(context: context, peerId: upgradedPeerId, loadCompleted: {
                 })
             } else {

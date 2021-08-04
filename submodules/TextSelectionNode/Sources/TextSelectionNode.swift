@@ -389,10 +389,7 @@ public final class TextSelectionNode: ASDisplayNode {
             }
             let point = CGPoint(x: (1.0 - progress) * startPoint.x + progress * endPoint.x, y: (1.0 - progress) * startPoint.y + progress * endPoint.y)
             strongSelf.recognizer?.moveKnob?(.right, point)
-        }, completion: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
+        }, completion: {
         })
         self.displayLinkAnimator = displayLinkAnimator
     }

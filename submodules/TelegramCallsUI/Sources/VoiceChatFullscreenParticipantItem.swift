@@ -614,7 +614,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)
 //                    }
@@ -700,7 +700,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                     
-                                    if let item = strongSelf.item, strongSelf.videoNode != nil && !active {
+                                    if let _ = strongSelf.item, strongSelf.videoNode != nil && !active {
                                         audioLevelView.alpha = 0.0
                                     }
                                 }

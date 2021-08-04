@@ -140,7 +140,6 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     
     var outgoingBubbleFillColor: UIColor?
     var outgoingBubbleFillGradientColor: UIColor?
-    var outgoingBubbleHighlightedFillColor: UIColor?
     var outgoingPrimaryTextColor: UIColor?
     var outgoingSecondaryTextColor: UIColor?
     var outgoingLinkTextColor: UIColor?

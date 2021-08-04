@@ -2,8 +2,8 @@
 
 @interface SSignal (Mapping)
 
-- (SSignal *)map:(id (^)(id))f;
-- (SSignal *)filter:(bool (^)(id))f;
-- (SSignal *)ignoreRepeated;
+- (SSignal * _Nonnull)map:(id _Nullable (^ _Nonnull)(id _Nullable))f;
+- (SSignal * _Nonnull)filter:(bool (^ _Nonnull)(id _Nullable))f;
+- (SSignal * _Nonnull)ignoreRepeated;
 
 @end

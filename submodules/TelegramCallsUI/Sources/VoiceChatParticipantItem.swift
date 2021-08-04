@@ -937,7 +937,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)
 //                    }

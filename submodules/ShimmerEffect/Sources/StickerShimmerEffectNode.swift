@@ -330,6 +330,9 @@ private func renderPath(_ segments: [PathSegment], context: CGContext) {
         cubicPoint = nil
         quadrPoint = nil
     }
+
+    let _ = initialPoint
+    let _ = quadrPoint
     
     for segment in segments {
         var data = segment.data

@@ -111,7 +111,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
         }
         
         switch previousState {
-        case let .idle(previousIdle):
+        case .idle:
             switch monkeyState {
             case let .idle(idle):
                 self.enqueueIdle(idle)

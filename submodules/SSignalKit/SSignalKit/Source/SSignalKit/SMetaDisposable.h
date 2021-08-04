@@ -2,6 +2,6 @@
 
 @interface SMetaDisposable : NSObject <SDisposable>
 
-- (void)setDisposable:(id<SDisposable>)disposable;
+- (void)setDisposable:(id<SDisposable> _Nullable)disposable;
 
 @end

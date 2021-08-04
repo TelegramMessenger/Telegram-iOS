@@ -40,7 +40,7 @@ private protocol SemanticStatusNodeStateDrawingState: NSObjectProtocol {
     func draw(context: CGContext, size: CGSize, foregroundColor: UIColor)
 }
 
-private protocol SemanticStatusNodeStateContext: class {
+private protocol SemanticStatusNodeStateContext: AnyObject {
     var isAnimating: Bool { get }
     var requestUpdate: () -> Void { get set }
     

@@ -53,7 +53,7 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureReco
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let gestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer else {
+        guard let _ = gestureRecognizer as? UIPanGestureRecognizer else {
             return !self.verticalPanEnabled
         }
         return true
@@ -570,7 +570,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     }
                     handleNodeContainer.updateMultiplier = { [weak self] multiplier in
                            if let strongSelf = self {
-                               if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                               if let statusValue = strongSelf.statusValue, let _ = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
                                    strongSelf.scrubbingBeginTimestamp = strongSelf.scrubbingTimestampValue
                                }
                            }

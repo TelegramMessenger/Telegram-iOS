@@ -32,15 +32,6 @@ private enum ShareSearchRecentEntryStableId: Hashable {
                 }
         }
     }
-    
-    var hashValue: Int {
-        switch self {
-            case .topPeers:
-                return 0
-            case let .peerId(peerId):
-                return peerId.hashValue
-        }
-    }
 }
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {

@@ -1,6 +1,6 @@
 import Postbox
 
-public struct TelegramChatAdminRightsFlags: OptionSet {
+public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {

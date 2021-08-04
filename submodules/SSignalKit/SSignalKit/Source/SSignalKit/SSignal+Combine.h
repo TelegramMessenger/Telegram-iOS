@@ -2,9 +2,9 @@
 
 @interface SSignal (Combine)
 
-+ (SSignal *)combineSignals:(NSArray *)signals;
-+ (SSignal *)combineSignals:(NSArray *)signals withInitialStates:(NSArray *)initialStates;
++ (SSignal * _Nonnull)combineSignals:(NSArray * _Nonnull)signals;
++ (SSignal * _Nonnull)combineSignals:(NSArray * _Nonnull)signals withInitialStates:(NSArray * _Nullable)initialStates;
 
-+ (SSignal *)mergeSignals:(NSArray *)signals;
++ (SSignal * _Nonnull)mergeSignals:(NSArray * _Nonnull)signals;
 
 @end

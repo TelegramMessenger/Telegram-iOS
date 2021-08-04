@@ -2683,7 +2683,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     }
     
     func hasUnsavedData() -> Bool {
-        guard var innerState = self.innerState else {
+        guard let innerState = self.innerState else {
             return false
         }
         guard let values = innerState.makeValues(), !values.isEmpty else {

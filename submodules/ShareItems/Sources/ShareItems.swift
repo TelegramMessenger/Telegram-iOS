@@ -99,7 +99,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 var cropRect = CGRect(origin: CGPoint(), size: size)
                 if abs(width - height) < CGFloat.ulpOfOne {
                     cropRect = cropRect.insetBy(dx: 13.0, dy: 13.0)
-                    cropRect.offsetBy(dx: 2.0, dy: 3.0)
+                    cropRect = cropRect.offsetBy(dx: 2.0, dy: 3.0)
                 } else {
                     let shortestSide = min(size.width, size.height)
                     cropRect = CGRect(x: (size.width - shortestSide) / 2.0, y: (size.height - shortestSide) / 2.0, width: shortestSide, height: shortestSide)
@@ -119,7 +119,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
             }
             
-            let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()))
+            let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
             let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
             resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
         }
@@ -151,7 +151,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         if !treatAsFile, let image = UIImage(data: data) {
             var isGif = false
             if data.count > 4 {
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                data.withUnsafeBytes { buffer -> Void in
+                    guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     if bytes.advanced(by: 0).pointee == 71 // G
                     && bytes.advanced(by: 1).pointee == 73 // I
                     && bytes.advanced(by: 2).pointee == 70 // F

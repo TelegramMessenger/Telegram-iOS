@@ -3,16 +3,16 @@
 @interface SSignal : NSObject
 {
 @public
-    id<SDisposable> (^_generator)(SSubscriber *);
+    id<SDisposable> _Nullable (^ _Nonnull _generator)(SSubscriber * _Nonnull);
 }
 
-- (instancetype)initWithGenerator:(id<SDisposable> (^)(SSubscriber *))generator;
+- (instancetype _Nonnull)initWithGenerator:(id<SDisposable> _Nullable (^ _Nonnull)(SSubscriber * _Nonnull))generator;
 
-- (id<SDisposable>)startWithNext:(void (^)(id next))next error:(void (^)(id error))error completed:(void (^)())completed;
-- (id<SDisposable>)startWithNext:(void (^)(id next))next;
-- (id<SDisposable>)startWithNext:(void (^)(id next))next completed:(void (^)())completed;
+- (id<SDisposable> _Nullable)startWithNext:(void (^ _Nullable)(id _Nullable next))next error:(void (^ _Nullable)(id _Nullable error))error completed:(void (^ _Nullable)())completed;
+- (id<SDisposable> _Nullable)startWithNext:(void (^ _Nullable)(id _Nullable next))next;
+- (id<SDisposable> _Nullable)startWithNext:(void (^ _Nullable)(id _Nullable next))next completed:(void (^ _Nullable)())completed;
 
-- (SSignal *)trace:(NSString *)name;
+- (SSignal * _Nonnull)trace:(NSString * _Nonnull)name;
 
 @end
 
