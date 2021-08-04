@@ -191,7 +191,7 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
         self.currentCornerRadius = cornerRadius
         
         var rotationAngle: CGFloat
-        if isOutgoing && isCompactLayout {
+        if false && isOutgoing && isCompactLayout {
             rotationAngle = CGFloat.pi / 2.0
         } else {
             switch self.currentOrientation {
@@ -227,7 +227,10 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
                 additionalAngle = 0.0
             }
             rotationAngle += additionalAngle
-            if abs(rotationAngle - (-CGFloat.pi)) < 1.0 {
+            if abs(rotationAngle - CGFloat.pi * 3.0 / 2.0) < 0.01 {
+                rotationAngle = -CGFloat.pi / 2.0
+            }
+            if abs(rotationAngle - (-CGFloat.pi)) < 0.01 {
                 rotationAngle = -CGFloat.pi + 0.001
             }
         }
@@ -1656,7 +1659,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     self.animationForExpandedVideoSnapshotView = nil
                 }
                 minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
-                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: false, transition: minimizedVideoTransition)
+                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: layout.metrics.widthClass == .compact, transition: minimizedVideoTransition)
                 if transition.isAnimated && didAppear {
                     minimizedVideoNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }

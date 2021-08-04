@@ -353,7 +353,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            let avatarContent = strongSelf.avatarsContext.update(peers: replyPeers, animated: animation.isAnimated)
+                            let avatarContent = strongSelf.avatarsContext.update(peers: replyPeers.map(EnginePeer.init), animated: animation.isAnimated)
                             let avatarsSize = strongSelf.avatarsNode.update(context: item.context, content: avatarContent, animated: animation.isAnimated, synchronousLoad: synchronousLoad)
                             
                             let iconAlpha: CGFloat = avatarsSize.width.isZero ? 1.0 : 0.0

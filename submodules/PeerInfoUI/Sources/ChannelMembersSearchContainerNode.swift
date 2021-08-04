@@ -779,8 +779,8 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 switch participant.participant {
                                     case .creator:
                                         label = presentationData.strings.Channel_Management_LabelOwner
-                                    case let .member(member):
-                                        if member.adminInfo != nil {
+                                    case let .member(_, _, adminInfo, _, _):
+                                        if adminInfo != nil {
                                             label = presentationData.strings.Channel_Management_LabelEditor
                                         }
                                 }
@@ -930,7 +930,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     return entries
                 }
-            } else if let group = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
+            } else if let _ = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
                 updateActivity(true)
                 let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                 let foundMembers: Signal<[RenderedChannelParticipant], NoError>
@@ -1043,39 +1043,6 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 section = .none
                             }
                             
-                            var canPromote: Bool = false
-                            var canRestrict: Bool = false
-                            /*switch participant.participant {
-                            case .creator:
-                                canPromote = false
-                                canRestrict = false
-                            case let .member(_, _, adminRights, bannedRights):
-                                if channel.hasPermission(.addAdmins) {
-                                    canPromote = true
-                                } else {
-                                    canPromote = false
-                                }
-                                if channel.hasPermission(.banMembers) {
-                                    canRestrict = true
-                                } else {
-                                    canRestrict = false
-                                }
-                                if canPromote {
-                                    if let bannedRights = bannedRights {
-                                        if bannedRights.restrictedBy != account.peerId && !channel.flags.contains(.isCreator) {
-                                            canPromote = false
-                                        }
-                                    }
-                                }
-                                if canRestrict {
-                                    if let adminRights = adminRights {
-                                        if adminRights.promotedBy != account.peerId && !channel.flags.contains(.isCreator) {
-                                            canRestrict = false
-                                        }
-                                    }
-                                }
-                            }*/
-                            
                             var label: String?
                             var enabled = true
                             if case .banAndPromoteActions = mode {
@@ -1087,8 +1054,8 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 switch participant.participant {
                                     case .creator:
                                         label = presentationData.strings.Channel_Management_LabelOwner
-                                    case let .member(member):
-                                        if member.adminInfo != nil {
+                                    case let .member(_, _, adminInfo, _, _):
+                                        if adminInfo != nil {
                                             label = presentationData.strings.Channel_Management_LabelEditor
                                         }
                                 }
@@ -1097,17 +1064,6 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                             if state.removingParticipantIds.contains(participant.peer.id) {
                                 enabled = false
                             }
-                            
-                            var peerActions: [ParticipantRevealAction] = []
-                            /*if case .searchMembers = mode {
-                                if canPromote {
-                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: .promote))
-                                }
-                                if canRestrict {
-                                    peerActions.append(ParticipantRevealAction(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: .restrict))
-                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
-                                }
-                            }*/
                             
                             switch mode {
                                 case .searchAdmins:
@@ -1155,7 +1111,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 default:
                                     break
                             }
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }

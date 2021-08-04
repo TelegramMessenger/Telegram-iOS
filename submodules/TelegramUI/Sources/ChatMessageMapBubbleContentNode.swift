@@ -151,7 +151,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             var mode: ChatMessageLiveLocationPositionNode.Mode = .location(selectedMedia)
             if let selectedMedia = selectedMedia, let peer = item.message.author {
                 if selectedMedia.liveBroadcastingTimeout != nil {
-                    mode = .liveLocation(peer: peer, active: activeLiveBroadcastingTimeout != nil, latitude: selectedMedia.latitude, longitude: selectedMedia.longitude, heading: selectedMedia.heading)
+                    mode = .liveLocation(peer: EnginePeer(peer), active: activeLiveBroadcastingTimeout != nil, latitude: selectedMedia.latitude, longitude: selectedMedia.longitude, heading: selectedMedia.heading)
                 }
             }
             let (pinSize, pinApply) = makePinLayout(item.context, item.presentationData.theme.theme, mode)

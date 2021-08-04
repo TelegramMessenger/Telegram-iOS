@@ -6,6 +6,9 @@ objc_library(
     srcs = glob([
         "Source/UIKitRuntimeUtils/*.m",
     ]),
+    copts = [
+        "-Werror",
+    ],
     hdrs = glob([
         "Source/UIKitRuntimeUtils/*.h",
     ]),

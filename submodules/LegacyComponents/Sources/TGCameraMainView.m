@@ -14,6 +14,51 @@
 #import "TGMediaPickerPhotoCounterButton.h"
 #import "TGMediaPickerPhotoStripView.h"
 
+@implementation TGCameraCornersView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        self.contentMode = UIViewContentModeScaleToFill;
+        
+        static UIImage *cornersImage = nil;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^
+        {
+            CGSize size = CGSizeMake(50.0, 50.0);
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(50.0, 50.0), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+
+            CGContextSetAlpha(context, 0.5);
+            CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+            CGContextSetBlendMode(context, kCGBlendModeCopy);
+            
+            CGFloat width = 1.0;
+            CGFloat length = 24.0;
+            CGContextFillRect(context, CGRectMake(0, 0, length, width));
+            CGContextFillRect(context, CGRectMake(0, 0, width, length));
+            
+            CGContextFillRect(context, CGRectMake(size.width - length, 0, length, width));
+            CGContextFillRect(context, CGRectMake(size.width - width, 0, width, length));
+            
+            CGContextFillRect(context, CGRectMake(0, size.height - width, length, width));
+            CGContextFillRect(context, CGRectMake(0, size.height - length, width, length));
+            
+            CGContextFillRect(context, CGRectMake(size.width - length, size.height - width, length, width));
+            CGContextFillRect(context, CGRectMake(size.width - width, size.height - length, width, length));
+            
+            cornersImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:25 topCapHeight:25];
+            UIGraphicsEndImageContext();
+        });
+        
+        self.image = cornersImage;
+        self.userInteractionEnabled = false;
+    }
+    return self;
+}
+
+@end
+
 @interface TGCameraMainView ()
 {
     
@@ -24,6 +69,16 @@
 
 @dynamic thumbnailSignalForItem;
 @dynamic editingContext;
+
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera {
+    self = [super init];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (void)setResults:(NSArray *)__unused results {
+}
 
 #pragma mark - Mode
 
@@ -156,6 +211,11 @@
         self.shutterReleased(false);
 }
 
+- (void)shutterButtonPanGesture:(UIPanGestureRecognizer *)gestureRecognizer {
+    if (self.shutterPanGesture != nil)
+        self.shutterPanGesture(gestureRecognizer);
+}
+
 - (void)cancelButtonPressed
 {
     if (self.cancelPressed != nil)
@@ -182,7 +242,8 @@
 - (void)setZoomLevel:(CGFloat)zoomLevel displayNeeded:(bool)displayNeeded
 {
     [_zoomView setZoomLevel:zoomLevel displayNeeded:displayNeeded];
-    [_zoomModeView setZoomLevel:zoomLevel];
+    [_zoomModeView setZoomLevel:zoomLevel animated:true];
+    [_zoomWheelView setZoomLevel:zoomLevel];
 }
 
 - (void)zoomChangingEnded
@@ -194,6 +255,8 @@
 {
     if (!hasZoom)
         [_zoomView hideAnimated:true];
+    
+    [_zoomModeView setHidden:!hasZoom animated:true];
 }
 
 #pragma mark - Video
@@ -231,11 +294,6 @@
 {
     if (completion != nil)
         completion(true);
-}
-
-- (void)layoutPreviewRelativeViews
-{
-    
 }
 
 #pragma mark -

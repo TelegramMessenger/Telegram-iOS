@@ -522,8 +522,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     @objc func installActionButtonPressed() {
-        let dismissOnAction = true
-        if let stickerPack = self.stickerPack, let stickerSettings = self.stickerSettings {
+        if let stickerPack = self.stickerPack, let _ = self.stickerSettings {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
@@ -534,19 +533,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             }
                             strongSelf.actionPerformed?(info, items, .remove(positionInList: positionInList))
                         })
-                        if !dismissOnAction {
-                            self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
-                        }
                     } else {
                         let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
-                        if !dismissOnAction {
-                            self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
-                        }
                         self.actionPerformed?(info, items, .add)
                     }
-                    if dismissOnAction {
-                        self.cancelButtonPressed()
-                    }
+                    self.cancelButtonPressed()
                 default:
                     break
             }

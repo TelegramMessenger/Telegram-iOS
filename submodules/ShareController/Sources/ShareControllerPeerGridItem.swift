@@ -10,6 +10,7 @@ import TelegramStringFormatting
 import SelectablePeerNode
 import PeerPresenceStatusManager
 import AccountContext
+import ShimmerEffect
 
 final class ShareControllerInteraction {
     var foundPeers: [RenderedPeer] = []
@@ -89,14 +90,14 @@ final class ShareControllerPeerGridItem: GridItem {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let peer: RenderedPeer
+    let peer: RenderedPeer?
     let presence: PeerPresence?
     let controllerInteraction: ShareControllerInteraction
     let search: Bool
     
     let section: GridSection?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer?, presence: PeerPresence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -130,11 +131,14 @@ final class ShareControllerPeerGridItem: GridItem {
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, RenderedPeer, Bool, PeerPresence?)?
+    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, RenderedPeer?, Bool, PeerPresence?)?
     private let peerNode: SelectablePeerNode
     private var presenceManager: PeerPresenceStatusManager?
     
     var controllerInteraction: ShareControllerInteraction?
+    
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     override init() {
         self.peerNode = SelectablePeerNode()
@@ -143,7 +147,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         self.peerNode.toggleSelection = { [weak self] in
             if let strongSelf = self {
-                if let (_, _, _, peer, search, _) = strongSelf.currentState {
+                if let (_, _, _, maybePeer, search, _) = strongSelf.currentState, let peer = maybePeer {
                     if let _ = peer.peers[peer.peerId] {
                         strongSelf.controllerInteraction?.togglePeer(peer, search)
                     }
@@ -159,21 +163,61 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         })
     }
     
-    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        let rect = absoluteRect
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
+    }
+    
+    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer?, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
         if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.3 != peer || !arePeerPresencesEqual(self.currentState!.5, presence) {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
-            if let peer = peer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
-                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
+            if let peer = peer?.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
+                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: timestamp)
                 if case .online = relativeStatus {
                     online = true
                 }
             }
             
             self.peerNode.theme = itemTheme
-            self.peerNode.setup(context: context, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
+            if let peer = peer {
+                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer), online: online, synchronousLoad: synchronousLoad)
+                if let shimmerNode = self.placeholderNode {
+                    self.placeholderNode = nil
+                    shimmerNode.removeFromSupernode()
+                }
+            } else {
+                let shimmerNode: ShimmerEffectNode
+                if let current = self.placeholderNode {
+                    shimmerNode = current
+                } else {
+                    shimmerNode = ShimmerEffectNode()
+                    self.placeholderNode = shimmerNode
+                    self.addSubnode(shimmerNode)
+                }
+                shimmerNode.frame = self.bounds
+                if let (rect, size) = self.absoluteLocation {
+                    shimmerNode.updateAbsoluteRect(rect, within: size)
+                }
+                
+                var shapes: [ShimmerEffectNode.Shape] = []
+                
+                let titleLineWidth: CGFloat = 56.0
+                let lineDiameter: CGFloat = 10.0
+                
+                let iconFrame = CGRect(x: 13.0, y: 4.0, width: 60.0, height: 60.0)
+                shapes.append(.circle(iconFrame))
+                
+                let titleFrame = CGRect(x: 15.0, y: 70.0, width: 56.0, height: 10.0)
+                shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                
+                shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: self.bounds.size)
+            }
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
             if let presence = presence as? TelegramUserPresence {
@@ -185,7 +229,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func updateSelection(animated: Bool) {
         var selected = false
-        if let controllerInteraction = self.controllerInteraction, let (_, _, _, peer, _, _) = self.currentState {
+        if let controllerInteraction = self.controllerInteraction, let (_, _, _, maybePeer, _, _) = self.currentState, let peer = maybePeer {
             selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
         }
         
@@ -197,5 +241,21 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         let bounds = self.bounds
         self.peerNode.frame = bounds
+        self.placeholderNode?.frame = bounds
+        
+        if let (_, theme, _, _, _, _) = self.currentState, let shimmerNode = self.placeholderNode {
+            var shapes: [ShimmerEffectNode.Shape] = []
+            
+            let titleLineWidth: CGFloat = 56.0
+            let lineDiameter: CGFloat = 10.0
+            
+            let iconFrame = CGRect(x: (bounds.width - 60.0) / 2.0, y: 4.0, width: 60.0, height: 60.0)
+            shapes.append(.circle(iconFrame))
+            
+            let titleFrame = CGRect(x: (bounds.width - titleLineWidth) / 2.0, y: 70.0, width: titleLineWidth, height: 10.0)
+            shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+            
+            shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: self.bounds.size)
+        }
     }
 }

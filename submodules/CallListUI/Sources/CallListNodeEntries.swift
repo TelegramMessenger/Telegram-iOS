@@ -1,18 +1,17 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MergeLists
 
 enum CallListNodeEntryId: Hashable {
     case setting(Int32)
-    case groupCall(PeerId)
-    case hole(MessageIndex)
-    case message(MessageIndex)
+    case groupCall(EnginePeer.Id)
+    case hole(EngineMessage.Index)
+    case message(EngineMessage.Index)
 }
 
-private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
+private func areMessagesEqual(_ lhsMessage: EngineMessage, _ rhsMessage: EngineMessage) -> Bool {
     if lhsMessage.stableVersion != rhsMessage.stableVersion {
         return false
     }
@@ -26,9 +25,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
     enum SortIndex: Comparable {
         case displayTab
         case displayTabInfo
-        case groupCall(PeerId, String)
-        case message(MessageIndex)
-        case hole(MessageIndex)
+        case groupCall(EnginePeer.Id, String)
+        case message(EngineMessage.Index)
+        case hole(EngineMessage.Index)
         
         static func <(lhs: SortIndex, rhs: SortIndex) -> Bool {
             switch lhs {
@@ -79,9 +78,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
-    case groupCall(peer: Peer, editing: Bool, isActive: Bool)
-    case messageEntry(topMessage: Message, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool, missed: Bool)
-    case holeEntry(index: MessageIndex, theme: PresentationTheme)
+    case groupCall(peer: EnginePeer, editing: Bool, isActive: Bool)
+    case messageEntry(topMessage: EngineMessage, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool, missed: Bool)
+    case holeEntry(index: EngineMessage.Index, theme: PresentationTheme)
     
     var sortIndex: SortIndex {
         switch self {
@@ -133,7 +132,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .groupCall(lhsPeer, lhsEditing, lhsIsActive):
                 if case let .groupCall(rhsPeer, rhsEditing, rhsIsActive) = rhs {
-                    if !lhsPeer.isEqual(rhsPeer) {
+                    if lhsPeer != rhsPeer {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -194,9 +193,9 @@ enum CallListNodeEntry: Comparable, Identifiable {
     }
 }
 
-func callListNodeEntriesForView(view: CallListView, groupCalls: [Peer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: PeerId?) -> [CallListNodeEntry] {
+func callListNodeEntriesForView(view: EngineCallList, groupCalls: [EnginePeer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: EnginePeer.Id?) -> [CallListNodeEntry] {
     var result: [CallListNodeEntry] = []
-    for entry in view.entries {
+    for entry in view.items {
         switch entry {
             case let .message(topMessage, messages):
                 result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id, displayHeader: !showSettings && isRecentCalls, missed: !isRecentCalls))
@@ -205,7 +204,7 @@ func callListNodeEntriesForView(view: CallListView, groupCalls: [Peer], state: C
         }
     }
     
-    if view.later == nil {
+    if !view.hasLater {
         if !showSettings && isRecentCalls {
             for peer in groupCalls.sorted(by: { lhs, rhs in
                 let lhsTitle = lhs.compactDisplayTitle

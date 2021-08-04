@@ -10,14 +10,14 @@
 
 @interface MTTransportScheme : NSObject <NSCoding>
 
-@property (nonatomic, strong, readonly) Class transportClass;
-@property (nonatomic, strong, readonly) MTDatacenterAddress *address;
+@property (nonatomic, strong, readonly) Class _Nonnull transportClass;
+@property (nonatomic, strong, readonly) MTDatacenterAddress * _Nonnull address;
 @property (nonatomic, readonly) bool media;
 
-- (instancetype)initWithTransportClass:(Class)transportClass address:(MTDatacenterAddress *)address media:(bool)media;
+- (instancetype _Nonnull)initWithTransportClass:(Class _Nonnull)transportClass address:(MTDatacenterAddress * _Nonnull)address media:(bool)media;
 
-- (BOOL)isEqualToScheme:(MTTransportScheme *)other;
+- (BOOL)isEqualToScheme:(MTTransportScheme * _Nonnull)other;
 - (BOOL)isOptimal;
-- (NSComparisonResult)compareToScheme:(MTTransportScheme *)other;
+- (NSComparisonResult)compareToScheme:(MTTransportScheme * _Nonnull)other;
 
 @end

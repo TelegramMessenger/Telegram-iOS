@@ -271,7 +271,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     })))
                 }
 
-                let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
+                let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id. _internalFromInt64Value(777000)) && peerId == context.account.peerId
                 if let (group, _) = groupAndIndex {
                     if archiveEnabled {
                         let isArchived = group == Namespaces.PeerGroup.archive
@@ -361,13 +361,14 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
 
                                 joinChannelDisposable.set((createSignal
                                 |> deliverOnMainQueue).start(next: { _ in
-                                    if let navigationController = (chatListController?.navigationController as? NavigationController) {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                                    }
                                 }, error: { _ in
                                     if let chatListController = chatListController {
                                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                         chatListController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }
+                                }, completed: {
+                                    if let navigationController = (chatListController?.navigationController as? NavigationController) {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                                     }
                                 }))
                                 f(.default)

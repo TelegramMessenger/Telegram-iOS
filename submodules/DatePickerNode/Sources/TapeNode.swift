@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import AudioToolbox
 
-@objc public protocol PickerViewDelegate: class {
+@objc public protocol PickerViewDelegate: AnyObject {
     func pickerViewHeightForRows(_ pickerView: TapeNode) -> CGFloat
     @objc optional func pickerView(_ pickerView: TapeNode, didSelectRow row: Int)
     @objc optional func pickerView(_ pickerView: TapeNode, didTapRow row: Int)

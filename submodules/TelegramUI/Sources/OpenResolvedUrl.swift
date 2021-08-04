@@ -222,14 +222,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 
                 if let textInputState = textInputState {
-                    let _ = (context.account.postbox.transaction({ transaction -> Void in
-                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                            if let currentState = currentState as? ChatInterfaceState {
-                                return currentState.withUpdatedComposeInputState(textInputState)
-                            } else {
-                                return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
-                            }
-                        })
+                    let _ = (ChatInterfaceState.update(engine: context.engine, peerId: peerId, threadId: nil, { currentState in
+                        return currentState.withUpdatedComposeInputState(textInputState)
                     })
                     |> deliverOnMainQueue).start(completed: {
                         navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
@@ -471,7 +465,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         return
                     }
                     navigationController.currentWindow?.present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { [weak chatController] call in
-                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: call)
+                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
                     }), on: .root, blockInteraction: false, completion: {})
                 }))
             }

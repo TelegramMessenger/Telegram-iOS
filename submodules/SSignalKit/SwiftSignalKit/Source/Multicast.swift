@@ -48,9 +48,6 @@ public final class Multicast<T> {
                         subscriber(next)
                     }
                 }, error: { _ in
-                    self.lock.locked {
-                        let _ = self.instances.removeValue(forKey: key)
-                    }
                 }, completed: {
                     self.lock.locked {
                         self.instances.removeValue(forKey: key)

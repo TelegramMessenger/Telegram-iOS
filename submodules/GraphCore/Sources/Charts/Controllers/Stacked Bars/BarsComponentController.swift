@@ -216,7 +216,6 @@ class BarsComponentController: GeneralChartComponentController {
     }
     
     override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
-        let rangeWithOffset = detailsViewPosition - barsWidth / currentHorizontalMainChartRange.distance * chartFrame().width / 2 + chartFrame().minX / 2
         super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animated: animated, feedback: feedback)
         mainBarsRenderer.setSelectedIndex(dataIndex, animated: true)
     }

@@ -208,8 +208,9 @@
     self.view.frame = (CGRect){ CGPointZero, [self referenceViewSize]};
     self.view.clipsToBounds = true;
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         self.view.accessibilityIgnoresInvertColors = true;
+    }
     
     if ([self presentedForAvatarCreation] && ![self presentedFromCamera])
         self.view.backgroundColor = [UIColor blackColor];
@@ -888,9 +889,11 @@
         
         self.navigationController.interactivePopGestureRecognizer.enabled = true;
     }
-    
-    if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
-        [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+
+    if (@available(iOS 11.0, *)) {
+        if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
+            [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+    }
     
     [super viewWillDisappear:animated];
 }
@@ -1274,6 +1277,8 @@
         
         if ([self presentedFromCamera] && [self presentedForAvatarCreation])
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
             {
                 transitionReferenceFrame = CGRectMake(self.view.frame.size.width - transitionReferenceFrame.size.height - transitionReferenceFrame.origin.y,
@@ -1286,6 +1291,7 @@
                                                       self.view.frame.size.height - transitionReferenceFrame.size.width - transitionReferenceFrame.origin.x,
                                                       transitionReferenceFrame.size.height, transitionReferenceFrame.size.width);
             }
+#pragma clang diagnostic pop
         }
         
         if ([self presentedForAvatarCreation] && ![self presentedFromCamera])
@@ -1719,9 +1725,11 @@
     [_landscapeToolbarView setDoneButtonType:doneButtonType];
     
     [self updateEditorButtons];
-    
-    if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
-        [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+
+    if (@available(iOS 11.0, *)) {
+        if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
+            [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+    }
 }
 
 - (void)updatePreviewView:(bool)full
@@ -2352,13 +2360,17 @@
 
 - (bool)hasOnScreenNavigation {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     return hasOnScreenNavigation;
 }
 
 - (UIInterfaceOrientation)effectiveOrientation {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [self effectiveOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
 }
 
 - (UIInterfaceOrientation)effectiveOrientation:(UIInterfaceOrientation)orientation {

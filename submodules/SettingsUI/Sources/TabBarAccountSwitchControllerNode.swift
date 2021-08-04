@@ -189,7 +189,7 @@ private final class SwitchAccountItemNode: ASDisplayNode, AbstractSwitchAccountI
         return (titleSize.width + leftInset + rightInset, height, { width in
             let avatarSize = CGSize(width: 30.0, height: 30.0)
             self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((leftInset - avatarSize.width) / 2.0), y: floor((height - avatarSize.height) / 2.0)), size: avatarSize)
-            self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme, peer: self.peer)
+            self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme, peer: EnginePeer(self.peer))
             
             self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
             

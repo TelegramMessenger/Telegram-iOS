@@ -8,6 +8,7 @@
 @interface TGCameraTimeCodeView ()
 {
     UIView *_backgroundView;
+    UIView *_recordingBackgroundView;
     UILabel *_timeLabel;
     
     NSUInteger _recordingDurationSeconds;
@@ -25,9 +26,16 @@
         _backgroundView = [[UIView alloc] init];
         _backgroundView.clipsToBounds = true;
         _backgroundView.layer.cornerRadius = 4.0;
-        _backgroundView.backgroundColor = [TGCameraInterfaceAssets redColor];
+        _backgroundView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
         _backgroundView.alpha = 0.0;
         [self addSubview:_backgroundView];
+        
+        _recordingBackgroundView = [[UIView alloc] init];
+        _recordingBackgroundView.clipsToBounds = true;
+        _recordingBackgroundView.layer.cornerRadius = 4.0;
+        _recordingBackgroundView.backgroundColor = [TGCameraInterfaceAssets redColor];
+        _recordingBackgroundView.alpha = 0.0;
+        [self addSubview:_recordingBackgroundView];
         
         _timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
         _timeLabel.backgroundColor = [UIColor clearColor];
@@ -45,6 +53,12 @@
     [self stopRecording];
 }
 
+- (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    _interfaceOrientation = interfaceOrientation;
+    
+    _backgroundView.alpha = UIInterfaceOrientationIsLandscape(interfaceOrientation) ? 1.0 : 0.0;
+}
+
 - (void)_updateRecordingTime
 {
     if (_recordingDurationSeconds > 60 * 60) {
@@ -57,6 +71,7 @@
     CGFloat inset = 8.0f;
     CGFloat backgroundWidth = _timeLabel.frame.size.width + inset * 2.0;
     _backgroundView.frame = CGRectMake(floor((self.frame.size.width - backgroundWidth) / 2.0), 0.0, backgroundWidth, 28.0);
+    _recordingBackgroundView.frame = _backgroundView.frame;
     
     _timeLabel.frame = CGRectMake(floor((self.frame.size.width - _timeLabel.frame.size.width) / 2.0), floor((28 - _timeLabel.frame.size.height) / 2.0), _timeLabel.frame.size.width, _timeLabel.frame.size.height);
 }
@@ -66,12 +81,20 @@
     [self reset];
     
     _recordingTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(recordingTimerEvent) interval:1.0 repeat:false];
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        _recordingBackgroundView.alpha = 1.0;
+    }];
 }
 
 - (void)stopRecording
 {
     [_recordingTimer invalidate];
     _recordingTimer = nil;
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        _recordingBackgroundView.alpha = 0.0;
+    }];
 }
 
 - (void)reset

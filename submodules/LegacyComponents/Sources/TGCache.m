@@ -449,11 +449,6 @@ static NSFileManager *cacheFileManager = nil;
             {
                 cacheRecord.date = CFAbsoluteTimeGetCurrent();
                 
-                if (false)
-                {
-                    dataImage = [[UIImage alloc] initWithData:cacheRecord.object];
-                }
-                else
                 {
                     NSDictionary *dict = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:true] forKey:(id)kCGImageSourceShouldCache];
                     CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef)cacheRecord.object, nil);

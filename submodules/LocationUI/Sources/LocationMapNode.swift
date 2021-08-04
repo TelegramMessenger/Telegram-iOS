@@ -178,7 +178,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var proximityDimView = UIImageView()
     var proximityIndicatorRadius: Double? {
         didSet {
-            if let radius = self.proximityIndicatorRadius, let mapView = self.mapView {
+            if let _ = self.proximityIndicatorRadius, let mapView = self.mapView {
                 if self.proximityDimView.image == nil {
                     proximityDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }

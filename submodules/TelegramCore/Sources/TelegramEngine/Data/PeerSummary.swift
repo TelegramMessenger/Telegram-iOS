@@ -57,5 +57,36 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+
+        public struct GroupCallDescription: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<EngineGroupCallDescription>
+
+            fileprivate var id: EnginePeer.Id
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedPeerData = view.cachedPeerData else {
+                    return nil
+                }
+                switch cachedPeerData {
+                case let channel as CachedChannelData:
+                    return channel.activeCall.flatMap(EngineGroupCallDescription.init)
+                case let group as CachedGroupData:
+                    return group.activeCall.flatMap(EngineGroupCallDescription.init)
+                default:
+                    return nil
+                }
+            }
+        }
     }
 }

@@ -4,9 +4,9 @@
 
 @interface SVariable : NSObject
 
-- (instancetype)init;
+- (instancetype _Nonnull)init;
 
-- (void)set:(SSignal *)signal;
-- (SSignal *)signal;
+- (void)set:(SSignal * _Nonnull)signal;
+- (SSignal * _Nonnull)signal;
 
 @end

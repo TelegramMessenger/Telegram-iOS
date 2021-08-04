@@ -2498,4 +2498,86 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
     }
+
+    final class SnapshotState {
+        fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
+        let titleViewSnapshotState: ChatTitleView.SnapshotState?
+        let avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
+        let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
+        let titleAccessoryPanelSnapshot: UIView?
+        let navigationBarHeight: CGFloat
+
+        fileprivate init(
+            historySnapshotState: ChatHistoryListNode.SnapshotState,
+            titleViewSnapshotState: ChatTitleView.SnapshotState?,
+            avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
+            navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
+            titleAccessoryPanelSnapshot: UIView?,
+            navigationBarHeight: CGFloat
+        ) {
+            self.historySnapshotState = historySnapshotState
+            self.titleViewSnapshotState = titleViewSnapshotState
+            self.avatarSnapshotState = avatarSnapshotState
+            self.navigationButtonsSnapshotState = navigationButtonsSnapshotState
+            self.titleAccessoryPanelSnapshot = titleAccessoryPanelSnapshot
+            self.navigationBarHeight = navigationBarHeight
+        }
+    }
+
+    func prepareSnapshotState(
+        titleViewSnapshotState: ChatTitleView.SnapshotState?,
+        avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
+    ) -> SnapshotState {
+        var titleAccessoryPanelSnapshot: UIView?
+        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let snapshot = titleAccessoryPanelNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshot.frame = titleAccessoryPanelNode.frame
+            titleAccessoryPanelSnapshot = snapshot
+        }
+        return SnapshotState(
+            historySnapshotState: self.historyNode.prepareSnapshotState(),
+            titleViewSnapshotState: titleViewSnapshotState,
+            avatarSnapshotState: avatarSnapshotState,
+            navigationButtonsSnapshotState: self.navigateButtons.prepareSnapshotState(),
+            titleAccessoryPanelSnapshot: titleAccessoryPanelSnapshot,
+            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState)
+        self.navigateButtons.animateFromSnapshot(snapshotState.navigationButtonsSnapshotState)
+
+        if let titleAccessoryPanelSnapshot = snapshotState.titleAccessoryPanelSnapshot {
+            self.titleAccessoryPanelContainer.view.addSubview(titleAccessoryPanelSnapshot)
+            if let _ = self.titleAccessoryPanelNode {
+                titleAccessoryPanelSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak titleAccessoryPanelSnapshot] _ in
+                    titleAccessoryPanelSnapshot?.removeFromSuperview()
+                })
+                titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -10.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            } else {
+                titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -titleAccessoryPanelSnapshot.bounds.height), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak titleAccessoryPanelSnapshot] _ in
+                    titleAccessoryPanelSnapshot?.removeFromSuperview()
+                })
+            }
+        }
+
+        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
+            if let _ = snapshotState.titleAccessoryPanelSnapshot {
+                titleAccessoryPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 10.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+                titleAccessoryPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: true)
+            } else {
+                titleAccessoryPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -titleAccessoryPanelNode.bounds.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+            }
+        }
+
+        if let navigationBar = self.navigationBar {
+            let currentFrame = navigationBar.backgroundNode.frame
+            var previousFrame = currentFrame
+            previousFrame.size.height = snapshotState.navigationBarHeight
+            if previousFrame != currentFrame {
+                navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
+                navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
+            }
+        }
+    }
 }

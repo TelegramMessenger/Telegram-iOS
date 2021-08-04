@@ -41,13 +41,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     var signals: [Signal<Void, NoError>] = []
                     for peerId in peerIds {
-                        transaction.updatePeerChatInterfaceState(peerId, update: { current in
-                            if let current = current as? SynchronizeableChatInterfaceState {
-                                return current.withUpdatedSynchronizeableInputState(nil)
-                            } else {
-                                return nil
-                            }
-                        })
+                        _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: nil)
                         
                         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                             signals.append(network.request(Api.functions.messages.saveDraft(flags: 0, replyToMsgId: nil, peer: inputPeer, message: "", entities: nil))

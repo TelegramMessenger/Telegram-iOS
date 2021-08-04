@@ -131,7 +131,7 @@ public final class PresentationCallVideoView {
     }
 }
 
-public protocol PresentationCall: class {
+public protocol PresentationCall: AnyObject {
     var context: AccountContext { get }
     var isIntegratedWithCallKit: Bool { get }
     var internalId: CallSessionInternalId { get }
@@ -168,6 +168,26 @@ public protocol PresentationCall: class {
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
+public struct VoiceChatConfiguration {
+    public static var defaultValue: VoiceChatConfiguration {
+        return VoiceChatConfiguration(videoParticipantsMaxCount: 30)
+    }
+    
+    public let videoParticipantsMaxCount: Int32
+    
+    fileprivate init(videoParticipantsMaxCount: Int32) {
+        self.videoParticipantsMaxCount = videoParticipantsMaxCount
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> VoiceChatConfiguration {
+        if let data = appConfiguration.data, let value = data["groupcall_video_participants_max"] as? Double {
+            return VoiceChatConfiguration(videoParticipantsMaxCount: Int32(value))
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 public struct PresentationGroupCallState: Equatable {
     public enum NetworkState {
         case connecting
@@ -191,6 +211,7 @@ public struct PresentationGroupCallState: Equatable {
     public var scheduleTimestamp: Int32?
     public var subscribedToScheduled: Bool
     public var isVideoEnabled: Bool
+    public var isVideoWatchersLimitReached: Bool
     
     public init(
         myPeerId: PeerId,
@@ -204,7 +225,8 @@ public struct PresentationGroupCallState: Equatable {
         raisedHand: Bool,
         scheduleTimestamp: Int32?,
         subscribedToScheduled: Bool,
-        isVideoEnabled: Bool
+        isVideoEnabled: Bool,
+        isVideoWatchersLimitReached: Bool
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -218,6 +240,7 @@ public struct PresentationGroupCallState: Equatable {
         self.scheduleTimestamp = scheduleTimestamp
         self.subscribedToScheduled = subscribedToScheduled
         self.isVideoEnabled = isVideoEnabled
+        self.isVideoWatchersLimitReached = isVideoWatchersLimitReached
     }
 }
 
@@ -368,7 +391,7 @@ public extension GroupCallParticipantsContext.Participant {
     }
 }
 
-public protocol PresentationGroupCall: class {
+public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
@@ -436,11 +459,11 @@ public protocol PresentationGroupCall: class {
     func loadMoreMembers(token: String)
 }
 
-public protocol PresentationCallManager: class {
+public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
     func scheduleGroupCall(context: AccountContext, peerId: PeerId, endCurrentIfAny: Bool) -> RequestScheduleGroupCallResult
 }

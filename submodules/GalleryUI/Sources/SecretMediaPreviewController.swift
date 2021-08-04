@@ -237,17 +237,8 @@ public final class SecretMediaPreviewController: ViewController {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
                 let animatedOutNode = true
-                var animatedOutInterface = false
-                
-                let completion = {
-                    if animatedOutNode && animatedOutInterface {
-                        //self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                    }
-                }
                 
                 strongSelf.controllerNode.animateOut(animateContent: animatedOutNode, completion: {
-                    animatedOutInterface = true
-                    //completion()
                 })
             }
         }
@@ -437,7 +428,7 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 
-                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)), streamVideos: false, hideControls: true, isSecret: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
+                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)), streamVideos: false, hideControls: true, isSecret: true, playbackRate: { nil }, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                 }, present: { _, _ in }) else {
                     self._ready.set(.single(true))

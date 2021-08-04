@@ -40,7 +40,7 @@ private protocol SemanticStatusNodeStateDrawingState: NSObjectProtocol {
     func draw(context: CGContext, size: CGSize, foregroundColor: UIColor)
 }
 
-private protocol SemanticStatusNodeStateContext: class {
+private protocol SemanticStatusNodeStateContext: AnyObject {
     var isAnimating: Bool { get }
     var requestUpdate: () -> Void { get set }
     
@@ -273,6 +273,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                     strongSelf.requestUpdate()
                 }
             }
+            self.animationNode?.enqueueState(self.icon == .play ? .play : .pause, animated: false)
             self.iconImage = self.animationNode?.image
             self.iconOffset = 1.5
         }

@@ -493,7 +493,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                     context = current
                     context.updateApiEnvironment({ _ in return apiEnvironment})
                 } else {
-                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)!
+                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
                     store.contexts[key] = context
                 }
                 contextValue = context

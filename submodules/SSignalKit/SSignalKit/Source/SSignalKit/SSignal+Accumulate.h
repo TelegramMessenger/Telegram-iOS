@@ -2,7 +2,7 @@
 
 @interface SSignal (Accumulate)
 
-- (SSignal *)reduceLeft:(id)value with:(id (^)(id, id))f;
-- (SSignal *)reduceLeftWithPassthrough:(id)value with:(id (^)(id, id, void (^)(id)))f;
+- (SSignal * _Nonnull)reduceLeft:(id _Nullable)value with:(id _Nullable (^ _Nonnull)(id _Nullable, id _Nullable))f;
+- (SSignal * _Nonnull)reduceLeftWithPassthrough:(id _Nullable)value with:(id _Nullable (^ _Nonnull)(id _Nullable, id _Nullable, void (^ _Nonnull)(id _Nullable)))f;
 
 @end

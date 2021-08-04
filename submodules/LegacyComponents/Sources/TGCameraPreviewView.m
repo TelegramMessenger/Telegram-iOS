@@ -59,11 +59,8 @@
     {
         self.backgroundColor = [UIColor blackColor];
         self.clipsToBounds = true;
-        
-        if (false && iosMajorVersion() >= 8)
-            _wrapperView = [[TGCameraPreviewLayerWrapperView alloc] init];
-        else
-            _wrapperView = [[TGCameraLegacyPreviewLayerWrapperView alloc] init];
+
+        _wrapperView = [[TGCameraLegacyPreviewLayerWrapperView alloc] init];
         [self addSubview:_wrapperView];
         
         _wrapperView.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -74,8 +71,9 @@
         _fadeView.userInteractionEnabled = false;
         [self addSubview:_fadeView];
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _fadeView.accessibilityIgnoresInvertColors = true;
+        }
         
 #if TARGET_IPHONE_SIMULATOR
         _fadeView.backgroundColor = [UIColor redColor];
@@ -129,10 +127,15 @@
         if (strongSelf == nil)
             return;
         
-        if (resume)
+        if (resume) {
             [strongSelf endResetTransitionAnimated:true];
-        else
-            [strongSelf fadeInAnimated:true];
+        } else {
+            if (strongSelf->_snapshotView != nil) {
+                [strongSelf endTransitionAnimated:true];
+            } else {
+                [strongSelf fadeInAnimated:true];
+            }
+        }
     };
     
     camera.captureStopped = ^(bool pause)
@@ -225,8 +228,9 @@
     snapshotView.image = image;
     [self insertSubview:snapshotView aboveSubview:_wrapperView];
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         snapshotView.accessibilityIgnoresInvertColors = true;
+    }
     
     _snapshotView = snapshotView;
     
@@ -260,6 +264,10 @@
         [_snapshotView removeFromSuperview];
         _snapshotView = nil;
     }
+}
+
+- (bool)hasTransitionSnapshot {
+    return _snapshotView != nil;
 }
 
 - (void)beginResetTransitionAnimated:(bool)animated
@@ -319,7 +327,12 @@
     
     if (_snapshotView != nil)
     {
-        CGSize size = TGScaleToFill(_snapshotView.frame.size, _wrapperView.frame.size);
+        CGSize imageSize = _snapshotView.frame.size;
+        if ([_snapshotView isKindOfClass:[UIImageView class]]) {
+            imageSize = ((UIImageView *)_snapshotView).image.size;
+        }
+        
+        CGSize size = TGScaleToFill(imageSize, _wrapperView.frame.size);
         _snapshotView.frame = CGRectMake(floor((self.frame.size.width - size.width) / 2.0f), floor((self.frame.size.height - size.height) / 2.0f), size.width, size.height);
     }
 }

@@ -31,8 +31,9 @@
         _imageView.clipsToBounds = true;
         [self addSubview:_imageView];
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _imageView.accessibilityIgnoresInvertColors = true;
+        }
         
         _typeIconView = [[UIImageView alloc] init];
         _typeIconView.contentMode = UIViewContentModeCenter;
@@ -69,8 +70,9 @@
             [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [self addSubview:_checkButton];
             
-            if (iosMajorVersion() >= 11)
+            if (@available(iOS 11.0, *)) {
                 _checkButton.accessibilityIgnoresInvertColors = true;
+            }
         }
         
         if (_itemSelectedDisposable == nil)

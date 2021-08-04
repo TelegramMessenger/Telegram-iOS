@@ -222,7 +222,9 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
     }];
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
         _portraitToolControlView.layer.shouldRasterize = true;
     else
@@ -259,6 +261,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         else
             _landscapeToolsWrapperView.frame = toolTargetFrame;
     };
+#pragma clang diagnostic pop
     
     [UIView animateWithDuration:0.3f animations:^
     {
@@ -280,6 +283,8 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     _wrapperView.backgroundColor = [UIColor clearColor];
     
     if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
@@ -347,6 +352,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         if (completion != nil)
             completion();
     }];
+#pragma clang diagnostic pop
 }
 
 - (void)_animatePreviewViewTransitionOutToFrame:(CGRect)targetFrame saving:(bool)saving parentView:(UIView *)__unused parentView completion:(void (^)(void))completion
@@ -446,8 +452,9 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGRect containerFrame = [TGPhotoQualityController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorQualityPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
@@ -459,14 +466,18 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIInterfaceOrientation orientation = self.interfaceOrientation;
+#pragma clang diagnostic pop
     
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGRect containerFrame = [TGPhotoQualityController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorQualityPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
@@ -519,8 +530,9 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     CGFloat panelToolbarLandscapeSize = panelToolbarPortraitSize;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
@@ -741,8 +753,11 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
             [strongSelf.view insertSubview:strongSelf->_videoView belowSubview:belowView];
             
             [strongSelf->_player play];
-            
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [strongSelf updateLayout:strongSelf.interfaceOrientation];
+#pragma clang diagnostic pop
             
             strongSelf->_overlayView.hidden = true;
             [strongSelf->_overlayView setProgress:0.03f cancelEnabled:false animated:true];

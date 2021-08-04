@@ -154,7 +154,7 @@ public final class UniversalVideoManagerImpl: UniversalVideoManager {
         if let current = self.holders[content.id] {
             holder = current
         } else {
-            var foundHolder: UniversalVideoContentHolder?
+            let foundHolder: UniversalVideoContentHolder? = nil
             for (_, current) in self.holders {
                 if current.content.isEqual(to: content) {
                     //foundHolder = current

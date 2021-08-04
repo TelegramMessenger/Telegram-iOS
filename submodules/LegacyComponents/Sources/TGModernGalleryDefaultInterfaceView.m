@@ -79,8 +79,9 @@
         _closeButton.frame = [self closeButtonFrameForSize:frame.size];
         [_navigationBarView addSubview:_closeButton];
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             self.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

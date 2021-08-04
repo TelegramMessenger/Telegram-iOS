@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -60,7 +59,7 @@ class CallListGroupCallItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let context: AccountContext
     let style: ItemListStyle
-    let peer: Peer
+    let peer: EnginePeer
     let isActive: Bool
     let editing: Bool
     let interaction: CallListNodeInteraction
@@ -69,7 +68,7 @@ class CallListGroupCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, context: AccountContext, style: ItemListStyle, peer: Peer, isActive: Bool, editing: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, context: AccountContext, style: ItemListStyle, peer: EnginePeer, isActive: Bool, editing: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.context = context
         self.style = style

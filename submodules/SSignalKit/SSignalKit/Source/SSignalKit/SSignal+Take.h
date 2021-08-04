@@ -2,8 +2,8 @@
 
 @interface SSignal (Take)
 
-- (SSignal *)take:(NSUInteger)count;
-- (SSignal *)takeLast;
-- (SSignal *)takeUntilReplacement:(SSignal *)replacement;
+- (SSignal * _Nonnull)take:(NSUInteger)count;
+- (SSignal * _Nonnull)takeLast;
+- (SSignal * _Nonnull)takeUntilReplacement:(SSignal * _Nonnull)replacement;
 
 @end

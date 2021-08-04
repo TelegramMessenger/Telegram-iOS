@@ -187,7 +187,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     convertedType = .play
             }
             let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
-            }, deactivate: {
+            }, deactivate: { _ in
                 interrupted?()
                 return .complete()
             })

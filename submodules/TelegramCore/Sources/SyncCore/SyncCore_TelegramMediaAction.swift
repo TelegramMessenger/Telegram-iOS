@@ -251,6 +251,13 @@ public final class TelegramMediaAction: Media {
     }
     
     public let action: TelegramMediaActionType
+
+    public func preventsAutomaticMessageSendingFailure() -> Bool {
+        if case .historyScreenshot = self.action {
+            return true
+        }
+        return false
+    }
     
     public init(action: TelegramMediaActionType) {
         self.action = action

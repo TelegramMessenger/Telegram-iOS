@@ -396,8 +396,8 @@ public enum TabBarItemContextActionType {
             }
             navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
             if !transition.isAnimated {
-                navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
-                navigationBar.layer.cancelAnimationsRecursive(key: "position")
+                navigationBar.layer.removeAnimation(forKey: "bounds")
+                navigationBar.layer.removeAnimation(forKey: "position")
             }
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)

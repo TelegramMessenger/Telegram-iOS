@@ -87,7 +87,6 @@ public final class ConfettiView: UIView {
         let velocityYRange = Float(3.0) ..< Float(5.0)
         let angularVelocityRange = Float(1.0) ..< Float(6.0)
         let sizeVariation = Float(0.8) ..< Float(1.6)
-        let topDelayRange = Float(0.0) ..< Float(0.0)
         
         for i in 0 ..< 70 {
             let (image, size) = images[i % imageCount]
@@ -99,9 +98,6 @@ public final class ConfettiView: UIView {
         
         let sideMassRange: Range<Float> = 110.0 ..< 120.0
         let sideOriginYBase: Float = Float(frame.size.height * 9.0 / 10.0)
-        let sideOriginYVariation: Float = Float(frame.size.height / 12.0)
-        let sideOriginYRange = Float(sideOriginYBase - sideOriginYVariation) ..< Float(sideOriginYBase + sideOriginYVariation)
-        let sideOriginXRange = Float(0.0) ..< Float(100.0)
         let sideOriginVelocityValueRange = Float(1.1) ..< Float(1.3)
         let sideOriginVelocityValueScaling: Float = 2400.0 * Float(frame.height) / 896.0
         let sideOriginVelocityBase: Float = Float.pi / 2.0 + atanf(Float(CGFloat(sideOriginYBase) / (frame.size.width * 0.8)))
@@ -152,11 +148,7 @@ public final class ConfettiView: UIView {
         self.slowdownStartTimestamps[0] = 0.33
         
         var haveParticlesAboveGround = false
-        let minPositionY: CGFloat = 0.0
         let maxPositionY = self.bounds.height + 30.0
-        let minDampingX: CGFloat = 40.0
-        let maxDampingX: CGFloat = self.bounds.width - 40.0
-        let centerX: CGFloat = self.bounds.width / 2.0
         let dt: Float = 1.0 * 1.0 / 60.0
         
         let typeDelays: [Float] = [0.0, 0.01, 0.08]
@@ -220,7 +212,7 @@ public final class ConfettiView: UIView {
         var typesWithPositiveVelocity: [Bool] = [false, false, false]
         
         for particle in self.particles {
-            let (localDt, damping_) = dtAndDamping[particle.type]
+            let (localDt, _) = dtAndDamping[particle.type]
             if localDt.isZero {
                 continue
             }

@@ -261,9 +261,12 @@
     CGContextStrokePath(context);
     
     UIFont *font = [TGFont roundedFontOfSize:11];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize textSize = [label sizeWithFont:font];
     [[UIColor whiteColor] setFill];
     [label drawInRect:CGRectMake((size.width - textSize.width) / 2.0f + TGScreenPixel, 4.0f, textSize.width, textSize.height) withFont:font];
+#pragma clang diagnostic pop
     
     UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
@@ -294,8 +297,11 @@
         NSString *label = [NSString stringWithFormat:@"%ld", value];
         
         UIFont *font = [TGFont roundedFontOfSize:11];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGSize size = [label sizeWithFont:font];
         [label drawInRect:CGRectMake(floor(background.size.width - size.width) / 2.0f, 9.0f, size.width, size.height) withFont:font];
+#pragma clang diagnostic pop
         
         UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();

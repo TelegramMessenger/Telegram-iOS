@@ -29,6 +29,8 @@ NSString * const TGPhotoToolCellKind = @"TGPhotoToolCellKind";
 {
     [_toolView removeFromSuperview];
     _toolView = nil;
+
+    [super prepareForReuse];
 }
 
 - (void)setPhotoTool:(PGPhotoTool *)photoTool landscape:(bool)landscape nameWidth:(CGFloat)nameWidth changeBlock:(void (^)(PGPhotoTool *, id, bool))changeBlock interactionBegan:(void (^)(void))interactionBegan interactionEnded:(void (^)(void))interactionEnded

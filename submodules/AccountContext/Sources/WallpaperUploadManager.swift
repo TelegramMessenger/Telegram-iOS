@@ -18,7 +18,7 @@ public enum WallpaperUploadManagerStatus {
     }
 }
 
-public protocol WallpaperUploadManager: class {
+public protocol WallpaperUploadManager: AnyObject {
     func stateSignal() -> Signal<WallpaperUploadManagerStatus, NoError>
     func presentationDataUpdated(_ presentationData: PresentationData)
 }

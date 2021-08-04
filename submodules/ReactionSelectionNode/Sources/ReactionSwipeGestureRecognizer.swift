@@ -110,7 +110,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                     strongSelf.activationTimer = nil
                     if strongSelf.validatedGesture {
                         let location = strongSelf.currentLocation
-                        if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?(), let localAnchorPoint = strongSelf.getAnchorPoint?() {
+                        if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?(), let _ = strongSelf.getAnchorPoint?() {
                             strongSelf.currentContainer = reactionContainer
                             //let reactionContainerLocation = reactionContainer.view.convert(localAnchorPoint, from: strongSelf.view)
                             let elevate = strongSelf.shouldElevateAnchorPoint?() ?? false

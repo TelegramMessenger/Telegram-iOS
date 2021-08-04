@@ -261,15 +261,8 @@ public final class ReactionContextNode: ASDisplayNode {
             let row = CGFloat(rowIndex)
             let column = CGFloat(columnIndex)
             
-            let isHighlighted = false
-            
-            var itemSize: CGFloat = minimizedItemSize
-            var itemOffset: CGFloat = 0.0
-            if isHighlighted {
-                let updatedSize = itemSize * 1.15
-                itemOffset = (updatedSize - itemSize) / 2.0
-                itemSize = updatedSize
-            }
+            let itemSize: CGFloat = minimizedItemSize
+            let itemOffset: CGFloat = 0.0
             
             let itemFrame = CGRect(origin: CGPoint(x: sideInset + column * (minimizedItemSize + itemSpacing) - itemOffset, y: verticalInset + row * (rowHeight + rowSpacing) + floor((rowHeight - minimizedItemSize) / 2.0) - itemOffset), size: CGSize(width: itemSize, height: itemSize))
             transition.updateFrame(node: self.itemNodes[i], frame: itemFrame, beginWithCurrentState: true)

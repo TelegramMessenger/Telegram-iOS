@@ -13,7 +13,7 @@ import Cocoa
 import UIKit
 #endif
 
-public protocol ChartViewRenderer: class {
+public protocol ChartViewRenderer: AnyObject {
     var containerViews: [GView] { get set }
     func render(context: CGContext, bounds: CGRect, chartFrame: CGRect)
 }

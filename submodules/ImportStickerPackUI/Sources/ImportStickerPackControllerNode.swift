@@ -694,10 +694,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     }
                 }
             }
-        }, error: { [weak self] error in
-            if let strongSelf = self {
-                
-            }
+        }, error: { _ in
         }))
     }
     

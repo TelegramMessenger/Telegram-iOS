@@ -43,26 +43,6 @@ let bottomAreaHeight: CGFloat = 206.0
 private let fullscreenBottomAreaHeight: CGFloat = 80.0
 private let bottomGradientHeight: CGFloat = 70.0
 
-public struct VoiceChatConfiguration {
-    static var defaultValue: VoiceChatConfiguration {
-        return VoiceChatConfiguration(videoParticipantsMaxCount: 30)
-    }
-    
-    public let videoParticipantsMaxCount: Int32
-    
-    fileprivate init(videoParticipantsMaxCount: Int32) {
-        self.videoParticipantsMaxCount = videoParticipantsMaxCount
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> VoiceChatConfiguration {
-        if let data = appConfiguration.data, let value = data["groupcall_video_participants_max"] as? Double {
-            return VoiceChatConfiguration(videoParticipantsMaxCount: Int32(value))
-        } else {
-            return .defaultValue
-        }
-    }
-}
-
 func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
         return nil
@@ -379,7 +359,7 @@ public final class VoiceChatController: ViewController {
         }
         
         private enum ListEntry: Comparable, Identifiable {
-            case tiles([VoiceChatTileItem], VoiceChatTileLayoutMode)
+            case tiles([VoiceChatTileItem], VoiceChatTileLayoutMode, Int32, Bool)
             case invite(PresentationTheme, PresentationStrings, String, Bool)
             case peer(VoiceChatPeerEntry, Int32)
             
@@ -396,8 +376,8 @@ public final class VoiceChatController: ViewController {
             
             static func ==(lhs: ListEntry, rhs: ListEntry) -> Bool {
                 switch lhs {
-                    case let .tiles(lhsTiles, lhsLayoutMode):
-                        if case let .tiles(rhsTiles, rhsLayoutMode) = rhs, lhsTiles == rhsTiles, lhsLayoutMode == rhsLayoutMode {
+                    case let .tiles(lhsTiles, lhsLayoutMode, lhsVideoLimit, lhsReachedLimit):
+                        if case let .tiles(rhsTiles, rhsLayoutMode, rhsVideoLimit, rhsReachedLimit) = rhs, lhsTiles == rhsTiles, lhsLayoutMode == rhsLayoutMode, lhsVideoLimit == rhsVideoLimit, lhsReachedLimit == rhsReachedLimit {
                             return true
                         } else {
                             return false
@@ -644,8 +624,8 @@ public final class VoiceChatController: ViewController {
             
             func item(context: AccountContext, presentationData: PresentationData, interaction: Interaction) -> ListViewItem {
                 switch self {
-                    case let .tiles(tiles, layoutMode):
-                        return VoiceChatTilesGridItem(context: context, tiles: tiles, layoutMode: layoutMode, getIsExpanded: {
+                    case let .tiles(tiles, layoutMode, videoLimit, reachedLimit):
+                        return VoiceChatTilesGridItem(context: context, tiles: tiles, layoutMode: layoutMode, videoLimit: videoLimit, reachedLimit: reachedLimit, getIsExpanded: {
                             return interaction.isExpanded
                         })
                     case let .invite(_, _, text, isLink):
@@ -965,6 +945,8 @@ public final class VoiceChatController: ViewController {
                     return false
             }
         }
+
+        private var statsDisposable: Disposable?
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -1704,7 +1686,7 @@ public final class VoiceChatController: ViewController {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
                                         var items: [ActionSheetItem] = []
                                         
-                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: chatPeer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(peer), chatPeer: EnginePeer(chatPeer), action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
 
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
@@ -2358,6 +2340,27 @@ public final class VoiceChatController: ViewController {
                 }
                 strongSelf.appIsActive = active
             })
+
+            if self.context.sharedContext.immediateExperimentalUISettings.enableDebugDataDisplay {
+                self.statsDisposable = ((call as! PresentationGroupCallImpl).getStats()
+                |> deliverOnMainQueue
+                |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                |> restart).start(next: { [weak self] stats in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for (endpointId, videoNode) in strongSelf.videoNodes {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            videoNode.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                    if let (_, maybeEndpointId, _, _, _) = strongSelf.mainStageNode.currentPeer, let endpointId = maybeEndpointId {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            strongSelf.mainStageNode.currentVideoNode?.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                })
+            }
         }
         
         deinit {
@@ -2381,6 +2384,7 @@ public final class VoiceChatController: ViewController {
             self.readyVideoDisposables.dispose()
             self.applicationStateDisposable?.dispose()
             self.myPeerVideoReadyDisposable.dispose()
+            self.statsDisposable?.dispose()
         }
         
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -3501,23 +3505,27 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self, ready else {
                         return
                     }
+                    var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
                     if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
+                        videoView.updateIsEnabled(true)
+                        
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
                         let controller = VoiceChatCameraPreviewController(sharedContext: strongSelf.context.sharedContext, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
                             if let strongSelf = self {
                                 strongSelf.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
-                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer)
+                                (strongSelf.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer, useFrontCamera: isFrontCamera)
 
                                 if let (layout, navigationHeight) = strongSelf.validLayout {
                                     strongSelf.animatingButtonsSwap = true
                                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
                                 }
                             }
-                        }, switchCamera: { [weak self] in
+                        }, switchCamera: {
                             Queue.mainQueue().after(0.1) {
-                                self?.call.switchVideoCamera()
+                                isFrontCamera = !isFrontCamera
+                                videoCapturer.switchVideoInput(isFront: isFrontCamera)
                             }
                         })
                         strongSelf.controller?.present(controller, in: .window(.root))
@@ -4792,7 +4800,6 @@ public final class VoiceChatController: ViewController {
             
             let speakingPeersUpdated = self.currentSpeakingPeers != speakingPeers
             self.currentCallMembers = callMembers
-            self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
             
             var entries: [ListEntry] = []
@@ -5019,12 +5026,16 @@ public final class VoiceChatController: ViewController {
             
             self.joinedVideo = joinedVideo
             
+            let configuration = self.configuration ?? VoiceChatConfiguration.defaultValue
+            var reachedLimit = false
+
             if !joinedVideo && (!tileItems.isEmpty || !gridTileItems.isEmpty), let peer = self.peer {
                 tileItems.removeAll()
                 gridTileItems.removeAll()
                 
-                let configuration = self.configuration ?? VoiceChatConfiguration.defaultValue
                 tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
+            } else if let callState = self.callState, !tileItems.isEmpty && callState.isVideoWatchersLimitReached && self.connectedOnce && (callState.canManageCall || callState.adminIds.contains(self.context.account.peerId)) {
+                reachedLimit = true
             }
             
             for member in callMembers.0 {
@@ -5093,9 +5104,10 @@ public final class VoiceChatController: ViewController {
                 self.updateMainVideo(waitForFullSize: true, entries: fullscreenEntries, force: true)
                 return
             }
-            
+                        
             self.updateRequestedVideoChannels()
             
+            self.currentSpeakingPeers = speakingPeers
             self.peerIdToEndpointId = peerIdToEndpointId
                     
             var updateLayout = false
@@ -5108,11 +5120,11 @@ public final class VoiceChatController: ViewController {
                 updateLayout = true
                 self.currentTileItems = gridTileItems
                 if displayPanelVideos && !tileItems.isEmpty {
-                    entries.insert(.tiles(tileItems, .pairs), at: 0)
+                    entries.insert(.tiles(tileItems, .pairs, configuration.videoParticipantsMaxCount, reachedLimit), at: 0)
                 }
             } else {
                 if !tileItems.isEmpty {
-                    entries.insert(.tiles(tileItems, .pairs), at: 0)
+                    entries.insert(.tiles(tileItems, .pairs, configuration.videoParticipantsMaxCount, reachedLimit), at: 0)
                 }
             }
             
@@ -6032,15 +6044,15 @@ public final class VoiceChatController: ViewController {
                 } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
-                            subscriber?.putNext(duration)
-                            subscriber?.putCompletion()
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
                         })
                         
                         return SBlockDisposable(block: {
                             disposable.dispose()
                         })
                     })
-                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
                             return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                         } else {

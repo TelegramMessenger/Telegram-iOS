@@ -57,10 +57,10 @@ final class AuthorizationSequenceSplashController: ViewController {
                 
                 if let available = localization.availableLocalizations.first, available.languageCode != "en" {
                     let value = TGSuggestedLocalization(info: TGAvailableLocalization(title: available.title, localizedTitle: available.localizedTitle, code: available.languageCode), continueWithLanguageString: continueWithLanguageString, chooseLanguageString: "Choose Language", chooseLanguageOtherString: "Choose Language", englishLanguageNameString: "English")
-                    subscriber?.putNext(value)
+                    subscriber.putNext(value)
                 }
             }, completed: {
-                subscriber?.putCompletion()
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable(block: {

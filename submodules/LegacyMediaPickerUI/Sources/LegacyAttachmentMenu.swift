@@ -102,11 +102,15 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as? [Any], immediate: transitionCompletion != nil, appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
+            var selectableResult: TGMediaSelectableItem?
+            if let result = result {
+                selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+            }
+            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
                 nativeGenerator(_1, _2, _3, _4, nil)
             })
             sendMessagesWithSignals(signals, false, 0)
@@ -319,7 +323,11 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
-                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
+                    var selectableResult: TGMediaSelectableItem?
+                    if let result = result {
+                        selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+                    }
+                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
                         nativeGenerator(_1, _2, _3, _4, nil)
                     })
                     sendMessagesWithSignals(signals, false, 0, { _ in nil}, {})

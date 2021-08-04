@@ -199,6 +199,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     break
                 }
             }
+            if item.message.id.namespace == Namespaces.Message.Local {
+                notConsumed = true
+            }
             
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia || updatedMessageId {
@@ -774,9 +777,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if !self.bounds.contains(point) {
             return nil
         }
-        if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.15 * playbackNode.frame.width, dy: 0.15 * playbackNode.frame.height).contains(point) {
+        if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.2 * playbackNode.frame.width, dy: 0.2 * playbackNode.frame.height).contains(point) {
             let distanceFromCenter = point.distanceTo(playbackNode.position)
-            if distanceFromCenter < 0.15 * playbackNode.frame.width {
+            if distanceFromCenter < 0.2 * playbackNode.frame.width {
                 return self.view
             } else {
                 return playbackNode.view
@@ -917,6 +920,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
 
+    private var animatedFadeIn = false
     func animateFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
         guard let videoFrame = self.videoFrame else {
             return
@@ -934,9 +938,12 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
 
         transition.horizontal.animateTransformScale(node: self, from: 1.0 / scale)
 
-        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
-        if let durationNode = self.durationNode {
-            durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
+        if !self.animatedFadeIn {
+            self.animatedFadeIn = true
+            self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
+            if let durationNode = self.durationNode {
+                durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
+            }
         }
     }
 }

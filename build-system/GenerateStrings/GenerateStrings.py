@@ -402,9 +402,15 @@ static _FormattedString * _Nonnull formatWithArgumentRanges(
             [result appendString:[string substringWithRange:
                 NSMakeRange(currentLocation, range.range.location - currentLocation)]];
         }
+        NSString *argument = nil;
+        if (range.index >= 0 && range.index < arguments.count) {
+            argument = arguments[range.index];
+        } else {
+            argument = @"?";
+        }
         [resultingRanges addObject:[[_FormattedStringRange alloc] initWithIndex:range.index
-            range:NSMakeRange(result.length, arguments[range.index].length)]];
-        [result appendString:arguments[range.index]];
+            range:NSMakeRange(result.length, argument.length)]];
+        [result appendString:argument];
         currentLocation = range.range.location + range.range.length;
     }
     

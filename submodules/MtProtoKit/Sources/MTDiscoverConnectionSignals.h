@@ -11,10 +11,10 @@ typedef struct {
 
 @interface MTDiscoverConnectionSignals : NSObject
 
-+ (NSData *)payloadData:(MTPayloadData *)outPayloadData context:(MTContext *)context address:(MTDatacenterAddress *)address;
++ (NSData * _Nonnull)payloadData:(MTPayloadData * _Nonnull)outPayloadData context:(MTContext * _Nonnull)context address:(MTDatacenterAddress * _Nonnull)address;
 
-+ (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy;
++ (MTSignal * _Nonnull)discoverSchemeWithContext:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId addressList:(NSArray * _Nonnull)addressList media:(bool)media isProxy:(bool)isProxy;
 
-+ (MTSignal * _Nonnull)checkIfAuthKeyRemovedWithContext:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authKey:(MTDatacenterAuthKey *)authKey;
++ (MTSignal * _Nonnull)checkIfAuthKeyRemovedWithContext:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authKey:(MTDatacenterAuthKey * _Nonnull)authKey;
 
 @end

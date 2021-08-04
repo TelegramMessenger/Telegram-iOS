@@ -8,6 +8,7 @@ swift_library(
     ]),
     copts = [
         "-O",
+        "-warnings-as-errors",
     ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

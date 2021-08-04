@@ -124,18 +124,10 @@ static bool FBCompareTypeEncoding(const char *objctype, POPValueType type)
               );
       
     case kPOPValueSCNVector3:
-#if SCENEKIT_SDK_AVAILABLE
-      return strcmp(objctype, @encode(SCNVector3)) == 0;
-#else
       return false;
-#endif
       
     case kPOPValueSCNVector4:
-#if SCENEKIT_SDK_AVAILABLE
-      return strcmp(objctype, @encode(SCNVector4)) == 0;
-#else
       return false;
-#endif
       
     default:
       return false;
@@ -229,16 +221,6 @@ id POPBox(VectorConstRef vec, POPValueType type, bool force)
       return (__bridge_transfer id)vec->cg_color();
       break;
     }
-#if SCENEKIT_SDK_AVAILABLE
-    case kPOPValueSCNVector3: {
-      return [NSValue valueWithSCNVector3:vec->scn_vector3()];
-      break;
-    }
-    case kPOPValueSCNVector4: {
-      return [NSValue valueWithSCNVector4:vec->scn_vector4()];
-      break;
-    }
-#endif
     default:
       return force ? [NSValue valueWithCGPoint:vec->cg_point()] : nil;
       break;
@@ -274,14 +256,6 @@ static VectorRef vectorize(id value, POPValueType type)
     case kPOPValueColor:
       vec = Vector::new_cg_color(POPCGColorWithColor(value));
       break;
-#if SCENEKIT_SDK_AVAILABLE
-    case kPOPValueSCNVector3:
-      vec = Vector::new_scn_vector3([value SCNVector3Value]);
-      break;
-    case kPOPValueSCNVector4:
-      vec = Vector::new_scn_vector4([value SCNVector4Value]);
-      break;
-#endif
     default:
       break;
   }

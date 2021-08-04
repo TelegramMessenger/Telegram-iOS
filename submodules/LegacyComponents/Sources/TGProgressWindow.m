@@ -121,7 +121,7 @@ static bool TGProgressWindowIsLight = true;
     [self dismiss:animated completion:nil];
 }
 
-- (void)dismiss:(bool)animated completion:(void (^)())completion
+- (void)dismiss:(bool)animated completion:(void (^)(void))completion
 {
     TGProgressWindow *window = (TGProgressWindow *)_weakWindow;
     

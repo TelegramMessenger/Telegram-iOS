@@ -76,8 +76,9 @@
         orientation = UIInterfaceOrientationPortrait;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = _controller.view.safeAreaInsets.bottom > FLT_EPSILON;
+    }
     
     CGSize referenceViewSize = [_controller referenceViewSizeForOrientation:orientation];
     CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceViewSize.width, referenceViewSize.height) toolbarLandscapeSize:_controller.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:hasOnScreenNavigation];

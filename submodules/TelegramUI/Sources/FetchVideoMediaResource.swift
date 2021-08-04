@@ -357,8 +357,8 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
-                            subscriber?.putNext(duration)
-                            subscriber?.putCompletion()
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
                         })
                         
                         return SBlockDisposable(block: {
@@ -366,7 +366,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                         })
                     })
                     
-                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
                             return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
                                 var value = stat()

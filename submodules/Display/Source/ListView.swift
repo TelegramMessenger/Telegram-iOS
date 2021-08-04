@@ -2661,24 +2661,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             }
                     }
                     
-                    if !offset.isZero {
-                        let scrollToItemTransition: ContainedViewLayoutTransition
-                        if !scrollToItem.animated {
-                            scrollToItemTransition = .immediate
-                        } else {
-                            switch scrollToItem.curve {
-                            case let .Spring(duration):
-                                scrollToItemTransition = .animated(duration: duration, curve: .spring)
-                            case let .Default(duration):
-                                scrollToItemTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                            case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
-                                scrollToItemTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
-                            }
-                        }
-                        
-                        //self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
-                    }
-                    
                     for itemNode in self.itemNodes {
                         var frame = itemNode.frame
                         frame.origin.y += offset
@@ -2749,24 +2731,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.scrollIndicatorInsets = updateSizeAndInsets.scrollIndicatorInsets ?? self.insets
                 self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                 self.visibleSize = updateSizeAndInsets.size
-                
-                let updateSizeAndInsetsTransition: ContainedViewLayoutTransition
-                if updateSizeAndInsets.duration.isZero {
-                    updateSizeAndInsetsTransition = .immediate
-                } else {
-                    switch updateSizeAndInsets.curve {
-                    case let .Spring(duration):
-                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .spring)
-                    case let .Default(duration):
-                        updateSizeAndInsetsTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
-                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
-                    }
-                }
-
-                if !offsetFix.isZero {
-                    //self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
-                }
                 
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
@@ -4437,7 +4401,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for (_, headerNode) in self.itemHeaderNodes {
             let headerNodeFrame = headerNode.frame
             if headerNodeFrame.contains(point) {
-                return headerNode.hitTest(point.offsetBy(dx: -headerNodeFrame.minX, dy: -headerNodeFrame.minY), with: event)
+                return headerNode.hitTest(self.view.convert(point, to: headerNode.view), with: event)
             }
         }
         return nil

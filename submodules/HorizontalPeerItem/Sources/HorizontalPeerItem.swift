@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
@@ -24,15 +23,15 @@ public final class HorizontalPeerItem: ListViewItem {
     let strings: PresentationStrings
     let mode: HorizontalPeerItemMode
     let context: AccountContext
-    public let peer: Peer
-    let action: (Peer) -> Void
-    let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
-    let isPeerSelected: (PeerId) -> Bool
+    public let peer: EnginePeer
+    let action: (EnginePeer) -> Void
+    let contextAction: (EnginePeer, ASDisplayNode, ContextGesture?) -> Void
+    let isPeerSelected: (EnginePeer.Id) -> Bool
     let customWidth: CGFloat?
-    let presence: PeerPresence?
+    let presence: EnginePeer.Presence?
     let unreadBadge: (Int32, Bool)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, context: AccountContext, peer: Peer, presence: PeerPresence?, unreadBadge: (Int32, Bool)?, action: @escaping (Peer) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, context: AccountContext, peer: EnginePeer, presence: EnginePeer.Presence?, unreadBadge: (Int32, Bool)?, action: @escaping (EnginePeer) -> Void, contextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
@@ -163,7 +162,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
             
             var online = false
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            if let peer = item.peer as? TelegramUser, let presence = item.presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) {
+            if case let .user(peer) = item.peer, let presence = item.presence, !item.peer.isService, !peer.flags.contains(.isSupport) {
                 let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
                 if case .online = relativeStatus {
                     online = true
@@ -187,7 +186,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme
-                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: synchronousLoads)
+                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: EngineRenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: synchronousLoads)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

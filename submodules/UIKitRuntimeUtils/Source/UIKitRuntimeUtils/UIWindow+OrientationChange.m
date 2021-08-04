@@ -16,6 +16,12 @@ static NSMutableArray *postDeviceDidChangeOrientationBlocks() {
 
 static bool _isDeviceRotating = false;
 
+@interface UIView (OrientationChangeDeps)
+
+- (void)_updateToInterfaceOrientation:(int)arg1 duration:(double)arg2 force:(BOOL)arg3;
+
+@end
+
 @implementation UIWindow (OrientationChange)
 
 + (void)load {
@@ -112,6 +118,10 @@ static bool _isDeviceRotating = false;
 
 + (bool)isDeviceRotating {
     return _isDeviceRotating;
+}
+
+- (void)_updateToInterfaceOrientation:(int)arg1 duration:(double)arg2 force:(BOOL)arg3 {
+    [super _updateToInterfaceOrientation:arg1 duration:arg2 force:arg3];
 }
 
 @end

@@ -43,11 +43,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     }
 
     private var forwardInfoNode: ChatMessageForwardInfoNode?
-    private var forwardBackgroundNode: ASImageNode?
+    private var forwardBackgroundNode: NavigationBackgroundNode?
     
     private var viaBotNode: TextNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
-    private var replyBackgroundNode: ASImageNode?
+    private var replyBackgroundNode: NavigationBackgroundNode?
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
@@ -69,6 +69,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
         }
     }
+    
+    private var wasPlaying = false
     
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -97,7 +99,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 return false
             }
             if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
-                return false
+                return strongSelf.interactiveVideoNode.frame.insetBy(dx: 0.15 * strongSelf.interactiveVideoNode.frame.width, dy: 0.15 * strongSelf.interactiveVideoNode.frame.height).contains(location)
             }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
                 if case .action = action {
@@ -126,7 +128,21 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
                     strongSelf.recognizer?.cancel()
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    if strongSelf.appliedCurrentlyPlaying && strongSelf.interactiveVideoNode.isPlaying {
+                        strongSelf.wasPlaying = true
+                        strongSelf.interactiveVideoNode.pause()
+                    }
                 }
+            }
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] extracted, _ in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            if !extracted && strongSelf.wasPlaying {
+                strongSelf.wasPlaying = false
+                strongSelf.interactiveVideoNode.play()
             }
         }
         
@@ -373,11 +389,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: ASImageNode?
+            var updatedReplyBackgroundNode: NavigationBackgroundNode?
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - normalDisplaySize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
             var ignoreForward = false
             var ignoreSource = false
@@ -416,6 +432,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                         
                         viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                        
+                        ignoreForward = true
                     }
                 }
                 
@@ -448,11 +466,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                     updatedReplyBackgroundNode = currentReplyBackgroundNode
                 } else {
-                    updatedReplyBackgroundNode = ASImageNode()
+                    updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                 }
                 
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+                updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
             }
             
             var updatedShareButtonNode: ChatMessageShareButton?
@@ -471,7 +488,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             var forwardAuthorSignature: String?
             
             var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
-            var updatedForwardBackgroundNode: ASImageNode?
+            var updatedForwardBackgroundNode: NavigationBackgroundNode?
             var forwardBackgroundImage: UIImage?
             
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
@@ -495,17 +512,16 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         forwardAuthorSignature = forwardInfo.authorSignature
                     }
                 }
-                let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
+                let availableWidth = max(60.0, availableContentWidth - normalDisplaySize.width + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode
                 } else {
-                    updatedForwardBackgroundNode = ASImageNode()
+                    updatedForwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                 }
                 
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                forwardBackgroundImage = graphics.chatServiceBubbleFillImage
+                updatedForwardBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
             }
             
             var maxContentWidth = normalDisplaySize.width
@@ -597,10 +613,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                             if strongSelf.replyBackgroundNode == nil {
                                 strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                                strongSelf.addSubnode(updatedReplyBackgroundNode)
-                                updatedReplyBackgroundNode.image = replyBackgroundImage
-                            } else {
-                                strongSelf.replyBackgroundNode?.image = replyBackgroundImage
+                                strongSelf.contextSourceNode.contentNode.addSubnode(updatedReplyBackgroundNode)
                             }
                         } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
                             replyBackgroundNode.removeFromSupernode()
@@ -611,11 +624,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             let viaBotNode = viaBotApply()
                             if strongSelf.viaBotNode == nil {
                                 strongSelf.viaBotNode = viaBotNode
-                                strongSelf.addSubnode(viaBotNode)
+                                strongSelf.contextSourceNode.contentNode.addSubnode(viaBotNode)
                             }
                             let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0), size: viaBotLayout.size)
                             viaBotNode.frame = viaBotFrame
-                            strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 4.0, y: viaBotFrame.minY - 2.0), size: CGSize(width: viaBotFrame.size.width + 8.0, height: viaBotFrame.size.height + 5.0))
+                            let replyBackgroundFrame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 4.0, y: viaBotFrame.minY - 2.0), size: CGSize(width: viaBotFrame.size.width + 8.0, height: viaBotFrame.size.height + 5.0))
+                            strongSelf.replyBackgroundNode?.frame = replyBackgroundFrame
+                            strongSelf.replyBackgroundNode?.update(size: replyBackgroundFrame.size, cornerRadius: 8.0, transition: .immediate)
                         } else if let viaBotNode = strongSelf.viaBotNode {
                             viaBotNode.removeFromSupernode()
                             strongSelf.viaBotNode = nil
@@ -625,7 +640,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             let replyInfoNode = replyInfoApply()
                             if strongSelf.replyInfoNode == nil {
                                 strongSelf.replyInfoNode = replyInfoNode
-                                strongSelf.addSubnode(replyInfoNode)
+                                strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
                             }
                             var viaBotSize = CGSize()
                             if let viaBotNode = strongSelf.viaBotNode {
@@ -638,7 +653,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                 }
                             }
                             replyInfoNode.frame = replyInfoFrame
-                            strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                            let replyBackgroundFrame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                            strongSelf.replyBackgroundNode?.frame = replyBackgroundFrame
+                            strongSelf.replyBackgroundNode?.update(size: replyBackgroundFrame.size, cornerRadius: 8.0, transition: .immediate)
                         } else if let replyInfoNode = strongSelf.replyInfoNode {
                             replyInfoNode.removeFromSupernode()
                             strongSelf.replyInfoNode = nil
@@ -678,8 +695,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         if let updatedForwardBackgroundNode = updatedForwardBackgroundNode {
                             if strongSelf.forwardBackgroundNode == nil {
                                 strongSelf.forwardBackgroundNode = updatedForwardBackgroundNode
-                                strongSelf.addSubnode(updatedForwardBackgroundNode)
-                                updatedForwardBackgroundNode.image = forwardBackgroundImage
+                                strongSelf.contextSourceNode.contentNode.addSubnode(updatedForwardBackgroundNode)
                             }
                         } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
                             forwardBackgroundNode.removeFromSupernode()
@@ -690,7 +706,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             let forwardInfoNode = forwardInfoApply(forwardInfoSize.width)
                             if strongSelf.forwardInfoNode == nil {
                                 strongSelf.forwardInfoNode = forwardInfoNode
-                                strongSelf.addSubnode(forwardInfoNode)
+                                strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
                                 forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
                                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
                                         return
@@ -700,7 +716,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             }
                             let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                             forwardInfoNode.frame = forwardInfoFrame
-                            strongSelf.forwardBackgroundNode?.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                            let forwardBackgroundFrame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                            strongSelf.forwardBackgroundNode?.frame = forwardBackgroundFrame
+                            strongSelf.forwardBackgroundNode?.update(size: forwardBackgroundFrame.size, cornerRadius: 8.0, transition: .immediate)
                         } else if let forwardInfoNode = strongSelf.forwardInfoNode {
                             forwardInfoNode.removeFromSupernode()
                             strongSelf.forwardInfoNode = nil

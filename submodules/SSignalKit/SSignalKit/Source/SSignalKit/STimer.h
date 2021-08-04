@@ -4,8 +4,8 @@
 
 @interface STimer : NSObject
 
-- (id)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t)completion queue:(SQueue *)queue;
-- (id)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t)completion nativeQueue:(dispatch_queue_t)nativeQueue;
+- (instancetype _Nonnull)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t _Nonnull)completion queue:(SQueue * _Nonnull)queue;
+- (instancetype _Nonnull)initWithTimeout:(NSTimeInterval)timeout repeat:(bool)repeat completion:(dispatch_block_t _Nonnull)completion nativeQueue:(dispatch_queue_t _Nonnull)nativeQueue;
 
 - (void)start;
 - (void)invalidate;

@@ -2,9 +2,9 @@
 
 @interface SSignal (Single)
 
-+ (SSignal *)single:(id)next;
-+ (SSignal *)fail:(id)error;
-+ (SSignal *)never;
-+ (SSignal *)complete;
++ (SSignal * _Nonnull)single:(id _Nullable)next;
++ (SSignal * _Nonnull)fail:(id _Nullable)error;
++ (SSignal * _Nonnull)never;
++ (SSignal * _Nonnull)complete;
 
 @end

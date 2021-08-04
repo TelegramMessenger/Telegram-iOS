@@ -160,7 +160,6 @@ public func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaRes
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 options[kCGImageSourceShouldCache as NSString] = false as NSNumber

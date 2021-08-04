@@ -65,8 +65,8 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         self.addSubnode(self.channelAvatarNode)
         self.addSubnode(self.textNode)
         
-        self.channelAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: channelPeer)
-        self.groupAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: groupPeer)
+        self.channelAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: EnginePeer(channelPeer))
+        self.groupAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: EnginePeer(groupPeer))
         
         let text: PresentationStrings.FormattedString
         if let channelPeer = channelPeer as? TelegramChannel, let addressName = channelPeer.addressName, !addressName.isEmpty {

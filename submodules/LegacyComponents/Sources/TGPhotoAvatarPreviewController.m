@@ -715,7 +715,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (void)updateToolViews
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIInterfaceOrientation orientation = self.interfaceOrientation;
+#pragma clang diagnostic pop
     if ([self inFormSheet] || TGIsPad())
     {
         _landscapeToolsWrapperView.hidden = true;

@@ -267,6 +267,8 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 
 - (void)setCenterButtonImage:(UIImage *)centerButtonImage
 {
+    _centerButtonImage = centerButtonImage;
+
     if (_centerButton == nil)
     {
         _centerButton = [[TGModernButton alloc] initWithFrame:CGRectMake(round((self.frame.size.width - 60.0f) / 2.0f), 0, 60, 44)];
@@ -281,6 +283,8 @@ const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 
 - (void)setCenterButtonSelectedImage:(UIImage *)centerButtonSelectedImage
 {
+    _centerButtonSelectedImage = centerButtonSelectedImage;
+    
     [_centerButton setImage:centerButtonSelectedImage forState:UIControlStateSelected];
     [_centerButton setImage:centerButtonSelectedImage forState:UIControlStateSelected | UIControlStateHighlighted];
 }

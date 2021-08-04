@@ -38,10 +38,18 @@ private var fadeImage: UIImage? = {
     return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
-        var locations: [CGFloat] = [1.0, 0.0]
-        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+        let stepCount = 10
+        var colors: [CGColor] = []
+        var locations: [CGFloat] = []
+
+        for i in 0 ... stepCount {
+            let t = CGFloat(i) / CGFloat(stepCount)
+            colors.append(fadeColor.withAlphaComponent((1.0 - t * t) * 0.7).cgColor)
+            locations.append(t)
+        }
+
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     })
 }()
@@ -606,7 +614,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)
 //                    }
@@ -692,7 +700,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                     
-                                    if let item = strongSelf.item, strongSelf.videoNode != nil && !active {
+                                    if let _ = strongSelf.item, strongSelf.videoNode != nil && !active {
                                         audioLevelView.alpha = 0.0
                                     }
                                 }
@@ -744,7 +752,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     var hadMicrophoneNode = false
                     var hadRaiseHandNode = false

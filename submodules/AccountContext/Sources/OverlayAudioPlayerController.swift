@@ -1,5 +1,5 @@
 import Foundation
 
-public protocol OverlayAudioPlayerController: class {
+public protocol OverlayAudioPlayerController: AnyObject {
     
 }

@@ -18,6 +18,10 @@
 @class TGMediaPickerGallerySelectedItemsModel;
 @class TGMediaEditingContext;
 
+@interface TGCameraCornersView : UIImageView
+
+@end
+
 @interface TGCameraMainView : UIView
 {
     UIInterfaceOrientation _interfaceOrientation;
@@ -49,9 +53,11 @@
 
 @property (nonatomic, copy) void(^focusPointChanged)(CGPoint point);
 @property (nonatomic, copy) void(^expositionChanged)(CGFloat value);
+@property (nonatomic, copy) void(^zoomChanged)(CGFloat level, bool animated);
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
+@property (nonatomic, copy) void(^shutterPanGesture)(UIPanGestureRecognizer *gesture);
 @property (nonatomic, copy) void(^cancelPressed)(void);
 @property (nonatomic, copy) void(^donePressed)(void);
 @property (nonatomic, copy) void(^resultPressed)(NSInteger index);
@@ -61,7 +67,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;
@@ -88,6 +94,7 @@
 
 - (void)shutterButtonPressed;
 - (void)shutterButtonReleased;
+- (void)shutterButtonPanGesture:(UIPanGestureRecognizer *)gestureRecognizer;
 - (void)flipButtonPressed;
 - (void)cancelButtonPressed;
 - (void)doneButtonPressed;
@@ -105,8 +112,6 @@
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;
-
-- (void)layoutPreviewRelativeViews;
 
 - (void)photoCounterButtonPressed;
 

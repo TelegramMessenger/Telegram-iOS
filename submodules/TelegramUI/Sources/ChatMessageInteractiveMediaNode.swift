@@ -899,6 +899,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
                                         if let strongSelf = self {
                                             strongSelf.videoNode?.isHidden = !owns
+                                            if owns {
+                                                strongSelf.videoNode?.setBaseRate(1.0)
+                                                strongSelf.videoNode?.continuePlayingWithoutSound()
+                                            }
                                         }
                                     }
                                     strongSelf.videoContent = videoContent

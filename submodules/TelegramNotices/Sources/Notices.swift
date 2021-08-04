@@ -137,6 +137,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case callsTabTip = 18
     case chatFolderTips = 19
     case locationProximityAlertTip = 20
+    case nextChatSuggestionTip = 21
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -267,6 +268,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func locationProximityAlertTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.locationProximityAlertTip.key)
+    }
+
+    static func nextChatSuggestionTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.nextChatSuggestionTip.key)
     }
 }
 
@@ -733,6 +738,28 @@ public struct ApplicationSpecificNotice {
             currentValue += count
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+
+    public static func getNextChatSuggestionTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.nextChatSuggestionTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementNextChatSuggestionTip(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.nextChatSuggestionTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            transaction.setNotice(ApplicationSpecificNoticeKeys.nextChatSuggestionTip(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
     

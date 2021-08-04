@@ -14,7 +14,7 @@ import TelegramNotices
 import AppBundle
 import TooltipUI
 
-protocol CallControllerNodeProtocol: class {
+protocol CallControllerNodeProtocol: AnyObject {
     var isMuted: Bool { get set }
     
     var toggleMute: (() -> Void)? { get set }

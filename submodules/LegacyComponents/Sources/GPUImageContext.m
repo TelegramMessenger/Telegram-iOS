@@ -259,7 +259,7 @@ static void *openGLESContextQueueKey;
 #if TARGET_IPHONE_SIMULATOR
     return NO;
 #else
-    return (CVOpenGLESTextureCacheCreate != NULL);
+    return true;
 #endif
 }
 

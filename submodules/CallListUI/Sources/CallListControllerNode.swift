@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -25,8 +24,8 @@ private struct CallListNodeListViewTransition {
     let stationaryItemRange: (Int, Int)?
 }
 
-private extension CallListViewEntry {
-    var lowestIndex: MessageIndex {
+private extension EngineCallList.Item {
+    var lowestIndex: EngineMessage.Index {
         switch self {
             case let .hole(index):
                 return index
@@ -42,7 +41,7 @@ private extension CallListViewEntry {
         }
     }
     
-    var highestIndex: MessageIndex {
+    var highestIndex: EngineMessage.Index {
         switch self {
         case let .hole(index):
             return index
@@ -60,14 +59,14 @@ private extension CallListViewEntry {
 }
 
 final class CallListNodeInteraction {
-    let setMessageIdWithRevealedOptions: (MessageId?, MessageId?) -> Void
-    let call: (PeerId, Bool) -> Void
-    let openInfo: (PeerId, [Message]) -> Void
-    let delete: ([MessageId]) -> Void
+    let setMessageIdWithRevealedOptions: (EngineMessage.Id?, EngineMessage.Id?) -> Void
+    let call: (EnginePeer.Id, Bool) -> Void
+    let openInfo: (EnginePeer.Id, [EngineMessage]) -> Void
+    let delete: ([EngineMessage.Id]) -> Void
     let updateShowCallsTab: (Bool) -> Void
-    let openGroupCall: (PeerId) -> Void
+    let openGroupCall: (EnginePeer.Id) -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void, openGroupCall: @escaping (PeerId) -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (EngineMessage.Id?, EngineMessage.Id?) -> Void, call: @escaping (EnginePeer.Id, Bool) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, delete: @escaping ([EngineMessage.Id]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void, openGroupCall: @escaping (EnginePeer.Id) -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
@@ -82,7 +81,7 @@ struct CallListNodeState: Equatable {
     let dateTimeFormat: PresentationDateTimeFormat
     let disableAnimations: Bool
     let editing: Bool
-    let messageIdWithRevealedOptions: MessageId?
+    let messageIdWithRevealedOptions: EngineMessage.Id?
     
     func withUpdatedPresentationData(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> CallListNodeState {
         return CallListNodeState(presentationData: presentationData, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations, editing: self.editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
@@ -92,7 +91,7 @@ struct CallListNodeState: Equatable {
         return CallListNodeState(presentationData: self.presentationData, dateTimeFormat: self.dateTimeFormat, disableAnimations: self.disableAnimations, editing: editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
     }
     
-    func withUpdatedMessageIdWithRevealedOptions(_ messageIdWithRevealedOptions: MessageId?) -> CallListNodeState {
+    func withUpdatedMessageIdWithRevealedOptions(_ messageIdWithRevealedOptions: EngineMessage.Id?) -> CallListNodeState {
         return CallListNodeState(presentationData: self.presentationData, dateTimeFormat: self.dateTimeFormat, disableAnimations: self.disableAnimations, editing: self.editing, messageIdWithRevealedOptions: messageIdWithRevealedOptions)
     }
     
@@ -177,9 +176,9 @@ final class CallListControllerNode: ASDisplayNode {
         return _ready.get()
     }
     
-    var peerSelected: ((PeerId) -> Void)?
+    var peerSelected: ((EnginePeer.Id) -> Void)?
     var activateSearch: (() -> Void)?
-    var deletePeerChat: ((PeerId) -> Void)?
+    var deletePeerChat: ((EnginePeer.Id) -> Void)?
     var startNewCall: (() -> Void)?
     
     private let viewProcessingQueue = Queue()
@@ -191,7 +190,7 @@ final class CallListControllerNode: ASDisplayNode {
     private var currentState: CallListNodeState
     private let statePromise: ValuePromise<CallListNodeState>
     
-    private var currentLocationAndType = CallListNodeLocationAndType(location: .initial(count: 50), type: .all)
+    private var currentLocationAndType = CallListNodeLocationAndType(location: .initial(count: 50), scope: .all)
     private let callListLocationAndType = ValuePromise<CallListNodeLocationAndType>()
     private let callListDisposable = MetaDisposable()
     
@@ -205,9 +204,9 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyButtonIconNode: ASImageNode
     private let emptyButtonTextNode: ImmediateTextNode
     
-    private let call: (PeerId, Bool) -> Void
-    private let joinGroupCall: (PeerId, CachedChannelData.ActiveCall) -> Void
-    private let openInfo: (PeerId, [Message]) -> Void
+    private let call: (EnginePeer.Id, Bool) -> Void
+    private let joinGroupCall: (EnginePeer.Id, EngineGroupCallDescription) -> Void
+    private let openInfo: (EnginePeer.Id, [EngineMessage]) -> Void
     private let emptyStateUpdated: (Bool) -> Void
     
     private let emptyStatePromise = Promise<Bool>()
@@ -215,7 +214,7 @@ final class CallListControllerNode: ASDisplayNode {
     
     private let openGroupCallDisposable = MetaDisposable()
     
-    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, joinGroupCall: @escaping (PeerId, CachedChannelData.ActiveCall) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (EnginePeer.Id, Bool) -> Void, joinGroupCall: @escaping (EnginePeer.Id, EngineGroupCallDescription) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.controller = controller
         self.context = context
         self.mode = mode
@@ -322,13 +321,12 @@ final class CallListControllerNode: ASDisplayNode {
         }, openInfo: { [weak self] peerId, messages in
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
-            guard let strongSelf = self, let peerId = messageIds.first?.peerId else {
+            guard let peerId = messageIds.first?.peerId else {
                 return
             }
-            
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peerId)
-            }
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
             |> deliverOnMainQueue).start(next: { peer in
                 guard let strongSelf = self, let peer = peer else {
                     return
@@ -381,19 +379,12 @@ final class CallListControllerNode: ASDisplayNode {
             }
             
             let disposable = strongSelf.openGroupCallDisposable
-            
-            let account = strongSelf.context.account
+
             let engine = strongSelf.context.engine
-            var signal: Signal<CachedChannelData.ActiveCall?, NoError> = strongSelf.context.account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
-                let cachedData = transaction.getPeerCachedData(peerId: peerId)
-                if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.activeCall
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.activeCall
-                }
-                return nil
-            }
-            |> mapToSignal { activeCall -> Signal<CachedChannelData.ActiveCall?, NoError> in
+            var signal: Signal<EngineGroupCallDescription?, NoError> = context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.GroupCallDescription(id: peerId)
+            )
+            |> mapToSignal { activeCall -> Signal<EngineGroupCallDescription?, NoError> in
                 if let activeCall = activeCall {
                     return .single(activeCall)
                 } else {
@@ -446,7 +437,7 @@ final class CallListControllerNode: ASDisplayNode {
         let callListViewUpdate = self.callListLocationAndType.get()
         |> distinctUntilChanged
         |> mapToSignal { locationAndType in
-            return callListViewForLocationAndType(locationAndType: locationAndType, account: context.account)
+            return callListViewForLocationAndType(locationAndType: locationAndType, engine: context.engine)
         }
         
         let previousView = Atomic<CallListNodeView?>(value: nil)
@@ -468,10 +459,10 @@ final class CallListControllerNode: ASDisplayNode {
             return value
         }
         
-        let currentGroupCallPeerId: Signal<PeerId?, NoError>
+        let currentGroupCallPeerId: Signal<EnginePeer.Id?, NoError>
         if let callManager = context.sharedContext.callManager {
             currentGroupCallPeerId = callManager.currentGroupCallSignal
-            |> map { call -> PeerId? in
+            |> map { call -> EnginePeer.Id? in
                 call?.peerId
             }
             |> distinctUntilChanged
@@ -479,19 +470,14 @@ final class CallListControllerNode: ASDisplayNode {
             currentGroupCallPeerId = .single(nil)
         }
         
-        let groupCalls = context.account.postbox.tailChatListView(groupId: .root, count: 100, summaryComponents: ChatListEntrySummaryComponents())
-        |> map { view -> [Peer] in
-            var result: [Peer] = []
-            for entry in view.0.entries {
-                switch entry {
-                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
-                    if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.hasActiveVoiceChat) {
-                        result.append(channel)
-                    } else if let group = renderedPeer.peer as? TelegramGroup, group.flags.contains(.hasActiveVoiceChat) {
-                        result.append(group)
-                    }
-                default:
-                    break
+        let groupCalls: Signal<[EnginePeer], NoError> = context.engine.messages.chatList(group: .root, count: 100)
+        |> map { chatList -> [EnginePeer] in
+            var result: [EnginePeer] = []
+            for item in chatList.items {
+                if case let .channel(channel) = item.renderedPeer.peer, channel.flags.contains(.hasActiveVoiceChat) {
+                    result.append(.channel(channel))
+                } else if case let .legacyGroup(group) = item.renderedPeer.peer, group.flags.contains(.hasActiveVoiceChat) {
+                    result.append(.legacyGroup(group))
                 }
             }
             return result.sorted(by: { lhs, rhs in
@@ -503,19 +489,15 @@ final class CallListControllerNode: ASDisplayNode {
                 return lhs.id < rhs.id
             })
         }
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if lhs.count != rhs.count {
-                return false
-            }
-            for i in 0 ..< lhs.count {
-                if !lhs[i].isEqual(rhs[i]) {
-                    return false
-                }
-            }
-            return true
-        })
+        |> distinctUntilChanged
         
-        let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), groupCalls, showCallsTab, currentGroupCallPeerId)
+        let callListNodeViewTransition = combineLatest(
+            callListViewUpdate,
+            self.statePromise.get(),
+            groupCalls,
+            showCallsTab,
+            currentGroupCallPeerId
+        )
         |> mapToQueue { (updateAndType, state, groupCalls, showCallsTab, currentGroupCallPeerId) -> Signal<CallListNodeListViewTransition, NoError> in
             let (update, type) = updateAndType
             
@@ -545,7 +527,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             } else {
                 if previous?.originalView === update.view {
-                    let previousCalls = previous?.filteredEntries.compactMap { item -> PeerId? in
+                    let previousCalls = previous?.filteredEntries.compactMap { item -> EnginePeer.Id? in
                         switch item {
                         case let .groupCall(peer, _, _):
                             return peer.id
@@ -553,7 +535,7 @@ final class CallListControllerNode: ASDisplayNode {
                             return nil
                         }
                     }
-                    let updatedCalls = processedView.filteredEntries.compactMap { item -> PeerId? in
+                    let updatedCalls = processedView.filteredEntries.compactMap { item -> EnginePeer.Id? in
                         switch item {
                         case let .groupCall(peer, _, _):
                             return peer.id
@@ -582,12 +564,14 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, account: context.account, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, context: context, scrollPosition: update.scrollPosition)
             |> map({ mappedCallListNodeViewListTransition(context: context, presentationData: state.presentationData, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         
-        let appliedTransition = callListNodeViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in
+        let appliedTransition = callListNodeViewTransition
+        |> deliverOnMainQueue
+        |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in
             if let strongSelf = self {
                 return strongSelf.enqueueTransition(transition)
             }
@@ -597,14 +581,14 @@ final class CallListControllerNode: ASDisplayNode {
         self.listNode.displayedItemRangeChanged = { [weak self] range, transactionOpaqueState in
             if let strongSelf = self, let range = range.loadedRange, let view = (transactionOpaqueState as? CallListOpaqueTransactionState)?.callListView.originalView {
                 var location: CallListNodeLocation?
-                if range.firstIndex < 5 && view.later != nil {
-                    location = .navigation(index: view.entries[view.entries.count - 1].highestIndex)
-                } else if range.firstIndex >= 5 && range.lastIndex >= view.entries.count - 5 && view.earlier != nil {
-                    location = .navigation(index: view.entries[0].lowestIndex)
+                if range.firstIndex < 5 && view.hasLater {
+                    location = .navigation(index: view.items[view.items.count - 1].highestIndex)
+                } else if range.firstIndex >= 5 && range.lastIndex >= view.items.count - 5 && view.hasEarlier {
+                    location = .navigation(index: view.items[0].lowestIndex)
                 }
                 
                 if let location = location, location != strongSelf.currentLocationAndType.location {
-                    strongSelf.currentLocationAndType = CallListNodeLocationAndType(location: location, type: strongSelf.currentLocationAndType.type)
+                    strongSelf.currentLocationAndType = CallListNodeLocationAndType(location: location, scope: strongSelf.currentLocationAndType.scope)
                     strongSelf.callListLocationAndType.set(strongSelf.currentLocationAndType)
                 }
             }
@@ -615,9 +599,10 @@ final class CallListControllerNode: ASDisplayNode {
         self.callListLocationAndType.set(self.currentLocationAndType)
 
         let emptySignal = self.emptyStatePromise.get() |> distinctUntilChanged
-        let typeSignal = self.callListLocationAndType.get() |> map { locationAndType -> CallListViewType in
-            return locationAndType.type
-        } |> distinctUntilChanged
+        let typeSignal = self.callListLocationAndType.get() |> map { locationAndType -> EngineCallList.Scope in
+            return locationAndType.scope
+        }
+        |> distinctUntilChanged
         
         self.emptyStateDisposable.set((combineLatest(emptySignal, typeSignal, self.statePromise.get()) |> deliverOnMainQueue).start(next: { [weak self] isEmpty, type, state in
             if let strongSelf = self {
@@ -649,7 +634,7 @@ final class CallListControllerNode: ASDisplayNode {
             
             self.emptyButtonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call List/CallIcon"), color: presentationData.theme.list.itemAccentColor)
             
-            self.updateEmptyPlaceholder(theme: presentationData.theme, strings: presentationData.strings, type: self.currentLocationAndType.type, isHidden: self.emptyTextNode.alpha.isZero)
+            self.updateEmptyPlaceholder(theme: presentationData.theme, strings: presentationData.strings, type: self.currentLocationAndType.scope, isHidden: self.emptyTextNode.alpha.isZero)
             
             self.updateState {
                 return $0.withUpdatedPresentationData(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: true)
@@ -666,7 +651,7 @@ final class CallListControllerNode: ASDisplayNode {
     private let textFont = Font.regular(16.0)
     private let buttonFont = Font.regular(17.0)
     
-    func updateEmptyPlaceholder(theme: PresentationTheme, strings: PresentationStrings, type: CallListViewType, isHidden: Bool) {
+    func updateEmptyPlaceholder(theme: PresentationTheme, strings: PresentationStrings, type: EngineCallList.Scope, isHidden: Bool) {
         let alpha: CGFloat = isHidden ? 0.0 : 1.0
         let previousAlpha = self.emptyTextNode.alpha
         self.emptyTextNode.alpha = alpha
@@ -691,7 +676,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyButtonNode.isUserInteractionEnabled = !isHidden
         
         if !isHidden {
-            let type = self.currentLocationAndType.type
+            let type = self.currentLocationAndType.scope
             let emptyText: String
             let buttonText = strings.Calls_StartNewCall
             if type == .missed {
@@ -730,16 +715,16 @@ final class CallListControllerNode: ASDisplayNode {
         }
     }
     
-    func updateType(_ type: CallListViewType) {
-        if type != self.currentLocationAndType.type {
+    func updateType(_ type: EngineCallList.Scope) {
+        if type != self.currentLocationAndType.scope {
             if let view = self.callListView?.originalView {
-                var index: MessageIndex
-                if !view.entries.isEmpty {
-                    index = view.entries[view.entries.count - 1].highestIndex
+                var index: EngineMessage.Index
+                if !view.items.isEmpty {
+                    index = view.items[view.items.count - 1].highestIndex
                 } else {
-                    index = MessageIndex.absoluteUpperBound()
+                    index = EngineMessage.Index.absoluteUpperBound()
                 }
-                self.currentLocationAndType = CallListNodeLocationAndType(location: .changeType(index: index), type: type)
+                self.currentLocationAndType = CallListNodeLocationAndType(location: .changeType(index: index), scope: type)
                 self.emptyStatePromise.set(.single(false))
                 self.callListLocationAndType.set(self.currentLocationAndType)
             }
@@ -799,11 +784,11 @@ final class CallListControllerNode: ASDisplayNode {
     }
     
     func scrollToLatest() {
-        if let view = self.callListView?.originalView, view.later == nil {
+        if let view = self.callListView?.originalView, !view.hasLater {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         } else {
-            let location: CallListNodeLocation = .scroll(index: MessageIndex.absoluteUpperBound(), sourceIndex: MessageIndex.absoluteLowerBound(), scrollPosition: .top(0.0), animated: true)
-            self.currentLocationAndType = CallListNodeLocationAndType(location: location, type: self.currentLocationAndType.type)
+            let location: CallListNodeLocation = .scroll(index: EngineMessage.Index.absoluteUpperBound(), sourceIndex: EngineMessage.Index.absoluteLowerBound(), scrollPosition: .top(0.0), animated: true)
+            self.currentLocationAndType = CallListNodeLocationAndType(location: location, scope: self.currentLocationAndType.scope)
             self.callListLocationAndType.set(self.currentLocationAndType)
         }
     }

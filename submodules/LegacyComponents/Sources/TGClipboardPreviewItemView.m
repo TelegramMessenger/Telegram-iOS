@@ -50,8 +50,9 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         _collectionLayout.minimumLineSpacing = 8.0f;
         
         _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width, TGClipboardPreviewCellHeight + TGClipboardPreviewEdgeInset * 2) collectionViewLayout:_collectionLayout];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         _collectionView.backgroundColor = [UIColor whiteColor];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;

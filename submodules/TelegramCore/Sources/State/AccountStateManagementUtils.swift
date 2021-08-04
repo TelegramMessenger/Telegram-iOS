@@ -1353,7 +1353,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         if let replyToMsgId = replyToMsgId {
                             replyToMessageId = MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
                         }
-                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date)
+                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
                 }
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             case let .updatePhoneCall(phoneCall):
@@ -2995,9 +2995,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case .UpdateRecentGifs:
                 syncRecentGifs = true
             case let .UpdateChatInputState(peerId, inputState):
-                transaction.updatePeerChatInterfaceState(peerId, update: { current in
-                    return auxiliaryMethods.updatePeerChatInputState(current, inputState)
-                })
+                _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: inputState)
             case let .UpdateCall(call):
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):

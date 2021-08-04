@@ -84,13 +84,17 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 
 - (bool)hasOnScreenNavigation {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     return hasOnScreenNavigation;
 }
 
 - (UIInterfaceOrientation)effectiveOrientation {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [self effectiveOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
 }
 
 - (UIInterfaceOrientation)effectiveOrientation:(UIInterfaceOrientation)orientation {
@@ -227,6 +231,8 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {
             referenceFrame = CGRectMake(referenceSize.height - referenceFrame.size.height - referenceFrame.origin.y,
@@ -239,6 +245,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
                                         referenceFrame.origin.x,
                                         referenceFrame.size.height, referenceFrame.size.width);
         }
+#pragma clang diagnostic pop
     }
     
     if (self.beginTransitionOut != nil)
@@ -249,6 +256,8 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     if (self.intent & TGPhotoEditorControllerFromCameraIntent && self.intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent))
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
         {
             referenceFrame = CGRectMake(referenceSize.width - referenceFrame.size.height - referenceFrame.origin.y,
@@ -261,6 +270,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
                                         referenceSize.height - referenceFrame.size.width - referenceFrame.origin.x,
                                         referenceFrame.size.height, referenceFrame.size.width);
         }
+#pragma clang diagnostic pop
     }
     
     if (saving)
@@ -343,8 +353,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
@@ -367,8 +378,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     UIInterfaceOrientation orientation = self.effectiveOrientation;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);

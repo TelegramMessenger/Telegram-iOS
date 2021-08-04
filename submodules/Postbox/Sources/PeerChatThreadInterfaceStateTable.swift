@@ -15,7 +15,7 @@ final class PeerChatThreadInterfaceStateTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
-    private var states: [PeerChatThreadId: PeerChatInterfaceState?] = [:]
+    private var states: [PeerChatThreadId: StoredPeerChatInterfaceState?] = [:]
     private var peerIdsWithUpdatedStates = Set<PeerChatThreadId>()
     
     private let sharedKey = ValueBoxKey(length: 8 + 8)
@@ -26,10 +26,10 @@ final class PeerChatThreadInterfaceStateTable: Table {
         return sharedKey
     }
     
-    func get(_ peerId: PeerChatThreadId) -> PeerChatInterfaceState? {
+    func get(_ peerId: PeerChatThreadId) -> StoredPeerChatInterfaceState? {
         if let cachedValue = self.states[peerId] {
             return cachedValue
-        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = PostboxDecoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
+        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = try? AdaptedPostboxDecoder().decode(StoredPeerChatInterfaceState.self, from: value.makeData()) {
             self.states[peerId] = state
             return state
         } else {
@@ -38,11 +38,11 @@ final class PeerChatThreadInterfaceStateTable: Table {
         }
     }
     
-    func set(_ peerId: PeerChatThreadId, state: PeerChatInterfaceState?) -> Bool {
+    func set(_ peerId: PeerChatThreadId, state: StoredPeerChatInterfaceState?) -> Bool {
         let currentState = self.get(peerId)
         var updated = false
         if let currentState = currentState, let state = state {
-            if !currentState.isEqual(to: state) {
+            if currentState != state {
                 updated = true
             }
         } else if (currentState != nil) != (state != nil) {
@@ -62,13 +62,10 @@ final class PeerChatThreadInterfaceStateTable: Table {
     
     override func beforeCommit() {
         if !self.peerIdsWithUpdatedStates.isEmpty {
-            let sharedEncoder = PostboxEncoder()
             for peerId in self.peerIdsWithUpdatedStates {
                 if let state = self.states[peerId] {
-                    if let state = state {
-                    sharedEncoder.reset()
-                    sharedEncoder.encodeRootObject(state)
-                    self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
+                    if let state = state, let data = try? AdaptedPostboxEncoder().encode(state) {
+                        self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: ReadBuffer(data: data))
                     } else {
                         self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey), secure: false)
                     }

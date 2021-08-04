@@ -89,8 +89,11 @@ public extension TelegramEngine {
             return _internal_cachedGroupCallDisplayAsAvailablePeers(account: self.account, peerId: peerId)
         }
 
-        public func updatedCurrentPeerGroupCall(peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
+        public func updatedCurrentPeerGroupCall(peerId: PeerId) -> Signal<EngineGroupCallDescription?, NoError> {
             return _internal_updatedCurrentPeerGroupCall(account: self.account, peerId: peerId)
+            |> map { activeCall -> EngineGroupCallDescription? in
+                return activeCall.flatMap(EngineGroupCallDescription.init)
+            }
         }
 
         public func getAudioBroadcastDataSource(callId: Int64, accessHash: Int64) -> Signal<AudioBroadcastDataSource?, NoError> {

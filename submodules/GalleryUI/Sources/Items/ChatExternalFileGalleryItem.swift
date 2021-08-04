@@ -195,7 +195,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
                     strongSelf.statusNode.alpha = 1.0
                     strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                     strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                case let .Fetching(isActive, progress):
+                case let .Fetching(_, progress):
                     strongSelf.statusNode.isHidden = false
                     strongSelf.statusNode.alpha = 1.0
                     strongSelf.statusNodeContainer.isUserInteractionEnabled = true

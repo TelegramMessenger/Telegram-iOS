@@ -70,7 +70,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {

@@ -194,7 +194,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
     _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:self.view.bounds hasDoubleTap:false];
-    if (iosMajorVersion() >= 11) {
+    if (@available(iOS 11.0, *)) {
         _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     }
     _scrollView.contentInset = UIEdgeInsetsZero;
@@ -1414,7 +1414,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGFloat)_brushWeightForSize:(CGFloat)size
 {
-    return ([self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size) / _scrollView.zoomScale;
+    CGFloat scale = MAX(0.001, _scrollView.zoomScale);
+    return ([self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size) / scale;
 }
 
 + (CGSize)maximumPaintingSize

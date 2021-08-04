@@ -246,7 +246,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let multiplexedNode = strongSelf.multiplexedNode else {
                     return
                 }
                 let absoluteOffset = -offset + 60.0

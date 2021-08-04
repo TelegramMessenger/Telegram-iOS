@@ -95,12 +95,12 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
     private let call: PresentationGroupCall
-    private var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
+    private(set) var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
     private var currentPeerEntry: VoiceChatPeerEntry?
         
     var callState: PresentationGroupCallState?
     
-    private var currentVideoNode: GroupVideoNode?
+    private(set) var currentVideoNode: GroupVideoNode?
         
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
@@ -161,10 +161,18 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let image = generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
-            
-            let colorsArray = [fadeColor.cgColor, fadeColor.withAlphaComponent(0.0).cgColor] as CFArray
-            var locations: [CGFloat] = [1.0, 0.0]
-            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+            let stepCount = 10
+            var colors: [CGColor] = []
+            var locations: [CGFloat] = []
+
+            for i in 0 ... stepCount {
+                let t = CGFloat(i) / CGFloat(stepCount)
+                colors.append(fadeColor.withAlphaComponent(t * t).cgColor)
+                locations.append(t)
+            }
+
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.topFadeNode.backgroundColor = UIColor(patternImage: image)
@@ -181,6 +189,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
             var locations: [CGFloat] = [1.0, 0.0]
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.bottomGradientNode.backgroundColor = UIColor(patternImage: image)
@@ -628,7 +637,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 }
                 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: peer)
+                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: EnginePeer(peer))
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])

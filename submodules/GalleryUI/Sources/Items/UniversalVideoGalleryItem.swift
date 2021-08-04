@@ -44,7 +44,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let isSecret: Bool
     let landscape: Bool
     let timecode: Double?
-    let playbackRate: Double?
+    let playbackRate: () -> Double?
     let configuration: GalleryConfiguration?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
@@ -52,7 +52,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -364,13 +364,15 @@ private final class MoreHeaderButton: HighlightableButtonNode {
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
 
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: wide ? 32.0 : 22.0, height: 22.0))
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
         self.referenceNode.frame = self.containerNode.bounds
 
         self.iconNode.image = optionsCircleImage(dark: false)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
         }
+
+        self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -4.0, bottom: 0.0, right: -4.0)
     }
 
     private var content: Content?
@@ -380,7 +382,8 @@ private final class MoreHeaderButton: HighlightableButtonNode {
             let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
                                                                                       "Point 3.Group 1.Fill 1": iconColor,
                                                                                       "Point 1.Group 1.Fill 1": iconColor], scale: 1.0)
-            animationNode.frame = self.containerNode.bounds
+            let animationSize = CGSize(width: 22.0, height: 22.0)
+            animationNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - animationSize.width) / 2.0), y: floor((self.containerNode.bounds.height - animationSize.height) / 2.0)), size: animationSize)
             self.addSubnode(animationNode)
             self.animationNode = animationNode
         }
@@ -423,10 +426,18 @@ private final class MoreHeaderButton: HighlightableButtonNode {
             self.content = content
             switch content {
                 case let .image(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
                     self.animationNode?.isHidden = true
                 case let .more(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
                     self.animationNode?.isHidden = false
@@ -440,7 +451,7 @@ private final class MoreHeaderButton: HighlightableButtonNode {
     }
 
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: wide ? 32.0 : 22.0, height: 22.0)
+        return CGSize(width: wide ? 32.0 : 22.0, height: 44.0)
     }
 
     func onLayout() {
@@ -494,6 +505,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var requiresDownload = false
     
     private var item: UniversalVideoGalleryItem?
+    private var playbackRate: Double?
+    private let playbackRatePromise = ValuePromise<Double>()
     
     private let statusDisposable = MetaDisposable()
     private let moreButtonStateDisposable = MetaDisposable()
@@ -511,6 +524,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasExpandedCaptionPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
@@ -622,6 +636,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setPlayRate = { [weak self] rate in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 videoNode.setBaseRate(rate)
+
+                if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }
             }
         }
         
@@ -684,12 +702,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get())
-        |> mapToSignal { isPlaying, isIntracting, controlsVisible, isShowingContextMenu -> Signal<Void, NoError> in
-            if isShowingContextMenu {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || hasExpandedCaptionPromise {
                 return .complete()
             }
-            if isPlaying && !isIntracting && controlsVisible {
+            if isPlaying && !isInteracting && controlsVisible {
                 return .single(Void())
                 |> delay(4.0, queue: Queue.mainQueue())
             } else {
@@ -839,6 +857,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
+
+                        if let playbackRate = strongSelf.playbackRate {
+                            strongSelf.videoNode?.setBaseRate(playbackRate)
+                        }
                     }
                 }
             }
@@ -872,10 +894,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
-                        return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
+                        return .single(next) |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))
                     }
                     
-                    self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
+                    self.mediaPlaybackStateDisposable.set((throttledSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let strongSelf = self, let videoNode = strongSelf.videoNode, videoNode.ownsContentNode else {
+                            return
+                        }
+
                         if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
@@ -923,13 +950,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
-                videoNode.status,
+                self.playbackRatePromise.get(),
                 self.isShowingContextMenuPromise.get()
-            ).start(next: { [weak self] status, isShowingContextMenu in
+            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
                 guard let strongSelf = self else {
-                    return
-                }
-                guard let status = status else {
                     return
                 }
 
@@ -937,7 +961,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if isShowingContextMenu {
                     effectiveBaseRate = 1.0
                 } else {
-                    effectiveBaseRate = status.baseRate
+                    effectiveBaseRate = playbackRate
                 }
 
                 if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
@@ -1113,14 +1137,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
-                var isWebpage = false
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
-                        isWebpage = true
                         break
                     }
                 }
@@ -1128,7 +1150,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var hasMoreButton = false
                 if isEnhancedWebPlayer {
                     hasMoreButton = true
-                } else if !isWebpage, let file = file, !file.isAnimated {
+                } else if let file = file, !file.isAnimated {
                     hasMoreButton = true
                 }
                  
@@ -1158,6 +1180,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.item = item
+
+        if let _ = item.content as? NativeVideoContent {
+            self.playbackRate = item.playbackRate()
+        } else if let _ = item.content as? WebEmbedVideoContent {
+            self.playbackRate = item.playbackRate()
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
         if let contentInfo = item.contentInfo {
             switch contentInfo {
@@ -1244,6 +1274,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: self.actionAtEnd)
+
+                            videoNode.setBaseRate(self.playbackRate ?? 1.0)
                         }
                     } else {
                         if self.shouldAutoplayOnCentrality()  {
@@ -1314,24 +1346,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var isAnimated = false
             var seek = MediaPlayerSeek.start
-            var playbackRate: Double? = nil
             if let item = self.item {
                 if let content = item.content as? NativeVideoContent {
                     isAnimated = content.fileReference.media.isAnimated
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
-                    playbackRate = item.playbackRate
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
-                    playbackRate = item.playbackRate
                 }
             }
-            if let playbackRate = playbackRate {
-                videoNode.setBaseRate(playbackRate)
-            }
+
+            videoNode.setBaseRate(self.playbackRate ?? 1.0)
+
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
@@ -1763,6 +1792,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
             })
+
+            let playbackRate = self.playbackRate
+
             expandImpl = { [weak overlayNode] in
                 guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
                     return
@@ -1770,7 +1802,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
@@ -1865,6 +1897,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
             })
+
+            let playbackRate = self.playbackRate
+
             expandImpl = { [weak overlayNode] in
                 guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
                     return
@@ -1872,7 +1907,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
@@ -2007,10 +2042,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
 
-    private func speedList() -> [(String, String, Double)] {
+    private func speedList(strings: PresentationStrings) -> [(String, String, Double)] {
         let speedList: [(String, String, Double)] = [
             ("0.5x", "0.5x", 0.5),
-            ("Normal", "1x", 1.0),
+            (strings.PlaybackSpeed_Normal, "1x", 1.0),
             ("1.5x", "1.5x", 1.5),
             ("2x", "2x", 2.0)
         ]
@@ -2033,9 +2068,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            var speedValue: String = "Normal"
+            var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
-            for (text, iconText, speed) in strongSelf.speedList() {
+            for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 if abs(speed - status.baseRate) < 0.01 {
                     speedValue = text
                     speedIconText = iconText
@@ -2043,7 +2078,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            items.append(.action(ContextMenuActionItem(text: "Playback Speed", textLayout: .secondLineWithValue(speedValue), icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
                 return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 guard let strongSelf = self else {
@@ -2053,8 +2088,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
-            if let (message, maybeFile, isWebpage) = strongSelf.contentInfo(), let file = maybeFile, !isWebpage {
-                items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
@@ -2068,22 +2103,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 guard let controller = strongSelf.galleryController() else {
                                     return
                                 }
-                                //TODO:localize
-                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: "Video Saved"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             })
                         default:
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
-                            //TODO:localize
-                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: "Please wait for the video to be fully downloaded.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             })]), in: .window(.root))
                         }
                     }
                 })))
             }
             if strongSelf.canDelete() {
-                items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {
@@ -2111,7 +2144,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var items: [ContextMenuItem] = []
 
-            for (text, _, rate) in strongSelf.speedList() {
+            for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 let isSelected = abs(status.baseRate - rate) < 0.01
                 items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                     if isSelected {
@@ -2127,6 +2160,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     videoNode.setBaseRate(rate)
+
+                    if let controller = strongSelf.galleryController() as? GalleryController {
+                        controller.updateSharedPlaybackRate(rate)
+                    }
                 })))
             }
 
@@ -2197,6 +2234,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
         return .single((self.footerContentNode, nil))
+    }
+
+    func updatePlaybackRate(_ playbackRate: Double?) {
+        self.playbackRate = playbackRate
+
+        if let playbackRate = self.playbackRate {
+            self.videoNode?.setBaseRate(playbackRate)
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
     }
 }
 

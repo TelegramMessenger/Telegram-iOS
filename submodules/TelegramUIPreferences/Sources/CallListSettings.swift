@@ -34,9 +34,7 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        var defaultValue = CallListSettings.defaultSettings.showTab
         if let alternativeDefaultValue = decoder.decodeOptionalInt32ForKey("defaultShowTab") {
-            defaultValue = alternativeDefaultValue != 0
             self.defaultShowTab = alternativeDefaultValue != 0
         }
         if let value = decoder.decodeOptionalInt32ForKey("showTab") {
