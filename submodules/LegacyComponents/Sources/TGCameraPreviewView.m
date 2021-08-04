@@ -129,10 +129,15 @@
         if (strongSelf == nil)
             return;
         
-        if (resume)
+        if (resume) {
             [strongSelf endResetTransitionAnimated:true];
-        else
-            [strongSelf fadeInAnimated:true];
+        } else {
+            if (strongSelf->_snapshotView != nil) {
+                [strongSelf endTransitionAnimated:true];
+            } else {
+                [strongSelf fadeInAnimated:true];
+            }
+        }
     };
     
     camera.captureStopped = ^(bool pause)
@@ -262,6 +267,10 @@
     }
 }
 
+- (bool)hasTransitionSnapshot {
+    return _snapshotView != nil;
+}
+
 - (void)beginResetTransitionAnimated:(bool)animated
 {
     if (iosMajorVersion() < 7)
@@ -319,7 +328,12 @@
     
     if (_snapshotView != nil)
     {
-        CGSize size = TGScaleToFill(_snapshotView.frame.size, _wrapperView.frame.size);
+        CGSize imageSize = _snapshotView.frame.size;
+        if ([_snapshotView isKindOfClass:[UIImageView class]]) {
+            imageSize = ((UIImageView *)_snapshotView).image.size;
+        }
+        
+        CGSize size = TGScaleToFill(imageSize, _wrapperView.frame.size);
         _snapshotView.frame = CGRectMake(floor((self.frame.size.width - size.width) / 2.0f), floor((self.frame.size.height - size.height) / 2.0f), size.width, size.height);
     }
 }

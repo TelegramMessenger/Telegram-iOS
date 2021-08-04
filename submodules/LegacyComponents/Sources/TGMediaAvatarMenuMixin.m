@@ -53,7 +53,7 @@
         _hasSearchButton = hasSearchButton;
         _hasDeleteButton = hasDeleteButton;
         _hasViewButton = hasViewButton;
-        _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
+        _personalPhoto = personalPhoto;
         _isVideo = isVideo;
         _signup = signup;
     }

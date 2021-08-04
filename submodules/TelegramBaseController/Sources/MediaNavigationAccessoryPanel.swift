@@ -4,16 +4,20 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import AccountContext
+import TelegramUIPreferences
 
 public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public let containerNode: MediaNavigationAccessoryContainerNode
     
     public var close: (() -> Void)?
-    public var toggleRate: (() -> Void)?
+    public var setRate: ((AudioPlaybackRate) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var tapAction: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
+    
+    public var getController: (() -> ViewController?)?
+    public var presentInGlobalOverlay: ((ViewController) -> Void)?
     
     public init(context: AccountContext, displayBackground: Bool = false) {
         self.containerNode = MediaNavigationAccessoryContainerNode(context: context, displayBackground: displayBackground)
@@ -27,8 +31,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 close()
             }
         }
-        self.containerNode.headerNode.toggleRate = { [weak self] in
-            self?.toggleRate?()
+        self.containerNode.headerNode.setRate = { [weak self] rate in
+            self?.setRate?(rate)
         }
         self.containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {
@@ -48,6 +52,20 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
         self.containerNode.headerNode.playNext = { [weak self] in
             if let strongSelf = self, let playNext = strongSelf.playNext {
                 playNext()
+            }
+        }
+        
+        self.containerNode.headerNode.getController = { [weak self] in
+            if let strongSelf = self, let getController = strongSelf.getController {
+                return getController()
+            } else {
+                return nil
+            }
+        }
+        
+        self.containerNode.headerNode.presentInGlobalOverlay = { [weak self] c in
+            if let strongSelf = self, let presentInGlobalOverlay = strongSelf.presentInGlobalOverlay {
+                presentInGlobalOverlay(c)
             }
         }
     }

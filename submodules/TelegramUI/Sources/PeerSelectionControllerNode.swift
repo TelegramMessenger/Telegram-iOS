@@ -66,7 +66,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessagesCount: Int, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -78,6 +78,16 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
+        
+        var mockMessageIds: [MessageId]?
+        if forwardedMessagesCount > 0 {
+            var messageIds: [MessageId] = []
+            for _ in 0 ..< forwardedMessagesCount {
+                messageIds.append(MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: Int32.random(in: 0 ..< Int32.max)))
+            }
+            mockMessageIds = messageIds
+        }
+        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(mockMessageIds) }
         
         if hasChatListSelector && hasContactSelector {
             self.toolbarBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
@@ -276,13 +286,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-//            let previousSupportedOrientations = strongSelf.supportedOrientations
-//            if layout.size.width > layout.size.height {
-//                strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
-//            } else {
-//                strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-//            }
-            
             let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
                 if let strongSelf = self {
 //                    strongSelf.supportedOrientations = previousSupportedOrientations
@@ -292,7 +295,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, schedule: { [weak textInputPanelNode] in
                 textInputPanelNode?.sendMessage(.schedule)
             })
-//            strongSelf.sendMessageActionsController = controller
             strongSelf.presentInGlobalOverlay(controller, nil)
         }, openScheduledMessages: {
         }, openPeersNearby: {

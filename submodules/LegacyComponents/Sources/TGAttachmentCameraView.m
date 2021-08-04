@@ -4,6 +4,7 @@
 
 #import <LegacyComponents/TGMenuSheetView.h>
 #import "TGAttachmentMenuCell.h"
+#import "TGCameraController.h"
 
 #import <LegacyComponents/PGCamera.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
@@ -46,6 +47,8 @@
         _camera = camera;
         
         _previewView = [[TGCameraPreviewView alloc] initWithFrame:CGRectMake(0, 0, 84.0f, 84.0f)];
+        [_previewView fadeInAnimated:false];
+        [_previewView beginTransitionWithSnapshotImage:[TGCameraController startImage] animated:false];
         [_wrapperView addSubview:_previewView];
         [camera attachPreviewView:_previewView];
         
