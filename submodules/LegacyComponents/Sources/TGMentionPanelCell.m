@@ -154,12 +154,18 @@ NSString *const TGMentionPanelCellKind = @"TGMentionPanelCell";
     CGFloat leftInset = 51.0f;
     CGFloat spacing = 6.0f;
     CGFloat rightInset = 6.0f;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize nameSize = [_nameLabel.text sizeWithFont:_nameLabel.font];
+#pragma clang diagnostic pop
     nameSize.width = CGCeil(MIN((boundsSize.width - leftInset - rightInset) * 3.0f / 4.0f, nameSize.width));
     nameSize.height = CGCeil(nameSize.height);
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize usernameSize = [_usernameLabel.text sizeWithFont:_usernameLabel.font];
+#pragma clang diagnostic pop
     usernameSize.width = CGCeil(MIN(boundsSize.width - leftInset - rightInset - nameSize.width - spacing, usernameSize.width));
     
     _nameLabel.frame = CGRectMake(leftInset, CGFloor((boundsSize.height - nameSize.height) / 2.0f), nameSize.width, nameSize.height);

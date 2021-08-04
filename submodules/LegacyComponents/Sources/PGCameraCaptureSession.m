@@ -393,12 +393,8 @@ const NSInteger PGCameraFrameRate = 30;
 - (void)_enableVideoStabilization
 {
     AVCaptureConnection *videoConnection = [_videoOutput connectionWithMediaType:AVMediaTypeVideo];
-    if (videoConnection.supportsVideoStabilization)
-    {
-        if ([videoConnection respondsToSelector:@selector(setPreferredVideoStabilizationMode:)])
-            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
-        else
-            videoConnection.enablesVideoStabilizationWhenAvailable = true;
+    if (videoConnection.supportsVideoStabilization) {
+        videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
     }
 }
 
@@ -454,7 +450,7 @@ const NSInteger PGCameraFrameRate = 30;
 #pragma mark - Zoom
 
 - (bool)hasUltrawideCamera {
-    if (iosMajorVersion() >= 13.0) {
+    if (@available(iOS 13.0, *)) {
         if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.firstObject.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera) {
             return true;
         }
@@ -463,7 +459,7 @@ const NSInteger PGCameraFrameRate = 30;
 }
 
 - (bool)hasTelephotoCamera {
-    if (iosMajorVersion() >= 13.0) {
+    if (@available(iOS 13.0, *)) {
         if (self.videoDevice.isVirtualDevice && self.videoDevice.constituentDevices.lastObject.deviceType == AVCaptureDeviceTypeBuiltInTelephotoCamera) {
             return true;
         }
@@ -475,41 +471,43 @@ const NSInteger PGCameraFrameRate = 30;
 {
     if (![self.videoDevice respondsToSelector:@selector(videoZoomFactor)])
         return 1.0f;
-    
-    if (iosMajorVersion() >= 13.0 && self.videoDevice.isVirtualDevice) {
-        CGFloat backingLevel = self.videoDevice.videoZoomFactor;
-        CGFloat realLevel = backingLevel;
-        
-        NSArray *marks = self.videoDevice.virtualDeviceSwitchOverVideoZoomFactors;
-        if (marks.count == 2) {
-            CGFloat firstMark = [marks.firstObject floatValue];
-            CGFloat secondMark = [marks.lastObject floatValue];
-            
-            if (backingLevel < firstMark) {
-                realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
-            } else if (backingLevel < secondMark) {
-                realLevel = 1.0 + 1.0 * (backingLevel - firstMark) / (secondMark - firstMark);
-            } else {
-                realLevel = 2.0 + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
-            }
-        } else if (marks.count == 1) {
-            CGFloat mark = [marks.firstObject floatValue];
-            if ([self hasTelephotoCamera]) {
-                if (backingLevel < mark) {
-                    realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
+
+    if (@available(iOS 13.0, *)) {
+        if (self.videoDevice.isVirtualDevice) {
+            CGFloat backingLevel = self.videoDevice.videoZoomFactor;
+            CGFloat realLevel = backingLevel;
+
+            NSArray *marks = self.videoDevice.virtualDeviceSwitchOverVideoZoomFactors;
+            if (marks.count == 2) {
+                CGFloat firstMark = [marks.firstObject floatValue];
+                CGFloat secondMark = [marks.lastObject floatValue];
+
+                if (backingLevel < firstMark) {
+                    realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
+                } else if (backingLevel < secondMark) {
+                    realLevel = 1.0 + 1.0 * (backingLevel - firstMark) / (secondMark - firstMark);
                 } else {
-                    realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+                    realLevel = 2.0 + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
                 }
-            } else if ([self hasUltrawideCamera]) {
-                if (backingLevel < mark) {
-                    realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (mark - 1.0);
-                } else {
-                    realLevel = 1.0 + 7.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+            } else if (marks.count == 1) {
+                CGFloat mark = [marks.firstObject floatValue];
+                if ([self hasTelephotoCamera]) {
+                    if (backingLevel < mark) {
+                        realLevel = 1.0 + 1.0 * (backingLevel - 1.0) / (mark - 1.0);
+                    } else {
+                        realLevel = 2.0 + 6.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+                    }
+                } else if ([self hasUltrawideCamera]) {
+                    if (backingLevel < mark) {
+                        realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (mark - 1.0);
+                    } else {
+                        realLevel = 1.0 + 7.0 * (backingLevel - mark) / (self.maxZoomLevel - mark);
+                    }
                 }
             }
+
+            return realLevel;
         }
-        
-        return realLevel;
     }
     
     return self.videoDevice.videoZoomFactor;
@@ -548,33 +546,35 @@ const NSInteger PGCameraFrameRate = 30;
         
         CGFloat level = zoomLevel;
         CGFloat backingLevel = zoomLevel;
-        if (iosMajorVersion() >= 13.0 && device.isVirtualDevice) {
-            NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
-            if (marks.count == 2) {
-                CGFloat firstMark = [marks.firstObject floatValue];
-                CGFloat secondMark = [marks.lastObject floatValue];
-                if (level < 1.0) {
-                    level = MAX(0.5, level);
-                    backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
-                } else if (zoomLevel < 2.0) {
-                    backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
-                } else {
-                    backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
-                }
-            } else if (marks.count == 1) {
-                CGFloat mark = [marks.firstObject floatValue];
-                if ([self hasTelephotoCamera]) {
-                    if (zoomLevel < 2.0) {
-                        backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
-                    } else {
-                        backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
-                    }
-                } else if ([self hasUltrawideCamera]) {
+        if (@available(iOS 13.0, *)) {
+            if (device.isVirtualDevice) {
+                NSArray *marks = device.virtualDeviceSwitchOverVideoZoomFactors;
+                if (marks.count == 2) {
+                    CGFloat firstMark = [marks.firstObject floatValue];
+                    CGFloat secondMark = [marks.lastObject floatValue];
                     if (level < 1.0) {
                         level = MAX(0.5, level);
-                        backingLevel = 1.0 + ((level - 0.5) / 0.5) * (mark - 1.0);
+                        backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
+                    } else if (zoomLevel < 2.0) {
+                        backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
                     } else {
-                        backingLevel = mark + ((level - 1.0) / 7.0) * (self.maxZoomLevel - mark);
+                        backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
+                    }
+                } else if (marks.count == 1) {
+                    CGFloat mark = [marks.firstObject floatValue];
+                    if ([self hasTelephotoCamera]) {
+                        if (zoomLevel < 2.0) {
+                            backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
+                        } else {
+                            backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
+                        }
+                    } else if ([self hasUltrawideCamera]) {
+                        if (level < 1.0) {
+                            level = MAX(0.5, level);
+                            backingLevel = 1.0 + ((level - 0.5) / 0.5) * (mark - 1.0);
+                        } else {
+                            backingLevel = mark + ((level - 1.0) / 7.0) * (self.maxZoomLevel - mark);
+                        }
                     }
                 }
             }
@@ -844,16 +844,18 @@ const NSInteger PGCameraFrameRate = 30;
 
 + (AVCaptureDevice *)_deviceWithPosition:(AVCaptureDevicePosition)position
 {
-    if (iosMajorVersion() >= 13 && position != AVCaptureDevicePositionFront) {
-        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
-        if (device == nil) {
-            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
-        }
-        if (device == nil) {
-            device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualWideCamera mediaType:AVMediaTypeVideo position:position];
-        }
-        if (device != nil) {
-            return device;
+    if (@available(iOS 13.0, *)) {
+        if (position != AVCaptureDevicePositionFront) {
+            AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera mediaType:AVMediaTypeVideo position:position];
+            if (device == nil) {
+                device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:position];
+            }
+            if (device == nil) {
+                device = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualWideCamera mediaType:AVMediaTypeVideo position:position];
+            }
+            if (device != nil) {
+                return device;
+            }
         }
     }
     

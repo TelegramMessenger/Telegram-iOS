@@ -97,8 +97,6 @@
 
 - (void)clear
 {
-    NSInteger index = 0;
-    
     [_items enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(id<TGMediaSelectableItem> item, NSUInteger index, __unused BOOL *stop)
     {
         if (self.selectionUpdated != nil)

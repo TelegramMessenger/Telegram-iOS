@@ -104,8 +104,7 @@
         _zoomedView.userInteractionEnabled = false;
         [self addSubview:_zoomedView];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _fadeView.accessibilityIgnoresInvertColors = true;
             _iconView.accessibilityIgnoresInvertColors = true;
         }

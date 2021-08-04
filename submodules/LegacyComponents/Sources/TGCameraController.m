@@ -454,8 +454,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (_intent != TGCameraControllerGenericIntent && _intent != TGCameraControllerAvatarIntent)
         [_interfaceView setHasModeControl:false];
 
-    if (iosMajorVersion() >= 11)
-    {
+    if (@available(iOS 11.0, *)) {
         _backgroundView.accessibilityIgnoresInvertColors = true;
         _interfaceView.accessibilityIgnoresInvertColors = true;
         _focusControl.accessibilityIgnoresInvertColors = true;
@@ -675,7 +674,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             });
         }];
         
-        if (iosMajorVersion() >= 13.0) {
+        if (@available(iOS 13.0, *)) {
             [strongSelf->_feedbackGenerator impactOccurredWithIntensity:0.5];
         } else {
             [strongSelf->_feedbackGenerator impactOccurred];
@@ -1020,7 +1019,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (void)shutterPressed
 {
-    if (iosMajorVersion() >= 13.0) {
+    if (@available(iOS 13.0, *)) {
         [_feedbackGenerator impactOccurredWithIntensity:0.5];
     } else {
         [_feedbackGenerator impactOccurred];
@@ -1060,7 +1059,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
 - (void)shutterReleased
 {
-    if (iosMajorVersion() >= 13.0) {
+    if (@available(iOS 13.0, *)) {
         [_feedbackGenerator impactOccurredWithIntensity:0.6];
     } else {
         [_feedbackGenerator impactOccurred];
@@ -2359,21 +2358,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     self.view.hidden = true;
     
     [resultController.view.layer animatePositionFrom:resultController.view.layer.position to:CGPointMake(resultController.view.layer.position.x, resultController.view.layer.position.y + resultController.view.bounds.size.height) duration:0.3 timingFunction:kCAMediaTimingFunctionSpring removeOnCompletion:false completion:^(__unused bool finished) {
-        if (resultController.customDismissSelf) {
-            resultController.customDismissSelf();
-        } else {
-            [resultController dismiss];
-        }
-        [self dismiss];
-    }];
-    
-    return;
-    
-    [UIView animateWithDuration:0.3 delay:0.0f options:(7 << 16) animations:^
-    {
-        resultController.view.frame = CGRectOffset(resultController.view.frame, 0, resultController.view.frame.size.height);
-    } completion:^(__unused BOOL finished)
-    {
         if (resultController.customDismissSelf) {
             resultController.customDismissSelf();
         } else {

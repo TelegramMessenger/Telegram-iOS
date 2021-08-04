@@ -583,12 +583,15 @@
             hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
         }
     }
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGFloat inset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation hasOnScreenNavigation:hasOnScreenNavigation].bottom;
     _toolbarView = [[TGMediaPickerToolbarView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - TGMediaPickerToolbarHeight - inset, self.view.frame.size.width, TGMediaPickerToolbarHeight + inset)];
     if (_pallete != nil)
         _toolbarView.pallete = _pallete;
     _toolbarView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation hasOnScreenNavigation:hasOnScreenNavigation];
+#pragma clang diagnostic pop
     _toolbarView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     if ((_intent != TGMediaAssetsControllerSendFileIntent && _intent != TGMediaAssetsControllerSendMediaIntent && _intent != TGMediaAssetsControllerPassportMultipleIntent) || _selectionContext == nil)
         [_toolbarView setRightButtonHidden:true];
@@ -609,19 +612,24 @@
         };
     }
     [self.view addSubview:_toolbarView];
-    
-    if (iosMajorVersion() >= 14 && [PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelReadWrite] == PHAuthorizationStatusLimited) {
-        _accessView = [[TGMediaPickerAccessView alloc] init];
-        _accessView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        _accessView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation hasOnScreenNavigation:hasOnScreenNavigation];
-        [_accessView setPallete:_pallete];
-        _accessView.pressed = ^{
-            __strong TGMediaAssetsController *strongSelf = weakSelf;
-            if (strongSelf != nil) {
-                [strongSelf manageAccess];
-            }
-        };
-        [self.view addSubview:_accessView];
+
+    if (@available(iOS 14.0, *)) {
+        if ([PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelReadWrite] == PHAuthorizationStatusLimited) {
+            _accessView = [[TGMediaPickerAccessView alloc] init];
+            _accessView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            _accessView.safeAreaInset = [TGViewController safeAreaInsetForOrientation:self.interfaceOrientation hasOnScreenNavigation:hasOnScreenNavigation];
+    #pragma clang diagnostic pop
+            [_accessView setPallete:_pallete];
+            _accessView.pressed = ^{
+                __strong TGMediaAssetsController *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    [strongSelf manageAccess];
+                }
+            };
+            [self.view addSubview:_accessView];
+        }
     }
 }
 

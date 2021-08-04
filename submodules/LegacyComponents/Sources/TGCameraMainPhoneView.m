@@ -213,7 +213,7 @@
                 
                 if (!strongSelf->_zoomWheelView.isHidden) {
                     NSInteger counter = strongSelf->_dismissingWheelCounter + 1;
-                    strongSelf->_dismissingWheelCounter = counter;
+                    strongSelf->_dismissingWheelCounter = (int)counter;
                     
                     TGDispatchAfter(1.5, dispatch_get_main_queue(), ^{
                         if (strongSelf->_dismissingWheelCounter == counter) {
@@ -224,7 +224,7 @@
                 }
             } else {
                 NSInteger counter = strongSelf->_dismissingWheelCounter + 1;
-                strongSelf->_dismissingWheelCounter = counter;
+                strongSelf->_dismissingWheelCounter = (int)counter;
                 [strongSelf->_zoomWheelView setZoomLevel:zoomLevel panning:true];
                 [strongSelf->_zoomModeView setHidden:true animated:true];
                 [strongSelf->_zoomWheelView setHidden:false animated:true];

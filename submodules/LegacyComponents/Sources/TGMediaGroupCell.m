@@ -124,8 +124,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         _iconView.contentMode = UIViewContentModeCenter;
         [self.contentView addSubview:_iconView];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _shadowView.accessibilityIgnoresInvertColors = true;
             _iconView.accessibilityIgnoresInvertColors = true;
         }
@@ -227,8 +226,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
                                                                    imageType:TGMediaAssetImageTypeThumbnail
                                                                         size:CGSizeMake(138, 138)]];
                 
-                if (iosMajorVersion() >= 11)
+                if (@available(iOS 11.0, *)) {
                     imageView.accessibilityIgnoresInvertColors = true;
+                }
             }
             else
             {
@@ -237,8 +237,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
                 
                 [imageView reset];
                 
-                if (iosMajorVersion() >= 11)
+                if (@available(iOS 11.0, *)) {
                     imageView.accessibilityIgnoresInvertColors = false;
+                }
             }
         }
     }
@@ -254,8 +255,9 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
             
             [imageView reset];
             
-            if (iosMajorVersion() >= 11)
+            if (@available(iOS 11.0, *)) {
                 imageView.accessibilityIgnoresInvertColors = false;
+            }
         }
         
         [(TGImageView *)_imageViews.firstObject setImage:TGComponentsImageNamed(@"ModernMediaEmptyAlbumIcon")];
@@ -345,8 +347,11 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         
     CGSize titleSize = [_nameLabel sizeThatFits:CGSizeMake(self.contentView.frame.size.width - _nameLabel.frame.origin.x - 20, _nameLabel.frame.size.height)];
     _nameLabel.frame = CGRectMake(_nameLabel.frame.origin.x, y, ceil(titleSize.width), ceil(titleSize.height));
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize countSize = [_countLabel.text sizeWithFont:_countLabel.font];
+#pragma clang diagnostic pop
     _countLabel.frame = (CGRect){ _countLabel.frame.origin, { ceil(countSize.width), ceil(countSize.height) } };
 }
 

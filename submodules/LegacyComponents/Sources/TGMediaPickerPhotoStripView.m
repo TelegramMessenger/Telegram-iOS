@@ -82,8 +82,9 @@
         _collectionViewLayout.minimumLineSpacing = 4.0f;
         
         _collectionView = [[TGDraggableCollectionView alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, frame.size.height) collectionViewLayout:_collectionViewLayout];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         _collectionView.alwaysBounceHorizontal = false;
         _collectionView.alwaysBounceVertical = false;
         _collectionView.backgroundColor = [UIColor clearColor];

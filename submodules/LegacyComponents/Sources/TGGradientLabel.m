@@ -31,12 +31,8 @@
 {
     if (_text == nil || _font == nil)
         return;
-    
-    if (iosMajorVersion() >= 7) {
-        _textSize = [self.text boundingRectWithSize:CGSizeMake(1000.0f, 1000.0f) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: _font} context:nil].size;
-    } else {
-        _textSize = [self.text sizeWithFont:_font];
-    }
+
+    _textSize = [self.text boundingRectWithSize:CGSizeMake(1000.0f, 1000.0f) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: _font} context:nil].size;
     
     CGRect frame = self.frame;
     frame.size = _textSize;
@@ -126,98 +122,20 @@
     {
         CGPoint drawingOffset = CGPointMake(CGFloor((bounds.size.width - _textSize.width) / 2.0f), CGFloor((bounds.size.height - _textSize.height) / 2.0f));
         
-        if (false)
-        {
-            memset(_offscreenMemory, 0x00, (int)(_offscreenContextStride * _offscreenContextHeight));
-            UIGraphicsPushContext(_offscreenContext);
-            [_text drawAtPoint:CGPointMake(2.0f, 2.0f) withFont:_font];
-            UIGraphicsPopContext();
-            
-            int minX = _offscreenContextWidth;
-            int minY = _offscreenContextHeight;
-            int maxX = 0;
-            int maxY = 0;
-            
-            const void *offscreenMemory = _offscreenMemory;
-            const int offscreenStride = _offscreenContextStride;
-            for (int y = 0; y < _offscreenContextHeight; y++)
-            {
-                for (int x = 0; x < _offscreenContextWidth; x++)
-                {
-                    if ((*((uint32_t *)&offscreenMemory[y * offscreenStride + x * 4]) & 0xff000000) == 0xff000000)
-                    {
-                        if (x < minX)
-                            minX = x;
-                        if (y < minY)
-                            minY = y;
-                        if (x > maxX)
-                            maxX = x;
-                        if (y > maxY)
-                            maxY = y;
-                    }
-                }
-            }
-            
-            const int halfY = (maxY + minY) / 2;
-            const int halfX = (maxX + minX) / 2;
-            
-            int topHalf = 0;
-            int bottomHalf = 0;
-            int rightHalf = 0;
-            int leftHalf = 0;
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    if ((*((uint32_t *)&offscreenMemory[y * offscreenStride + x * 4]) & 0xff000000) == 0xff000000)
-                    {
-                        if (x < halfX)
-                            leftHalf++;
-                        else
-                            rightHalf++;
-                        
-                        if (y < halfY)
-                            topHalf++;
-                        else
-                            bottomHalf++;
-                    }
-                }
-            }
-            
-            CGFloat topOffset = 0.0f;
-            CGFloat leftOffset = 0.0f;
-            
-            if (topHalf != 0 && bottomHalf != 0 && leftHalf != 0 && rightHalf != 0)
-            {
-                topOffset = topHalf / (CGFloat)bottomHalf - 1.0f;
-                leftOffset = leftHalf / (CGFloat)rightHalf - 1.0f;
-            }
-            
-            minY = _offscreenContextHeight - minY;
-            maxY = _offscreenContextHeight - maxY;
-            int tmp = maxY;
-            maxY = minY;
-            minY = tmp;
-            
-            CGSize realSize = CGSizeMake(maxX - minX, maxY - minY);
-            CGPoint realOffset = CGPointMake(minX - 2.0f, minY - 2.0f);
-            
-            if (realSize.width > FLT_EPSILON && realSize.height > FLT_EPSILON)
-            {
-                drawingOffset = CGPointMake(CGFloor((bounds.size.width - realSize.width) / 2.0f) - realOffset.x, CGFloor((bounds.size.height - realSize.height) / 2.0f) - realOffset.y);
-                //drawingOffset.x += leftOffset;
-                //drawingOffset.y += topOffset;
-            }
-        }
-        
         CGContextSetFillColorWithColor(context, _textColor.CGColor);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [_text drawAtPoint:drawingOffset withFont:_font];
+#pragma clang diagnostic pop
     }
     else
     {
         CGContextSetTextDrawingMode(context, kCGTextClip);
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [_text drawAtPoint:CGPointMake(CGFloor((bounds.size.width - _textSize.width) / 2.0f), CGFloor((bounds.size.height - _textSize.height) / 2.0f)) withFont:_font];
+#pragma clang diagnostic pop
         
         CGColorRef colors[2] = {
             CGColorRetain(UIColorRGB(_topColor).CGColor),

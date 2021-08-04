@@ -103,7 +103,10 @@ NSString *const TGHashtagPanelCellKind = @"TGHashtagPanelCell";
     [super layoutSubviews];
     
     CGFloat inset = 15.0f;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize labelSize = [_label.text sizeWithFont:_label.font];
+#pragma clang diagnostic pop
     labelSize.width = CGCeil(MIN(labelSize.width, self.frame.size.width - inset * 2.0f));
     labelSize.height = CGCeil(labelSize.height);
     _label.frame = CGRectMake(inset, CGFloor((self.frame.size.height - labelSize.height) / 2.0f), labelSize.width, labelSize.height);

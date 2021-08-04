@@ -12,8 +12,11 @@
     else
     {
         CGContextSetFillColorWithColor(UIGraphicsGetCurrentContext(), _placeholderColor.CGColor);
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGSize placeholderSize = [self.placeholder sizeWithFont:_placeholderFont];
+#pragma clang diagnostic pop
         
         CGPoint placeholderOrigin = CGPointMake(0.0f, CGFloor((rect.size.height - placeholderSize.height) / 2.0f) - TGRetinaPixel);
         if (self.textAlignment == NSTextAlignmentCenter)
@@ -22,8 +25,11 @@
             placeholderOrigin.x = rect.size.width - placeholderSize.width;
         
         placeholderOrigin.y += TGScreenPixel + _placeholderOffset;
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [self.placeholder drawAtPoint:placeholderOrigin withFont:_placeholderFont];
+#pragma clang diagnostic pop
     }
 }
 

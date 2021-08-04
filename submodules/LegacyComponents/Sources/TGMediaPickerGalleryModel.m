@@ -278,8 +278,9 @@
              }];
         };
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _interfaceView.accessibilityIgnoresInvertColors = true;
+        }
     }
     return _interfaceView;
 }
@@ -564,8 +565,9 @@
             [_context setStatusBarHidden:false withAnimation:UIStatusBarAnimationNone];
         }
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             [strongSelf.controller setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
+        }
     };
     
     controller.requestThumbnailImage = ^SSignal *(id<TGMediaEditableItem> editableItem)

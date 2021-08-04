@@ -75,8 +75,9 @@
         [self addSubview:_bottomView];
         
         _tableView = [[UITableView alloc] init];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         _tableView.delegate = self;
         _tableView.dataSource = self;
         _tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;

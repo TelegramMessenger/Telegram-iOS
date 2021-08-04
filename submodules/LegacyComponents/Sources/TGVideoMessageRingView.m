@@ -128,7 +128,7 @@
     if (self != nil) {
         self.clipsToBounds = true;
         self.layer.cornerRadius = frame.size.width / 2.0f;
-        if (iosMajorVersion() >= 13) {
+        if (@available(iOS 13.0, *)) {
             self.layer.cornerCurve = kCACornerCurveCircular;
         }
         
@@ -141,7 +141,7 @@
         _borderMaskView.layer.borderWidth = 1.0;
         _borderMaskView.layer.borderColor = [UIColor whiteColor].CGColor;
         _borderMaskView.layer.cornerRadius = frame.size.width / 2.0f;
-        if (iosMajorVersion() >= 13) {
+        if (@available(iOS 13.0, *)) {
             _borderMaskView.layer.cornerCurve = kCACornerCurveCircular;
         }
         _borderView.maskView = _borderMaskView;

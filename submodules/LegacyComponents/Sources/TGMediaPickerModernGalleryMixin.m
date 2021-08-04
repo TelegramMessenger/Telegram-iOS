@@ -370,7 +370,7 @@
         {
             case TGMediaAssetVideoType:
             {
-                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
+                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
             }
                 break;
                 
@@ -386,7 +386,7 @@
 //                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
 //                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
 //                else
-                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
+                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
             }
                 break;
         }

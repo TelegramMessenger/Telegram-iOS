@@ -447,6 +447,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 }
 
 - (void)setEnablePanHandling:(bool)enablePanHandling {
+    _enablePanHandling = enablePanHandling;
     _panGestureRecognizer.enabled = enablePanHandling;
 }
 

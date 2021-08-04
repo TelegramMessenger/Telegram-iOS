@@ -409,7 +409,10 @@ typedef enum {
                 NSString *link = [text substringWithRange:entity.range];
                 NSURL *url = [NSURL URLWithString:link];
                 if (url == nil) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                     url = [NSURL URLWithString:[link stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+#pragma clang diagnostic pop
                 }
                 [textCheckingResults addObject:[NSTextCheckingResult linkCheckingResultWithRange:entity.range URL:url]];
             } else if ([entity isKindOfClass:[TGMessageEntityCashtag class]]) {
@@ -876,7 +879,10 @@ typedef enum {
                         NSString *link = [_text substringWithRange:entity.range];
                         NSURL *url = [NSURL URLWithString:link];
                         if (url == nil) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                             url = [NSURL URLWithString:[link stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+#pragma clang diagnostic pop
                         }
                         [textCheckingResults addObject:[NSTextCheckingResult linkCheckingResultWithRange:entity.range URL:url]];
                     } else if ([entity isKindOfClass:[TGMessageEntityCashtag class]]) {
@@ -1359,7 +1365,7 @@ typedef enum {
 - (NSUInteger)hash
 {
     if (_cachedHash == 0)
-        _cachedHash = (int)(((_itemId >> 32) ^ _itemId & 0xffffffff) + (int)_type);
+        _cachedHash = (int)((((_itemId >> 32) ^ _itemId) & 0xffffffff) + (int)_type);
     return _cachedHash;
 }
 

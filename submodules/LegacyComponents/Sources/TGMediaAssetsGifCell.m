@@ -64,8 +64,7 @@ NSString *const TGMediaAssetsGifCellKind = @"TGMediaAssetsGifCellKind";
         [_typeLabel sizeToFit];
         [self addSubview:_typeLabel];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _shadowView.accessibilityIgnoresInvertColors = true;
             _typeLabel.accessibilityIgnoresInvertColors = true;
         }

@@ -169,4 +169,6 @@
     }
 }
 
+@synthesize interactionBegan;
+
 @end

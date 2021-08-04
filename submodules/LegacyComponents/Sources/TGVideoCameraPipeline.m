@@ -257,19 +257,20 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     {
 		if ([notification.name isEqualToString:AVCaptureSessionWasInterruptedNotification])
 		{
-			[self captureSessionDidStopRunning];
+            NSInteger reason = [notification.userInfo[AVCaptureSessionInterruptionReasonKey] integerValue];
+            if (reason == AVCaptureSessionInterruptionReasonVideoDeviceNotAvailableInBackground) {
+                if (_running)
+                    _startCaptureSessionOnEnteringForeground = true;
+            } else {
+                [self captureSessionDidStopRunning];
+            }
 		}
 		else if ([notification.name isEqualToString:AVCaptureSessionRuntimeErrorNotification])
 		{
 			[self captureSessionDidStopRunning];
 			
 			NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
-			if (error.code == AVErrorDeviceIsNotAvailableInBackground)
-			{
-				if (_running)
-					_startCaptureSessionOnEnteringForeground = true;
-			}
-			else if (error.code == AVErrorMediaServicesWereReset)
+			if (error.code == AVErrorMediaServicesWereReset)
             {
 				[self handleRecoverableCaptureSessionRuntimeError:error];
 			}
@@ -994,12 +995,8 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
 - (void)_enableVideoStabilization
 {
     AVCaptureConnection *videoConnection = [_videoOutput connectionWithMediaType:AVMediaTypeVideo];
-    if (videoConnection.supportsVideoStabilization)
-    {
-        if ([videoConnection respondsToSelector:@selector(setPreferredVideoStabilizationMode:)])
-            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
-        else
-            videoConnection.enablesVideoStabilizationWhenAvailable = true;
+    if (videoConnection.supportsVideoStabilization) {
+        videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
     }
 }
 

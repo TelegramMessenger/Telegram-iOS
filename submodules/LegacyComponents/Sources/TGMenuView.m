@@ -169,12 +169,18 @@ static UIImage *pagerLeftButtonHighlightedImage() {
     {
         if (self.isMultiline)
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             CGSize size = [title sizeWithFont:self.titleLabel.font constrainedToSize:CGSizeMake(self.maxWidth - 18.0f, FLT_MAX) lineBreakMode:NSLineBreakByWordWrapping];
+#pragma clang diagnostic pop
             self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, ceil(size.width) + 18, MAX(41.0f, ceil(size.height) + 20.0f));
         }
         else
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, [title sizeWithFont:self.titleLabel.font].width + 34, 41);
+#pragma clang diagnostic pop
         }
     }
     else

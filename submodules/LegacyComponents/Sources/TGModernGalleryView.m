@@ -50,8 +50,9 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         _context = context;
         _itemPadding = itemPadding;
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             self.accessibilityIgnoresInvertColors = true;
+        }
         
         self.opaque = false;
         self.backgroundColor = UIColorRGBA(0x000000, 1.0f);
@@ -62,8 +63,9 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
         [self addSubview:_scrollViewContainer];
         
         _scrollView = [[TGModernGalleryScrollView alloc] initWithFrame:CGRectMake(-_itemPadding, 0.0f, frame.size.width + itemPadding * 2.0f, frame.size.height)];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         [_scrollViewContainer addSubview:_scrollView];
         
         _interfaceView = interfaceView;
