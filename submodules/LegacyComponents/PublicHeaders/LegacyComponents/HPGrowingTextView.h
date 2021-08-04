@@ -110,7 +110,7 @@ extern NSString *TGMentionBoldAttributeName;
 
 - (NSString *)textWithEntities:(__autoreleasing NSArray<TGMessageEntity *> **)entities;
 
-+ (void)replaceMention:(NSString *)mention inputField:(HPGrowingTextView *)inputField username:(bool)username userId:(int32_t)userId;
++ (void)replaceMention:(NSString *)mention inputField:(HPGrowingTextView *)inputField username:(bool)username userId:(int64_t)userId;
 + (void)replaceHashtag:(NSString *)hashtag inputField:(HPGrowingTextView *)inputField;
 
 @end

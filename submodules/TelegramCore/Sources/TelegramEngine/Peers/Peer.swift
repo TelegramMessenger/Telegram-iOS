@@ -138,7 +138,7 @@ public extension EnginePeer {
             if peer.id.isReplies {
                 return true
             }
-            return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt32Value() == 777000 || peer.id.id._internalGetInt32Value() == 333000))
+            return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt64Value() == 777000 || peer.id.id._internalGetInt64Value() == 333000))
         }
         return false
     }

@@ -815,7 +815,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     [HPGrowingTextView replaceMention:mention inputField:_inputField username:true userId:0];
 }
 
-- (void)replaceMention:(NSString *)mention username:(bool)username userId:(int32_t)userId {
+- (void)replaceMention:(NSString *)mention username:(bool)username userId:(int64_t)userId {
     [HPGrowingTextView replaceMention:mention inputField:_inputField username:username userId:userId];
 }
 
