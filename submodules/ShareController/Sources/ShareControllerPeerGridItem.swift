@@ -187,7 +187,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             self.peerNode.theme = itemTheme
 
             if let peer = peer {
-                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer), online: online, synchronousLoad: synchronousLoad)
+                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
                 if let shimmerNode = self.placeholderNode {
                     self.placeholderNode = nil
                     shimmerNode.removeFromSupernode()
