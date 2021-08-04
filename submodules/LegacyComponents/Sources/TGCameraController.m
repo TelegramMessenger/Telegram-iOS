@@ -1102,7 +1102,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             __strong TGCameraController *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
-            
+        
             TGDispatchOnMainThread(^
             {
                 strongSelf->_shutterIsBusy = false;
@@ -1120,6 +1120,10 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         strongSelf->_camera.disabled = false;
                 }
             });
+            
+            [[SQueue concurrentDefaultQueue] dispatch:^{
+                [TGCameraController generateStartImageWithImage:result];
+            }];
         }];
     }
     else if (cameraMode == PGCameraModeVideo || cameraMode == PGCameraModeSquareVideo || cameraMode == PGCameraModeSquareSwing)
@@ -2246,6 +2250,15 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     _interfaceView.previewViewFrame = toFrame;
 }
 
++ (void)generateStartImageWithImage:(UIImage *)frameImage {
+    CGFloat minSize = MIN(frameImage.size.width, frameImage.size.height);
+    UIImage *image = TGPhotoEditorCrop(frameImage, nil, UIImageOrientationUp, 0.0f, CGRectMake((frameImage.size.width - minSize) / 2.0f, (frameImage.size.height - minSize) / 2.0f, minSize, minSize), false, CGSizeMake(240.0f, 240.0f), frameImage.size, true);
+    UIImage *startImage = TGSecretBlurredAttachmentImage(image, image.size, NULL, false, 0);
+    TGDispatchOnMainThread(^{
+        [TGCameraController saveStartImage:startImage];
+    });
+}
+
 - (void)beginTransitionOutWithVelocity:(CGFloat)velocity
 {
     _dismissing = true;
@@ -2269,13 +2282,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     __weak TGCameraController *weakSelf = self;
     [_camera captureNextFrameCompletion:^(UIImage *frameImage) {
-        CGFloat minSize = MIN(frameImage.size.width, frameImage.size.height);
-        CGFloat maxSize = MAX(frameImage.size.width, frameImage.size.height);
-        
-        UIImage *image = TGPhotoEditorCrop(frameImage, nil, UIImageOrientationUp, 0.0f, CGRectMake((maxSize - minSize) / 2.0f, 0.0f, minSize, minSize), false, CGSizeMake(240.0f, 240.0f), frameImage.size, true);
-        
-        UIImage *startImage = TGSecretBlurredAttachmentImage(image, image.size, NULL, false, 0);
-        [TGCameraController saveStartImage:startImage];
+        [[SQueue concurrentDefaultQueue] dispatch:^{
+            [TGCameraController generateStartImageWithImage:frameImage];
+        }];
     }];
     if (_standalone)
     {
@@ -3156,7 +3165,7 @@ static UIImage *startImage = nil;
 + (UIImage *)startImage
 {
     if (startImage == nil)
-        startImage = TGComponentsImageNamed (@"VideoMessagePlaceholder.jpg");
+        startImage = TGComponentsImageNamed (@"CameraPlaceholder.jpg");
     
     return startImage;
 }

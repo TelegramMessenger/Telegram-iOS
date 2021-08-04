@@ -184,16 +184,16 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             }
             switch playbackBaseRate {
                 case .x0_5:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "0.5x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x1:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "1x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.controlColor)))
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateNormal
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
                 case .x1_5:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.5x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x2:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "2x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.accentTextColor)))
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
@@ -372,13 +372,13 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         if let playbackBaseRate = self.playbackBaseRate {
             switch playbackBaseRate {
                 case .x0_5:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "0.5x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x1:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "1x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.controlColor)))
                 case .x1_5:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.5x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x2:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "2x", isLarge: false, color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 default:
                     break
             }
@@ -486,7 +486,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 30.0, height: minHeight)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 20.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 33.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
         transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
@@ -501,7 +501,18 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     }
     
     @objc public func rateButtonPressed() {
-        self.rateButton.contextAction?(self.rateButton.containerNode, nil)
+        let nextRate: AudioPlaybackRate
+        if let rate = self.playbackBaseRate {
+            switch rate {
+            case .x1:
+                nextRate = .x2
+            default:
+                nextRate = .x1
+            }
+        } else {
+            nextRate = .x2
+        }
+        self.setRate?(nextRate)
     }
     
     private func speedList(strings: PresentationStrings) -> [(String, String, AudioPlaybackRate)] {
@@ -542,7 +553,6 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let items: Signal<[ContextMenuItem], NoError> = self.contextMenuSpeedItems()
         let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode)), items: items, reactionItems: [], gesture: gesture)
         self.presentInGlobalOverlay?(contextController)
-//        controller.presentInGlobalOverlay(contextController)
     }
     
     @objc public func actionButtonPressed() {
@@ -606,38 +616,42 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     }
 }
 
-private func optionsRateImage(rate: String, isLarge: Bool, color: UIColor = .white) -> UIImage? {
-    return generateImage(isLarge ? CGSize(width: 30.0, height: 30.0) : CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
+private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 16.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
 
         context.clear(CGRect(origin: CGPoint(), size: size))
 
-        if let image = generateTintedImage(image: UIImage(bundleImageName: isLarge ? "Chat/Context Menu/Playspeed30" : "Chat/Context Menu/Playspeed24"), color: color) {
-            image.draw(at: CGPoint(x: 0.0, y: 0.0))
-        }
+        let lineWidth = 1.0 + UIScreenPixel
+        context.setLineWidth(lineWidth)
+        context.setStrokeColor(color.cgColor)
+        
 
-        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .semibold), textColor: color)
+        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
 
         var offset = CGPoint(x: 1.0, y: 0.0)
+        var width: CGFloat
         if rate.count >= 3 {
-            if rate == "0.5x" {
+            if rate == "0.5X" {
                 string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.5
             } else {
                 string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.3
             }
+            width = 29.0
         } else {
+            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            width = 19.0
             offset.x += -0.3
         }
-
-        if !isLarge {
-            offset.x *= 0.5
-            offset.y *= 0.5
-        }
-
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
+        context.addPath(path.cgPath)
+        context.strokePath()
+        
         let boundingRect = string.boundingRect(with: size, options: [], context: nil)
-        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + floor((size.height - boundingRect.height) / 2.0)))
+        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
 
         UIGraphicsPopContext()
     })
