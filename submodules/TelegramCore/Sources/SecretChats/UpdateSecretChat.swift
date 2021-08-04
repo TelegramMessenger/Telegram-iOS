@@ -40,7 +40,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                         }
                     }
                     
-                    let keyHash = MTSha1(key)!
+                    let keyHash = MTSha1(key)
                     
                     var keyFingerprint: Int64 = 0
                     keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in

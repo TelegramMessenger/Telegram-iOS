@@ -219,7 +219,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
             }
         }
         
-        let keyHash = MTSha1(key)!
+        let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
         keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
@@ -321,7 +321,7 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
             }
         }
         
-        let keyHash = MTSha1(key)!
+        let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
         keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in

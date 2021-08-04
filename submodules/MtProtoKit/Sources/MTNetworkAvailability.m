@@ -137,7 +137,6 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
     [[MTNetworkAvailability networkAvailabilityQueue] dispatchOnQueue:^
      {
          BOOL isReachable = ((flags & kSCNetworkReachabilityFlagsReachable) != 0);
-         BOOL needsConnection = ((flags & kSCNetworkReachabilityFlagsConnectionRequired) != 0);
          BOOL canConnectionAutomatically = (((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
                                             ((flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0));
          BOOL canConnectWithoutUserInteraction = (canConnectionAutomatically &&

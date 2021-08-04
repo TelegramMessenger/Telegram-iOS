@@ -92,7 +92,7 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     if (self.response && !self.HTTPError) {
         if (![self hasAcceptableStatusCode]) {
             NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
-            [userInfo setValue:[NSString stringWithFormat:NSLocalizedString(@"Expected status code in (%@), got %d", nil), AFStringFromIndexSet(self.acceptableStatusCodes), [self.response statusCode]] forKey:NSLocalizedDescriptionKey];
+            [userInfo setValue:[NSString stringWithFormat:NSLocalizedString(@"Expected status code in (%@), got %ld", nil), AFStringFromIndexSet(self.acceptableStatusCodes), (long)[self.response statusCode]] forKey:NSLocalizedDescriptionKey];
             [userInfo setValue:[self.request URL] forKey:NSURLErrorFailingURLErrorKey];
             
             self.HTTPError = [[NSError alloc] initWithDomain:AFNetworkingErrorDomain code:NSURLErrorBadServerResponse userInfo:userInfo];
@@ -176,21 +176,27 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 - (void)setCompletionBlockWithSuccess:(void (^)(NSOperation *operation, id responseObject))success
                               failure:(void (^)(NSOperation *operation, NSError *error))failure
 {
+    __weak typeof(self) weakSelf = self;
     self.completionBlock = ^ {
-        if ([self isCancelled]) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) {
+            return;
+        }
+
+        if ([strongSelf isCancelled]) {
             return;
         }
         
-        if (self.error) {
+        if (strongSelf.error) {
             if (failure) {
-                dispatch_group_async(self.dispatchGroup, self.failureCallbackQueue ? self.failureCallbackQueue : dispatch_get_main_queue(), ^{
-                    failure(self, self.error);
+                dispatch_group_async(strongSelf.dispatchGroup, strongSelf.failureCallbackQueue ? strongSelf.failureCallbackQueue : dispatch_get_main_queue(), ^{
+                    failure(strongSelf, strongSelf.error);
                 });
             }
         } else {
             if (success) {
-                dispatch_group_async(self.dispatchGroup, self.successCallbackQueue ? self.successCallbackQueue : dispatch_get_main_queue(), ^{
-                    success(self, self.responseData);
+                dispatch_group_async(strongSelf.dispatchGroup, strongSelf.successCallbackQueue ? strongSelf.successCallbackQueue : dispatch_get_main_queue(), ^{
+                    success(strongSelf, strongSelf.responseData);
                 });
             }
         }

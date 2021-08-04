@@ -364,7 +364,7 @@ private enum MultipartFetchSource {
                                     var ivOffset: Int32 = (offset / 16).bigEndian
                                     memcpy(bytes.advanced(by: partIvCount - 4), &ivOffset, 4)
                                 }
-                                return .single(MTAesCtrDecrypt(bytes.makeData(), key, partIv))
+                                return .single(MTAesCtrDecrypt(bytes.makeData(), key, partIv)!)
                             }
                     }
                 }
