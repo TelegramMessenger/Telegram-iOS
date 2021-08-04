@@ -522,7 +522,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                         if let presences = (view.views[key] as? PeerPresencesView)?.presences {
                             for (_, presence) in presences {
                                 if let presence = presence as? TelegramUserPresence {
-                                    let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                    let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
                                     switch relativeStatus {
                                     case .online:
                                         count += 1

@@ -6,7 +6,7 @@ import SwiftSignalKit
 
 public typealias DeviceContactStableId = String
 
-public protocol DeviceContactDataManager: class {
+public protocol DeviceContactDataManager: AnyObject {
     func personNameDisplayOrder() -> Signal<PresentationPersonNameOrder, NoError>
     func basicData() -> Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
     func basicDataForNormalizedPhoneNumber(_ normalizedNumber: DeviceContactNormalizedPhoneNumber) -> Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError>

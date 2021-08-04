@@ -589,7 +589,7 @@ public final class PostboxEncoder {
         let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try! value.encode(to: innerEncoder)
 
-        let (data, valueType) = innerEncoder.makeData()
+        let (data, valueType) = innerEncoder.makeData(addHeader: true)
         self.encodeInnerObjectData(data, valueType: valueType, forKey: key)
     }
 
@@ -1610,6 +1610,29 @@ public final class PostboxDecoder {
             return ReadBuffer(memory: copyBytes, length: Int(length), freeWhenDone: true)
         } else {
             return nil
+        }
+    }
+
+    static func parseDataRaw(data: Data) -> Data? {
+        return data.withUnsafeBytes { bytes -> Data? in
+            guard let baseAddress = bytes.baseAddress else {
+                return nil
+            }
+            if bytes.count < 4 {
+                return nil
+            }
+
+            var length: Int32 = 0
+            memcpy(&length, baseAddress, 4)
+
+            if length < 0 || length != (bytes.count - 4) {
+                return nil
+            }
+            if length == 0 {
+                return Data()
+            }
+
+            return Data(bytes: baseAddress.advanced(by: 4), count: Int(length))
         }
     }
     

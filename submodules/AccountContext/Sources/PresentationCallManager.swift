@@ -131,7 +131,7 @@ public final class PresentationCallVideoView {
     }
 }
 
-public protocol PresentationCall: class {
+public protocol PresentationCall: AnyObject {
     var context: AccountContext { get }
     var isIntegratedWithCallKit: Bool { get }
     var internalId: CallSessionInternalId { get }
@@ -391,7 +391,7 @@ public extension GroupCallParticipantsContext.Participant {
     }
 }
 
-public protocol PresentationGroupCall: class {
+public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }

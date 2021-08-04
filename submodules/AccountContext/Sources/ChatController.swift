@@ -339,37 +339,6 @@ public enum ChatControllerPresentationMode: Equatable {
     case inline(NavigationController?)
 }
 
-public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
-    public let timestamp: Int32
-    public let text: NSAttributedString
-    
-    public init(timestamp: Int32, text: NSAttributedString) {
-        self.timestamp = timestamp
-        self.text = text
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
-        self.timestamp = (try? container.decode(Int32.self, forKey: "d")) ?? 0
-        self.text = ((try? container.decode(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKey.self)
-
-        try container.encode(self.timestamp, forKey: "d")
-        try container.encode(ChatTextInputStateText(attributedText: self.text), forKey: "at")
-    }
-    
-    public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
-        if let to = to as? ChatEmbeddedInterfaceState {
-            return self.timestamp == to.timestamp && self.text.isEqual(to: to.text)
-        } else {
-            return false
-        }
-    }
-}
-
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
     case hashtags([String])

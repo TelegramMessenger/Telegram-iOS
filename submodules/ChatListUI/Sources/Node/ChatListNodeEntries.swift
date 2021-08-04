@@ -46,7 +46,7 @@ public enum ChatListNodeEntryPromoInfo: Equatable {
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case HeaderEntry
-    case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, hasFailedMessages: Bool, isContact: Bool)
+    case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, hasFailedMessages: Bool, isContact: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
     case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
@@ -64,8 +64,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(index)
         case .ArchiveIntro:
             return .index(ChatListIndex.absoluteUpperBound.successor)
-        case let .AdditionalCategory(additionalCategory):
-            return .additionalCategory(additionalCategory.index)
+        case let .AdditionalCategory(index, _, _, _, _, _, _):
+            return .additionalCategory(index)
         }
     }
     
@@ -81,8 +81,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .GroupId(groupId)
         case .ArchiveIntro:
             return .ArchiveIntro
-        case let .AdditionalCategory(additionalCategory):
-            return .additionalCategory(additionalCategory.id)
+        case let .AdditionalCategory(_, id, _, _, _, _, _):
+            return .additionalCategory(id)
         }
     }
     
@@ -144,7 +144,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                             return false
                         }
                         if let lhsEmbeddedState = lhsEmbeddedState, let rhsEmbeddedState = rhsEmbeddedState {
-                            if !lhsEmbeddedState.isEqual(to: rhsEmbeddedState) {
+                            if lhsEmbeddedState != rhsEmbeddedState {
                                 return false
                             }
                         } else if (lhsEmbeddedState != nil) != (rhsEmbeddedState != nil) {

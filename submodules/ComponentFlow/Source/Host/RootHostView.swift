@@ -80,7 +80,7 @@ public final class RootHostView<EnvironmentType: Equatable>: UIViewController {
         self.environment._isUpdated = false
 
         transition.setFrame(view: self.componentView, frame: CGRect(origin: CGPoint(), size: size))
-        self.componentView.update(
+        let _ = self.componentView.update(
             transition: transition,
             component: self.content,
             environment: {

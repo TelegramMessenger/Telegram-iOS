@@ -827,14 +827,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 if let strongSelf = self, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                     var items: [ActionSheetItem] = []
-                    var personalPeerName: String?
-                    var isChannel = false
+                    let personalPeerName: String? = nil
                     
                     if actions.options.contains(.deleteGlobally) {
                         let globalTitle: String
-                        if isChannel {
-                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                        } else if let personalPeerName = personalPeerName {
+                        if let personalPeerName = personalPeerName {
                             globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
                         } else {
                             globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
@@ -854,14 +851,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         }))
                     }
                     if actions.options.contains(.deleteLocally) {
-                        var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-//                        if strongSelf.context.account.peerId == strongSelf.peerId {
-//                            if messageIds.count == 1 {
-//                                localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
-//                            } else {
-//                                localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
-//                            }
-//                        }
+                        let localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
                         items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
@@ -1031,15 +1021,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }
                     } else {
-                        let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                            transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                if let currentState = currentState as? ChatInterfaceState {
-                                    return currentState.withUpdatedForwardMessageIds(Array(messageIds))
-                                } else {
-                                    return ChatInterfaceState().withUpdatedForwardMessageIds(Array(messageIds))
-                                }
-                            })
-                        }) |> deliverOnMainQueue).start(completed: {
+                        let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                            return currentState.withUpdatedForwardMessageIds(Array(messageIds))
+                        })
+                        |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
                                 let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                                 controller.purposefulAction = { [weak self] in

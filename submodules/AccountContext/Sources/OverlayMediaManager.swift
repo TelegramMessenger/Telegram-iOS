@@ -15,7 +15,7 @@ public final class OverlayMediaControllerEmbeddingItem {
     }
 }
 
-public protocol OverlayMediaController: class {
+public protocol OverlayMediaController: AnyObject {
     var updatePossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem?) -> Void)? { get set }
     var embedPossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem) -> Bool)? { get set }
     

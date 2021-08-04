@@ -1386,8 +1386,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     outgoingAudioBitrateKbit = value
                 }
 
-                let enableNoiseSuppression = accountContext.sharedContext.immediateExperimentalUISettings.enableNoiseSuppression
-
                 genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                     let disposable = MetaDisposable()
                     Queue.mainQueue().async {
@@ -1406,7 +1404,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: enableNoiseSuppression)
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false)
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
@@ -3201,5 +3199,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public func loadMoreMembers(token: String) {
         self.participantsContext?.loadMore(token: token)
+    }
+
+    func getStats() -> Signal<OngoingGroupCallContext.Stats, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let strongSelf = self else {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            if let genericCallContext = strongSelf.genericCallContext {
+                genericCallContext.getStats(completion: { stats in
+                    subscriber.putNext(stats)
+                    subscriber.putCompletion()
+                })
+            } else {
+                subscriber.putCompletion()
+            }
+
+            return EmptyDisposable
+        }
+        |> runOn(.mainQueue())
     }
 }

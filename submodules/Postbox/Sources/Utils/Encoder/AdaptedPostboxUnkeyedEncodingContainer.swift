@@ -25,7 +25,9 @@ extension _AdaptedPostboxEncoder {
             self.userInfo = userInfo
         }
 
-        func makeData() -> (Data, ValueType) {
+        func makeData(addHeader: Bool) -> (Data, ValueType) {
+            precondition(addHeader)
+            
             if self.items.isEmpty {
                 let buffer = WriteBuffer()
 
@@ -111,7 +113,7 @@ extension _AdaptedPostboxEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try! value.encode(to: innerEncoder)
 
-        let (data, _) = innerEncoder.makeData()
+        let (data, _) = innerEncoder.makeData(addHeader: true)
 
         let buffer = WriteBuffer()
 

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import TextFormat
+import ObjCRuntimeUtils
 
 public enum CreatePollTextInputItemTextLimitMode {
     case characters
@@ -292,7 +293,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 let textLength: Int
                 switch maxLength.mode {
                 case .characters:
-                    textLength = item.text.string.count ?? 0
+                    textLength = item.text.string.count
                 case .bytes:
                     textLength = item.text.string.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
                 }
@@ -511,7 +512,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     }
     
     public func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-       if action == Selector(("_showTextStyleOptions:")) {
+       if action == makeSelectorFromString("_showTextStyleOptions:") {
             if case .general = self.inputMenu.state {
                 if self.textNode.attributedText == nil || self.textNode.attributedText!.length == 0 || self.textNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)

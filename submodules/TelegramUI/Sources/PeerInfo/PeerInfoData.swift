@@ -724,7 +724,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         for participant in participants.participants {
                             if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
-                                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
                                 switch relativeStatus {
                                 case .online:
                                     onlineCount += 1

@@ -289,9 +289,10 @@ public final class NavigateToChatControllerParams {
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
+    public let chatListFilter: ChatListFilterData?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: ChatListFilterData? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -312,6 +313,7 @@ public final class NavigateToChatControllerParams {
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId
+        self.chatListFilter = chatListFilter
         self.completion = completion
     }
 }
@@ -534,7 +536,7 @@ public enum CreateGroupMode {
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
 }
 
-public protocol AppLockContext: class {
+public protocol AppLockContext: AnyObject {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     
@@ -543,10 +545,10 @@ public protocol AppLockContext: class {
     func failedUnlockAttempt()
 }
 
-public protocol RecentSessionsController: class {
+public protocol RecentSessionsController: AnyObject {
 }
 
-public protocol SharedAccountContext: class {
+public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -701,16 +703,16 @@ public final class TonContext {
 public protocol ComposeController: ViewController {
 }
 
-public protocol ChatLocationContextHolder: class {
+public protocol ChatLocationContextHolder: AnyObject {
 }
 
-public protocol AccountGroupCallContext: class {
+public protocol AccountGroupCallContext: AnyObject {
 }
 
-public protocol AccountGroupCallContextCache: class {
+public protocol AccountGroupCallContextCache: AnyObject {
 }
 
-public protocol AccountContext: class {
+public protocol AccountContext: AnyObject {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
     var engine: TelegramEngine { get }

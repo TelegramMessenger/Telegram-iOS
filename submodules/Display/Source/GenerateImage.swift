@@ -553,7 +553,6 @@ public class DrawingContext {
         }
         if self.hasGeneratedImage {
             preconditionFailure()
-            return nil
         }
         self.hasGeneratedImage = true
 

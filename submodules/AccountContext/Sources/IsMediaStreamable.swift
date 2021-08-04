@@ -18,8 +18,8 @@ public func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Boo
         return false
     }
     for attribute in media.attributes {
-        if case let .Video(video) = attribute {
-            if video.flags.contains(.supportsStreaming) {
+        if case let .Video(_, _, flags) = attribute {
+            if flags.contains(.supportsStreaming) {
                 return true
             }
             break
@@ -41,8 +41,8 @@ public func isMediaStreamable(media: TelegramMediaFile) -> Bool {
         return false
     }
     for attribute in media.attributes {
-        if case let .Video(video) = attribute {
-            if video.flags.contains(.supportsStreaming) {
+        if case let .Video(_, _, flags) = attribute {
+            if flags.contains(.supportsStreaming) {
                 return true
             }
             break

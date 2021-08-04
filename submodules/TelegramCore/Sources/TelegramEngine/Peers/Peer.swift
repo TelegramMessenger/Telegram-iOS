@@ -132,6 +132,16 @@ public extension EnginePeer {
     var isVerified: Bool {
         return self._asPeer().isVerified
     }
+
+    var isService: Bool {
+        if case let .user(peer) = self {
+            if peer.id.isReplies {
+                return true
+            }
+            return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt32Value() == 777000 || peer.id.id._internalGetInt32Value() == 333000))
+        }
+        return false
+    }
 }
 
 public extension EnginePeer {

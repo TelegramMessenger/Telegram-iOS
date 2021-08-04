@@ -611,8 +611,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
-                    
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.data, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         if let promoInfo = promoInfo {
                             switch promoInfo {
@@ -836,10 +836,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             switch item.content {
-            case let .groupReference(groupReference):
-                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
+            case let .groupReference(groupId, _, _, _, _):
+                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                 chatListController.navigationPresentation = .master
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _):
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
@@ -1481,8 +1481,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             switch entry {
             case .all:
                 return nil
-            case let .filter(filter):
-                return filter.id
+            case let .filter(id, _, _):
+                return id
             }
         }
         
@@ -1996,7 +1996,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return false
                     }
                     if value == .commit {
-                        let context = strongSelf.context
                         let presentationData = strongSelf.presentationData
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))

@@ -341,7 +341,7 @@ final class ChatOverscrollControl: CombinedComponent {
     let foregroundColor: UIColor
     let peer: EnginePeer?
     let context: AccountContext
-    let expandProgress: CGFloat
+    let expandDistance: CGFloat
 
     init(
         text: String,
@@ -349,14 +349,14 @@ final class ChatOverscrollControl: CombinedComponent {
         foregroundColor: UIColor,
         peer: EnginePeer?,
         context: AccountContext,
-        expandProgress: CGFloat
+        expandDistance: CGFloat
     ) {
         self.text = text
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.peer = peer
         self.context = context
-        self.expandProgress = expandProgress
+        self.expandDistance = expandDistance
     }
 
     static func ==(lhs: ChatOverscrollControl, rhs: ChatOverscrollControl) -> Bool {
@@ -375,7 +375,7 @@ final class ChatOverscrollControl: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.expandProgress != rhs.expandProgress {
+        if lhs.expandDistance != rhs.expandDistance {
             return false
         }
         return true
@@ -431,13 +431,32 @@ final class ChatOverscrollControl: CombinedComponent {
                 )
             })
 
+            let progressSize = avatarBackground.size.width - avatarProgressPadding * 2.0
+
+            let halfDistance = progressSize
+            let quarterDistance = halfDistance / 2.0
+
+            let clippedDistance = max(0.0, min(halfDistance * 2.0, context.component.expandDistance))
+
+            var mappedProgress: CGFloat
+            if clippedDistance <= quarterDistance {
+                mappedProgress = acos(1.0 - clippedDistance / quarterDistance) / (CGFloat.pi * 2.0)
+            } else if clippedDistance <= halfDistance {
+                let sectionDistance = halfDistance - clippedDistance
+                mappedProgress = 0.25 + asin(1.0 - sectionDistance / quarterDistance) / (CGFloat.pi * 2.0)
+            } else {
+                let restDistance = clippedDistance - halfDistance
+                mappedProgress = min(1.0, 0.5 + restDistance / 60.0)
+            }
+            mappedProgress = max(0.01, mappedProgress)
+
             let avatarExpandProgress = avatarExpandProgress.update(
                 component: RadialProgressComponent(
                     color: context.component.foregroundColor,
                     lineWidth: 2.5,
-                    value: context.component.peer == nil ? 0.0 : context.component.expandProgress
+                    value: context.component.peer == nil ? 0.0 : mappedProgress
                 ),
-                availableSize: CGSize(width: avatarBackground.size.width - avatarProgressPadding * 2.0, height: avatarBackground.size.height - avatarProgressPadding * 2.0),
+                availableSize: CGSize(width: progressSize, height: progressSize),
                 transition: context.transition
             )
 

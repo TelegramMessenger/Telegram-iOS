@@ -945,6 +945,8 @@ public final class VoiceChatController: ViewController {
                     return false
             }
         }
+
+        private var statsDisposable: Disposable?
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -2338,6 +2340,27 @@ public final class VoiceChatController: ViewController {
                 }
                 strongSelf.appIsActive = active
             })
+
+            if self.context.sharedContext.immediateExperimentalUISettings.enableDebugDataDisplay {
+                self.statsDisposable = ((call as! PresentationGroupCallImpl).getStats()
+                |> deliverOnMainQueue
+                |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                |> restart).start(next: { [weak self] stats in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for (endpointId, videoNode) in strongSelf.videoNodes {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            videoNode.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                    if let (_, maybeEndpointId, _, _, _) = strongSelf.mainStageNode.currentPeer, let endpointId = maybeEndpointId {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            strongSelf.mainStageNode.currentVideoNode?.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                })
+            }
         }
         
         deinit {
@@ -2361,6 +2384,7 @@ public final class VoiceChatController: ViewController {
             self.readyVideoDisposables.dispose()
             self.applicationStateDisposable?.dispose()
             self.myPeerVideoReadyDisposable.dispose()
+            self.statsDisposable?.dispose()
         }
         
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {

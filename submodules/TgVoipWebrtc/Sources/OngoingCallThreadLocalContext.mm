@@ -1785,6 +1785,20 @@ private:
     }
 }
 
+- (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion {
+    if (_instance) {
+        _instance->getStats([completion](tgcalls::GroupInstanceStats stats) {
+            NSMutableDictionary<NSString *,OngoingGroupCallIncomingVideoStats *> *incomingVideoStats = [[NSMutableDictionary alloc] init];
+
+            for (const auto &it : stats.incomingVideoStats) {
+                incomingVideoStats[[NSString stringWithUTF8String:it.first.c_str()]] = [[OngoingGroupCallIncomingVideoStats alloc] initWithReceivingQuality:it.second.receivingQuality availableQuality:it.second.availableQuality];
+            }
+
+            completion([[OngoingGroupCallStats alloc] initWithIncomingVideoStats:incomingVideoStats]);
+        });
+    }
+}
+
 @end
 
 @implementation OngoingGroupCallMediaChannelDescription
@@ -1841,6 +1855,31 @@ private:
         _ssrcGroups = ssrcGroups;
         _minQuality = minQuality;
         _maxQuality = maxQuality;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallIncomingVideoStats
+
+- (instancetype _Nonnull)initWithReceivingQuality:(int)receivingQuality availableQuality:(int)availableQuality {
+    self = [super init];
+    if (self != nil) {
+        _receivingQuality = receivingQuality;
+        _availableQuality = availableQuality;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallStats
+
+- (instancetype _Nonnull)initWithIncomingVideoStats:(NSDictionary<NSString *, OngoingGroupCallIncomingVideoStats *> * _Nonnull)incomingVideoStats {
+    self = [super init];
+    if (self != nil) {
+        _incomingVideoStats = incomingVideoStats;
     }
     return self;
 }

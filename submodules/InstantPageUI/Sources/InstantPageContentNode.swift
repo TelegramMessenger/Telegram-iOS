@@ -179,7 +179,7 @@ final class InstantPageContentNode : ASDisplayNode {
                 var itemNode = self.visibleItemsWithNodes[itemIndex]
                 if let currentItemNode = itemNode {
                     if !item.matchesNode(currentItemNode) {
-                        (currentItemNode as! ASDisplayNode).removeFromSupernode()
+                        currentItemNode.removeFromSupernode()
                         self.visibleItemsWithNodes.removeValue(forKey: itemIndex)
                         itemNode = nil
                     }
@@ -221,9 +221,9 @@ final class InstantPageContentNode : ASDisplayNode {
                         }
                     }
                 } else {
-                    if (itemNode as! ASDisplayNode).frame != itemFrame {
-                        transition.updateFrame(node: (itemNode as! ASDisplayNode), frame: itemFrame)
-                        itemNode?.updateLayout(size: itemFrame.size, transition: transition)
+                    if let itemNode = itemNode, itemNode.frame != itemFrame {
+                        transition.updateFrame(node: itemNode, frame: itemFrame)
+                        itemNode.updateLayout(size: itemFrame.size, transition: transition)
                     }
                 }
                 
@@ -279,9 +279,9 @@ final class InstantPageContentNode : ASDisplayNode {
         for (index, itemNode) in self.visibleItemsWithNodes {
             if !visibleItemIndices.contains(index) {
                 removeItemIndices.append(index)
-                (itemNode as! ASDisplayNode).removeFromSupernode()
+                itemNode.removeFromSupernode()
             } else {
-                var itemFrame = (itemNode as! ASDisplayNode).frame
+                var itemFrame = itemNode.frame
                 let itemThreshold: CGFloat = 200.0
                 itemFrame.origin.y -= itemThreshold
                 itemFrame.size.height += itemThreshold * 2.0

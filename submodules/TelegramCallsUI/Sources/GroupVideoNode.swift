@@ -24,6 +24,8 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
     private let containerNode: ASDisplayNode
     private let videoViewContainer: UIView
     private let videoView: VideoRenderingView
+
+    private let debugTextNode: ImmediateTextNode
     
     private let backdropVideoViewContainer: UIView
     private let backdropVideoView: VideoRenderingView?
@@ -55,6 +57,8 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         self.backdropVideoViewContainer = UIView()
         self.backdropVideoViewContainer.isUserInteractionEnabled = false
         self.backdropVideoView = backdropVideoView
+
+        self.debugTextNode = ImmediateTextNode()
                 
         super.init()
 
@@ -66,6 +70,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         self.videoViewContainer.addSubview(self.videoView)
         self.addSubnode(self.sourceContainerNode)
         self.containerNode.view.addSubview(self.videoViewContainer)
+        self.containerNode.addSubnode(self.debugTextNode)
         self.sourceContainerNode.contentNode.addSubnode(self.containerNode)
                 
         self.clipsToBounds = true
@@ -199,9 +204,24 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         }
         return rotatedAspect
     }
+
+    func updateDebugInfo(text: String) {
+        self.debugTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+        if let (size, layoutMode) = self.validLayout {
+            self.updateLayout(size: size, layoutMode: layoutMode, transition: .immediate)
+        }
+    }
     
     func updateLayout(size: CGSize, layoutMode: VideoNodeLayoutMode, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, layoutMode)
+
+        let debugTextSize = self.debugTextNode.updateLayout(CGSize(width: 200.0, height: 200.0))
+        if size.height > size.width + 100.0 {
+            self.debugTextNode.frame = CGRect(origin: CGPoint(x: 5.0, y: 44.0), size: debugTextSize)
+        } else {
+            self.debugTextNode.frame = CGRect(origin: CGPoint(x: 5.0, y: 5.0), size: debugTextSize)
+        }
+
         let bounds = CGRect(origin: CGPoint(), size: size)
         self.sourceContainerNode.update(size: size, transition: .immediate)
         transition.updateFrameAsPositionAndBounds(node: self.sourceContainerNode, frame: bounds)

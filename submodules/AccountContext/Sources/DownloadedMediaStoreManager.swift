@@ -4,7 +4,7 @@ import Postbox
 import TelegramUIPreferences
 import SwiftSignalKit
 
-public protocol DownloadedMediaStoreManager: class {
+public protocol DownloadedMediaStoreManager: AnyObject {
     func store(_ media: AnyMediaReference, timestamp: Int32, peerType: MediaAutoDownloadPeerType)
 }
 

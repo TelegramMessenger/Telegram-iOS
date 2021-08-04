@@ -38,8 +38,22 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
             if let mappedType = AdaptedPostboxDecoder.ContentType(valueType: valueType) {
                 return try AdaptedPostboxDecoder().decode(T.self, from: data, contentType: mappedType)
             } else {
-                decodingErrorBreakpoint()
-                throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+                switch valueType {
+                case .Bytes:
+                    guard let resultData = PostboxDecoder.parseDataRaw(data: data) else {
+                        decodingErrorBreakpoint()
+                        throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+                    }
+                    if let resultData = resultData as? T {
+                        return resultData
+                    } else {
+                        decodingErrorBreakpoint()
+                        throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+                    }
+                default:
+                    decodingErrorBreakpoint()
+                    throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+                }
             }
         } else {
             decodingErrorBreakpoint()
@@ -76,6 +90,15 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
 
     func decode(_ type: String.Type, forKey key: Key) throws -> String {
         if let value = self.decoder.decodeOptionalStringForKey(key.stringValue) {
+            return value
+        } else {
+            decodingErrorBreakpoint()
+            throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+        }
+    }
+
+    func decode(_ type: Double.Type, forKey key: Key) throws -> Double {
+        if let value = self.decoder.decodeOptionalDoubleForKey(key.stringValue) {
             return value
         } else {
             decodingErrorBreakpoint()

@@ -149,7 +149,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                                     }
                                 }
                             }
-                        } else if view.isAddedToChatList, let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
+                        } else if view.isAddedToChatList, tagMask == nil, let historyScrollState = (initialData?.storedInterfaceState).flatMap(_internal_decodeStoredChatInterfaceState).flatMap(ChatInterfaceState.parse)?.historyScrollState {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
                             if case .peer = chatLocation, !view.isAddedToChatList {

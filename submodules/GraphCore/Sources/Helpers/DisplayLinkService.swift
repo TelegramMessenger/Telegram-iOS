@@ -14,7 +14,7 @@ import UIKit
 #endif
 import CoreGraphics
 
-public protocol DisplayLinkListner: class {
+public protocol DisplayLinkListner: AnyObject {
     func update(delta: TimeInterval)
 }
 

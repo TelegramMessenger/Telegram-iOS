@@ -14,15 +14,15 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
     return Signal { subscriber in
         #if targetEnvironment(simulator)
         return EmptyDisposable
-        #endif
-        
+        #else
         let container = CKContainer.default()
         let publicDatabase = container.database(with: .public)
         let recordId = CKRecord.ID(recordName: "emergency-datacenter-\(prefix)")
         publicDatabase.fetch(withRecordID: recordId, completionHandler: { record, error in
             if let error = error {
                 print("publicDatabase.fetch error: \(error)")
-                if let error = error as? NSError, error.domain == CKError.errorDomain, error.code == 1 {
+                let nsError = error as NSError
+                if nsError.domain == CKError.errorDomain, nsError.code == 1 {
                     subscriber.putError(.networkUnavailable)
                 } else {
                     subscriber.putError(.generic)
@@ -46,8 +46,8 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
         })
         
         return ActionDisposable {
-            
         }
+        #endif
     }
 }
 

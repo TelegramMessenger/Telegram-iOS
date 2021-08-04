@@ -76,7 +76,6 @@ class LinesChartRenderer: BaseChartRenderer {
             if linesShapeAnimator.isAnimating {
                 let animationOffset = linesShapeAnimator.current
                 
-                let path = CGMutablePath()
                 let fromPoints = fromLines.safeElement(at: index)?.points ?? []
                 let toPoints = toLines.safeElement(at: index)?.points ?? []
                 

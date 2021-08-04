@@ -38,7 +38,6 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
     
     init(context: AccountContext, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))

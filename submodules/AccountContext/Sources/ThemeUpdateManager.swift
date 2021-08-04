@@ -3,5 +3,5 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 
-public protocol ThemeUpdateManager: class {
+public protocol ThemeUpdateManager: AnyObject {
 }

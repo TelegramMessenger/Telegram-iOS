@@ -55,7 +55,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
             let previousState = self.state
             self.state = state
             
-            if let (absoluteRect, containerSize) = self.validLayout, let previousState = previousState {
+            if let (absoluteRect, containerSize) = self.validLayout, let _ = previousState {
                 self.updateLayout(absoluteRect: absoluteRect, containerSize: containerSize, transition: .immediate)
             }
         }

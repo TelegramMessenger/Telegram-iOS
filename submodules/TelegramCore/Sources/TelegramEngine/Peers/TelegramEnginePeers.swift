@@ -8,6 +8,22 @@ public enum AddressNameValidationStatus: Equatable {
     case availability(AddressNameAvailability)
 }
 
+public final class OpaqueChatInterfaceState {
+    public let opaqueData: Data?
+    public let historyScrollMessageIndex: MessageIndex?
+    public let synchronizeableInputState: SynchronizeableChatInputState?
+
+    public init(
+        opaqueData: Data?,
+        historyScrollMessageIndex: MessageIndex?,
+        synchronizeableInputState: SynchronizeableChatInputState?
+    ) {
+        self.opaqueData = opaqueData
+        self.historyScrollMessageIndex = historyScrollMessageIndex
+        self.synchronizeableInputState = synchronizeableInputState
+    }
+}
+
 public extension TelegramEngine {
     final class Peers {
         private let account: Account
@@ -479,16 +495,19 @@ public extension TelegramEngine {
             return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
 
-        public func getNextUnreadChannel(peerId: PeerId) -> Signal<EnginePeer?, NoError> {
+        public func getNextUnreadChannel(peerId: PeerId, filter: ChatListFilterPredicate?) -> Signal<EnginePeer?, NoError> {
             return self.account.postbox.transaction { transaction -> EnginePeer? in
-                var peers: [RenderedPeer] = []
-                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: .root, count: 100))
-                peers.append(contentsOf: transaction.getTopChatListEntries(groupId: Namespaces.PeerGroup.archive, count: 100))
-
                 var results: [(EnginePeer, Int32)] = []
 
-                for peer in peers {
-                    guard let channel = peer.chatMainPeer as? TelegramChannel, case .broadcast = channel.info else {
+                var peerIds: [PeerId] = []
+                peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: filter))
+                peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: filter))
+
+                for listId in peerIds {
+                    guard let peer = transaction.getPeer(listId) else {
+                        continue
+                    }
+                    guard let channel = peer as? TelegramChannel, case .broadcast = channel.info else {
                         continue
                     }
                     if channel.id == peerId {
@@ -500,6 +519,7 @@ public extension TelegramEngine {
                     guard let topMessageIndex = transaction.getTopPeerMessageIndex(peerId: channel.id) else {
                         continue
                     }
+
                     results.append((EnginePeer(channel), topMessageIndex.timestamp))
                 }
 
@@ -508,5 +528,86 @@ public extension TelegramEngine {
                 return results.first?.0
             }
         }
+
+        public func getOpaqueChatInterfaceState(peerId: PeerId, threadId: Int64?) -> Signal<OpaqueChatInterfaceState?, NoError> {
+            return self.account.postbox.transaction { transaction -> OpaqueChatInterfaceState? in
+                let storedState: StoredPeerChatInterfaceState?
+                if let threadId = threadId {
+                    storedState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
+                } else {
+                    storedState = transaction.getPeerChatInterfaceState(peerId)
+                }
+
+                guard let state = storedState, let data = state.data else {
+                    return nil
+                }
+                guard let internalState = try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data) else {
+                    return nil
+                }
+                return OpaqueChatInterfaceState(
+                    opaqueData: internalState.opaqueData,
+                    historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+                    synchronizeableInputState: internalState.synchronizeableInputState
+                )
+            }
+        }
+
+        public func setOpaqueChatInterfaceState(peerId: PeerId, threadId: Int64?, state: OpaqueChatInterfaceState) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                guard let data = try? AdaptedPostboxEncoder().encode(InternalChatInterfaceState(
+                    synchronizeableInputState: state.synchronizeableInputState,
+                    historyScrollMessageIndex: state.historyScrollMessageIndex,
+                    opaqueData: state.opaqueData
+                )) else {
+                    return
+                }
+
+                #if DEBUG
+                let _ = try! AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data)
+                #endif
+
+                let storedState = StoredPeerChatInterfaceState(
+                    overrideChatTimestamp: state.synchronizeableInputState?.timestamp,
+                    historyScrollMessageIndex: state.historyScrollMessageIndex,
+                    associatedMessageIds: (state.synchronizeableInputState?.replyToMessageId).flatMap({ [$0] }) ?? [],
+                    data: data
+                )
+
+                if let threadId = threadId {
+                    transaction.setPeerChatThreadInterfaceState(peerId, threadId: threadId, state: storedState)
+                } else {
+                    var currentInputState: SynchronizeableChatInputState?
+                    if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
+                        currentInputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
+                    }
+                    let updatedInputState = state.synchronizeableInputState
+
+                    if currentInputState != updatedInputState {
+                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
+                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId)
+                        }
+                    }
+                    transaction.setPeerChatInterfaceState(
+                        peerId,
+                        state: storedState
+                    )
+                }
+            }
+            |> ignoreValues
+        }
     }
+}
+
+public func _internal_decodeStoredChatInterfaceState(state: StoredPeerChatInterfaceState) -> OpaqueChatInterfaceState? {
+    guard let data = state.data else {
+        return nil
+    }
+    guard let internalState = try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data) else {
+        return nil
+    }
+    return OpaqueChatInterfaceState(
+        opaqueData: internalState.opaqueData,
+        historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+        synchronizeableInputState: internalState.synchronizeableInputState
+    )
 }

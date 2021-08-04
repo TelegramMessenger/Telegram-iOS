@@ -280,9 +280,7 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
             return
         }
         
-        if let (centralIndex, progress) = self.centralIndexAndProgress {
-            //let contentOffset = contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: self.scrollNode.view.contentInset)
-            
+        if let _ = self.centralIndexAndProgress {
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
             if !decelerate {
                 self.isPanning = false

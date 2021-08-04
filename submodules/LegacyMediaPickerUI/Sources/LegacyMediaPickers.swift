@@ -394,7 +394,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
                                             
-                                            var text = caption ?? ""                                            
+                                            let text = caption ?? ""                                            
                                             messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                         }
                                     }
