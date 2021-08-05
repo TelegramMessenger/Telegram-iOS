@@ -83,8 +83,11 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
         }
 
         fileprivate init(rawValue: Int64) {
-            //precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
-            assert(rawValue == (rawValue & 0x00ffffffffffffff))
+            if rawValue < 0 {
+                assert(abs(rawValue) == (abs(rawValue) & 0x007fffffffffffff))
+            } else {
+                assert(abs(rawValue) == (abs(rawValue) & 0x00ffffffffffffff))
+            }
 
             self.rawValue = rawValue
         }
@@ -163,7 +166,16 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             let offsetIdHighBits = (data >> (32 + 3)) & 0xffffffff
             let idHighBits = offsetIdHighBits << 32
 
-            self.id = Id(rawValue: Int64(bitPattern: idHighBits | idLowBits))
+            if idHighBits == 0 {
+                if let uint32Value = UInt32(exactly: idLowBits) {
+                    self.id = Id(rawValue: Int64(Int32(bitPattern: uint32Value)))
+                } else {
+                    preconditionFailure()
+                }
+            } else {
+                let idAbs: UInt64 = idHighBits | idLowBits
+                self.id = Id(rawValue: Int64(bitPattern: idAbs))
+            }
         }
 
         assert(self._toInt64() == n)
@@ -187,7 +199,17 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 
     private func _toInt64() -> Int64 {
-        let data = UInt64(bitPattern: self.id.rawValue)
+        let data: UInt64
+
+        if self.id.rawValue < 0 {
+            if let int32Value = Int32(exactly: self.id.rawValue) {
+                data = UInt64(UInt32(bitPattern: int32Value))
+            } else {
+                preconditionFailure()
+            }
+        } else {
+            data = UInt64(bitPattern: self.id.rawValue)
+        }
 
         let idLowBits = data & 0xffffffff
         let idHighBits = (data >> 32) & 0xffffffff
