@@ -70,7 +70,7 @@ public final class WatchCommunicationManager {
                 let _ = WatchAudioHandler.handleFile(path: path, metadata: metadata, manager: strongSelf).start()
             }
         }, dispatchOnQueue: { [weak self] block in
-            if let strongSelf = self, let block = block {
+            if let strongSelf = self {
                 strongSelf.queue.justDispatch(block)
             }
         }, logFunction: { value in
@@ -156,7 +156,7 @@ public final class WatchCommunicationManager {
     
     private var watchAppInstalled: Signal<Bool, NoError> {
         return Signal { subscriber in
-            let disposable = self.server.watchAppInstalledSignal()?.start(next: { value in
+            let disposable = self.server.watchAppInstalledSignal().start(next: { value in
                 if let value = value as? NSNumber {
                     subscriber.putNext(value.boolValue)
                 }
@@ -169,7 +169,7 @@ public final class WatchCommunicationManager {
     
     private var runningTasks: Signal<WatchRunningTasks?, NoError> {
         return Signal { subscriber in
-            let disposable = self.server.runningRequestsSignal()?.start(next: { value in
+            let disposable = self.server.runningRequestsSignal().start(next: { value in
                 if let value = value as? Dictionary<String, Any> {
                     if let running = value["running"] as? Bool, let version = value["version"] as? Int32 {
                         subscriber.putNext(WatchRunningTasks(running: running, version: version))
