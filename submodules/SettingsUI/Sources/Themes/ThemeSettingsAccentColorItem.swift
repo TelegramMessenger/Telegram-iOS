@@ -24,7 +24,7 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
     
     var stableId: ThemeSettingsColorEntryId {
         switch self {
-            case let .color(index, _, themeReference, accentColor, _):
+            case let .color(_, _, themeReference, accentColor, _):
                 return .color(themeReference.index &+ Int64(accentColor?.index ?? 0))
             case let .theme(_, _, _, theme, _):
                 return .theme(theme.index)
@@ -555,8 +555,6 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
     }
     
     func asyncLayout() -> (ThemeSettingsAccentColorPickerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let currentItem = self.item
-
         return { [weak self] item, params in
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 60.0, height: 60.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
@@ -767,7 +765,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         }
         self.enqueuedTransitions.remove(at: 0)
         
-        var options = ListViewDeleteAndInsertOptions()
+        let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized || transition.updatePosition {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
@@ -776,7 +774,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
             }
         }
 
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }
     
@@ -787,11 +785,6 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
             var themeUpdated = false
             if currentItem?.theme !== item.theme {
                 themeUpdated = true
-            }
-            
-            var colorUpdated: Bool
-            if currentItem?.currentColor != item.currentColor {
-                colorUpdated = true
             }
             
             let contentSize: CGSize
@@ -927,10 +920,10 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             } else {
                                 item.updated(color)
                             }
-                            ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
+                            let _ = ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }
                     }
-                    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, selected, node, gesture in
+                    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { color, selected, node, gesture in
                         if let strongSelf = self, let item = strongSelf.item {
                             item.contextAction?(selected, item.generalThemeReference, color, node, gesture)
                         }

@@ -372,12 +372,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         var backgroundColors: [UInt32] = []
         switch chatPresentationInterfaceState.chatWallpaper {
-        case let .file(_, _, _, _, isPattern, _, _, _, settings):
-            if isPattern {
-                backgroundColors = settings.colors
+        case let .file(file):
+            if file.isPattern {
+                backgroundColors = file.settings.colors
             }
-        case let .gradient(_, colors, _):
-            backgroundColors = colors
+        case let .gradient(gradient):
+            backgroundColors = gradient.colors
         case let .color(color):
             backgroundColors = [color]
         default:

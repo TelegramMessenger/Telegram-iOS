@@ -87,13 +87,13 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ConfirmPhoneNumberCodeControllerArguments
         switch self {
-            case let .codeEntry(theme, strings, title, text):
+            case let .codeEntry(_, _, title, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ConfirmPhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(theme, strings, phoneNumber, nextOptionText):
+            case let .codeInfo(_, strings, phoneNumber, nextOptionText):
                 let formattedNumber = formatPhoneNumber(phoneNumber)
                 let stringAndRanges = strings.CancelResetAccount_TextSMS(formattedNumber)
                 var result = ""
@@ -157,7 +157,7 @@ private func timeoutSignal(codeData: CancelAccountResetData) -> Signal<Int32?, N
     }
 }
 
-protocol ConfirmPhoneNumberCodeController: class {
+protocol ConfirmPhoneNumberCodeController: AnyObject {
     func applyCode(_ code: Int)
 }
 

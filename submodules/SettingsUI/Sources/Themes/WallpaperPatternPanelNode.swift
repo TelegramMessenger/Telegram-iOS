@@ -142,19 +142,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     }
     
     func asyncLayout() -> (WallpaperPatternItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let currentItem = self.item
-
         return { [weak self] item, params in
-            var updatedWallpaper = false
-            var updatedSelected = false
-            
-            if currentItem?.wallpaper != item.wallpaper {
-                updatedWallpaper = true
-            }
-            if currentItem?.selected != item.selected {
-                updatedSelected = true
-            }
-            
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 112.0, height: 112.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
                 if let strongSelf = self {
@@ -365,7 +353,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
                 let settings = WallpaperSettings(colors: backgroundColors.0, intensity: intensity, rotation: backgroundColors.1)
-                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
+                updatedWallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings))
             }
             
             var selected = false
@@ -432,8 +420,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         let wallpaper: TelegramWallpaper?
 
         switch initialWallpaper {
-        case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
-            wallpaper = .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: self.wallpapers[0].settings ?? WallpaperSettings())
+        case var .file(file):
+            file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
+            wallpaper = .file(file)
         default:
             wallpaper = self.wallpapers.first
         }
@@ -503,9 +492,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         transition.updateFrame(node: self.scrollNode, frame: scrollViewFrame)
         
         let labelSize = self.labelNode.updateLayout(self.bounds.size)
-        var combinedHeight = labelSize.height + 34.0
+        let combinedHeight = labelSize.height + 34.0
         
-        var originY: CGFloat = scrollViewFrame.maxY + floor((size.height - scrollViewFrame.maxY - combinedHeight) / 2.0)
+        let originY: CGFloat = scrollViewFrame.maxY + floor((size.height - scrollViewFrame.maxY - combinedHeight) / 2.0)
         transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: 14.0, y: originY), size: labelSize))
         
         self.sliderView?.frame = CGRect(origin: CGPoint(x: 15.0, y: originY + 8.0), size: CGSize(width: size.width - 15.0 * 2.0, height: 44.0))

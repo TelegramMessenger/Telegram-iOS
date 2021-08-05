@@ -88,13 +88,13 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChangePhoneNumberCodeControllerArguments
         switch self {
-            case let .codeEntry(theme, strings, title, text):
+            case let .codeEntry(_, _, title, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(theme, text):
+            case let .codeInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -172,7 +172,7 @@ private func timeoutSignal(codeData: ChangeAccountPhoneNumberData) -> Signal<Int
     }
 }
 
-public protocol ChangePhoneNumberCodeController: class {
+public protocol ChangePhoneNumberCodeController: AnyObject {
     func applyCode(_ code: Int)
 }
 

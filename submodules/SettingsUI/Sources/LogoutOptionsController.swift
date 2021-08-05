@@ -75,33 +75,33 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! LogoutOptionsItemArguments
         switch self {
-            case let .alternativeHeader(theme, title):
+            case let .alternativeHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .addAccount(theme, title, text):
+            case let .addAccount(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.addAccount, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.addAccount()
                 })
-            case let .setPasscode(theme, title, text):
+            case let .setPasscode(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.setPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setPasscode()
                 })
-            case let .clearCache(theme, title, text):
+            case let .clearCache(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.clearCache, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.clearCache()
                 })
-            case let .changePhoneNumber(theme, title, text):
+            case let .changePhoneNumber(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.changePhoneNumber, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.changePhoneNumber()
                 })
-            case let .contactSupport(theme, title, text):
+            case let .contactSupport(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.support, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.contactSupport()
                 })
-            case let .logout(theme, title):
+            case let .logout(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.logout()
                 })
-            case let .logoutInfo(theme, title):
+            case let .logoutInfo(_, title):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(title), sectionId: self.section)
         }
     }

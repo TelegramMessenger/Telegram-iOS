@@ -31,24 +31,6 @@ private enum FeaturedStickerPacksSection: Int32 {
 
 private enum FeaturedStickerPacksEntryId: Hashable {
     case pack(ItemCollectionId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
-    
-    static func ==(lhs: FeaturedStickerPacksEntryId, rhs: FeaturedStickerPacksEntryId) -> Bool {
-        switch lhs {
-            case let .pack(id):
-                if case .pack(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
@@ -119,7 +101,7 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! FeaturedStickerPacksControllerArguments
         switch self {
-            case let .pack(_, theme, strings, info, unread, topItem, count, playAnimatedStickers, installed):
+            case let .pack(_, _, _, info, unread, topItem, count, playAnimatedStickers, installed):
                 return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
@@ -202,8 +184,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     
     let featured = Promise<[FeaturedStickerPackItem]>()
     featured.set(context.account.viewTracker.featuredStickerPacks())
-    
-    var previousPackCount: Int?
+
     var initialUnreadPacks: [ItemCollectionId: Bool] = [:]
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
@@ -214,8 +195,6 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
                 stickerSettings = value
             }
             
-            let packCount: Int? = featured.count
-            
             for item in featured {
                 if initialUnreadPacks[item.info.id] == nil {
                     initialUnreadPacks[item.info.id] = item.unread
@@ -223,8 +202,6 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
             }
             
             let rightNavigationButton: ItemListNavigationButton? = nil
-            let previous = previousPackCount
-            previousPackCount = packCount
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.FeaturedStickerPacks_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             

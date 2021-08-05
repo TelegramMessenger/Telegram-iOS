@@ -444,9 +444,9 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
             return serviceColor(with: UIColor(argb: color))
-        case let .gradient(_, colors, _):
-            if colors.count == 2 {
-                let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
+        case let .gradient(gradient):
+            if gradient.colors.count == 2 {
+                let mixedColor = UIColor(argb: gradient.colors[0]).mixedWith(UIColor(argb: gradient.colors[1]), alpha: 0.5)
                 return serviceColor(with: mixedColor)
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
@@ -457,12 +457,12 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
             }
-        case let .file(_, _, _, _, _, _, _, _, settings):
+        case let .file(file):
             if wallpaper.0.isPattern {
-                if settings.colors.count >= 1 && settings.colors.count <= 2 {
-                    var mixedColor = UIColor(argb: settings.colors[0])
-                    if settings.colors.count >= 2 {
-                        mixedColor = mixedColor.mixedWith(UIColor(argb: settings.colors[1]), alpha: 0.5)
+                if file.settings.colors.count >= 1 && file.settings.colors.count <= 2 {
+                    var mixedColor = UIColor(argb: file.settings.colors[0])
+                    if file.settings.colors.count >= 2 {
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: file.settings.colors[1]), alpha: 0.5)
                     }
                     return serviceColor(with: mixedColor)
                 } else {
@@ -503,9 +503,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             return .single(UIColor(rgb: 0x000000, alpha: 0.2))
         case let .color(color):
             return .single(serviceColor(with: UIColor(argb: color)))
-        case let .gradient(_, colors, _):
-            if colors.count == 2 {
-                let mixedColor = UIColor(argb: colors[0]).mixedWith(UIColor(argb: colors[1]), alpha: 0.5)
+        case let .gradient(gradient):
+            if gradient.colors.count == 2 {
+                let mixedColor = UIColor(argb: gradient.colors[0]).mixedWith(UIColor(argb: gradient.colors[1]), alpha: 0.5)
                 return .single(
                     serviceColor(with: mixedColor))
             } else {
@@ -531,12 +531,12 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             } else {
                 return .single(UIColor(rgb: 0x000000, alpha: 0.3))
             }
-        case let .file(_, _, _, _, _, _, _, file, settings):
+        case let .file(file):
             if wallpaper.isPattern {
-                if settings.colors.count >= 1 && settings.colors.count <= 2 {
-                    var mixedColor = UIColor(argb: settings.colors[0])
-                    if settings.colors.count >= 2 {
-                        mixedColor = mixedColor.mixedWith(UIColor(argb: settings.colors[1]), alpha: 0.5)
+                if file.settings.colors.count >= 1 && file.settings.colors.count <= 2 {
+                    var mixedColor = UIColor(argb: file.settings.colors[0])
+                    if file.settings.colors.count >= 2 {
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: file.settings.colors[1]), alpha: 0.5)
                     }
                     return .single(serviceColor(with: mixedColor))
                 } else {
@@ -544,7 +544,7 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                 }
             } else {
                 return Signal<UIColor, NoError> { subscriber in
-                    let data = serviceColor(for: mediaBox.resourceData(file.resource)).start(next: { next in
+                    let data = serviceColor(for: mediaBox.resourceData(file.file.resource)).start(next: { next in
                         subscriber.putNext(next)
                     }, completed: {
                         subscriber.putCompletion()

@@ -211,45 +211,45 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DataPrivacyControllerArguments
         switch self {
-            case let .contactsHeader(theme, text):
+            case let .contactsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .deleteContacts(theme, text, value):
+            case let .deleteContacts(_, text, value):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: value ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.deleteContacts()
                 })
-            case let .syncContacts(theme, text, value):
+            case let .syncContacts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateSyncContacts(updatedValue)
                 })
-            case let .syncContactsInfo(theme, text):
+            case let .syncContactsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .frequentContacts(theme, text, value):
+            case let .frequentContacts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: !value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateSuggestFrequentContacts(updatedValue)
                 })
-            case let .frequentContactsInfo(theme, text):
+            case let .frequentContactsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .chatsHeader(theme, text):
+            case let .chatsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .deleteCloudDrafts(theme, text, value):
+            case let .deleteCloudDrafts(_, text, value):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: value ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.deleteCloudDrafts()
                 })
-            case let .paymentHeader(theme, text):
+            case let .paymentHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .clearPaymentInfo(theme, text, enabled):
+            case let .clearPaymentInfo(_, text, enabled):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.clearPaymentInfo()
                 })
-            case let .paymentInfo(theme, text):
+            case let .paymentInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .secretChatLinkPreviewsHeader(theme, text):
+            case let .secretChatLinkPreviewsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .secretChatLinkPreviews(theme, text, value):
+            case let .secretChatLinkPreviews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateSecretChatLinkPreviews(updatedValue)
                 })
-            case let .secretChatLinkPreviewsInfo(theme, text):
+            case let .secretChatLinkPreviewsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -500,8 +500,6 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         presentControllerImpl?(controller)
     })
     
-    let previousState = Atomic<DataPrivacyControllerState?>(value: nil)
-    
     actionsDisposable.add(context.engine.peers.managedUpdatedRecentPeers().start())
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.engine.peers.recentPeers())
@@ -528,7 +526,6 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PrivateDataSettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let previousStateValue = previousState.swap(state)
         let animateChanges = false
         
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataPrivacyControllerEntries(presentationData: presentationData, state: state, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers), style: .blocks, animateChanges: animateChanges)

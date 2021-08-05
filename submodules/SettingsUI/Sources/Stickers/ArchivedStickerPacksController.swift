@@ -43,32 +43,6 @@ private enum ArchivedStickerPacksSection: Int32 {
 private enum ArchivedStickerPacksEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
-    
-    static func ==(lhs: ArchivedStickerPacksEntryId, rhs: ArchivedStickerPacksEntryId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .pack(id):
-                if case .pack(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
@@ -157,9 +131,9 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ArchivedStickerPacksControllerArguments
         switch self {
-            case let .info(theme, text):
+            case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .pack(_, theme, strings, info, topItem, count, animatedStickers, enabled, editing):
+            case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing):
                 return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
