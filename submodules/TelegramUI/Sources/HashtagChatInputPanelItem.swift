@@ -149,7 +149,6 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let leftInset: CGFloat = 15.0 + params.leftInset
-            let rightInset: CGFloat = 10.0 + params.rightInset
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "#\(item.text)", font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -186,7 +185,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     }
     
     func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        if let (size, leftInset, rightInset) = self.validLayout {
+        if let (_, leftInset, _) = self.validLayout {
             transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 15.0 + leftInset, y: self.textNode.frame.minY), size: self.textNode.frame.size))
         }
     }
@@ -194,7 +193,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if let revealNode = self.revealNode, self.revealOffset != 0 {
+        if let _ = self.revealNode, self.revealOffset != 0 {
             return
         }
         
@@ -225,7 +224,6 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
         if self.revealOptions == options {
             return
         }
-        let previousOptions = self.revealOptions
         let wasEmpty = self.revealOptions.isEmpty
         self.revealOptions = options
         let isEmpty = options.isEmpty
@@ -374,7 +372,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     
     private func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
-        guard let (size, leftInset, rightInset) = self.validLayout else {
+        guard let (size, _, rightInset) = self.validLayout else {
             return
         }
         

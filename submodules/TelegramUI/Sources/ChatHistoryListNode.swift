@@ -1094,7 +1094,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 let previousTheme = strongSelf.currentPresentationData.theme
                 let previousStrings = strongSelf.currentPresentationData.strings
                 let previousWallpaper = strongSelf.currentPresentationData.theme.wallpaper
-                let previousDisableAnimations = strongSelf.currentPresentationData.disableAnimations
                 let previousAnimatedEmojiScale = strongSelf.currentPresentationData.animatedEmojiScale
                 
                 let animatedEmojiConfig = ChatHistoryAnimatedEmojiConfiguration.with(appConfiguration: appConfiguration)
@@ -1311,8 +1310,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
-            var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
-            var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1593,7 +1590,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     } else if case let .MessageGroupEntry(_, messages, _) = entry {
                         currentMessage = messages.first?.0
                     }
-                    if let message = currentMessage, let anchorMessage = self.anchorMessageInCurrentHistoryView() {
+                    if let message = currentMessage, let _ = self.anchorMessageInCurrentHistoryView() {
                         self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .message(message.index), anchorIndex: .message(message.index), sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true, highlight: false), id: self.takeNextHistoryLocationId())
                     }
                 }

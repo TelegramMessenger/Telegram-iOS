@@ -125,26 +125,6 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         self.delegate = self
         self.dataSource = self
         
-        /*self.navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
-        self.navigationBar.tintColor = theme.rootController.navigationBar.accentTextColor
-        self.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
-        })
-        self.navigationBar.isTranslucent = false
-        self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
-        controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
-        self.setViewControllers([controller], animated: false)*/
-        
-        var pathExtension: String?
-        if let fileName = self.file.fileName {
-            let pathExtensionCandidate = (fileName as NSString).pathExtension
-            if !pathExtensionCandidate.isEmpty {
-                pathExtension = pathExtensionCandidate
-            }
-        }
-        
         if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
             var updatedPath = path
             if let fileName = self.file.fileName {

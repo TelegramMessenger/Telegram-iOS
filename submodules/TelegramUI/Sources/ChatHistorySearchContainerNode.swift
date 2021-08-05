@@ -14,26 +14,7 @@ import ListMessageItem
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
-    
-    static func ==(lhs: ChatHistorySearchEntryStableId, rhs: ChatHistorySearchEntryStableId) -> Bool {
-        switch lhs {
-            case let .messageId(messageId):
-                if case .messageId(messageId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .messageId(messageId):
-                return messageId.hashValue
-        }
-    }
 }
-
 
 private enum ChatHistorySearchEntry: Comparable, Identifiable {
     case message(Message, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationFontSize)

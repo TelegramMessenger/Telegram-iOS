@@ -1689,8 +1689,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
-                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
-                    var anchorTopView: UIView = self.view
+                    let anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    let anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .gif:
@@ -2025,7 +2025,7 @@ final class ChatMediaInputNode: ChatInputNode {
             collectionListPanelOffset = 0.0
         }
         
-        var listPanelOffset = collectionListPanelOffset * 2.0
+        let listPanelOffset = collectionListPanelOffset * 2.0
         
         self.updateAppearanceTransition(transition: transition)
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: listPanelOffset), size: self.collectionListPanel.bounds.size))

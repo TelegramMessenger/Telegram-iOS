@@ -820,9 +820,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             insets = layout.insets(options: [.input])
         }
         
-        let statusBarHeight = layout.insets(options: [.statusBar]).top
-        
-
         if case .overlay = self.chatPresentationInterfaceState.mode {
             insets.top = 44.0
         } else {
@@ -1152,7 +1149,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var displayTopDimNode = false
-        var ensureTopInsetForOverlayHighlightedItems: CGFloat?
+        let ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil
         var expandTopDimNode = false
         if case let .media(_, expanded) = self.chatPresentationInterfaceState.inputMode, expanded != nil {
             displayTopDimNode = true
@@ -1168,7 +1165,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     topInset -= UIScreenPixel
                 }
             }
-            let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: max(0.0, topInset)))
             
             let inputPanelOrigin = layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight
             
@@ -1285,11 +1281,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let inputContextPanelsFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - inputPanelsHeight - insets.top)))
         let inputContextPanelsOverMainPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - (inputPanelSize == nil ? CGFloat(0.0) : inputPanelSize!.height) - insets.top)))
-        
-        if transition.isAnimated, let derivedLayoutState = self.derivedLayoutState {
-            let offset = derivedLayoutState.inputContextPanelsOverMainPanelFrame.maxY - inputContextPanelsOverMainPanelFrame.maxY
-            //transition.animateOffsetAdditive(node: self.inputContextPanelContainer, offset: -offset)
-        }
         
         if let inputContextPanelNode = self.inputContextPanelNode {
             let panelFrame = inputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame

@@ -29,14 +29,6 @@ private enum PeerMessagesMediaPlaylistNavigation {
 
 struct MessageMediaPlaylistItemStableId: Hashable {
     let stableId: UInt32
-    
-    var hashValue: Int {
-        return self.stableId.hashValue
-    }
-    
-    static func ==(lhs: MessageMediaPlaylistItemStableId, rhs: MessageMediaPlaylistItemStableId) -> Bool {
-        return lhs.stableId == rhs.stableId
-    }
 }
 
 private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
@@ -736,12 +728,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 }
                                 
                                 if case .all = looping {
-                                    let viewIndex: HistoryViewInputAnchor
-                                    if case .earlier = navigation {
-                                        viewIndex = .upperBound
-                                    } else {
-                                        viewIndex = .lowerBound
-                                    }
                                     return .single((nil, messages.count, false))
                                 } else {
                                     if hasMore {

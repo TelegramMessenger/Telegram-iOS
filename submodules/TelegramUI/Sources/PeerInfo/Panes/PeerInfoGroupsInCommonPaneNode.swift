@@ -179,7 +179,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     private func dequeueTransaction() {
-        guard let (layout, _, _) = self.currentParams, let transaction = self.enqueuedTransactions.first else {
+        guard let _ = self.currentParams, let transaction = self.enqueuedTransactions.first else {
             return
         }
         

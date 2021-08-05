@@ -45,7 +45,6 @@ private final class TonePlayerContext {
     
     func start() {
         do {
-            let currentVolume = AVAudioSession.sharedInstance().outputVolume
             //let gainFactor = max(0.1, min(1.5, self.initialVolume / currentVolume))
             
             try self.audioEngine.start()

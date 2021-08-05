@@ -61,7 +61,7 @@ import TelegramCallsUI
 import PeerInfoAvatarListNode
 import PasswordSetupUI
 
-protocol PeerInfoScreenItem: class {
+protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
     func node() -> PeerInfoScreenItemNode
 }
@@ -1188,7 +1188,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDiscussionGroup = 3
                 let ItemSignMessages = 4
                 let ItemSignMessagesHelp = 5
-                let ItemAutoremove = 6
                 
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
@@ -1261,7 +1260,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemLocationHeader = 110
                 let ItemLocation = 111
                 let ItemLocationSetup = 112
-                let ItemAutoremove = 113
                 let ItemDeleteGroup = 114
                 
                 let isCreator = channel.flags.contains(.isCreator)
@@ -1399,7 +1397,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemPreHistory = 103
             let ItemPermissions = 104
             let ItemAdmins = 105
-            let ItemAutoremove = 106
             
             var canViewAdminsAndBanned = false
             
@@ -3077,7 +3074,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             var storedState: MediaPlaybackStoredState?
             if let timestamp = timestamp {
-                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate) ?? .x1)
+                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
             }
             let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
         }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
@@ -3128,7 +3125,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             })
         }), centralItemUpdated: { [weak self] messageId in
-            self?.paneContainerNode.requestExpandTabs?()
+            let _ = self?.paneContainerNode.requestExpandTabs?()
             self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
         }))
     }
@@ -3159,7 +3156,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     break
                 }
             }, sendFile: nil,
-            sendSticker: { [weak self] f, sourceNode, sourceRect in
+            sendSticker: { f, sourceNode, sourceRect in
             return false
         }, requestMessageActionUrlAuth: nil,
         joinVoiceChat: { peerId, invite, call in
@@ -3270,7 +3267,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         cancelImpl = { [weak self] in
             self?.resolvePeerByNameDisposable?.set(nil)
         }
-        let account = self.context.account
         disposable.set((resolveSignal
         |> take(1)
         |> mapToSignal { peer -> Signal<Peer?, NoError> in
@@ -3297,7 +3293,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if self.resolvePeerByNameDisposable == nil {
             self.resolvePeerByNameDisposable = MetaDisposable()
         }
-        let account = self.context.account
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
             resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
@@ -6592,16 +6587,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                             })?.withRenderingMode(.alwaysOriginal)
                             
-                            let selectedImage = generateImage(size, rotatedContext: { size, context in
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.translateBy(x: inset, y: inset)
-                                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
-                                context.translateBy(x: -inset, y: -inset)
-                                context.setLineWidth(1.0)
-                                context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
-                                context.strokeEllipse(in: CGRect(x: 1.0, y: 1.0, width: 27.0, height: 27.0))
-                            })?.withRenderingMode(.alwaysOriginal)
-                            
                             subscriber.putNext(image.flatMap { ($0, $0) })
                             subscriber.putCompletion()
                             return EmptyDisposable
@@ -7036,7 +7021,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))
 
-            if case let .animated(duration, _) = transition, (bottomNavigationBar.additionalContentNode.alpha.isZero || bottomNavigationBar.additionalContentNode.alpha == 1.0) {
+            if case .animated = transition, (bottomNavigationBar.additionalContentNode.alpha.isZero || bottomNavigationBar.additionalContentNode.alpha == 1.0) {
                 bottomNavigationBar.additionalContentNode.alpha = fraction
                 if fraction.isZero {
                     bottomNavigationBar.additionalContentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
