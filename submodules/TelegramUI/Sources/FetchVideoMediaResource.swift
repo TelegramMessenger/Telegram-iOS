@@ -214,7 +214,6 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
     }
     |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-        let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
         let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
             subscriber.putNext(.reset)
             let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
@@ -328,7 +327,6 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
     }
     |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-        let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
         let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
             subscriber.putNext(.reset)
             
@@ -522,7 +520,6 @@ func fetchLocalFileGifMediaResource(resource: LocalFileGifMediaResource) -> Sign
         
         let disposable = MetaDisposable()
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.path), options: Data.ReadingOptions.mappedIfSafe) {
-            let updatedSize = Atomic<Int>(value: 0)
             let signal = TGGifConverter.convertGif(toMp4: data)!
             let signalDisposable = signal.start(next: { next in
                 if let result = next as? NSDictionary, let path = result["path"] as? String {

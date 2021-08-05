@@ -301,21 +301,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             case let .wallpaper(wallpaper, _):
                 self.nativeNode.update(wallpaper: wallpaper)
 
-                if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
+                if case let .file(file) = wallpaper, file.isPattern {
                     self.nativeNode.isHidden = false
-                    self.patternButtonNode.isSelected = isPattern
+                    self.patternButtonNode.isSelected = file.isPattern
 
-                    if isPattern && settings.colors.count >= 3 {
+                    if file.isPattern && file.settings.colors.count >= 3 {
                         self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                     }
-                } else if case let .gradient(_, colors, _) = wallpaper {
+                } else if case let .gradient(gradient) = wallpaper {
                     self.nativeNode.isHidden = false
                     self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = false
 
-                    if colors.count >= 3 {
+                    if gradient.colors.count >= 3 {
                         self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
@@ -354,7 +354,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             subtitleSignal = .single(nil)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .color(color):
+                        case .color:
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -364,7 +364,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(_, colors, settings):
+                        case .gradient:
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -776,18 +776,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         switch entry {
         case let .wallpaper(wallpaper, _):
             switch wallpaper {
-            case let .file(_, _, _, _, isPattern, _, _, _, settings):
-                if isPattern {
-                    if settings.colors.isEmpty {
+            case let .file(file):
+                if file.isPattern {
+                    if file.settings.colors.isEmpty {
                         return nil
                     } else {
-                        return settings.colors.map(UIColor.init(rgb:))
+                        return file.settings.colors.map(UIColor.init(rgb:))
                     }
                 } else {
                     return nil
                 }
-            case let .gradient(_, colors, _):
-                return colors.map(UIColor.init(rgb:))
+            case let .gradient(gradient):
+                return gradient.colors.map(UIColor.init(rgb:))
             case let .color(color):
                 return [UIColor(rgb: color)]
             default:
@@ -810,11 +810,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             return
         }
         switch wallpaper {
-        case let .gradient(_, colors, settings):
-            if colors.count >= 3 {
+        case let .gradient(gradient):
+            if gradient.colors.count >= 3 {
                 self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
             } else {
-                let rotation = settings.rotation ?? 0
+                let rotation = gradient.settings.rotation ?? 0
                 self.requestRotateGradient?((rotation + 90) % 360)
             }
         case let .file(file):
@@ -952,11 +952,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
-                        case let .gradient(_, colors, _):
+                        case let .gradient(gradient):
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
-                            if colors.count >= 2 {
+                            if gradient.colors.count >= 2 {
                                 playAlpha = 1.0
                                 patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
                                 colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
@@ -1022,7 +1022,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        var bottomInset: CGFloat = 115.0
+        let bottomInset: CGFloat = 115.0
 
         if self.patternButtonNode.isSelected || self.colorsButtonNode.isSelected {
             //bottomInset = 350.0
@@ -1055,8 +1055,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         if file.settings.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
-                    case let .gradient(_, colors, _):
-                        if colors.count >= 3 {
+                    case let .gradient(gradient):
+                        if gradient.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
                     default:
@@ -1077,8 +1077,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 if file.settings.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
-                            case let .gradient(_, colors, _):
-                                if colors.count >= 3 {
+                            case let .gradient(gradient):
+                                if gradient.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
                             default:

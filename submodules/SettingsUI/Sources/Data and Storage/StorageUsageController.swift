@@ -230,7 +230,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! StorageUsageControllerArguments
         switch self {
-            case let .keepMediaHeader(theme, text):
+            case let .keepMediaHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .keepMedia(theme, strings, value):
                 return KeepMediaDurationPickerItem(theme: theme, strings: strings, value: value, sectionId: self.section, updated: { updatedValue in

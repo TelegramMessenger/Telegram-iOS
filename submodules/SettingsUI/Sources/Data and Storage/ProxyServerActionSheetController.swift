@@ -376,7 +376,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         let proxyServerSettings = self.server
         let _ = (self.accountManager.transaction { transaction -> ProxySettings in
             var currentSettings: ProxySettings?
-            updateProxySettingsInteractively(transaction: transaction, { settings in
+            let _ = updateProxySettingsInteractively(transaction: transaction, { settings in
                 currentSettings = settings
                 var settings = settings
                 if let index = settings.servers.firstIndex(of: proxyServerSettings) {

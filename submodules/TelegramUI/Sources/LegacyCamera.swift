@@ -217,7 +217,7 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
         legacyController?.dismiss()
     }
     
-    controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, _, _ in
+    controller.finishedWithResults = { [weak parentController] overlayController, selectionContext, editingContext, currentItem, _, _ in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let nativeGenerator = legacyAssetPickerItemGenerator()
             let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3, _4 in

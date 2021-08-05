@@ -64,7 +64,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(nil, [topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
+                            self = .gradient(TelegramWallpaper.Gradient(id: nil, colors: [topColor.argb, bottomColor.argb], settings: WallpaperSettings(blur: blur, motion: motion, rotation: rotation)))
                         } else {
                             var slug: String?
                             var colors: [UInt32] = []
@@ -98,7 +98,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
+                                self = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation)))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -117,48 +117,48 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(_, colors, settings):
+            case let .gradient(gradient):
                 var components: [String] = []
-                for color in colors {
+                for color in gradient.colors {
                     components.append(String(format: "%06x", color))
                 }
-                if let rotation = settings.rotation {
+                if let rotation = gradient.settings.rotation {
                     components.append("\(rotation)")
                 }
-                if settings.motion {
+                if gradient.settings.motion {
                     components.append("motion")
                 }
-                if settings.blur {
+                if gradient.settings.blur {
                     components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))
-            case let .file(_, _, _, _, _, _, slug, _, settings):
+            case let .file(file):
                 var components: [String] = []
-                components.append(slug)
+                components.append(file.slug)
                 if self.isPattern {
-                    if settings.colors.count >= 1 {
-                        components.append(String(format: "%06x", settings.colors[0]))
+                    if file.settings.colors.count >= 1 {
+                        components.append(String(format: "%06x", file.settings.colors[0]))
                     }
-                    if let intensity = settings.intensity {
+                    if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
                     }
-                    if settings.colors.count >= 2 {
-                        components.append(String(format: "%06x", settings.colors[1]))
+                    if file.settings.colors.count >= 2 {
+                        components.append(String(format: "%06x", file.settings.colors[1]))
                     }
-                    if settings.colors.count >= 3 {
-                        components.append(String(format: "%06x", settings.colors[2]))
+                    if file.settings.colors.count >= 3 {
+                        components.append(String(format: "%06x", file.settings.colors[2]))
                     }
-                    if settings.colors.count >= 4 {
-                        components.append(String(format: "%06x", settings.colors[3]))
+                    if file.settings.colors.count >= 4 {
+                        components.append(String(format: "%06x", file.settings.colors[3]))
                     }
-                    if let rotation = settings.rotation, rotation != 0 {
+                    if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")
                     }
                 }
-                if settings.motion {
+                if file.settings.motion {
                     components.append("motion")
                 }
-                if settings.blur {
+                if file.settings.blur {
                     components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))

@@ -191,7 +191,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.default)
-                                item.resultSelected(item.result, itemNode, itemNode.bounds)
+                                let _ = item.resultSelected(item.result, itemNode, itemNode.bounds)
                             })))
                             selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }

@@ -228,7 +228,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
     }
     
     func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        if let (size, leftInset, _) = self.validLayout {
+        if let (_, leftInset, _) = self.validLayout {
             transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 12.0 + leftInset, y: self.avatarNode.frame.minY), size: self.avatarNode.frame.size))
             transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 55.0 + leftInset, y: self.textNode.frame.minY), size: self.textNode.frame.size))
         }

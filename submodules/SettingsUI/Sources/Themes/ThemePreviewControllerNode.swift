@@ -125,7 +125,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         
-        if case let .file(file) = previewTheme.chat.defaultWallpaper {
+        if case .file = previewTheme.chat.defaultWallpaper {
             self.toolbarNode.setDoneEnabled(false)
         }
         
@@ -191,8 +191,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if file.settings.blur {
                 self.chatContainerNode.insertSubnode(self.blurredNode, belowSubnode: self.messagesContainerNode)
             }
-        } else if case let .gradient(_, colors, _) = self.wallpaper {
-            gradientColors = colors
+        } else if case let .gradient(gradient) = self.wallpaper {
+            gradientColors = gradient.colors
         }
 
         if gradientColors.count >= 3 {
@@ -247,7 +247,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 
                 let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-                let fileReference = FileMediaReference.standalone(media: file.file)
                 if wallpaper.isPattern {
                     signal = .complete()
                 } else {

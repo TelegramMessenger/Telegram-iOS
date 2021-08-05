@@ -22,7 +22,7 @@ public enum ChatHistoryNodeLoadState: Equatable {
     case messages
 }
 
-public protocol ChatHistoryNode: class {
+public protocol ChatHistoryNode: AnyObject {
     var historyState: ValuePromise<ChatHistoryNodeHistoryState> { get }
     var preloadPages: Bool { get set }
     

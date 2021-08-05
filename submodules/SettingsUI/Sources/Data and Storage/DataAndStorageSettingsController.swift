@@ -311,49 +311,49 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DataAndStorageControllerArguments
         switch self {
-            case let .storageUsage(theme, text):
+            case let .storageUsage(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openStorageUsage()
                 })
-            case let .networkUsage(theme, text):
+            case let .networkUsage(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openNetworkUsage()
                 })
-            case let .automaticDownloadHeader(theme, text):
+            case let .automaticDownloadHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .automaticDownloadCellular(theme, text, value):
+            case let .automaticDownloadCellular(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.cellular)
                 })
-            case let .automaticDownloadWifi(theme, text, value):
+            case let .automaticDownloadWifi(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.wifi)
                 })
-            case let .automaticDownloadReset(theme, text, enabled):
+            case let .automaticDownloadReset(_, text, enabled):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if enabled {
                         arguments.resetAutomaticDownload()
                     }
                 }, tag: DataAndStorageEntryTag.automaticDownloadReset)
-            case let .autoplayHeader(theme, text):
+            case let .autoplayHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .autoplayGifs(theme, text, value):
+            case let .autoplayGifs(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayGifs(value)
                 }, tag: DataAndStorageEntryTag.autoplayGifs)
-            case let .autoplayVideos(theme, text, value):
+            case let .autoplayVideos(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayVideos(value)
                 }, tag: DataAndStorageEntryTag.autoplayVideos)
-            case let .voiceCallsHeader(theme, text):
+            case let .voiceCallsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .useLessVoiceData(theme, text, value):
+            case let .useLessVoiceData(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceUseLessData()
                 })
-            case let .otherHeader(theme, text):
+            case let .otherHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .shareSheet(theme, text):
+            case let .shareSheet(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openIntents()
                 })
@@ -361,27 +361,27 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWidgetSettings()
                 })
-            case let .saveIncomingPhotos(theme, text):
+            case let .saveIncomingPhotos(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openSaveIncomingPhotos()
                 })
-            case let .saveEditedPhotos(theme, text, value):
+            case let .saveEditedPhotos(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
-            case let .openLinksIn(theme, text, value):
+            case let .openLinksIn(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openBrowserSelection()
                 })
-            case let .downloadInBackground(theme, text, value):
+            case let .downloadInBackground(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleDownloadInBackground(value)
                 }, tag: DataAndStorageEntryTag.downloadInBackground)
-            case let .downloadInBackgroundInfo(theme, text):
+            case let .downloadInBackgroundInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .connectionHeader(theme, text):
+            case let .connectionHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .connectionProxy(theme, text, value):
+            case let .connectionProxy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openProxy()
                 })

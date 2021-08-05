@@ -42,19 +42,19 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                     context.setFillColor(UIColor(argb: color).withAlphaComponent(1.0).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-            case let .gradient(_, colors, settings):
+            case let .gradient(gradient):
                 backgroundImage = generateImage(CGSize(width: 640.0, height: 1280.0), rotatedContext: { size, context in
-                    let gradientColors = [UIColor(argb: colors.count >= 1 ? colors[0] : 0).cgColor, UIColor(argb: colors.count >= 2 ? colors[1] : 0).cgColor] as CFArray
+                    let gradientColors = [UIColor(argb: gradient.colors.count >= 1 ? gradient.colors[0] : 0).cgColor, UIColor(argb: gradient.colors.count >= 2 ? gradient.colors[1] : 0).cgColor] as CFArray
                        
                     var locations: [CGFloat] = [0.0, 1.0]
                     let colorSpace = CGColorSpaceCreateDeviceRGB()
-                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                    let cgGradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
                     context.translateBy(x: 320.0, y: 640.0)
-                    context.rotate(by: CGFloat(settings.rotation ?? 0) * CGFloat.pi / 180.0)
+                    context.rotate(by: CGFloat(gradient.settings.rotation ?? 0) * CGFloat.pi / 180.0)
                     context.translateBy(x: -320.0, y: -640.0)
                     
-                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                    context.drawLinearGradient(cgGradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                 })
             case let .image(representations, settings):
                 if let largest = largestImageRepresentation(representations) {
@@ -72,20 +72,20 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                         backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                     }
                 }
-            case let .file(_, _, _, _, _, _, _, file, settings):
+            case let .file(file):
                 if wallpaper.isPattern {
                     backgroundImage = nil
                 } else {
-                    if settings.blur && composed {
+                    if file.settings.blur && composed {
                         var image: UIImage?
-                        let _ = mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                        let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
                                 image = UIImage(contentsOfFile: data.path)?.precomposed()
                             }
                         })
                         backgroundImage = image
                     }
-                    if backgroundImage == nil, let path = mediaBox.completedResourcePath(file.resource) {
+                    if backgroundImage == nil, let path = mediaBox.completedResourcePath(file.file.resource) {
                         succeed = false
                         backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                     }
@@ -128,19 +128,19 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 |> afterNext { image in
                     cacheWallpaper(image?.0)
                 }
-            case let .gradient(_, colors, settings):
+            case let .gradient(gradient):
                 return .single((generateImage(CGSize(width: 640.0, height: 1280.0).fitted(CGSize(width: 100.0, height: 100.0)), rotatedContext: { size, context in
-                    let gradientColors = [UIColor(rgb: colors.count >= 1 ? colors[0] : 0).cgColor, UIColor(rgb: colors.count >= 2 ? colors[1] : 0).cgColor] as CFArray
+                    let gradientColors = [UIColor(rgb: gradient.colors.count >= 1 ? gradient.colors[0] : 0).cgColor, UIColor(rgb: gradient.colors.count >= 2 ? gradient.colors[1] : 0).cgColor] as CFArray
                        
                     var locations: [CGFloat] = [0.0, 1.0]
                     let colorSpace = CGColorSpaceCreateDeviceRGB()
-                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                    let cgGradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                    context.rotate(by: CGFloat(settings.rotation ?? 0) * CGFloat.pi / 180.0)
+                    context.rotate(by: CGFloat(gradient.settings.rotation ?? 0) * CGFloat.pi / 180.0)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     
-                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                    context.drawLinearGradient(cgGradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                 }), true))
                 |> afterNext { image in
                     cacheWallpaper(image?.0)
@@ -166,17 +166,17 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         }
                     }
                 }
-            case let .file(_, _, _, _, _, _, slug, file, settings):
+            case let .file(file):
                 if wallpaper.isPattern {
                     return .single((nil, true))
                 } else {
-                    if settings.blur {
+                    if file.settings.blur {
                         let representation = CachedBlurredWallpaperRepresentation()
 
-                        if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: representation)) {
+                        if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: representation)) {
                             let effectiveMediaBox = mediaBox
 
-                            return effectiveMediaBox.cachedResourceRepresentation(file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
+                            return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
                             |> map { data -> (UIImage?, Bool)? in
                                 if data.complete {
                                     return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
@@ -189,17 +189,17 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             }
                         } else {
                             return Signal { subscriber in
-                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(slug), resource: file.resource)).start()
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
                                 var didOutputBlurred = false
-                                let data = accountMediaBox.cachedResourceRepresentation(file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                let data = accountMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
                                         if let image = UIImage(contentsOfFile: data.path)?.precomposed() {
-                                            mediaBox.copyResourceData(file.resource.id, fromTempPath: data.path)
+                                            mediaBox.copyResourceData(file.file.resource.id, fromTempPath: data.path)
                                             subscriber.putNext((image, true))
                                         }
                                     } else if !didOutputBlurred {
                                         didOutputBlurred = true
-                                        if let immediateThumbnailData = file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
+                                        if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
                                             if let image = UIImage(data: decodedData)?.precomposed() {
                                                 subscriber.putNext((image, false))
                                             }
@@ -215,9 +215,9 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         }
                     } else {
                         var path: String?
-                        if let maybePath = mediaBox.completedResourcePath(file.resource) {
+                        if let maybePath = mediaBox.completedResourcePath(file.file.resource) {
                             path = maybePath
-                        } else if let maybePath = accountMediaBox.completedResourcePath(file.resource) {
+                        } else if let maybePath = accountMediaBox.completedResourcePath(file.file.resource) {
                             path = maybePath
                         }
                         if let path = path {
@@ -227,17 +227,17 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             }
                         } else {
                             return Signal { subscriber in
-                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(slug), resource: file.resource)).start()
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
                                 var didOutputBlurred = false
-                                let data = accountMediaBox.resourceData(file.resource).start(next: { data in
+                                let data = accountMediaBox.resourceData(file.file.resource).start(next: { data in
                                     if data.complete {
                                         if let image = UIImage(contentsOfFile: data.path)?.precomposed() {
-                                            mediaBox.copyResourceData(file.resource.id, fromTempPath: data.path)
+                                            mediaBox.copyResourceData(file.file.resource.id, fromTempPath: data.path)
                                             subscriber.putNext((image, true))
                                         }
                                     } else if !didOutputBlurred {
                                         didOutputBlurred = true
-                                        if let immediateThumbnailData = file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
+                                        if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
                                             if let image = UIImage(data: decodedData)?.precomposed() {
                                                 subscriber.putNext((image, false))
                                             }

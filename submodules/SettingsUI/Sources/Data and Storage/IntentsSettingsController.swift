@@ -184,47 +184,46 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! IntentsSettingsControllerArguments
         switch self {
-            case let .accountHeader(theme, text):
+            case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .account(theme, peer, selected, _):
+            case let .account(_, peer, selected, _):
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context.sharedContext.makeTempAccountContext(account: arguments.context.account), peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedAccount(peer.id) }
                 }, setPeerIdWithRevealedOptions: { _, _ in}, removePeer: { _ in })
-                return ItemListTextItem(presentationData: presentationData, text: .plain(""), sectionId: self.section)
-            case let .accountInfo(theme, text):
+            case let .accountInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .chatsHeader(theme, text):
+            case let .chatsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .contacts(theme, text, value):
+            case let .contacts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateSettings { $0.withUpdatedContacts(value) }
                 })
-            case let .savedMessages(theme, text, value):
+            case let .savedMessages(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateSettings { $0.withUpdatedSavedMessages(value) }
                 })
-            case let .privateChats(theme, text, value):
+            case let .privateChats(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateSettings { $0.withUpdatedPrivateChats(value) }
                 })
-            case let .groups(theme, text, value):
+            case let .groups(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateSettings { $0.withUpdatedGroups(value) }
                 })
-            case let .chatsInfo(theme, text):
+            case let .chatsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .suggestHeader(theme, text):
+            case let .suggestHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .suggestAll(theme, text, value):
+            case let .suggestAll(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedOnlyShared(false) }
                 })
-            case let .suggestOnlyShared(theme, text, value):
+            case let .suggestOnlyShared(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedOnlyShared(true) }
                 })
 
-            case let .resetAll(theme, text):
+            case let .resetAll(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetAll()
                 })
@@ -263,16 +262,13 @@ private func intentsSettingsControllerEntries(context: AccountContext, presentat
 }
 
 public func intentsSettingsController(context: AccountContext) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
-    
-    let updateDisposable = MetaDisposable()
+
     let arguments = IntentsSettingsControllerArguments(context: context, updateSettings: { f in
         let _ = updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager, f).start(next: { previous, updated in
             guard let previous = previous, let updated = updated else {
                 return
             }
-            let accountPeerId = context.account.peerId
             if previous.contacts && !updated.contacts {
                 deleteAllSendMessageIntents()
             }
@@ -285,7 +281,7 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
             if previous.groups && !updated.groups {
                 deleteAllSendMessageIntents()
             }
-            if previous.account != updated.account, let previousAccount = previous.account {
+            if previous.account != updated.account, let _ = previous.account {
                 deleteAllSendMessageIntents()
             }
         })
@@ -318,9 +314,6 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
     }
     
     let controller = ItemListController(context: context, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

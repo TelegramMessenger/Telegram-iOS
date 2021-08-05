@@ -262,7 +262,7 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                         case let .color(color):
                             source = .wallpaper(.color(color.argb), nil, [], nil, nil, message)
                         case let .gradient(colors, rotation):
-                            source = .wallpaper(.gradient(nil, colors, WallpaperSettings(rotation: rotation)), nil, [], nil, rotation, message)
+                            source = .wallpaper(.gradient(TelegramWallpaper.Gradient(id: nil, colors: colors, settings: WallpaperSettings(rotation: rotation))), nil, [], nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)

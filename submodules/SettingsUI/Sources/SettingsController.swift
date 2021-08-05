@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 import AccountContext
 
-public protocol SettingsController: class {
+public protocol SettingsController: AnyObject {
     func updateContext(context: AccountContext)
 }
 

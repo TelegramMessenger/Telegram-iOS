@@ -94,9 +94,9 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                     |> map { result -> UploadWallpaperStatus in
                         switch result {
                             case let .complete(wallpaper):
-                                if case let .file(_, _, _, _, _, _, _, file, _) = wallpaper {
-                                    sharedContext.accountManager.mediaBox.moveResourceData(from: currentResource.id, to: file.resource.id)
-                                    account.postbox.mediaBox.moveResourceData(from: currentResource.id, to: file.resource.id)
+                                if case let .file(file) = wallpaper {
+                                    sharedContext.accountManager.mediaBox.moveResourceData(from: currentResource.id, to: file.file.resource.id)
+                                    account.postbox.mediaBox.moveResourceData(from: currentResource.id, to: file.file.resource.id)
                                 }
                             default:
                                 break
@@ -105,7 +105,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                     }
                     
                     let autoNightModeTriggered = presentationData.autoNightModeTriggered
-                    disposable.set(uploadSignal.start(next: { [weak self] status in
+                    disposable.set(uploadSignal.start(next: { status in
                         if case let .complete(wallpaper) = status {
                             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                 if let resource = wallpaper.mainResource {
@@ -133,10 +133,10 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                 })).start()
                             }
                             
-                            if case let .file(_, _, _, _, _, _, _, file, settings) = wallpaper, settings.blur {
-                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                            if case let .file(file) = wallpaper, file.settings.blur {
+                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                 })
-                                let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
                             } else {

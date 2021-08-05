@@ -60,10 +60,10 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             return .builtin
         case let .color(color):
             return .color(color)
-        case let .gradient(_, colors, _):
-            return .gradient(colors)
-        case let .file(id, _, _, _, _, _, _, _, settings):
-            return .file(id, settings.colors, settings.intensity ?? 0)
+        case let .gradient(gradient):
+            return .gradient(gradient.colors)
+        case let .file(file):
+            return .file(file.id, file.settings.colors, file.settings.intensity ?? 0)
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
                 return .image(largest.resource.id.uniqueId)
@@ -240,8 +240,6 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIds: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
 
-        let defaultWallpaper = presentationData.theme.chat.defaultWallpaper
-
         let wallpapersPromise = Promise<[Wallpaper]>()
         self.wallpapersPromise = wallpapersPromise
         
@@ -344,13 +342,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         |> map { wallpapers, deletedWallpaperIds, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
-            
-            var isSelectedEditable = true
-            if case .builtin = presentationData.chatWallpaper {
-                isSelectedEditable = false
-            } else if presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
-                isSelectedEditable = false
-            }
+
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: false, isSelected: true), at: 0)
             
             var defaultWallpaper: TelegramWallpaper?

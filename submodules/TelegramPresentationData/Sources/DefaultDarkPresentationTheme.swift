@@ -132,7 +132,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         defaultWallpaper = defaultBuiltinWallpaper(data: variant, colors: colors, intensity: intensity)
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
-            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
+            defaultWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: backgroundColors, settings: WallpaperSettings()))
         } else {
             defaultWallpaper = .color(backgroundColors[0])
         }

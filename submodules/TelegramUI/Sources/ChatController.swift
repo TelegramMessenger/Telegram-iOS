@@ -4239,7 +4239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return message
             }
             |> distinctUntilChanged
-        case let .replyThread(replyThreadMessage):
+        case .replyThread:
             return .single(nil)
         }
         return topPinnedMessage
@@ -7078,7 +7078,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let navigationController = strongSelf.effectiveNavigationController {
-                ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                let _ = ApplicationSpecificNotice.incrementNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
 
                 let snapshotState = strongSelf.chatDisplayNode.prepareSnapshotState(
                     titleViewSnapshotState: strongSelf.chatTitleView?.prepareSnapshotState(),
@@ -7219,7 +7219,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             self.tempVoicePlaylistItemChanged = { [weak self] previousItem, currentItem in
-                guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                guard let strongSelf = self, case .peer = strongSelf.chatLocation else {
                     return
                 }
                 
@@ -10481,7 +10481,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.completed
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()
@@ -11398,7 +11397,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             cancelImpl = { [weak self] in
                 self?.resolvePeerByNameDisposable?.set(nil)
             }
-            let account = self.context.account
             disposable.set((resolveSignal
             |> take(1)
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
@@ -11427,7 +11425,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if self.resolvePeerByNameDisposable == nil {
                 self.resolvePeerByNameDisposable = MetaDisposable()
             }
-            let account = self.context.account
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
