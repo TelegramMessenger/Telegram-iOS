@@ -687,7 +687,10 @@
 }
 
 - (bool)isCurrentlyEmoji {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   NSString *value = [[UITextInputMode currentInputMode] primaryLanguage];
+#pragma clang diagnostic pop
   if ([value isEqualToString:@"emoji"]) {
     return true;
   } else {

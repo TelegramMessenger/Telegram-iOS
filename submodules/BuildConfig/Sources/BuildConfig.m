@@ -207,7 +207,7 @@ API_AVAILABLE(ios(10))
     return bundleSeedID;
 }
 
-+ (NSString * _Nonnull)applicationSecretTag:(bool)isCheckKey {
++ (NSData * _Nullable)applicationSecretTag:(bool)isCheckKey {
     if (isCheckKey) {
         return [[telegramApplicationSecretKey stringByAppendingString:@"_check"] dataUsingEncoding:NSUTF8StringEncoding];
     } else {
@@ -349,7 +349,7 @@ API_AVAILABLE(ios(10))
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
     
     NSString *filePath = [rootPath stringByAppendingPathComponent:@".tempkey"];
-    NSString *encryptedPath = [rootPath stringByAppendingPathComponent:@".tempkeyEncrypted"];
+    //NSString *encryptedPath = [rootPath stringByAppendingPathComponent:@".tempkeyEncrypted"];
     
     NSData *currentData = [NSData dataWithContentsOfFile:filePath];
     NSData *resultData = nil;

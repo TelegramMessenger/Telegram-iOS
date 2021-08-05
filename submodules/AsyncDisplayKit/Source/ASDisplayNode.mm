@@ -68,6 +68,9 @@ static ASDisplayNodeNonFatalErrorBlock _nonFatalErrorBlock = nil;
 
 @end
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincomplete-implementation"
+
 @implementation ASDisplayNode
 
 @dynamic layoutElementType;
@@ -386,9 +389,12 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
 
 - (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(ASDisplayNodeDidLoadBlock)didLoadBlock
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-designated-initializers"
   if (!(self = [self init])) {
     return nil;
   }
+#pragma clang diagnostic pop
 
   [self setViewBlock:viewBlock];
   if (didLoadBlock != nil) {
@@ -405,9 +411,12 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
 
 - (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)layerBlock didLoadBlock:(ASDisplayNodeDidLoadBlock)didLoadBlock
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-designated-initializers"
   if (!(self = [self init])) {
     return nil;
   }
+#pragma clang diagnostic pop
   
   [self setLayerBlock:layerBlock];
   if (didLoadBlock != nil) {
@@ -3816,3 +3825,5 @@ static const char *ASDisplayNodeAssociatedNodeKey = "ASAssociatedNode";
 }
 
 @end
+
+#pragma clang diagnostic pop

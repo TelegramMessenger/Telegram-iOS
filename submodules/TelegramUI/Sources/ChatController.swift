@@ -9689,7 +9689,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
     private func presentPollCreation(isQuiz: Bool? = nil) {
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, isQuiz: isQuiz, completion: { [weak self] message in
+            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: EnginePeer(peer), isQuiz: isQuiz, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }

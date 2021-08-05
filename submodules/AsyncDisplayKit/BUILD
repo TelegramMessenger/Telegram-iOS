@@ -14,6 +14,9 @@ objc_library(
         "Source/**/*.m",
         "Source/**/*.mm",
     ]) + private_headers,
+    copts = [
+        "-Werror",
+    ],
     hdrs = public_headers,
     defines = [
         "MINIMAL_ASDK",

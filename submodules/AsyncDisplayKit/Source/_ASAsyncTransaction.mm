@@ -16,10 +16,6 @@
 #import <map>
 #import <mutex>
 
-#ifndef __STRICT_ANSI__
-  #warning "Texture must be compiled with std=c++11 to prevent layout issues. gnu++ is not supported. This is hopefully temporary."
-#endif
-
 AS_EXTERN NSRunLoopMode const UITrackingRunLoopMode;
 
 NSInteger const ASDefaultTransactionPriority = 0;
