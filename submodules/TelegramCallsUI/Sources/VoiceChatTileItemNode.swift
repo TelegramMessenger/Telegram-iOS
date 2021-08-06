@@ -157,6 +157,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     private var isExtracted = false
     
     private let audioLevelDisposable = MetaDisposable()
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
     
     init(context: AccountContext) {
         self.context = context
@@ -201,7 +204,14 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.placeholderIconNode.contentMode = .scaleAspectFit
         self.placeholderIconNode.displaysAsynchronously = false
         
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+
         super.init()
+
+        self.addSubnode(self.hierarchyTrackingNode)
         
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
@@ -235,6 +245,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 return
             }
             strongSelf.updateIsExtracted(isExtracted, transition: transition)
+        }
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.highlightNode.isCurrentlyInHierarchy = value
+            }
         }
     }
     
@@ -634,9 +651,14 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     private let maskLayer = CALayer()
     
     private let foregroundGradientLayer = CAGradientLayer()
-    
-    private let hierarchyTrackingNode: HierarchyTrackingNode
-    private var isCurrentlyInHierarchy = false
+
+    var isCurrentlyInHierarchy = false {
+        didSet {
+            if self.isCurrentlyInHierarchy != oldValue && self.isCurrentlyInHierarchy {
+                self.updateAnimations()
+            }
+        }
+    }
     
     private var audioLevel: CGFloat = 0.0
     private var presentationAudioLevel: CGFloat = 0.0
@@ -650,27 +672,13 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
-        var updateInHierarchy: ((Bool) -> Void)?
-        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
-            updateInHierarchy?(value)
-        })
-        
         super.init()
-        
-        updateInHierarchy = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.isCurrentlyInHierarchy = value
-                strongSelf.updateAnimations()
-            }
-        }
         
         self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
         }
-        
-        self.addSubnode(self.hierarchyTrackingNode)
     }
     
     override func didLoad() {
@@ -733,8 +741,11 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
             animation.toValue = newValue
             
             CATransaction.setCompletionBlock { [weak self] in
-                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
-                    self?.setupGradientAnimations()
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.isCurrentlyInHierarchy {
+                    strongSelf.setupGradientAnimations()
                 }
             }
             

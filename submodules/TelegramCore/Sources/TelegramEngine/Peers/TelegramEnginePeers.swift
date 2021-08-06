@@ -495,8 +495,8 @@ public extension TelegramEngine {
             return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
 
-        public func getNextUnreadChannel(peerId: PeerId, filter: ChatListFilterPredicate?) -> Signal<EnginePeer?, NoError> {
-            return self.account.postbox.transaction { transaction -> EnginePeer? in
+        public func getNextUnreadChannel(peerId: PeerId, filter: ChatListFilterPredicate?) -> Signal<(peer: EnginePeer, unreadCount: Int)?, NoError> {
+            return self.account.postbox.transaction { transaction -> (peer: EnginePeer, unreadCount: Int)? in
                 var results: [(EnginePeer, Int32)] = []
 
                 var peerIds: [PeerId] = []
@@ -525,7 +525,12 @@ public extension TelegramEngine {
 
                 results.sort(by: { $0.1 > $1.1 })
 
-                return results.first?.0
+                if let peer = results.first?.0 {
+                    let unreadCount: Int32 = transaction.getCombinedPeerReadState(peer.id)?.count ?? 0
+                    return (peer: peer, unreadCount: Int(unreadCount))
+                } else {
+                    return nil
+                }
             }
         }
 

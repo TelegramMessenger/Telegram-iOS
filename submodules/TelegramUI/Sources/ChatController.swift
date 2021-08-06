@@ -3324,10 +3324,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
 
                                     strongSelf.chatDisplayNode.historyNode.offerNextChannelToRead = true
-                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, unreadCount: Int) in
+                                        return (peer: nextPeer.peer, unreadCount: nextPeer.unreadCount)
+                                    }
                                     strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
 
-                                    let nextPeerId = nextPeer?.id
+                                    let nextPeerId = nextPeer?.peer.id
 
                                     if strongSelf.preloadNextChatPeerId != nextPeerId {
                                         strongSelf.preloadNextChatPeerId = nextPeerId
@@ -7508,7 +7510,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let avatarSnapshotState = snapshotState.avatarSnapshotState {
                 (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.animateFromSnapshot(avatarSnapshotState)
             }
-            self.chatDisplayNode.animateFromSnapshot(snapshotState)
+            self.chatDisplayNode.animateFromSnapshot(snapshotState, completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatDisplayNode.historyNode.preloadPages = true
+            })
+        } else {
+            self.chatDisplayNode.historyNode.preloadPages = true
         }
     }
     

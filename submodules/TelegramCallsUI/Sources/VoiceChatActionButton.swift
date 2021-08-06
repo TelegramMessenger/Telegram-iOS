@@ -1249,6 +1249,9 @@ private final class VoiceBlobView: UIView {
     private(set) var isAnimating = false
     
     public typealias BlobRange = (min: CGFloat, max: CGFloat)
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     public init(
         frame: CGRect,
@@ -1256,6 +1259,11 @@ private final class VoiceBlobView: UIView {
         mediumBlobRange: BlobRange,
         bigBlobRange: BlobRange
     ) {
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
         self.maxLevel = maxLevel
         
         self.mediumBlob = BlobView(
@@ -1278,17 +1286,29 @@ private final class VoiceBlobView: UIView {
         )
         
         super.init(frame: frame)
+
+        addSubnode(hierarchyTrackingNode)
         
         addSubview(bigBlob)
         addSubview(mediumBlob)
         
         displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
+
+            if !strongSelf.isCurrentlyInHierarchy {
+                return
+            }
             
             strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
             
             strongSelf.mediumBlob.level = strongSelf.presentationAudioLevel
             strongSelf.bigBlob.level = strongSelf.presentationAudioLevel
+        }
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+            }
         }
     }
     

@@ -43,6 +43,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     private let maxLevel: CGFloat
     
     private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     private var audioLevel: CGFloat = 0
     public var presentationAudioLevel: CGFloat = 0
@@ -93,8 +96,15 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             scaleSpeed: 0.2,
             isCircle: false
         )
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init(frame: frame)
+
+        self.addSubnode(self.hierarchyTrackingNode)
         
         self.addSubnode(self.bigBlob)
         self.addSubnode(self.mediumBlob)
@@ -108,6 +118,12 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             strongSelf.smallBlob.level = strongSelf.presentationAudioLevel
             strongSelf.mediumBlob.level = strongSelf.presentationAudioLevel
             strongSelf.bigBlob.level = strongSelf.presentationAudioLevel
+        }
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+            }
         }
     }
     
@@ -266,6 +282,9 @@ final class BlobNode: ASDisplayNode {
             )
         }
     }
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     init(
         pointsCount: Int,
@@ -290,12 +309,24 @@ final class BlobNode: ASDisplayNode {
         
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init()
-        
+
+        self.addSubnode(self.hierarchyTrackingNode)
         self.layer.addSublayer(self.shapeLayer)
         
         self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -305,7 +336,7 @@ final class BlobNode: ASDisplayNode {
     func setColor(_ color: UIColor, animated: Bool) {
         let previousColor = self.shapeLayer.fillColor
         self.shapeLayer.fillColor = color.cgColor
-        if animated, let previousColor = previousColor {
+        if animated, let previousColor = previousColor, self.isCurrentlyInHierarchy {
             self.shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }
     }
