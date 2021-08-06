@@ -440,8 +440,12 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     })
                 }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.peerSelected(peer, nil)
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { contactPeer in
+                    if case let .peer(maybePeer, maybeChatPeer) = contactPeer, let peer = maybePeer, let chatPeer = maybeChatPeer {
+                        interaction.peerSelected(chatPeer, peer, nil)
+                    } else {
+                        interaction.peerSelected(peer, nil, nil)
+                    }
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
                         if let chatPeer = chatPeer, chatPeer.id.namespace != Namespaces.Peer.SecretChat {
@@ -504,7 +508,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.peerSelected(peer.peer, nil)
+                    interaction.peerSelected(peer.peer, nil, nil)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
                         peerContextAction(peer.peer, .search(nil), node, gesture)
@@ -1209,9 +1213,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         let chatListInteraction = ChatListNodeInteraction(activateSearch: {
-        }, peerSelected: { [weak self] peer, _ in
+        }, peerSelected: { [weak self] peer, chatPeer, _ in
             interaction.dismissInput()
-            interaction.openPeer(peer, false)
+            interaction.openPeer(peer, chatPeer, false)
             let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, disabledPeerSelected: { _ in
@@ -1478,7 +1482,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let firstTime = previousEntries == nil
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, peerSelected: { peer in
-                    interaction.openPeer(peer, true)
+                    interaction.openPeer(peer, nil, true)
                     let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
                     self?.recentListNode.clearHighlightAnimated(true)
                 }, disabledPeerSelected: { peer in
@@ -2324,7 +2328,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             let timestamp1: Int32 = 100000
             var peers = SimpleDictionary<PeerId, Peer>()
             peers[peer1.id] = peer1
-            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
             }, present: { _ in })

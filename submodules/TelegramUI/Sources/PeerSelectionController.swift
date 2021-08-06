@@ -19,7 +19,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private var customTitle: String?
     
     public var peerSelected: ((Peer) -> Void)?
-    public var multiplePeersSelected: (([Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
+    public var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
     private let filter: ChatListNodePeersFilter
     
     private let attemptSelection: ((Peer) -> Void)?
@@ -158,8 +158,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.navigationBar = self.navigationBar
         
-        self.peerSelectionNode.requestSend = { [weak self] peers, text, mode in
-            self?.multiplePeersSelected?(peers, text, mode)
+        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode in
+            self?.multiplePeersSelected?(peers, peerMap, text, mode)
         }
         
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in

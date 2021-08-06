@@ -56,7 +56,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
-    var requestSend: (([Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
+    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -348,13 +348,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     let selectedContactPeers = strongSelf.contactListNode?.selectedPeers ?? []
                     let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
                     var selectedPeers: [Peer] = []
+                    var selectedPeerMap: [PeerId: Peer] = [:]
                     for contactPeer in selectedContactPeers {
                         if case let .peer(peer, _, _) = contactPeer {
                             selectedPeers.append(peer)
+                            selectedPeerMap[peer.id] = peer
                         }
                     }
                     if !selectedPeers.isEmpty {
-                        strongSelf.requestSend?(selectedPeers, effectiveInputText, mode)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode)
                     }
                 } else {
                     var selectedPeerIds: [PeerId] = []
@@ -372,7 +374,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 selectedPeers.append(peer)
                             }
                         }
-                        strongSelf.requestSend?(selectedPeers, effectiveInputText, mode)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode)
                     }
                 }
             }
@@ -492,7 +494,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: .root, displaySearchFilters: false, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: .root, displaySearchFilters: false, openPeer: { [weak self] peer, chatPeer, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -505,15 +507,18 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         var foundPeers = state.foundPeers
                         var selectedPeerMap = state.selectedPeerMap
                         selectedPeerMap[peer.id] = peer
+                        if peer is TelegramSecretChat, let chatPeer = chatPeer {
+                            selectedPeerMap[chatPeer.id] = chatPeer
+                        }
                         var exists = false
                         for foundPeer in foundPeers {
-                            if peer.id == foundPeer.id {
+                            if peer.id == foundPeer.0.id {
                                 exists = true
                                 break
                             }
                         }
                         if !exists {
-                            foundPeers.insert(peer, at: 0)
+                            foundPeers.insert((peer, chatPeer), at: 0)
                         }
                         if state.selectedPeerIds.contains(peer.id) {
                             state.selectedPeerIds.remove(peer.id)

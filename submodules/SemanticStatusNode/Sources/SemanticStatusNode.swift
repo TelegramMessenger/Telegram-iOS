@@ -273,6 +273,7 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                     strongSelf.requestUpdate()
                 }
             }
+            self.animationNode?.enqueueState(self.icon == .play ? .play : .pause, animated: false)
             self.iconImage = self.animationNode?.image
             self.iconOffset = 1.5
         }

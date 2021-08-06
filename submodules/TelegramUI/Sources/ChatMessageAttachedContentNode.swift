@@ -786,6 +786,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         var imageHeightAddition = size.height + 6.0
                         if textFrame.size.height > CGFloat.ulpOfOne {
                             imageHeightAddition += 6.0
+                        } else {
+                            imageHeightAddition += 7.0
                         }
                         
                         adjustedBoundingSize.height += imageHeightAddition + 5.0
@@ -931,7 +933,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 if let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
                                     contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentFileSize)
                                 } else {
-                                    contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 8.0 : 0.0)), size: contentFileSize)
+                                    contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 8.0 : 7.0)), size: contentFileSize)
                                 }
                             } else if let contentFileNode = strongSelf.contentFileNode {
                                 contentFileNode.removeFromSupernode()
