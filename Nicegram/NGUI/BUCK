@@ -20,7 +20,6 @@ static_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/TelegramPresentationData:TelegramPresentationData",

@@ -9,7 +9,6 @@ swift_library(
     deps = [
         "//Nicegram/NGData:NGData",
         "//submodules/Postbox:Postbox",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore"
     ],
     visibility = [

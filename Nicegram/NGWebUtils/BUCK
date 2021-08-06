@@ -8,7 +8,6 @@ static_library(
     deps = [
         "//Nicegram/NGData:NGData",
         "//submodules/Postbox:Postbox#shared",
-        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramCore:TelegramCore#shared"
     ],
     frameworks = [
