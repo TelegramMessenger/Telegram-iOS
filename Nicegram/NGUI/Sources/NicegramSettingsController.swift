@@ -18,7 +18,6 @@ import NGStrings
 import Postbox
 import PresentationDataUtils
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import TelegramNotices
 import TelegramPresentationData
