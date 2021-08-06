@@ -9,7 +9,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 
 
 public var MessagesToCopy: [EnqueueMessage] = []
