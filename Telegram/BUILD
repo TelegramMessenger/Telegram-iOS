@@ -198,10 +198,9 @@ filegroup(
     name = "AppStringResources",
     srcs = [
         "Telegram-iOS/en.lproj/Localizable.strings",
-        "Telegram-iOS/*.lproj/NiceLocalizable.strings",
     ] + [
         "{}.lproj/Localizable.strings".format(language) for language in empty_languages
-    ],
+    ] + glob(["Telegram-iOS/*.lproj/NiceLocalizable.strings"])
 )
 
 filegroup(
