@@ -18,7 +18,6 @@ import AccountContext
 import TelegramNotices
 import NGData
 import NGStrings
-import SyncCore
 
 private struct SelectionState: Equatable {
 }
