@@ -3077,7 +3077,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             var storedState: MediaPlaybackStoredState?
             if let timestamp = timestamp {
-                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate) ?? .x1)
+                storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
             }
             let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
         }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
@@ -3159,7 +3159,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     break
                 }
             }, sendFile: nil,
-            sendSticker: { [weak self] f, sourceNode, sourceRect in
+            sendSticker: { _, _, _ in
             return false
         }, requestMessageActionUrlAuth: nil,
         joinVoiceChat: { peerId, invite, call in
@@ -3270,7 +3270,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         cancelImpl = { [weak self] in
             self?.resolvePeerByNameDisposable?.set(nil)
         }
-        let account = self.context.account
+        
         disposable.set((resolveSignal
         |> take(1)
         |> mapToSignal { peer -> Signal<Peer?, NoError> in

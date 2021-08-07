@@ -73,7 +73,7 @@ enum ChatMediaInputExpanded: Equatable {
 enum ChatInputMode: Equatable {
     case none
     case text
-    case media(mode: ChatMediaInputMode, expanded: ChatMediaInputExpanded?)
+    case media(mode: ChatMediaInputMode, expanded: ChatMediaInputExpanded?, focused: Bool)
     case inputButtons
 }
 

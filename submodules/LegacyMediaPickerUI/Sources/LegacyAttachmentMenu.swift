@@ -182,7 +182,14 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         carouselItem.stickersContext = paintStickersContext
         carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
         carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        var openedCamera = false
+        controller.willDismiss = { [weak carouselItem] _ in
+            if let carouselItem = carouselItem, !openedCamera {
+                carouselItem.saveStartImage()
+            }
+        }
         carouselItem.cameraPressed = { [weak controller, weak parentController] cameraView in
+            openedCamera = true
             if let controller = controller {
                 if let parentController = parentController, parentController.context.currentlyInSplitView() {
                     return

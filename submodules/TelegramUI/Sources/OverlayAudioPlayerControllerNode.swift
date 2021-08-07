@@ -201,7 +201,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             }
         }
         
-        self.historyNode.endedInteractiveDragging = { [weak self] in
+        self.historyNode.endedInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -613,7 +613,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 }
             }
             
-            self.historyNode.endedInteractiveDragging = { [weak self] in
+            self.historyNode.endedInteractiveDragging = { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

@@ -185,7 +185,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         var resourceReference: MediaResourceReference?
         if let thumbnail = info.thumbnail {
             if info.flags.contains(.isAnimated) {
-                thumbnailItem = .animated(thumbnail.resource)
+                thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions)
                 resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
             } else {
                 thumbnailItem = .still(thumbnail)
@@ -193,7 +193,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             }
         } else if let item = item {
             if item.file.isAnimatedSticker {
-                thumbnailItem = .animated(item.file.resource)
+                thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100))
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
             } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                 thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
@@ -210,6 +210,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
+            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
@@ -217,7 +218,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
-                    case let .animated(resource):
+                    case let .animated(resource, _):
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true, nilIfEmpty: true))
@@ -236,7 +237,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             } else {
                                 self.scalingNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
@@ -247,7 +248,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         
             if let placeholderNode = self.placeholderNode {
                 let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: CGSize(width: 100.0, height: 100.0))
+                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
             }
             
             self.updateIsHighlighted()
@@ -259,12 +260,12 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         let expandScale: CGFloat = expanded ? 1.0 : boundingImageScale
         let expandTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: 0.3, curve: .spring) : .immediate
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
-        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -2.0 : 3.0)))
+        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
         expandTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 2.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
         expandTransition.updateFrameAsPositionAndBounds(node: self.titleNode, frame: displayTitleFrame)
         expandTransition.updateTransformScale(node: self.titleNode, scale: expanded ? 1.0 : 0.001)

@@ -103,6 +103,33 @@ public final class ApplicationSpecificTimestampNotice: NoticeEntry {
     }
 }
 
+public final class ApplicationSpecificInt64ArrayNotice: NoticeEntry {
+    public let values: [Int64]
+    
+    public init(values: [Int64]) {
+        self.values = values
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.values = decoder.decodeInt64ArrayForKey("v")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64Array(self.values, forKey: "v")
+    }
+    
+    public func isEqual(to: NoticeEntry) -> Bool {
+        if let to = to as? ApplicationSpecificInt64ArrayNotice {
+            if self.values != to.values {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private func noticeNamespace(namespace: Int32) -> ValueBoxKey {
     let key = ValueBoxKey(length: 4)
     key.setInt32(0, value: namespace)
@@ -138,6 +165,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatFolderTips = 19
     case locationProximityAlertTip = 20
     case nextChatSuggestionTip = 21
+    case dismissedTrendingStickerPacks = 22
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -272,6 +300,10 @@ private struct ApplicationSpecificNoticeKeys {
 
     static func nextChatSuggestionTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.nextChatSuggestionTip.key)
+    }
+    
+    static func dismissedTrendingStickerPacks() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedTrendingStickerPacks.key)
     }
 }
 
@@ -760,6 +792,23 @@ public struct ApplicationSpecificNotice {
             currentValue += count
 
             transaction.setNotice(ApplicationSpecificNoticeKeys.nextChatSuggestionTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    public static func dismissedTrendingStickerPacks(accountManager: AccountManager) -> Signal<[Int64]?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedTrendingStickerPacks())
+        |> map { view -> [Int64]? in
+            if let value = view.value as? ApplicationSpecificInt64ArrayNotice {
+                return value.values
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func setDismissedTrendingStickerPacks(accountManager: AccountManager, values: [Int64]) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedTrendingStickerPacks(), ApplicationSpecificInt64ArrayNotice(values: values))
         }
     }
     

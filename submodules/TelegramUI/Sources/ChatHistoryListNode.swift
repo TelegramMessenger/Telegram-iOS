@@ -1167,7 +1167,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self?.beganDragging?()
         }
 
-        self.endedInteractiveDragging = { [weak self] in
+        self.endedInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -1176,7 +1176,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        self.didEndScrolling = { [weak self] in
+        self.didEndScrolling = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }

@@ -1289,7 +1289,7 @@ public final class ChatListNode: ListView {
             }
         }
         
-        self.didEndScrolling = { [weak self] in
+        self.didEndScrolling = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
