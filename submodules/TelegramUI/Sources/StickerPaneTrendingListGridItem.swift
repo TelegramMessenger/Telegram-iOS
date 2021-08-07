@@ -302,7 +302,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                         
             if let placeholderNode = self.placeholderNode {
                 let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
+                placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
             }
         }
         
