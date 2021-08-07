@@ -291,7 +291,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                             } else {
                                 self.containerNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
