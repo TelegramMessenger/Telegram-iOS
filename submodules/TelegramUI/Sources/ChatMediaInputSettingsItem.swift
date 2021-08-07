@@ -91,6 +91,7 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
         self.containerNode.addSubnode(self.scalingNode)
         
         self.scalingNode.addSubnode(self.buttonNode)
+        self.scalingNode.addSubnode(self.titleNode)
         self.scalingNode.addSubnode(self.imageNode)
     }
         
