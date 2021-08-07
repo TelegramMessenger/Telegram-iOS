@@ -17,6 +17,13 @@
 "NiceFeatures.ChatScreen.AnimatedStickers" = "Animierte Stickers";
 "NiceFeatures.useBackCam" = "Verwende Rückkamera (runde Videos)";
 
+"NiceFeatures.Folders.Header" = "ORDNER";
+"NiceFeatures.Folders.TgFolders" = "Ordner - unten";
+"NiceFeatures.Folders.TgFolders.Notice" = "Ordnerliste im iOS-Stil";
+
+"NiceFeatures.RoundVideos.Header" = "RUNDE VIDEOS";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Starte mit umgedrehter Kamera";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "In Cloud speichern";
 
@@ -79,14 +86,17 @@
 "Common.FAQ.Intro" = "Bitte beachten Sie, dass der Nicegram Support von einem einzigen Entwickler und der Community durchgeführt wird.\n\nWerfen Sie einen Blick auf die Nicegram-FAQ: Sie enthält wichtige Tipps zur Fehlerbehebung und Antworten auf die meisten Fragen.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Einzigartige Funktionen, die du nicht ablehnen kannst!";
+"IAP.Premium.Features" = "Schnellnachrichten-Übersetzer\n\nAusgewählten Ordner beim Beenden merken";
 "IAP.Premium.Activated" = "Premium aktiviert!";
 "IAP.Common.Restore" = "Einkäufe wiederherstellen";
 "IAP.Common.CantPay" = "Leider können Sie aufgrund Ihres Geräts oder Ihres Kontos keine Einkäufe tätigen.";
 "IAP.Common.ErrorFetch" = "Entschuldigung, App Store Käufe können nicht abgerufen werden.";
 "IAP.Common.Congrats" = "Herzlichen Glückwunsch!";
 "IAP.Common.ValidateError" = "Es tut uns leid, kann Ihren Kauf nicht validieren.";
+"IAP.Common.Connecting" = "Verbinde mit AppStore...";
 "Premium.OnetapTranslate" = "Schnellübersetzen-Schaltfläche";
 "Premium.IgnoreTranslate.Title" = "Ignorierte Sprachen";
+"Premium.IgnoreTranslate.Header" = "Die Schaltfläche Schnellnachrichten-Übersetzung wird für die unten ausgewählten Sprachen DEAKTIVIERT sein.";
 
 /*Manage Filters*/
 "ManageFilters.Title" = "Tabs verwalten";
@@ -102,6 +112,7 @@
 "NGLab.RegDate.Notice" = "Dies ist ein ungefähres Datum";
 "NGLab.RegDate.MenuItem" = "registriert";
 "NGLab.RegDate.FetchError" = "Leider kann das Registrierungsdatum nicht abgerufen werden.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Gerät kann nicht verifiziert werden.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Einstellungen & Ordner mit iCloud synchronisieren";
@@ -129,3 +140,10 @@
 "Gmod.OpenChatNotice" = "Der Chat wird als gelesen markiert, du kannst aber durch Force-Touch/halten den Chat im Vorschaumodus öffnen";
 "Gmod.OpenChatBtn" = "Ja, Chat öffnen";
 "Gmod.DisableBtn" = "Warnungen deaktivieren";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Deine Nummer wird nur in der Benutzeroberfläche versteckt. Um sie vor anderen zu verbergen, verwende bitte die Privatsphäre-Einstellungen.";
+"NicegramSettings.Other.showProfileId" = "Profil-ID anzeigen";
+"NicegramSettings.Other.showRegDate" = "Registrierungsdatum anzeigen";
+"Premium.OnetapTranslate.LowPower" = "Erkennung bei geringer Leistung";
+"Premium.OnetapTranslate.LowPower.Notice" = "Die App erkennt die Sprache jeder Nachricht auf deinem Gerät. Das ist eine Aufgabe mit hoher Priorität, die sich auf die Akkulaufzeit auswirken kann.";
+"Premium.rememberFolderOnExit" = "Aktuellen Ordner beim Beenden merken";
