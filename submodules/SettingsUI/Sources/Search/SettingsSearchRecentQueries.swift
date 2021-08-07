@@ -8,7 +8,12 @@ private struct SettingsSearchRecentQueryItemId {
     public let rawValue: MemoryBuffer
     
     var value: Int64 {
-        return self.rawValue.makeData().withUnsafeBytes { $0.pointee } as Int64
+        return self.rawValue.makeData().withUnsafeBytes { buffer -> Int64 in
+            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: Int64.self) else {
+                return 0
+            }
+            return bytes.pointee
+        }
     }
     
     init(_ rawValue: MemoryBuffer) {

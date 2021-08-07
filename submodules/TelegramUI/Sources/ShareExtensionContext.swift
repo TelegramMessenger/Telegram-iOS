@@ -951,7 +951,7 @@ public class ShareRootControllerImpl {
                                                                 strongSelf.mainWindow?.present(controller, on: .root)
                                                             } else {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                                if let user = peer as? TelegramUser {
+                                                                if let _ = peer as? TelegramUser {
                                                                     let text: String
                                                                     switch result {
                                                                     case .allowed:

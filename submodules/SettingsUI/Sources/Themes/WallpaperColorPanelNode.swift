@@ -567,20 +567,15 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         let fieldHeight: CGFloat = 33.0
         let leftInset: CGFloat
         let rightInset: CGFloat
-        let fieldSpacing: CGFloat
         if condensedLayout {
             leftInset = 6.0
             rightInset = 6.0
-            fieldSpacing = 40.0
         } else {
             leftInset = 15.0
             rightInset = 15.0
-            fieldSpacing = 45.0
         }
-        let rightInsetWithButton: CGFloat = 42.0
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
-        let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
         //let middleButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
         //transition.updateFrame(node: self.rotateButton, frame: middleButtonFrame)

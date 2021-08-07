@@ -240,24 +240,6 @@ private func preparedSettingsSearchContainerTransition(theme: PresentationTheme,
 
 private enum SettingsSearchRecentEntryStableId: Hashable {
     case recent(SettingsSearchableItemId)
-    
-    static func ==(lhs: SettingsSearchRecentEntryStableId, rhs: SettingsSearchRecentEntryStableId) -> Bool {
-        switch lhs {
-            case let .recent(id):
-                if case .recent(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .recent(id):
-                return id.hashValue
-        }
-    }
 }
 
 private enum SettingsSearchRecentEntry: Comparable, Identifiable {

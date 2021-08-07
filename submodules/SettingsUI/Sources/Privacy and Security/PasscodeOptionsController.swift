@@ -109,23 +109,23 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PasscodeOptionsControllerArguments
         switch self {
-            case let .togglePasscode(theme, title, value):
+            case let .togglePasscode(_, title, value):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if value {
                         arguments.turnPasscodeOff()
                     }
                 })
-            case let .changePasscode(theme, title):
+            case let .changePasscode(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changePasscode()
                 })
-            case let .settingInfo(theme, text):
+            case let .settingInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .autoLock(theme, title, value):
+            case let .autoLock(_, title, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.changePasscodeTimeout()
                 })
-            case let .touchId(theme, title, value):
+            case let .touchId(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
                 })
@@ -210,10 +210,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     let initialState = PasscodeOptionsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
-    let stateValue = Atomic(value: initialState)
-    let updateState: ((PasscodeOptionsControllerState) -> PasscodeOptionsControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?

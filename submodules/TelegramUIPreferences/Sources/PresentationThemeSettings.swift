@@ -573,10 +573,10 @@ public struct PresentationThemeSettings: PreferencesEntry {
         switch wallpaper {
             case let .image(representations, _):
                 return representations.map { $0.resource.id }
-            case let .file(_, _, _, _, _, _, _, file, _):
+            case let .file(file):
                 var resources: [MediaResourceId] = []
-                resources.append(file.resource.id)
-                resources.append(contentsOf: file.previewRepresentations.map { $0.resource.id })
+                resources.append(file.file.resource.id)
+                resources.append(contentsOf: file.file.previewRepresentations.map { $0.resource.id })
                 return resources
             default:
                 return []

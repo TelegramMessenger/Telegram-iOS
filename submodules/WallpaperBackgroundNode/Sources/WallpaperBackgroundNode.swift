@@ -116,13 +116,13 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 var isInvertedGradient = false
                 var hasComplexGradient = false
                 switch wallpaper {
-                case let .file(_, _, _, _, _, _, _, _, settings):
-                    hasComplexGradient = settings.colors.count >= 3
-                    if let intensity = settings.intensity, intensity < 0 {
+                case let .file(file):
+                    hasComplexGradient = file.settings.colors.count >= 3
+                    if let intensity = file.settings.intensity, intensity < 0 {
                         isInvertedGradient = true
                     }
-                case let .gradient(_, colors, _):
-                    hasComplexGradient = colors.count >= 3
+                case let .gradient(gradient):
+                    hasComplexGradient = gradient.colors.count >= 3
                 default:
                     break
                 }
@@ -417,13 +417,13 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         if case let .color(color) = wallpaper {
             gradientColors = [color]
             self._isReady.set(true)
-        } else if case let .gradient(_, colors, settings) = wallpaper {
-            gradientColors = colors
-            gradientAngle = settings.rotation ?? 0
+        } else if case let .gradient(gradient) = wallpaper {
+            gradientColors = gradient.colors
+            gradientAngle = gradient.settings.rotation ?? 0
             self._isReady.set(true)
-        } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
-            gradientColors = settings.colors
-            gradientAngle = settings.rotation ?? 0
+        } else if case let .file(file) = wallpaper, file.isPattern {
+            gradientColors = file.settings.colors
+            gradientAngle = file.settings.rotation ?? 0
         }
 
         if gradientColors.count >= 3 {
@@ -526,11 +526,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
 
         switch wallpaper {
-        case let .file(_, _, _, _, isPattern, _, _, _, settings) where isPattern:
-            let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
+        case let .file(file) where file.isPattern:
+            let brightness = UIColor.average(of: file.settings.colors.map(UIColor.init(rgb:))).hsb.b
             let patternIsBlack = brightness <= 0.01
 
-            let intensity = CGFloat(settings.intensity ?? 50) / 100.0
+            let intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
             if intensity < 0 {
                 self.patternImageNode.alpha = 1.0
                 self.patternImageNode.layer.compositingFilter = nil
@@ -580,14 +580,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         var patternIsLight: Bool = false
 
         switch wallpaper {
-        case let .file(_, _, _, _, isPattern, _, slug, file, settings) where isPattern:
+        case let .file(file) where file.isPattern:
             var updated = true
-            let brightness = UIColor.average(of: settings.colors.map(UIColor.init(rgb:))).hsb.b
+            let brightness = UIColor.average(of: file.settings.colors.map(UIColor.init(rgb:))).hsb.b
             patternIsLight = brightness > 0.3
             if let previousWallpaper = self.validPatternImage?.wallpaper {
                 switch previousWallpaper {
-                case let .file(_, _, _, _, _, _, _, previousFile, _):
-                    if file.id == previousFile.id {
+                case let .file(previousFile):
+                    if file.file.id == previousFile.file.id {
                         updated = false
                     }
                 default:
@@ -606,15 +606,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                         if let message = message {
                             return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
                         }
-                        return .wallpaper(wallpaper: .slug(slug), resource: resource)
+                        return .wallpaper(wallpaper: .slug(file.slug), resource: resource)
                     }
 
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
-                    for representation in file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file, message: nil)))
+                    for representation in file.file.previewRepresentations {
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: nil)))
                     }
-                    let dimensions = file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.resource, media: file, message: nil)))
+                    let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: nil)))
 
                     let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                     self.patternImageDisposable.set((signal
@@ -636,7 +636,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     }))
                 }
             }
-            let intensity = CGFloat(settings.intensity ?? 50) / 100.0
+            let intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
             invertPattern = intensity < 0
         default:
             self.updatePatternPresentation()

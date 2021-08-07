@@ -327,24 +327,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         if let animation = animation {
             animationTransition = .animated(duration: 0.2, curve: .easeInOut)
             
-            if false, let copyView = self.contentContainer.view.snapshotView(afterScreenUpdates: false) {
-                let offset: CGFloat
-                switch animation {
-                case .slideToTop:
-                    offset = -40.0
-                case .slideToBottom:
-                    offset = 40.0
-                }
-                
-                copyView.frame = self.contentContainer.frame
-                self.clippingContainer.view.addSubview(copyView)
-                copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2, removeOnCompletion: false, additive: true)
-                copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
-                    copyView?.removeFromSuperview()
-                })
-                self.contentContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
-                self.contentContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            } else if let copyView = self.textNode.view.snapshotView(afterScreenUpdates: false) {
+            if let copyView = self.textNode.view.snapshotView(afterScreenUpdates: false) {
                 let offset: CGFloat
                 switch animation {
                 case .slideToTop:

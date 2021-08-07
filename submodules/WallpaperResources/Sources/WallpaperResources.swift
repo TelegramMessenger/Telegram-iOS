@@ -918,25 +918,25 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         case let .color(color):
             c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
-        case let .gradient(_, colors, _):
-            if colors.count >= 3 {
-                let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.map(UIColor.init(rgb:)))
+        case let .gradient(gradient):
+            if gradient.colors.count >= 3 {
+                let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: gradient.colors.map(UIColor.init(rgb:)))
                 c.draw(image.cgImage!, in: drawingRect)
-            } else if colors.count >= 2 {
-                let gradientColors = colors.map({ UIColor(rgb: $0).cgColor }) as CFArray
+            } else if gradient.colors.count >= 2 {
+                let gradientColors = gradient.colors.map({ UIColor(rgb: $0).cgColor }) as CFArray
                 var locations: [CGFloat] = [0.0, 1.0]
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-            } else if colors.count >= 1 {
-                let gradientColors = [UIColor(rgb: colors[0]), UIColor(rgb: colors[0])] as CFArray
+                let cgGradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                c.drawLinearGradient(cgGradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            } else if gradient.colors.count >= 1 {
+                let gradientColors = [UIColor(rgb: gradient.colors[0]), UIColor(rgb: gradient.colors[0])] as CFArray
                 var locations: [CGFloat] = [0.0, 1.0]
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                let cgGradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                c.drawLinearGradient(cgGradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             }
-        case let .file(_, _, _, _, isPattern, _, _, _, settings):
-            if isPattern, let intensity = settings.intensity, intensity < 0 {
+        case let .file(file):
+            if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
                 c.setFillColor(UIColor.black.cgColor)
                 c.fill(CGRect(origin: CGPoint(), size: size))
             } else {
@@ -1143,31 +1143,31 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
     let data = theme
     |> mapToSignal { (theme, thumbnailData) -> Signal<(PresentationTheme?, WallpaperImage?, Data?), NoError> in
         if let theme = theme {
-            if case let .file(_, _, _, _, _, _, slug, _, settings) = theme.chat.defaultWallpaper {
-                return cachedWallpaper(account: account, slug: slug, settings: settings)
+            if case let .file(file) = theme.chat.defaultWallpaper {
+                return cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, WallpaperImage?, Data?), NoError> in
-                    if let wallpaper = wallpaper, case let .file(_, _, _, _, _, _, slug, file, settings) = wallpaper.wallpaper {
+                    if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(slug), resource: file.resource)))
-                        return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                        return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, WallpaperImage?, Data?), NoError> in
                             guard complete, let fullSizeData = fullSizeData else {
                                 return .complete()
                             }
-                            accountManager.mediaBox.storeResourceData(file.resource.id, data: fullSizeData)
-                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                            accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                             
-                            if wallpaper.wallpaper.isPattern, !settings.colors.isEmpty, let intensity = settings.intensity {
-                                return accountManager.mediaBox.resourceData(file.resource)
+                            if wallpaper.wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
+                                return accountManager.mediaBox.resourceData(file.file.resource)
                                 |> mapToSignal { data in
                                     if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                        return .single((theme, .pattern(data: imageData, colors: settings.colors, intensity: intensity), thumbnailData))
+                                        return .single((theme, .pattern(data: imageData, colors: file.settings.colors, intensity: intensity), thumbnailData))
                                     } else {
                                         return .complete()
                                     }
                                 }
-                            } else if settings.blur {
-                                return accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
+                            } else if file.settings.blur {
+                                return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
                                 |> mapToSignal { data in
                                     if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
                                         return .single((theme, .image(image), thumbnailData))
@@ -1327,52 +1327,52 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     backgroundColor = (UIColor(rgb: 0xd6e2ee), nil, [])
                 case let .color(color):
                     backgroundColor = (UIColor(rgb: color), nil, [])
-                case let .gradient(_, colors, settings):
-                    if colors.count >= 2 {
-                        backgroundColor = (UIColor(rgb: colors[0]), UIColor(rgb: colors[1]), colors)
+                case let .gradient(gradient):
+                    if gradient.colors.count >= 2 {
+                        backgroundColor = (UIColor(rgb: gradient.colors[0]), UIColor(rgb: gradient.colors[1]), gradient.colors)
                     } else {
                         backgroundColor = (.white, nil, [])
                     }
-                    rotation = settings.rotation
+                    rotation = gradient.settings.rotation
                 case .image:
                     backgroundColor = (.black, nil, [])
-                case let .file(_, _, _, _, isPattern, _, slug, _, settings):
-                    rotation = settings.rotation
-                    if isPattern, let intensity = settings.intensity, intensity < 0 {
+                case let .file(file):
+                    rotation = file.settings.rotation
+                    if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
                         backgroundColor = (.black, nil, [])
-                    } else if !settings.colors.isEmpty {
+                    } else if !file.settings.colors.isEmpty {
                         var bottomColor: UIColor?
-                        if settings.colors.count >= 2 {
-                            bottomColor = UIColor(rgb: settings.colors[1])
+                        if file.settings.colors.count >= 2 {
+                            bottomColor = UIColor(rgb: file.settings.colors[1])
                         }
-                        backgroundColor = (UIColor(rgb: settings.colors[0]), bottomColor, settings.colors)
+                        backgroundColor = (UIColor(rgb: file.settings.colors[0]), bottomColor, file.settings.colors)
                     } else {
                         backgroundColor = (theme.chatList.backgroundColor, nil, [])
                     }
-                    wallpaperSignal = cachedWallpaper(account: account, slug: slug, settings: settings)
+                    wallpaperSignal = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                     |> mapToSignal { wallpaper in
-                        if let wallpaper = wallpaper, case let .file(_, _, _, _, _, _, _, file, settings) = wallpaper.wallpaper {
+                        if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                             var effectiveBackgroundColor = backgroundColor
-                            if !settings.colors.isEmpty {
+                            if !file.settings.colors.isEmpty {
                                 var bottomColor: UIColor?
-                                if settings.colors.count >= 2 {
-                                    bottomColor = UIColor(rgb: settings.colors[1])
+                                if file.settings.colors.count >= 2 {
+                                    bottomColor = UIColor(rgb: file.settings.colors[1])
                                 }
-                                effectiveBackgroundColor = (UIColor(rgb: settings.colors[0]), bottomColor, settings.colors)
+                                effectiveBackgroundColor = (UIColor(rgb: file.settings.colors[0]), bottomColor, file.settings.colors)
                             }
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(slug), resource: file.resource)))
-                            return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                            return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                             |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?, [UInt32]), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
                                 guard complete, let fullSizeData = fullSizeData else {
                                     return .complete()
                                 }
-                                accountManager.mediaBox.storeResourceData(file.resource.id, data: fullSizeData)
-                                let _ = accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                                let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                                 
                                 if wallpaper.wallpaper.isPattern {
-                                    if !settings.colors.isEmpty, let intensity = settings.intensity {
+                                    if !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
                                         if intensity < 0 {
                                             return .single(((.black, nil, []), incomingColor, outgoingColor, nil, rotation))
                                         } else {
@@ -1381,8 +1381,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     } else {
                                         return .complete()
                                     }
-                                } else if settings.blur {
-                                    return accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
+                                } else if file.settings.blur {
+                                    return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
                                     |> mapToSignal { _ in
                                         if let image = UIImage(data: fullSizeData) {
                                             return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
@@ -1480,8 +1480,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
 
 public func wallpaperThumbnail(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, wallpaper: TelegramWallpaper, synchronousLoad: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     switch wallpaper {
-    case let .file(_, _, _, _, _, _, _, file, settings):
-        guard let thumbnail = smallestImageRepresentation(file.previewRepresentations) else {
+    case let .file(file):
+        guard let thumbnail = smallestImageRepresentation(file.file.previewRepresentations) else {
             return .single({ _ in nil })
         }
         let signal: Signal<Data?, NoError> = Signal { subscriber in
@@ -1514,12 +1514,12 @@ public func wallpaperThumbnail(account: Account, accountManager: AccountManager,
                 let context = DrawingContext(size: arguments.boundingSize, clear: true)
 
                 context.withFlippedContext { c in
-                    let colors = settings.colors.map(UIColor.init(rgb:))
+                    let colors = file.settings.colors.map(UIColor.init(rgb:))
 
                     if colors.count == 1 {
                         c.setFillColor(colors[0].cgColor)
                         c.fill(arguments.drawingRect)
-                    } else if settings.colors.count >= 3 {
+                    } else if file.settings.colors.count >= 3 {
                         let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors)
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
@@ -1528,12 +1528,12 @@ public func wallpaperThumbnail(account: Account, accountManager: AccountManager,
                         c.translateBy(x: drawingRect.midX, y: drawingRect.midY)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
-                    } else if settings.colors.count >= 2 {
-                        let gradientColors = settings.colors.map { UIColor(rgb: $0).cgColor } as CFArray
-                        let delta: CGFloat = 1.0 / (CGFloat(settings.colors.count) - 1.0)
+                    } else if file.settings.colors.count >= 2 {
+                        let gradientColors = file.settings.colors.map { UIColor(rgb: $0).cgColor } as CFArray
+                        let delta: CGFloat = 1.0 / (CGFloat(file.settings.colors.count) - 1.0)
 
                         var locations: [CGFloat] = []
-                        for i in 0 ..< settings.colors.count {
+                        for i in 0 ..< file.settings.colors.count {
                             locations.append(delta * CGFloat(i))
                         }
                         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -1541,7 +1541,7 @@ public func wallpaperThumbnail(account: Account, accountManager: AccountManager,
 
                         c.saveGState()
                         c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
-                        c.rotate(by: CGFloat(settings.rotation ?? 0) * CGFloat.pi / -180.0)
+                        c.rotate(by: CGFloat(file.settings.rotation ?? 0) * CGFloat.pi / -180.0)
                         c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
 
                         c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])

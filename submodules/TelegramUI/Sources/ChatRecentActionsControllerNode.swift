@@ -781,7 +781,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openPeerMention(_ name: String) {
-        let postbox = self.context.account.postbox
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] peer in

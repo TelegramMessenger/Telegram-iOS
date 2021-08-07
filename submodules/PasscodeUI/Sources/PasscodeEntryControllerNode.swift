@@ -228,14 +228,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                     color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
                 }
                 self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
-            case let .gradient(_, colors, settings):
-                self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) }, inverted: (settings.intensity ?? 0) < 0)
+            case let .gradient(gradient):
+                self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    if case let .file(_, _, _, _, _, _, _, _, settings) = self.wallpaper, !settings.colors.isEmpty {
-                        self.background = CustomPasscodeBackground(size: size, colors: settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (settings.intensity ?? 0) < 0)
+                    if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
+                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
                         self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
                     }

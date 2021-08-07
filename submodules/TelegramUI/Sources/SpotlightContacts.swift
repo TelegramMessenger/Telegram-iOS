@@ -90,7 +90,7 @@ private final class SpotlightIndexStorage {
     func update(items: [PeerId: SpotlightIndexStorageItem]) {
         let validPeerIds = Set(items.keys)
         var removePeerIds: [PeerId] = []
-        for (peerId, item) in self.items {
+        for (peerId, _) in self.items {
             if !validPeerIds.contains(peerId) {
                 removePeerIds.append(peerId)
             }

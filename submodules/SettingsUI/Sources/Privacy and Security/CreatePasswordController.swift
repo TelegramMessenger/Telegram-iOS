@@ -120,25 +120,25 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CreatePasswordControllerArguments
         switch self {
-            case let .passwordHeader(theme, text):
+            case let .passwordHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .password(theme, strings, text, value):
+            case let .password(_, _, text, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.password, updatedText)
                 }, action: {
                     arguments.selectNextInputItem(CreatePasswordEntryTag.password)
                 })
-            case let .passwordConfirmation(theme, strings, text, value):
+            case let .passwordConfirmation(_, _, text, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.passwordConfirmation, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.passwordConfirmation, updatedText)
                 }, action: {
                     arguments.selectNextInputItem(CreatePasswordEntryTag.passwordConfirmation)
                 })
-            case let .passwordInfo(theme, text):
+            case let .passwordInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .hintHeader(theme, text):
+            case let .hintHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .hint(theme, strings, text, value, last):
+            case let .hint(_, _, text, value, last):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: text, type: .regular(capitalization: true, autocorrection: false), returnKeyType: last ? .done : .next, spacing: 0.0, tag: CreatePasswordEntryTag.hint, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.hint, updatedText)
                 }, action: {
@@ -148,21 +148,21 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
                         arguments.selectNextInputItem(CreatePasswordEntryTag.hint)
                     }
                 })
-            case let .hintInfo(theme, text):
+            case let .hintInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .emailHeader(theme, text):
+            case let .emailHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .email(theme, strings, text, value):
+            case let .email(_, _, text, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: text, type: .email, returnKeyType: .done, spacing: 0.0, tag: CreatePasswordEntryTag.email, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.email, updatedText)
                 }, action: {
                     arguments.save()
                 })
-            case let .emailInfo(theme, text):
+            case let .emailInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .emailConfirmation(theme, text):
+            case let .emailConfirmation(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .emailCancel(theme, text, enabled):
+            case let .emailCancel(_, text, enabled):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.cancelEmailConfirmation()
                 })

@@ -205,7 +205,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         switch self.wallpaper {
             case .image, .builtin:
                 return true
-            case let .file(file):
+            case .file:
                 return !self.wallpaper.isPattern
             default:
                 return false
@@ -457,7 +457,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     }
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 } else if backgroundColors.count >= 2 {
-                    wallpaper = .gradient(nil, backgroundColors, WallpaperSettings(rotation: state.rotation))
+                    wallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors:  backgroundColors, settings: WallpaperSettings(rotation: state.rotation)))
                 } else {
                     wallpaper = .color(backgroundColors.first ?? 0xffffff)
                 }
@@ -467,7 +467,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .dayClassic:
                         let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                        suggestedWallpaper = .gradient(nil, [topColor.rgb, bottomColor.rgb], WallpaperSettings())
+                        suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: [topColor.rgb, bottomColor.rgb], settings: WallpaperSettings()))
                         backgroundColors = [topColor.rgb, bottomColor.rgb]
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
@@ -980,8 +980,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let isFirstLayout = self.validLayout == nil
-        
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
   
         let chatListPreviewAvailable = self.state.section == .accent
@@ -1022,8 +1020,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
         self.colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
         
-        var patternPanelAlpha: CGFloat = self.state.displayPatternPanel ? 1.0 : 0.0
-        var patternPanelFrame = colorPanelFrame
+        let patternPanelAlpha: CGFloat = self.state.displayPatternPanel ? 1.0 : 0.0
+        let patternPanelFrame = colorPanelFrame
         transition.updateFrame(node: self.patternPanelNode, frame: patternPanelFrame)
         self.patternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
         self.patternPanelNode.isUserInteractionEnabled = self.state.displayPatternPanel

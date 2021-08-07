@@ -71,7 +71,7 @@ extension TelegramWallpaper {
                     } else {
                         wallpaperSettings = WallpaperSettings()
                     }
-                    self = .file(id: id, accessHash: accessHash, isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, isPattern: (flags & 1 << 3) != 0, isDark: (flags & 1 << 4) != 0, slug: slug, file: file, settings: wallpaperSettings)
+                    self = .file(TelegramWallpaper.File(id: id, accessHash: accessHash, isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, isPattern: (flags & 1 << 3) != 0, isDark: (flags & 1 << 4) != 0, slug: slug, file: file, settings: wallpaperSettings))
                 } else {
                     //assertionFailure()
                     self = .color(0xffffff)
@@ -82,7 +82,7 @@ extension TelegramWallpaper {
                         return color.flatMap(UInt32.init(bitPattern:))
                     })
                     if colors.count > 1 {
-                        self = .gradient(id, colors, WallpaperSettings(rotation: rotation))
+                        self = .gradient(TelegramWallpaper.Gradient(id: id, colors: colors, settings: WallpaperSettings(rotation: rotation)))
                     } else if colors.count == 1 {
                         self = .color(UInt32(bitPattern: colors[0]))
                     } else {
@@ -99,12 +99,12 @@ extension TelegramWallpaper {
         switch self {
         case .builtin:
             return nil
-        case let .file(_, _, _, _, _, _, slug, _, settings):
-            return (.inputWallPaperSlug(slug: slug), apiWallpaperSettings(settings))
+        case let .file(file):
+            return (.inputWallPaperSlug(slug: file.slug), apiWallpaperSettings(file.settings))
         case let .color(color):
             return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(colors: [color])))
-        case let .gradient(id, colors, settings):
-            return (.inputWallPaperNoFile(id: id ?? 0), apiWallpaperSettings(WallpaperSettings(colors: colors, rotation: settings.rotation)))
+        case let .gradient(gradient):
+            return (.inputWallPaperNoFile(id: gradient.id ?? 0), apiWallpaperSettings(WallpaperSettings(colors: gradient.colors, rotation: gradient.settings.rotation)))
         default:
             return nil
         }

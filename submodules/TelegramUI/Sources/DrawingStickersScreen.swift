@@ -952,14 +952,14 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
-        var searchMode: ChatMediaInputSearchMode?
+        let searchMode: ChatMediaInputSearchMode? = nil
                 
-        var displaySearch = false
+        let displaySearch = false
         let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
         let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat
         
-        var isExpanded: Bool = true
+        let isExpanded: Bool = true
 //            switch expanded {
 //                case .content:
                     panelHeight = maximumHeight
@@ -991,8 +991,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
-                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
-                    var anchorTopView: UIView = self.view
+                    let anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    let anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .sticker:
@@ -1007,7 +1007,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                     
                     if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: { [weak self] in
+                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: {
                         })
                     }
                 }

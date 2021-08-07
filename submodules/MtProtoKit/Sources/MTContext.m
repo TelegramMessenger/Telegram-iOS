@@ -283,6 +283,13 @@ static int32_t fixedTimeDifferenceValue = 0;
     return queue;
 }
 
++ (void)performWithObjCTry:(dispatch_block_t _Nonnull)block {
+    @try {
+        block();
+    } @finally {
+    }
+}
+
 - (void)cleanup
 {
     NSDictionary *datacenterAuthActions = _datacenterAuthActions;

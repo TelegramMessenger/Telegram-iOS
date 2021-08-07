@@ -62,21 +62,21 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SaveIncomingMediaControllerArguments
         switch self {
-            case let .header(theme, text):
+            case let .header(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .contacts(theme, text, value):
+            case let .contacts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggle(.contact)
                 })
-            case let .otherPrivate(theme, text, value):
+            case let .otherPrivate(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggle(.otherPrivate)
                 })
-            case let .groups(theme, text, value):
+            case let .groups(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggle(.group)
                 })
-            case let .channels(theme, text, value):
+            case let .channels(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggle(.channel)
                 })

@@ -192,6 +192,28 @@ public struct Transition {
         }
     }
 
+    public func setSublayerTransform(view: UIView, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            view.layer.sublayerTransform = transform
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousValue = view.layer.sublayerTransform
+            view.layer.sublayerTransform = transform
+            view.layer.animate(
+                from: NSValue(caTransform3D: previousValue),
+                to: NSValue(caTransform3D: transform),
+                keyPath: "transform",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+
     public func animateScale(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:

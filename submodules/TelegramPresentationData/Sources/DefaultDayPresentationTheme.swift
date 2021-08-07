@@ -20,8 +20,8 @@ public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallp
         return false
     } else if case .color = wallpaper {
         return false
-    } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper {
-        if isPattern, let intensity = settings.intensity, intensity < 0 {
+    } else if case let .file(file) = wallpaper {
+        if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
             return false
         } else {
             return true
@@ -66,10 +66,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                     outgoingAccent = accentColor
                 }
 
-                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
             }
         }
     }
@@ -228,7 +228,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
         defaultWallpaper = forcedWallpaper
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
-            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
+            defaultWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: backgroundColors, settings: WallpaperSettings()))
         } else {
             defaultWallpaper = .color(backgroundColors[0])
         }
@@ -1013,19 +1013,19 @@ public extension BuiltinWallpaperData {
             signals.append(getWallpaper(network: account.network, slug: slug)
             |> map { wallpaper -> String? in
                 switch wallpaper {
-                case let .file(id, accessHash, _, _, _, _, _, file, _):
-                    guard let resource = file.resource as? CloudDocumentMediaResource else {
+                case let .file(file):
+                    guard let resource = file.file.resource as? CloudDocumentMediaResource else {
                         return nil
                     }
-                    guard let size = file.size else {
+                    guard let size = file.file.size else {
                         return nil
                     }
                     return """
 static let \(name) = BuiltinWallpaperData(
-    wallpaperId: \(id),
-    wallpaperAccessHash: \(accessHash),
+    wallpaperId: \(file.id),
+    wallpaperAccessHash: \(file.accessHash),
     slug: "\(slug)",
-    fileId: \(file.fileId.id),
+    fileId: \(file.file.fileId.id),
     fileAccessHash: \(resource.accessHash),
     datacenterId: \(resource.datacenterId),
     fileSize: \(size)
@@ -1055,7 +1055,7 @@ static let \(name) = BuiltinWallpaperData(
 }
 
 public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32], intensity: Int32 = 50, rotation: Int32? = nil) -> TelegramWallpaper {
-    return .file(
+    return .file(TelegramWallpaper.File(
         id: data.wallpaperId,
         accessHash: data.wallpaperAccessHash,
         isCreator: false,
@@ -1098,5 +1098,5 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
             ]
         ),
         settings: WallpaperSettings(colors: colors, intensity: intensity, rotation: rotation)
-    )
+    ))
 }

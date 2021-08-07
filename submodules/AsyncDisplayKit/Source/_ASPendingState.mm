@@ -588,8 +588,8 @@ static UIColor *defaultTintColor = nil;
   _flags.setSemanticContentAttribute = YES;
 }
 
-- (void)setAccessibilityCustomActions:(NSArray<UIAccessibilityCustomAction *> *)accessibilityCustomActions {
-  self->accessibilityCustomActions = accessibilityCustomActions;
+- (void)setAccessibilityCustomActions:(NSArray<UIAccessibilityCustomAction *> *)accessibilityCustomActions_ {
+  self->accessibilityCustomActions = accessibilityCustomActions_;
   _flags.setAccessibilityCustomActions = YES;
 }
 

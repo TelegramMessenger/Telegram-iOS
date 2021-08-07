@@ -1132,7 +1132,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         if !found {
             let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 //                params.enqueueMessage(outMessage)
             }, stopLiveLocation: { messageId in
                 if let messageId = messageId {
@@ -1376,7 +1376,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let controller = generator(legacyController.context)
             legacyController.bind(controller: controller)
             legacyController.deferScreenEdgeGestures = [.top]
-            controller.selectionBlock = { [weak legacyController, weak controller] asset, _ in
+            controller.selectionBlock = { [weak legacyController] asset, _ in
                 if let asset = asset {
                     let _ = (fetchPhotoLibraryImage(localIdentifier: asset.backingAsset.localIdentifier, thumbnail: false)
                     |> deliverOnMainQueue).start(next: { imageAndFlag in

@@ -1396,8 +1396,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         switch item.presentationData.theme.wallpaper {
         case .color:
             hasSolidWallpaper = true
-        case let .gradient(_, colors, _):
-            hasSolidWallpaper = colors.count <= 2
+        case let .gradient(gradient):
+            hasSolidWallpaper = gradient.colors.count <= 2
         default:
             break
         }

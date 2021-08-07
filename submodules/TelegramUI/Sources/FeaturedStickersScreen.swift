@@ -612,14 +612,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 return controller
             }
             return nil
-        }, updateContent: { [weak self] content in
-            if let strongSelf = self {
-                var item: StickerPreviewPeekItem?
-                if let content = content as? StickerPreviewPeekContent {
-                    item = content.item
-                }
-                //strongSelf.updatePreviewingItem(item: item, animated: true)
-            }
+        }, updateContent: { _ in
         }))
     }
     
@@ -1124,7 +1117,6 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let account = strongSelf.context.account
             if install {
                 let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
             } else {

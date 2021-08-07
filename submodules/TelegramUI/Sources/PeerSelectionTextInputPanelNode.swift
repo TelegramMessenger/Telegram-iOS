@@ -394,9 +394,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
         self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
     
         var transition = transition
-        var additionalOffset: CGFloat = 0.0
         if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
-            additionalOffset = (previousAdditionalSideInsets.right - additionalSideInsets.right) / 3.0
             
             if case .animated = transition {
                 transition = .animated(duration: 0.2, curve: .easeInOut)
@@ -520,19 +518,13 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
             textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
         }
         let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
-        let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
-        
-        var animatedTransition = true
-        if case .immediate = transition {
-            animatedTransition = false
-        }
         
         let baseWidth = width - leftInset - rightInset
-        let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
+        let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
                                     
-        var composeButtonsOffset: CGFloat = 0.0
-        var textInputBackgroundWidthOffset: CGFloat = 0.0
+        let composeButtonsOffset: CGFloat = 0.0
+        let textInputBackgroundWidthOffset: CGFloat = 0.0
         
         self.updateCounterTextNode(transition: transition)
        
@@ -542,8 +534,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
         if let presentationInterfaceState = self.presentationInterfaceState {
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
         }
-        
-        let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
+
         var textFieldInsets = self.textFieldInsets(metrics: metrics)
         if additionalSideInsets.right > 0.0 {
             textFieldInsets.right += additionalSideInsets.right / 3.0
@@ -619,7 +610,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
         }
         
         if let (width, leftInset, rightInset, _, maxHeight, metrics, _) = self.validLayout {
-            var composeButtonsOffset: CGFloat = 0.0
+            let composeButtonsOffset: CGFloat = 0.0
             
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)

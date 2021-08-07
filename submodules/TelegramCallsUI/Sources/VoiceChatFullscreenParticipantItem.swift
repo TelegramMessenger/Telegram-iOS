@@ -202,6 +202,15 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     var item: VoiceChatFullscreenParticipantItem? {
         return self.layoutParams?.0
     }
+
+    private var isCurrentlyInHierarchy = false {
+        didSet {
+            if self.isCurrentlyInHierarchy != oldValue {
+                self.highlightNode.isCurrentlyInHierarchy = self.isCurrentlyInHierarchy
+            }
+        }
+    }
+    private var isCurrentlyInHierarchyDisposable: Disposable?
     
     init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -247,7 +256,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     
         self.actionContainerNode = ASDisplayNode()
         self.actionButtonNode = HighlightableButtonNode()
-        
+
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -293,6 +302,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
         self.silenceTimer?.invalidate()
+        self.isCurrentlyInHierarchyDisposable?.dispose()
     }
     
     override func selected() {
@@ -971,6 +981,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.actionButtonNode, frame: animationFrame)
                                         
                     strongSelf.updateIsHighlighted(transition: transition)
+
+                    if strongSelf.isCurrentlyInHierarchyDisposable == nil {
+                        strongSelf.isCurrentlyInHierarchyDisposable = (item.context.sharedContext.applicationBindings.applicationInForeground
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.isCurrentlyInHierarchy = value
+                        })
+                    }
                 }
             })
         }

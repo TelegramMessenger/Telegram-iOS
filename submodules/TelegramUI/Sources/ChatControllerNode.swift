@@ -107,6 +107,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
     private var inputPanelNode: ChatInputPanelNode?
+    private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?
     private weak var currentDismissedInputPanelNode: ASDisplayNode?
     private var secondaryInputPanelNode: ChatInputPanelNode?
     private(set) var accessoryPanelNode: AccessoryPanelNode?
@@ -372,12 +373,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         var backgroundColors: [UInt32] = []
         switch chatPresentationInterfaceState.chatWallpaper {
-        case let .file(_, _, _, _, isPattern, _, _, _, settings):
-            if isPattern {
-                backgroundColors = settings.colors
+        case let .file(file):
+            if file.isPattern {
+                backgroundColors = file.settings.colors
             }
-        case let .gradient(_, colors, _):
-            backgroundColors = colors
+        case let .gradient(gradient):
+            backgroundColors = gradient.colors
         case let .color(color):
             backgroundColors = [color]
         default:
@@ -819,7 +820,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             insets = layout.insets(options: [.input])
         }
-                
+
         if case .overlay = self.chatPresentationInterfaceState.mode {
             insets.top = 44.0
         } else {
@@ -1149,7 +1150,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var displayTopDimNode = false
-        var ensureTopInsetForOverlayHighlightedItems: CGFloat?
+        let ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil
         var expandTopDimNode = false
         if case let .media(_, expanded, _) = self.chatPresentationInterfaceState.inputMode, expanded != nil {
             displayTopDimNode = true
@@ -1165,7 +1166,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     topInset -= UIScreenPixel
                 }
             }
-            let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: max(0.0, topInset)))
             
             let inputPanelOrigin = layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight
             
@@ -1282,11 +1282,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let inputContextPanelsFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - inputPanelsHeight - insets.top)))
         let inputContextPanelsOverMainPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - insets.bottom - (inputPanelSize == nil ? CGFloat(0.0) : inputPanelSize!.height) - insets.top)))
-        
-        if transition.isAnimated, let derivedLayoutState = self.derivedLayoutState {
-            let offset = derivedLayoutState.inputContextPanelsOverMainPanelFrame.maxY - inputContextPanelsOverMainPanelFrame.maxY
-            //transition.animateOffsetAdditive(node: self.inputContextPanelContainer, offset: -offset)
-        }
         
         if let inputContextPanelNode = self.inputContextPanelNode {
             let panelFrame = inputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
@@ -2496,6 +2491,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
 
+    var shouldAllowOverscrollActions: Bool {
+        if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+            if inputPanelNode.isFocused {
+                return false
+            }
+            if !inputPanelNode.text.isEmpty {
+                return false
+            }
+        }
+        return true
+    }
+
     final class SnapshotState {
         fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
         let titleViewSnapshotState: ChatTitleView.SnapshotState?
@@ -2540,8 +2547,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         )
     }
 
-    func animateFromSnapshot(_ snapshotState: SnapshotState) {
-        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState)
+    func animateFromSnapshot(_ snapshotState: SnapshotState, completion: @escaping () -> Void) {
+        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState, completion: completion)
         self.navigateButtons.animateFromSnapshot(snapshotState.navigationButtonsSnapshotState)
 
         if let titleAccessoryPanelSnapshot = snapshotState.titleAccessoryPanelSnapshot {
@@ -2575,6 +2582,56 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
                 navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
             }
+        }
+    }
+
+    private var preivousChatInputPanelOverscrollNodeTimestamp: Double = 0.0
+
+    func setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode?) {
+        let directionUp: Bool
+        if let overscrollNode = overscrollNode {
+            if let current = self.inputPanelOverscrollNode {
+                directionUp = current.priority > overscrollNode.priority
+            } else {
+                directionUp = true
+            }
+        } else {
+            directionUp = false
+        }
+
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if self.preivousChatInputPanelOverscrollNodeTimestamp > timestamp - 0.05 {
+            if let inputPanelOverscrollNode = self.inputPanelOverscrollNode {
+                self.inputPanelOverscrollNode = nil
+                inputPanelOverscrollNode.removeFromSupernode()
+            }
+        }
+        self.preivousChatInputPanelOverscrollNodeTimestamp = timestamp
+
+        if let inputPanelOverscrollNode = self.inputPanelOverscrollNode {
+            self.inputPanelOverscrollNode = nil
+            inputPanelOverscrollNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: directionUp ? -5.0 : 5.0), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+            inputPanelOverscrollNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak inputPanelOverscrollNode] _ in
+                inputPanelOverscrollNode?.removeFromSupernode()
+            })
+        }
+
+        if let inputPanelNode = self.inputPanelNode, let overscrollNode = overscrollNode {
+            self.inputPanelOverscrollNode = overscrollNode
+            inputPanelNode.supernode?.insertSubnode(overscrollNode, aboveSubnode: inputPanelNode)
+
+            overscrollNode.frame = inputPanelNode.frame
+            overscrollNode.update(size: overscrollNode.bounds.size)
+
+            overscrollNode.layer.animatePosition(from: CGPoint(x: 0.0, y: directionUp ? 5.0 : -5.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
+            overscrollNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
+
+        if let inputPanelNode = self.inputPanelNode {
+            transition.updateAlpha(node: inputPanelNode, alpha: overscrollNode == nil ? 1.0 : 0.0)
+            transition.updateSublayerTransformOffset(layer: inputPanelNode.layer, offset: CGPoint(x: 0.0, y: overscrollNode == nil ? 0.0 : -5.0))
         }
     }
 }

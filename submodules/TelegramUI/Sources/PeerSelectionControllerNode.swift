@@ -286,10 +286,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
-                if let strongSelf = self {
-//                    strongSelf.supportedOrientations = previousSupportedOrientations
-                }
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
             }, sendMessage: { [weak textInputPanelNode] silently in
                 textInputPanelNode?.sendMessage(silently ? .silent : .generic)
             }, schedule: { [weak textInputPanelNode] in
