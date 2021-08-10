@@ -731,7 +731,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                        titleHighlightedColor = bubbleColor.fill
+                        titleHighlightedColor = bubbleColor.fill[0]
                     } else {
                         buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(presentationData.theme.theme)!
                         buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(presentationData.theme.theme)!
@@ -741,7 +741,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                        titleHighlightedColor = bubbleColor.fill
+                        titleHighlightedColor = bubbleColor.fill[0]
                     }
                     let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, buttonIconImage, buttonHighlightedIconImage, actionTitle, titleColor, titleHighlightedColor)
                     boundingSize.width = max(buttonWidth, boundingSize.width)

@@ -207,6 +207,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         didSet {
             if self.isCurrentlyInHierarchy != oldValue {
                 self.highlightNode.isCurrentlyInHierarchy = self.isCurrentlyInHierarchy
+                self.audioLevelView?.isManuallyInHierarchy = self.isCurrentlyInHierarchy
             }
         }
     }

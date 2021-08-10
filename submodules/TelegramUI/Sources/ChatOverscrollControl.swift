@@ -6,6 +6,9 @@ import TelegramCore
 import Postbox
 import AccountContext
 import AvatarNode
+import TextFormat
+import Markdown
+import WallpaperBackgroundNode
 
 final class BlurredRoundedRectangle: Component {
     let color: UIColor
@@ -314,11 +317,24 @@ final class BadgeComponent: CombinedComponent {
     let count: Int
     let backgroundColor: UIColor
     let foregroundColor: UIColor
+    let rect: CGRect
+    let withinSize: CGSize
+    let wallpaperNode: WallpaperBackgroundNode?
 
-    init(count: Int, backgroundColor: UIColor, foregroundColor: UIColor) {
+    init(
+        count: Int,
+        backgroundColor: UIColor,
+        foregroundColor: UIColor,
+        rect: CGRect,
+        withinSize: CGSize,
+        wallpaperNode: WallpaperBackgroundNode?
+    ) {
         self.count = count
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
+        self.rect = rect
+        self.withinSize = withinSize
+        self.wallpaperNode = wallpaperNode
     }
 
     static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
@@ -331,11 +347,20 @@ final class BadgeComponent: CombinedComponent {
         if !lhs.foregroundColor.isEqual(rhs.foregroundColor) {
             return false
         }
+        if lhs.rect != rhs.rect {
+            return false
+        }
+        if lhs.withinSize != rhs.withinSize {
+            return false
+        }
+        if lhs.wallpaperNode != rhs.wallpaperNode {
+            return false
+        }
         return true
     }
 
     static var body: Body {
-        let background = Child(BlurredRoundedRectangle.self)
+        let background = Child(WallpaperBlurComponent.self)
         let text = Child(Text.self)
 
         return { context in
@@ -353,13 +378,20 @@ final class BadgeComponent: CombinedComponent {
             let backgroundSize = CGSize(width: max(height, text.size.width + 8.0), height: height)
 
             let background = background.update(
-                component: BlurredRoundedRectangle(color: context.component.backgroundColor),
+                component: WallpaperBlurComponent(
+                    rect: CGRect(origin: context.component.rect.origin, size: backgroundSize),
+                    withinSize: context.component.withinSize,
+                    color: context.component.backgroundColor,
+                    wallpaperNode: context.component.wallpaperNode
+                ),
                 availableSize: backgroundSize,
                 transition: .immediate
             )
 
             context.add(background
                 .position(CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
+                .cornerRadius(min(backgroundSize.width, backgroundSize.height) / 2.0)
+                .clipsToBounds(true)
             )
 
             context.add(text
@@ -400,11 +432,24 @@ final class AvatarComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let badge: Badge?
+    let rect: CGRect
+    let withinSize: CGSize
+    let wallpaperNode: WallpaperBackgroundNode?
 
-    init(context: AccountContext, peer: EnginePeer, badge: Badge?) {
+    init(
+        context: AccountContext,
+        peer: EnginePeer,
+        badge: Badge?,
+        rect: CGRect,
+        withinSize: CGSize,
+        wallpaperNode: WallpaperBackgroundNode?
+    ) {
         self.context = context
         self.peer = peer
         self.badge = badge
+        self.rect = rect
+        self.withinSize = withinSize
+        self.wallpaperNode = wallpaperNode
     }
 
     static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
@@ -415,6 +460,15 @@ final class AvatarComponent: Component {
             return false
         }
         if lhs.badge != rhs.badge {
+            return false
+        }
+        if lhs.rect != rhs.rect {
+            return false
+        }
+        if lhs.withinSize != rhs.withinSize {
+            return false
+        }
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
             return false
         }
         return true
@@ -458,7 +512,10 @@ final class AvatarComponent: Component {
                     component: AnyComponent(BadgeComponent(
                         count: badge.count,
                         backgroundColor: badge.backgroundColor,
-                        foregroundColor: badge.foregroundColor
+                        foregroundColor: badge.foregroundColor,
+                        rect: CGRect(origin: component.rect.offsetBy(dx: 0.0, dy: 0.0).origin, size: CGSize()),
+                        withinSize: component.withinSize,
+                        wallpaperNode: component.wallpaperNode
                     )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0
@@ -505,13 +562,115 @@ final class AvatarComponent: Component {
     }
 }
 
+private final class WallpaperBlurNode: ASDisplayNode {
+    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private let colorNode: ASDisplayNode
+
+    override init() {
+        self.colorNode = ASDisplayNode()
+
+        super.init()
+
+        self.addSubnode(self.colorNode)
+    }
+
+    func update(rect: CGRect, within size: CGSize, color: UIColor, wallpaperNode: WallpaperBackgroundNode?, transition: ContainedViewLayoutTransition) {
+        var transition = transition
+        if self.backgroundNode == nil {
+            if let backgroundNode = wallpaperNode?.makeBubbleBackground(for: .free) {
+                self.backgroundNode = backgroundNode
+                self.insertSubnode(backgroundNode, at: 0)
+                transition = .immediate
+            }
+        }
+
+        self.colorNode.backgroundColor = color
+        transition.updateFrame(node: self.colorNode, frame: CGRect(origin: CGPoint(), size: rect.size))
+
+        if let backgroundNode = self.backgroundNode {
+            transition.updateFrame(node: backgroundNode, frame: CGRect(origin: CGPoint(), size: rect.size))
+            backgroundNode.update(rect: rect, within: size, transition: transition)
+        }
+    }
+}
+
+private final class WallpaperBlurComponent: Component {
+    let rect: CGRect
+    let withinSize: CGSize
+    let color: UIColor
+    let wallpaperNode: WallpaperBackgroundNode?
+
+    init(
+        rect: CGRect,
+        withinSize: CGSize,
+        color: UIColor,
+        wallpaperNode: WallpaperBackgroundNode?
+    ) {
+        self.rect = rect
+        self.withinSize = withinSize
+        self.color = color
+        self.wallpaperNode = wallpaperNode
+    }
+
+    static func ==(lhs: WallpaperBlurComponent, rhs: WallpaperBlurComponent) -> Bool {
+        if lhs.rect != rhs.rect {
+            return false
+        }
+        if lhs.withinSize != rhs.withinSize {
+            return false
+        }
+        if !lhs.color.isEqual(rhs.color) {
+            return false
+        }
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let background: WallpaperBlurNode
+
+        init() {
+            self.background = WallpaperBlurNode()
+
+            super.init(frame: CGRect())
+
+            self.addSubview(self.background.view)
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: WallpaperBlurComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
+            self.background.update(rect: component.rect, within: component.withinSize, color: component.color, wallpaperNode: component.wallpaperNode, transition: .immediate)
+
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
 final class OverscrollContentsComponent: Component {
     let context: AccountContext
     let backgroundColor: UIColor
     let foregroundColor: UIColor
     let peer: EnginePeer?
     let unreadCount: Int
+    let location: TelegramEngine.NextUnreadChannelLocation
     let expandOffset: CGFloat
+    let absoluteRect: CGRect
+    let absoluteSize: CGSize
+    let wallpaperNode: WallpaperBackgroundNode?
 
     init(
         context: AccountContext,
@@ -519,14 +678,22 @@ final class OverscrollContentsComponent: Component {
         foregroundColor: UIColor,
         peer: EnginePeer?,
         unreadCount: Int,
-        expandOffset: CGFloat
+        location: TelegramEngine.NextUnreadChannelLocation,
+        expandOffset: CGFloat,
+        absoluteRect: CGRect,
+        absoluteSize: CGSize,
+        wallpaperNode: WallpaperBackgroundNode?
     ) {
         self.context = context
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.peer = peer
         self.unreadCount = unreadCount
+        self.location = location
         self.expandOffset = expandOffset
+        self.absoluteRect = absoluteRect
+        self.absoluteSize = absoluteSize
+        self.wallpaperNode = wallpaperNode
     }
 
     static func ==(lhs: OverscrollContentsComponent, rhs: OverscrollContentsComponent) -> Bool {
@@ -545,7 +712,19 @@ final class OverscrollContentsComponent: Component {
         if lhs.unreadCount != rhs.unreadCount {
             return false
         }
+        if lhs.location != rhs.location {
+            return false
+        }
         if lhs.expandOffset != rhs.expandOffset {
+            return false
+        }
+        if lhs.absoluteRect != rhs.absoluteRect {
+            return false
+        }
+        if lhs.absoluteSize != rhs.absoluteSize {
+            return false
+        }
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
             return false
         }
         return true
@@ -553,7 +732,8 @@ final class OverscrollContentsComponent: Component {
 
     final class View: UIView {
         private let backgroundScalingContainer: ASDisplayNode
-        private let backgroundNode: NavigationBackgroundNode
+        private let backgroundNode: WallpaperBlurNode
+        private let backgroundFolderMask: UIImageView
         private let backgroundClippingNode: ASDisplayNode
         private let avatarView = ComponentHostView<Empty>()
         private let checkView = ComponentHostView<Empty>()
@@ -564,7 +744,7 @@ final class OverscrollContentsComponent: Component {
         private let arrowOffsetContainer: ASDisplayNode
 
         private let titleOffsetContainer: ASDisplayNode
-        private let titleBackgroundNode: NavigationBackgroundNode
+        private let titleBackgroundNode: WallpaperBlurNode
         private let titleNode: ImmediateTextNode
 
         private var isFullyExpanded: Bool = false
@@ -573,8 +753,12 @@ final class OverscrollContentsComponent: Component {
 
         init() {
             self.backgroundScalingContainer = ASDisplayNode()
-            self.backgroundNode = NavigationBackgroundNode(color: .clear)
+            self.backgroundNode = WallpaperBlurNode()
             self.backgroundNode.clipsToBounds = true
+
+            self.backgroundFolderMask = UIImageView()
+            self.backgroundFolderMask.image = UIImage(bundleImageName: "Chat/OverscrollFolder")?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 40)
+
             self.backgroundClippingNode = ASDisplayNode()
             self.backgroundClippingNode.clipsToBounds = true
             self.arrowNode = ASImageNode()
@@ -584,7 +768,8 @@ final class OverscrollContentsComponent: Component {
             self.arrowOffsetContainer = ASDisplayNode()
 
             self.titleOffsetContainer = ASDisplayNode()
-            self.titleBackgroundNode = NavigationBackgroundNode(color: .clear)
+            self.titleBackgroundNode = WallpaperBlurNode()
+            self.titleBackgroundNode.clipsToBounds = true
             self.titleNode = ImmediateTextNode()
 
             super.init(frame: CGRect())
@@ -620,36 +805,53 @@ final class OverscrollContentsComponent: Component {
                 self.checkView.isHidden = false
             }
 
-            let fullHeight: CGFloat = 90.0
-            let backgroundWidth: CGFloat = 50.0
-            let minBackgroundHeight: CGFloat = backgroundWidth + 34.0
+            let fullHeight: CGFloat = 94.0
+            let backgroundWidth: CGFloat = 56.0
+            let minBackgroundHeight: CGFloat = backgroundWidth + 5.0
             let avatarInset: CGFloat = 6.0
 
             let isFullyExpanded = component.expandOffset >= fullHeight
 
-            let backgroundHeight: CGFloat = max(minBackgroundHeight, min(fullHeight, component.expandOffset))
+            let isFolderMask: Bool
+            switch component.location {
+            case .archived, .folder:
+                isFolderMask = true
+            default:
+                isFolderMask = false
+            }
+
+            let expandProgress: CGFloat = max(0.1, min(1.0, component.expandOffset / fullHeight))
+
+            func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat {
+                return (1.0 - value) * from + value * to
+            }
+
+            let backgroundHeight: CGFloat = interpolate(from: minBackgroundHeight, to: fullHeight, value: expandProgress)
 
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - backgroundWidth) / 2.0), y: fullHeight - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
 
-            let expandProgress: CGFloat = max(0.1, min(1.0, component.expandOffset / minBackgroundHeight))
             let alphaProgress: CGFloat = max(0.0, min(1.0, component.expandOffset / 10.0))
 
             let maxAvatarScale: CGFloat = 1.0
-            let avatarExpandProgress: CGFloat = max(0.01, min(maxAvatarScale, component.expandOffset / fullHeight))
+            var avatarExpandProgress: CGFloat = max(0.01, min(maxAvatarScale, component.expandOffset / fullHeight))
+            avatarExpandProgress *= expandProgress
+
+            let avatarOffsetProgress = interpolate(from: 0.1, to: 1.0, value: avatarExpandProgress)
 
             transition.setAlpha(view: self.backgroundScalingContainer.view, alpha: alphaProgress)
             transition.setFrame(view: self.backgroundScalingContainer.view, frame: CGRect(origin: CGPoint(x: floor(availableSize.width / 2.0), y: fullHeight), size: CGSize(width: 0.0, height: 0.0)))
             transition.setSublayerTransform(view: self.backgroundScalingContainer.view, transform: CATransform3DMakeScale(expandProgress, expandProgress, 1.0))
 
             transition.setFrame(view: self.backgroundNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: fullHeight - backgroundFrame.size.height), size: backgroundFrame.size))
-            self.backgroundNode.updateColor(color: component.backgroundColor, transition: .immediate)
-            self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundWidth / 2.0, transition: .immediate)
+            self.backgroundNode.update(rect: backgroundFrame.offsetBy(dx: component.absoluteRect.minX, dy: component.absoluteRect.minY), within: component.absoluteSize, color: component.backgroundColor, wallpaperNode: component.wallpaperNode, transition: .immediate)
+            self.backgroundFolderMask.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
 
-            self.avatarView.frame = CGRect(origin: CGPoint(x: floor(-backgroundWidth / 2.0), y: floor(-backgroundWidth / 2.0)), size: CGSize(width: backgroundWidth, height: backgroundWidth))
+            let avatarFrame = CGRect(origin: CGPoint(x: floor(-backgroundWidth / 2.0), y: floor(-backgroundWidth / 2.0)), size: CGSize(width: backgroundWidth, height: backgroundWidth))
+            self.avatarView.frame = avatarFrame
 
             transition.setFrame(view: self.avatarOffsetContainer.view, frame: CGRect())
             transition.setFrame(view: self.avatarScalingContainer.view, frame: CGRect())
-            transition.setFrame(view: self.avatarExtraScalingContainer.view, frame: CGRect(origin: CGPoint(x: availableSize.width / 2.0, y: fullHeight - backgroundWidth / 2.0), size: CGSize()).offsetBy(dx: 0.0, dy: (1.0 - avatarExpandProgress) * backgroundWidth * 0.5))
+            transition.setFrame(view: self.avatarExtraScalingContainer.view, frame: CGRect(origin: CGPoint(x: availableSize.width / 2.0, y: fullHeight - backgroundWidth / 2.0), size: CGSize()).offsetBy(dx: 0.0, dy: (1.0 - avatarOffsetProgress) * backgroundWidth * 0.5))
             transition.setSublayerTransform(view: self.avatarScalingContainer.view, transform: CATransform3DMakeScale(avatarExpandProgress, avatarExpandProgress, 1.0))
 
             let titleText: String
@@ -664,13 +866,14 @@ final class OverscrollContentsComponent: Component {
             let titleBackgroundSize = CGSize(width: titleSize.width + 18.0, height: titleSize.height + 8.0)
             let titleBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleBackgroundSize.width) / 2.0), y: fullHeight - titleBackgroundSize.height - 8.0), size: titleBackgroundSize)
             self.titleBackgroundNode.frame = titleBackgroundFrame
-            self.titleBackgroundNode.updateColor(color: component.backgroundColor, transition: .immediate)
-            self.titleBackgroundNode.update(size: titleBackgroundFrame.size, cornerRadius: titleBackgroundFrame.size.height / 2.0, transition: .immediate)
+            self.titleBackgroundNode.update(rect: titleBackgroundFrame.offsetBy(dx: component.absoluteRect.minX, dy: component.absoluteRect.minY), within: component.absoluteSize, color: component.backgroundColor, wallpaperNode: component.wallpaperNode, transition: .immediate)
+            self.titleBackgroundNode.cornerRadius = min(titleBackgroundFrame.width, titleBackgroundFrame.height) / 2.0
             self.titleNode.frame = titleSize.centered(in: titleBackgroundFrame)
 
             let backgroundClippingFrame = CGRect(origin: CGPoint(x: floor(-backgroundWidth / 2.0), y: -fullHeight), size: CGSize(width: backgroundWidth, height: isFullyExpanded ? backgroundWidth : fullHeight))
-            self.backgroundClippingNode.cornerRadius = backgroundWidth / 2.0
-            self.backgroundNode.cornerRadius = backgroundWidth / 2.0
+            self.backgroundClippingNode.cornerRadius = isFolderMask ? 10.0 : backgroundWidth / 2.0
+            self.backgroundNode.cornerRadius = isFolderMask ? 0.0 : backgroundWidth / 2.0
+            self.backgroundNode.view.mask = isFolderMask ? self.backgroundFolderMask : nil
 
             if !(self.validForegroundColor?.isEqual(component.foregroundColor) ?? false) {
                 self.validForegroundColor = component.foregroundColor
@@ -713,7 +916,7 @@ final class OverscrollContentsComponent: Component {
                 transformTransition = .immediate
             }
 
-            let checkSize: CGFloat = 50.0
+            let checkSize: CGFloat = 56.0
             self.checkView.frame = CGRect(origin: CGPoint(x: floor(-checkSize / 2.0), y: floor(-checkSize / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             let _ = self.checkView.update(
                 transition: Transition(animation: transformTransition.isAnimated ? .curve(duration: 0.2, curve: .easeInOut) : .none),
@@ -732,7 +935,10 @@ final class OverscrollContentsComponent: Component {
                     component: AnyComponent(AvatarComponent(
                         context: component.context,
                         peer: peer,
-                        badge: isFullyExpanded ? AvatarComponent.Badge(count: component.unreadCount, backgroundColor: component.backgroundColor, foregroundColor: component.foregroundColor) : nil
+                        badge: isFullyExpanded ? AvatarComponent.Badge(count: component.unreadCount, backgroundColor: component.backgroundColor, foregroundColor: component.foregroundColor) : nil,
+                        rect: avatarFrame.offsetBy(dx: self.avatarExtraScalingContainer.frame.midX + component.absoluteRect.minX, dy: self.avatarExtraScalingContainer.frame.midY + component.absoluteRect.minY),
+                        withinSize: component.absoluteSize,
+                        wallpaperNode: component.wallpaperNode
                     )),
                     environment: {},
                     containerSize: self.avatarView.bounds.size
@@ -769,23 +975,35 @@ final class ChatOverscrollControl: CombinedComponent {
     let foregroundColor: UIColor
     let peer: EnginePeer?
     let unreadCount: Int
+    let location: TelegramEngine.NextUnreadChannelLocation
     let context: AccountContext
     let expandDistance: CGFloat
+    let absoluteRect: CGRect
+    let absoluteSize: CGSize
+    let wallpaperNode: WallpaperBackgroundNode?
 
     init(
         backgroundColor: UIColor,
         foregroundColor: UIColor,
         peer: EnginePeer?,
         unreadCount: Int,
+        location: TelegramEngine.NextUnreadChannelLocation,
         context: AccountContext,
-        expandDistance: CGFloat
+        expandDistance: CGFloat,
+        absoluteRect: CGRect,
+        absoluteSize: CGSize,
+        wallpaperNode: WallpaperBackgroundNode?
     ) {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.peer = peer
         self.unreadCount = unreadCount
+        self.location = location
         self.context = context
         self.expandDistance = expandDistance
+        self.absoluteRect = absoluteRect
+        self.absoluteSize = absoluteSize
+        self.wallpaperNode = wallpaperNode
     }
 
     static func ==(lhs: ChatOverscrollControl, rhs: ChatOverscrollControl) -> Bool {
@@ -801,10 +1019,22 @@ final class ChatOverscrollControl: CombinedComponent {
         if lhs.unreadCount != rhs.unreadCount {
             return false
         }
+        if lhs.location != rhs.location {
+            return false
+        }
         if lhs.context !== rhs.context {
             return false
         }
         if lhs.expandDistance != rhs.expandDistance {
+            return false
+        }
+        if lhs.absoluteRect != rhs.absoluteRect {
+            return false
+        }
+        if lhs.absoluteSize != rhs.absoluteSize {
+            return false
+        }
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
             return false
         }
         return true
@@ -821,7 +1051,11 @@ final class ChatOverscrollControl: CombinedComponent {
                     foregroundColor: context.component.foregroundColor,
                     peer: context.component.peer,
                     unreadCount: context.component.unreadCount,
-                    expandOffset: context.component.expandDistance
+                    location: context.component.location,
+                    expandOffset: context.component.expandDistance,
+                    absoluteRect: context.component.absoluteRect,
+                    absoluteSize: context.component.absoluteSize,
+                    wallpaperNode: context.component.wallpaperNode
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
@@ -839,18 +1073,22 @@ final class ChatOverscrollControl: CombinedComponent {
 }
 
 final class ChatInputPanelOverscrollNode: ASDisplayNode {
-    let text: String
+    let text: (String, [(Int, NSRange)])
     let priority: Int
     private let titleNode: ImmediateTextNode
 
-    init(text: String, color: UIColor, priority: Int) {
+    init(text: (String, [(Int, NSRange)]), color: UIColor, priority: Int) {
         self.text = text
         self.priority = priority
         self.titleNode = ImmediateTextNode()
 
         super.init()
 
-        self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: color)
+        let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: color)
+        let bold = MarkdownAttributeSet(font: Font.bold(14.0), textColor: color)
+
+        self.titleNode.attributedText = addAttributesToStringWithRanges(text, body: body, argumentAttributes: [0: bold])
+
         self.addSubnode(self.titleNode)
     }
 

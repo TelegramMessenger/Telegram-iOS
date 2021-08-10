@@ -46,6 +46,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
 
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = true
+
+    public var isManuallyInHierarchy: Bool?
     
     private var audioLevel: CGFloat = 0
     public var presentationAudioLevel: CGFloat = 0
@@ -136,6 +138,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func setColor(_ color: UIColor, animated: Bool) {
+        if let isManuallyInHierarchy = self.isManuallyInHierarchy, !isManuallyInHierarchy {
+            return
+        }
         smallBlob.setColor(color, animated: animated)
         mediumBlob.setColor(color.withAlphaComponent(0.3), animated: animated)
         bigBlob.setColor(color.withAlphaComponent(0.15), animated: animated)

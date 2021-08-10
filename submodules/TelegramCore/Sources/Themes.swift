@@ -348,7 +348,9 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                 return .generic
             }
             |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-                if let theme = TelegramTheme(apiTheme: apiTheme) {
+                if var theme = TelegramTheme(apiTheme: apiTheme) {
+                    theme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+
                     return account.postbox.transaction { transaction -> CreateThemeResult in
                         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
                         var items = entries.map { $0.contents as! TelegramTheme }
@@ -427,7 +429,9 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
             return .generic
         }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-            if let updatedTheme = TelegramTheme(apiTheme: apiTheme) {
+            if let theme = TelegramTheme(apiTheme: apiTheme) {
+                let updatedTheme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+
                 let _ = accountManager.transaction { transaction in
                     transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
                         var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)

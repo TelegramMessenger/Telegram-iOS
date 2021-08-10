@@ -14,12 +14,8 @@ import MediaResources
 private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 
 extension TelegramThemeSettings {
-    convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, messageColors: (top: UIColor, bottom: UIColor?)?, wallpaper: TelegramWallpaper?) {
-        var messageColorsValues: (UInt32, UInt32)?
-        if let colors = messageColors {
-            messageColorsValues = (colors.0.argb, colors.1?.argb ?? colors.0.argb)
-        }
-        self.init(baseTheme: baseTheme, accentColor: accentColor.argb, messageColors: messageColorsValues, wallpaper: wallpaper)
+    convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, messageColors: [UInt32], wallpaper: TelegramWallpaper?) {
+        self.init(baseTheme: baseTheme, accentColor: accentColor.argb, messageColors: messageColors, wallpaper: wallpaper)
     }
 }
 
@@ -379,7 +375,7 @@ final class ThemeAccentColorController: ViewController {
             var backgroundColors: [UInt32] = []
             var patternWallpaper: TelegramWallpaper?
             var patternIntensity: Int32 = 50
-            let messageColors: (UIColor, UIColor?)?
+            let messageColors: [UInt32]
             let defaultMessagesColor: UIColor? = nil
             var rotation: Int32 = 0
             
@@ -459,19 +455,15 @@ final class ThemeAccentColorController: ViewController {
                         extractWallpaperParameters(wallpaper)
                     }
                     
-                    if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
-                        if let bottomColor = bubbleColors.1 {
-                            messageColors = (bubbleColors.0, bottomColor)
-                        } else {
-                            messageColors = (bubbleColors.0, nil)
-                        }
+                    if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors, !bubbleColors.isEmpty {
+                        messageColors = bubbleColors
                     } else {
                         if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
-                            messageColors = (UIColor(rgb: 0xe1ffc7), nil)
+                            messageColors = [UIColor(rgb: 0xe1ffc7).rgb]
                         } else if let referenceTheme = referenceTheme {
-                            messageColors = (referenceTheme.chat.message.outgoing.bubble.withoutWallpaper.fill, referenceTheme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
+                            messageColors = referenceTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.map(\.rgb)
                         } else {
-                            messageColors = nil
+                            messageColors = []
                         }
                     }
                 } else {
@@ -489,16 +481,10 @@ final class ThemeAccentColorController: ViewController {
                             initialWallpaper = wallpaper
                         }
                         
-                        if let colors = themeSettings.messageColors {
-                            let topMessageColor = UIColor(argb: colors.top)
-                            let bottomMessageColor = UIColor(argb: colors.bottom)
-                            if topMessageColor.argb == bottomMessageColor.argb {
-                                messageColors = (topMessageColor, nil)
-                            } else {
-                                messageColors = (topMessageColor, bottomMessageColor)
-                            }
+                        if !themeSettings.messageColors.isEmpty {
+                            messageColors = themeSettings.messageColors
                         } else {
-                           messageColors = nil
+                            messageColors = []
                         }
                     } else if case .builtin = themeReference {
                          let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
@@ -525,17 +511,13 @@ final class ThemeAccentColorController: ViewController {
                              extractWallpaperParameters(wallpaper)
                          }
                          
-                         if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
-                             if let bottomColor = bubbleColors.1 {
-                                 messageColors = (bubbleColors.0, bottomColor)
-                             } else {
-                                 messageColors = (bubbleColors.0, nil)
-                             }
+                        if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors, !bubbleColors.isEmpty {
+                            messageColors = bubbleColors
                          } else {
                              if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
-                                 messageColors = (UIColor(rgb: 0xe1ffc7), nil)
+                                messageColors = [UIColor(rgb: 0xe1ffc7).rgb]
                              } else {
-                                 messageColors = nil
+                                 messageColors = []
                              }
                          }
                     } else {
@@ -550,14 +532,7 @@ final class ThemeAccentColorController: ViewController {
                             initialWallpaper = wallpaper
                         }
                         
-                        let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
-                        let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill
-                        
-                        if topMessageColor.argb == bottomMessageColor.argb {
-                            messageColors = (topMessageColor, nil)
-                        } else {
-                            messageColors = (topMessageColor, bottomMessageColor)
-                        }
+                        messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
                     }
                 }
             } else if case let .edit(theme, wallpaper, _, _, _, _) = strongSelf.mode {
@@ -570,18 +545,11 @@ final class ThemeAccentColorController: ViewController {
                     initialWallpaper = wallpaper
                 }
                 
-                let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
-                let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill
-                
-                if topMessageColor.argb == bottomMessageColor.argb {
-                    messageColors = (topMessageColor, nil)
-                } else {
-                    messageColors = (topMessageColor, bottomMessageColor)
-                }
+                messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
             } else {
                 accentColor = defaultDayAccentColor
                 backgroundColors = []
-                messageColors = nil
+                messageColors = []
             }
             
             let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors, rotation: rotation)

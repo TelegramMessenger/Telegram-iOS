@@ -175,6 +175,8 @@ public final class _UpdatedChildComponent {
     var _removed: Bool = false
     var _position: CGPoint?
     var _opacity: CGFloat?
+    var _cornerRadius: CGFloat?
+    var _clipsToBounds: Bool?
 
     fileprivate var transitionAppear: Transition.Appear?
     fileprivate var transitionAppearWithGuide: (Transition.AppearWithGuide, _AnyChildComponent.Id)?
@@ -238,6 +240,16 @@ public final class _UpdatedChildComponent {
 
     @discardableResult public func opacity(_ opacity: CGFloat) -> _UpdatedChildComponent {
         self._opacity = opacity
+        return self
+    }
+
+    @discardableResult public func cornerRadius(_ cornerRadius: CGFloat) -> _UpdatedChildComponent {
+        self._cornerRadius = cornerRadius
+        return self
+    }
+
+    @discardableResult public func clipsToBounds(_ clipsToBounds: Bool) -> _UpdatedChildComponent {
+        self._clipsToBounds = clipsToBounds
         return self
     }
 
@@ -672,6 +684,8 @@ public extension CombinedComponent {
 
                         updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0
+                        updatedChild.view.clipsToBounds = updatedChild._clipsToBounds ?? false
+                        updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0
                         updatedChild.view.context(typeErasedComponent: updatedChild.component).erasedState._updated = { [weak viewContext] transition in
                             guard let viewContext = viewContext else {
                                 return

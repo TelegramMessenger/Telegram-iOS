@@ -214,7 +214,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public weak var parentController: ViewController?
 
-    private let currentChatListFilter: ChatListFilterData?
+    private let currentChatListFilter: Int32?
     
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
@@ -465,7 +465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     private var nextChannelToReadDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: ChatListFilterData? = nil) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -3314,7 +3314,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
                             if strongSelf.nextChannelToReadDisposable == nil {
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
-                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, filter: strongSelf.currentChatListFilter.flatMap(chatListFilterPredicate)),
+                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),
                                     ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
                                 )
                                 |> then(.complete() |> delay(1.0, queue: .mainQueue()))
@@ -3324,8 +3324,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
 
                                     strongSelf.chatDisplayNode.historyNode.offerNextChannelToRead = true
-                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, unreadCount: Int) in
-                                        return (peer: nextPeer.peer, unreadCount: nextPeer.unreadCount)
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
+                                        return (peer: nextPeer.peer, unreadCount: nextPeer.unreadCount, location: nextPeer.location)
                                     }
                                     strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
 
@@ -7075,7 +7075,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
 
-        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer in
+        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer, location in
             guard let strongSelf = self else {
                 return
             }
@@ -7086,6 +7086,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     titleViewSnapshotState: strongSelf.chatTitleView?.prepareSnapshotState(),
                     avatarSnapshotState: (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.prepareSnapshotState()
                 )
+
+                var nextFolderId: Int32?
+                switch location {
+                case let .folder(id, _):
+                    nextFolderId = id
+                case .same:
+                    nextFolderId = strongSelf.currentChatListFilter
+                default:
+                    nextFolderId = nil
+                }
+
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: strongSelf.currentChatListFilter, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }))
