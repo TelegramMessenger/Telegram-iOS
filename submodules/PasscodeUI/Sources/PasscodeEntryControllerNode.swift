@@ -207,7 +207,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 let baseColor: UIColor
                 let lightness = color.lightness
                 if lightness < 0.1 || lightness > 0.9 {
-                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill[0]
                 } else{
                     baseColor = color
                 }

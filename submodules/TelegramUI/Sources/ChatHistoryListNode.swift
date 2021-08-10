@@ -549,13 +549,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var isSelectionGestureEnabled = true
 
     private var overscrollView: ComponentHostView<Empty>?
-    var nextChannelToRead: (peer: EnginePeer, unreadCount: Int)?
+    var nextChannelToRead: (peer: EnginePeer, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
     var offerNextChannelToRead: Bool = false
     var nextChannelToReadDisplayName: Bool = false
     private var currentOverscrollExpandProgress: CGFloat = 0.0
     private var freezeOverscrollControl: Bool = false
     private var feedback: HapticFeedback?
-    var openNextChannelToRead: ((EnginePeer) -> Void)?
+    var openNextChannelToRead: ((EnginePeer, TelegramEngine.NextUnreadChannelLocation) -> Void)?
     
     private let clientId: Atomic<Int32>
     
@@ -1171,9 +1171,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             guard let strongSelf = self else {
                 return
             }
-            if let channel = strongSelf.nextChannelToRead?.peer, strongSelf.currentOverscrollExpandProgress >= 0.99 {
+            if let nextChannelToRead = strongSelf.nextChannelToRead, strongSelf.currentOverscrollExpandProgress >= 0.99 {
                 strongSelf.freezeOverscrollControl = true
-                strongSelf.openNextChannelToRead?(channel)
+                strongSelf.openNextChannelToRead?(nextChannelToRead.peer, nextChannelToRead.location)
             }
         }
         
@@ -1239,36 +1239,59 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.currentOverscrollExpandProgress = expandProgress
             }
 
-            if expandProgress < 0.1 || self.nextChannelToRead == nil {
-                chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
-            } else if expandProgress >= 0.99 {
-                //TODO:localize
-                let text: String = "Release to go to the next unread channel"
-                if chatControllerNode.inputPanelOverscrollNode?.text != text {
-                    chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: text, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
+            if let nextChannelToRead = self.nextChannelToRead {
+                let swipeText: (String, [(Int, NSRange)])
+                let releaseText: (String, [(Int, NSRange)])
+                switch nextChannelToRead.location {
+                case .same:
+                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress, [])
+                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction, [])
+                case .archived:
+                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeProgress, [])
+                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeAction, [])
+                case .unarchived:
+                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeProgress, [])
+                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeAction, [])
+                case let .folder(_, title):
+                    swipeText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeProgress(title)._tuple
+                    releaseText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeAction(title)._tuple
+                }
+
+                if expandProgress < 0.1 {
+                    chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
+                } else if expandProgress >= 0.99 {
+                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != swipeText.0 {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: swipeText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
+                    }
+                } else {
+                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
+                    }
                 }
             } else {
-                //TODO:localize
-                let text: String = "Swipe up to go to the next unread channel"
-                if chatControllerNode.inputPanelOverscrollNode?.text != text {
-                    chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: text, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
-                }
+                chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
             }
 
-            let overscrollSize = overscrollView.update(
+            let overscrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.insets.top), size: CGSize(width: self.bounds.width, height: 94.0))
+
+            let _ = overscrollView.update(
                 transition: .immediate,
                 component: AnyComponent(ChatOverscrollControl(
                     backgroundColor: selectDateFillStaticColor(theme: self.currentPresentationData.theme.theme, wallpaper: self.currentPresentationData.theme.wallpaper),
                     foregroundColor: bubbleVariableColor(variableColor: self.currentPresentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: self.currentPresentationData.theme.wallpaper),
                     peer: self.nextChannelToRead?.peer,
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
+                    location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,
-                    expandDistance: expandDistance
+                    expandDistance: expandDistance,
+                    absoluteRect: CGRect(origin: CGPoint(x: overscrollFrame.minX, y: self.bounds.height - overscrollFrame.minY), size: overscrollFrame.size),
+                    absoluteSize: self.bounds.size,
+                    wallpaperNode: chatControllerNode.backgroundNode
                 )),
                 environment: {},
                 containerSize: CGSize(width: self.bounds.width, height: 200.0)
             )
-            overscrollView.frame = CGRect(origin: CGPoint(x: floor((self.bounds.width - overscrollSize.width) / 2.0), y: self.insets.top), size: overscrollSize)
+            overscrollView.frame = overscrollFrame
         } else if let overscrollView = self.overscrollView {
             self.overscrollView = nil
             overscrollView.removeFromSuperview()

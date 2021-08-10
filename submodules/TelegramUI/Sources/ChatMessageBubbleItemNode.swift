@@ -371,7 +371,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 selectionBackgroundFrame = selectionBackgroundFrame.inset(by: selectionInsets)
                 
                 let bubbleColor = graphics.hasWallpaper ? messageTheme.bubble.withWallpaper.fill : messageTheme.bubble.withoutWallpaper.fill
-                let selectionColor = bubbleColor.withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
+                let selectionColor = bubbleColor[0].withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
                 
                 self.selectionBackgroundNode?.backgroundColor = selectionColor
                 self.selectionBackgroundNode?.frame = selectionBackgroundFrame

@@ -6573,3 +6573,12 @@ Sorry for the inconvenience.";
 
 "PlaybackSpeed.Title" = "Playback Speed";
 "PlaybackSpeed.Normal" = "Normal";
+
+"Chat.NextChannelSameLocationSwipeProgress" = "Swipe up to go to the next unread channel";
+"Chat.NextChannelSameLocationSwipeAction" = "Release to go to the next unread channel";
+"Chat.NextChannelFolderSwipeProgress" = "Swipe up to go to the %@ folder";
+"Chat.NextChannelFolderSwipeAction" = "Release to go to the %@ folder";
+"Chat.NextChannelArchivedSwipeProgress" = "Swipe up to go to archived channels";
+"Chat.NextChannelArchivedSwipeAction" = "Release to go to archived channels";
+"Chat.NextChannelUnarchivedSwipeProgress" = "Swipe up to go to unarchived channels";
+"Chat.NextChannelUnarchivedSwipeAction" = "Release to go to unarchived channels";

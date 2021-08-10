@@ -21,7 +21,7 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         if lhs.accentColor != rhs.accentColor {
             return false
         }
-        if lhs.messageColors?.0 != rhs.messageColors?.0 || lhs.messageColors?.1 != rhs.messageColors?.1 {
+        if lhs.messageColors != rhs.messageColors {
             return false
         }
         if lhs.wallpaper != rhs.wallpaper {
@@ -32,10 +32,10 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     
     public let baseTheme: TelegramBaseTheme
     public let accentColor: UInt32
-    public let messageColors: (top: UInt32, bottom: UInt32)?
+    public let messageColors: [UInt32]
     public let wallpaper: TelegramWallpaper?
     
-    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, messageColors: (top: UInt32, bottom: UInt32)?, wallpaper: TelegramWallpaper?) {
+    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, messageColors: [UInt32], wallpaper: TelegramWallpaper?) {
         self.baseTheme = baseTheme
         self.accentColor = accentColor
         self.messageColors = messageColors
@@ -45,10 +45,15 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.baseTheme = TelegramBaseTheme(rawValue: decoder.decodeInt32ForKey("baseTheme", orElse: 0)) ?? .classic
         self.accentColor = UInt32(bitPattern: decoder.decodeInt32ForKey("accent", orElse: 0))
-        if let topMessageColor = decoder.decodeOptionalInt32ForKey("topMessage"), let bottomMessageColor = decoder.decodeOptionalInt32ForKey("bottomMessage") {
-            self.messageColors = (UInt32(bitPattern: topMessageColor), UInt32(bitPattern: bottomMessageColor))
+        let messageColors = decoder.decodeInt32ArrayForKey("messageColors")
+        if !messageColors.isEmpty {
+            self.messageColors = messageColors.map(UInt32.init(bitPattern:))
         } else {
-            self.messageColors = nil
+            if let topMessageColor = decoder.decodeOptionalInt32ForKey("topMessage"), let bottomMessageColor = decoder.decodeOptionalInt32ForKey("bottomMessage") {
+                self.messageColors = [UInt32(bitPattern: topMessageColor), UInt32(bitPattern: bottomMessageColor)]
+            } else {
+                self.messageColors = []
+            }
         }
         self.wallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
@@ -56,13 +61,7 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.baseTheme.rawValue, forKey: "baseTheme")
         encoder.encodeInt32(Int32(bitPattern: self.accentColor), forKey: "accent")
-        if let (topMessageColor, bottomMessageColor) = self.messageColors {
-            encoder.encodeInt32(Int32(bitPattern: topMessageColor), forKey: "topMessage")
-            encoder.encodeInt32(Int32(bitPattern: bottomMessageColor), forKey: "bottomMessage")
-        } else {
-            encoder.encodeNil(forKey: "topMessage")
-            encoder.encodeNil(forKey: "bottomMessage")
-        }
+        encoder.encodeInt32Array(self.messageColors.map(Int32.init(bitPattern:)), forKey: "messageColors")
         if let wallpaper = self.wallpaper {
             encoder.encodeObject(wallpaper, forKey: "wallpaper")
         } else {

@@ -33,6 +33,37 @@ private func encodeColor<Key>(_ values: inout KeyedEncodingContainer<Key>, _ val
     }
 }
 
+private func decodeColorList<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key) throws -> [UIColor] {
+    let colorValues = try values.decode([String].self, forKey: key)
+
+    var result: [UIColor] = []
+    for value in colorValues {
+        if value.lowercased() == "clear" {
+            result.append(UIColor.clear)
+        } else if let color = UIColor(hexString: value) {
+            result.append(color)
+        } else {
+            throw PresentationThemeDecodingError.generic
+        }
+    }
+
+    return result
+}
+
+private func encodeColorList<Key>(_ values: inout KeyedEncodingContainer<Key>, _ colors: [UIColor], _ key: Key) throws {
+    var stringList: [String] = []
+    for value in colors {
+        if value == UIColor.clear {
+            stringList.append("clear")
+        } else if value.alpha < 1.0 {
+            stringList.append(String(format: "%08x", value.argb))
+        } else {
+            stringList.append(String(format: "%06x", value.rgb))
+        }
+    }
+    try values.encode(stringList, forKey: key)
+}
+
 extension TelegramWallpaper: Codable {
     public init(from decoder: Decoder) throws {
         let values = try decoder.singleValueContainer()
@@ -1070,22 +1101,30 @@ extension PresentationThemeBubbleColorComponents: Codable {
         case highlightedBg
         case stroke
         case shadow
+        case bgList
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
-        
-        var fillColor = try decodeColor(values, .bg)
-        var gradientColor = try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: "\(codingPath).bg")
-        if gradientColor.rgb != fillColor.rgb {
-            fillColor = fillColor.withAlphaComponent(1.0)
-            gradientColor = gradientColor.withAlphaComponent(1.0)
+
+        let fill: [UIColor]
+
+        if let bgList = try? decodeColorList(values, .bgList) {
+            fill = bgList
+        } else {
+            var fillColor = try decodeColor(values, .bg)
+            var gradientColor = try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: "\(codingPath).bg")
+            if gradientColor.rgb != fillColor.rgb {
+                fillColor = fillColor.withAlphaComponent(1.0)
+                gradientColor = gradientColor.withAlphaComponent(1.0)
+            }
+
+            fill = [fillColor, gradientColor]
         }
-        
+
         self.init(
-            fill: fillColor,
-            gradientFill: gradientColor,
+            fill: fill,
             highlightedFill: try decodeColor(values, .highlightedBg),
             stroke: try decodeColor(values, .stroke),
             shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
@@ -1094,8 +1133,17 @@ extension PresentationThemeBubbleColorComponents: Codable {
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
-        try encodeColor(&values, self.fill, .bg)
-        try encodeColor(&values, self.gradientFill, .gradientBg)
+        if self.fill.count <= 2 {
+            if self.fill.count > 1 {
+                try encodeColor(&values, self.fill[0], .bg)
+                try encodeColor(&values, self.fill[1], .gradientBg)
+            } else {
+                try encodeColor(&values, self.fill[0], .bg)
+                try encodeColor(&values, self.fill[0], .gradientBg)
+            }
+        } else {
+            try encodeColorList(&values, self.fill, .bgList)
+        }
         try encodeColor(&values, self.highlightedFill, .highlightedBg)
         try encodeColor(&values, self.stroke, .stroke)
     }

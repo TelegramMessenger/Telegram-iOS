@@ -19,8 +19,8 @@ public func makeDefaultPresentationTheme(reference: PresentationBuiltinThemeRefe
     return theme
 }
 
-public func customizePresentationTheme(_ theme: PresentationTheme, editing: Bool, title: String? = nil, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
-    if accentColor == nil && bubbleColors == nil && backgroundColors.isEmpty && wallpaper == nil {
+public func customizePresentationTheme(_ theme: PresentationTheme, editing: Bool, title: String? = nil, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
+    if accentColor == nil && bubbleColors.isEmpty && backgroundColors.isEmpty && wallpaper == nil {
         return theme
     }
     switch theme.referenceTheme {
@@ -35,10 +35,10 @@ public func customizePresentationTheme(_ theme: PresentationTheme, editing: Bool
 
 public func makePresentationTheme(settings: TelegramThemeSettings, title: String? = nil, serviceBackgroundColor: UIColor? = nil) -> PresentationTheme? {
     let defaultTheme = makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference(baseTheme: settings.baseTheme), extendingThemeReference: nil, serviceBackgroundColor: serviceBackgroundColor, preview: false)
-    return customizePresentationTheme(defaultTheme, editing: true, title: title, accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper)
+    return customizePresentationTheme(defaultTheme, editing: true, title: title, accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper)
 }
 
-public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, extendingThemeReference: PresentationThemeReference? = nil, accentColor: UIColor? = nil, backgroundColors: [UInt32] = [], bubbleColors: (UIColor, UIColor?)? = nil, wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil, serviceBackgroundColor: UIColor? = nil, preview: Bool = false) -> PresentationTheme? {
+public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, extendingThemeReference: PresentationThemeReference? = nil, accentColor: UIColor? = nil, backgroundColors: [UInt32] = [], bubbleColors: [UInt32] = [], wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil, serviceBackgroundColor: UIColor? = nil, preview: Bool = false) -> PresentationTheme? {
     let theme: PresentationTheme
     switch themeReference {
         case let .builtin(reference):
@@ -52,7 +52,7 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
             }
         case let .cloud(info):
             if let settings = info.theme.settings {
-                if let loadedTheme = makePresentationTheme(mediaBox: mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), extendingThemeReference: themeReference, accentColor: accentColor ?? UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: bubbleColors ?? settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper:  wallpaper ?? settings.wallpaper, serviceBackgroundColor: serviceBackgroundColor, preview: preview) {
+                if let loadedTheme = makePresentationTheme(mediaBox: mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), extendingThemeReference: themeReference, accentColor: accentColor ?? UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: bubbleColors.isEmpty ? settings.messageColors : bubbleColors, wallpaper: wallpaper ?? settings.wallpaper, serviceBackgroundColor: serviceBackgroundColor, preview: preview) {
                     theme = loadedTheme
                 } else {
                     return nil

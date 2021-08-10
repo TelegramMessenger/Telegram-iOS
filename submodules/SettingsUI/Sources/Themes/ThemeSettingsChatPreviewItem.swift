@@ -225,25 +225,6 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(currentBackgroundNode, at: 0)
                     }
                     
-                    /*if let updatedBackgroundSignal = updatedBackgroundSignal {
-                        strongSelf.disposable.set((updatedBackgroundSignal
-                        |> deliverOnMainQueue).start(next: { [weak self] image in
-                            if let strongSelf = self, let (image, final) = image, let backgroundNode = strongSelf.backgroundNode {
-                                if final && !strongSelf.finalImage {
-                                    let tempLayer = CALayer()
-                                    tempLayer.frame = backgroundNode.bounds
-                                    tempLayer.contentsGravity = backgroundNode.layer.contentsGravity
-                                    tempLayer.contents = strongSelf.contents
-                                    strongSelf.layer.addSublayer(tempLayer)
-                                    tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
-                                        tempLayer?.removeFromSuperlayer()
-                                    })
-                                }
-                                backgroundNode.image = image
-                                strongSelf.finalImage = final
-                            }
-                        }))
-                    }*/
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
 

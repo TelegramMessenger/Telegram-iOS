@@ -152,14 +152,14 @@ public struct PresentationResourcesChat {
     public static func chatInstantVideoBackgroundImage(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatInstantVideoWithoutWallpaperBackgroundImage : PresentationResourceKey.chatInstantVideoWithWallpaperBackgroundImage
         return theme.image(key.rawValue, { theme in
-            return generateInstantVideoBackground(fillColor: theme.chat.message.freeform.withWallpaper.fill, strokeColor: theme.chat.message.freeform.withWallpaper.stroke)
+            return generateInstantVideoBackground(fillColor: theme.chat.message.freeform.withWallpaper.fill[0], strokeColor: theme.chat.message.freeform.withWallpaper.stroke)
         })
     }
     
     public static func chatActionPhotoBackgroundImage(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatActionPhotoWithoutWallpaperBackgroundImage : PresentationResourceKey.chatActionPhotoWithWallpaperBackgroundImage
         return theme.image(key.rawValue, { theme in
-            return generateActionPhotoBackground(fillColor: theme.chat.message.freeform.withWallpaper.fill, strokeColor: theme.chat.message.freeform.withWallpaper.stroke)
+            return generateActionPhotoBackground(fillColor: theme.chat.message.freeform.withWallpaper.fill[0], strokeColor: theme.chat.message.freeform.withWallpaper.stroke)
         })
     }
     
@@ -178,7 +178,7 @@ public struct PresentationResourcesChat {
         
     public static func chatInfoItemBackgroundImageWithoutWallpaper(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper.rawValue, { theme in
-            return messageSingleBubbleLikeImage(fillColor: theme.chat.message.incoming.bubble.withoutWallpaper.fill, strokeColor: theme.chat.message.incoming.bubble.withoutWallpaper.stroke)
+            return messageSingleBubbleLikeImage(fillColor: theme.chat.message.incoming.bubble.withoutWallpaper.fill[0], strokeColor: theme.chat.message.incoming.bubble.withoutWallpaper.stroke)
         })
     }
     
@@ -186,7 +186,7 @@ public struct PresentationResourcesChat {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper : PresentationResourceKey.chatInfoItemBackgroundImageWithWallpaper
         return theme.image(key.rawValue, { theme in
             let components: PresentationThemeBubbleColorComponents = wallpaper ? theme.chat.message.incoming.bubble.withWallpaper : theme.chat.message.incoming.bubble.withoutWallpaper
-            return messageSingleBubbleLikeImage(fillColor: components.fill, strokeColor: components.stroke)
+            return messageSingleBubbleLikeImage(fillColor: components.fill[0], strokeColor: components.stroke)
         })
     }
     
@@ -827,7 +827,7 @@ public struct PresentationResourcesChat {
     public static func chatMessageAttachedContentHighlightedButtonIconInstantIncoming(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantIncomingWithWallpaper
         return theme.image(key.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: true, wallpaper: wallpaper).fill)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: true, wallpaper: wallpaper).fill[0])
         })
     }
     
@@ -840,7 +840,7 @@ public struct PresentationResourcesChat {
     public static func chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithWallpaper
         return theme.image(key.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: false, wallpaper: wallpaper).fill)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: false, wallpaper: wallpaper).fill[0])
         })
     }
     

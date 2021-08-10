@@ -110,34 +110,28 @@ enum ThemeSettingsColorOption: Equatable {
         }
     }
     
-    var plainBubbleColors: (UIColor, UIColor)? {
+    var plainBubbleColors: [UInt32] {
         switch self {
             case let .accentColor(color):
                 return color.plainBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    return (UIColor(argb: messageColors.top), UIColor(argb: messageColors.bottom))
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                    return settings.messageColors
                 } else {
-                    return nil
+                    return []
                 }
         }
     }
     
-    var customBubbleColors: (UIColor, UIColor?)? {
+    var customBubbleColors: [UInt32] {
         switch self {
             case let .accentColor(color):
                 return color.customBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    let topColor = UIColor(argb: messageColors.top)
-                    let bottomColor = UIColor(argb: messageColors.bottom)
-                    if topColor.argb != bottomColor.argb {
-                        return (topColor, bottomColor)
-                    } else {
-                        return (topColor, nil)
-                    }
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                    return settings.messageColors
                 } else {
-                    return nil
+                    return []
                 }
         }
     }
@@ -381,9 +375,9 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                         var topColor: UIColor?
                         var bottomColor: UIColor?
                         
-                        if let colors = item.color?.plainBubbleColors {
-                            topColor = colors.0
-                            bottomColor = colors.1
+                        if let colors = item.color?.plainBubbleColors, !colors.isEmpty {
+                            topColor = UIColor(rgb: colors[0])
+                            bottomColor = UIColor(rgb: colors.last ?? colors[0])
                         } else if case .builtin(.dayClassic) = item.themeReference {
                             if let accentColor = item.color?.accentColor {
                                 let hsb = accentColor.hsb

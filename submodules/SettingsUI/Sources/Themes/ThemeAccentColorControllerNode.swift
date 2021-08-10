@@ -49,7 +49,7 @@ struct ThemeColorState {
     var patternIntensity: Int32
     
     var defaultMessagesColor: UIColor?
-    var messagesColors: (UIColor, UIColor?)?
+    var messagesColors: [UInt32]
     
     var rotation: Int32
     
@@ -65,11 +65,11 @@ struct ThemeColorState {
         self.patternWallpaper = nil
         self.patternIntensity = 50
         self.defaultMessagesColor = nil
-        self.messagesColors = nil
+        self.messagesColors = []
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?, rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: UIColor?, messagesColors: [UInt32], rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
@@ -105,20 +105,10 @@ struct ThemeColorState {
             return false
         }
 
-        if let lhsMessagesColors = self.messagesColors, let rhsMessagesColors = otherState.messagesColors {
-            if lhsMessagesColors.0 != rhsMessagesColors.0 {
-                return false
-            }
-            if let lhsSecondColor = lhsMessagesColors.1, let rhsSecondColor = rhsMessagesColors.1 {
-                if lhsSecondColor != rhsSecondColor {
-                    return false
-                }
-            } else if (lhsMessagesColors.1 == nil) != (rhsMessagesColors.1 == nil) {
-                return false
-            }
-        } else if (self.messagesColors == nil) != (otherState.messagesColors == nil) {
+        if self.messagesColors != otherState.messagesColors {
             return false
         }
+
         return true
     }
 }
@@ -347,11 +337,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         case .background:
                             updated.backgroundColors = colors
                         case .messages:
-                            if colors.count >= 1 {
-                                updated.messagesColors = (UIColor(rgb: colors[0]), colors.count >= 2 ? UIColor(rgb: colors[1]) : nil)
-                            } else {
-                                updated.messagesColors = nil
-                            }
+                            updated.messagesColors = colors
                     }
                     return updated
                 })
@@ -662,12 +648,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     } else {
                         defaultColor = self.state.accentColor
                     }
-                    if let messagesColors = self.state.messagesColors {
-                        if let second = messagesColors.1 {
-                            colors = [messagesColors.0.rgb, second.rgb]
-                        } else {
-                            colors = [messagesColors.0.rgb]
-                        }
+                    if !self.state.messagesColors.isEmpty {
+                        colors = self.state.messagesColors
                     } else {
                         colors = []
                     }
@@ -684,7 +666,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             case .background:
                 maximumNumberOfColors = 4
             case .messages:
-                maximumNumberOfColors = 2
+                maximumNumberOfColors = 4
             default:
                 maximumNumberOfColors = 1
             }
@@ -900,10 +882,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 }
                 strongSelf.updateState({ state in
                     var state = state
-                    if state.section == .background {
+                    //if state.section == .background {
                         state.colorPanelCollapsed = true
                         state.displayPatternPanel = false
-                    }
+                    //}
                     return state
                 }, animated: true)
                 /*if message.flags.contains(.Incoming) {

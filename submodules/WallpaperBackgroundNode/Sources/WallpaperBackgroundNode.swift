@@ -94,19 +94,24 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 case .incoming:
                     self.contentNode.image = graphics.incomingBubbleGradientImage
                     if graphics.incomingBubbleGradientImage == nil {
-                        self.contentNode.backgroundColor = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill
+                        self.contentNode.backgroundColor = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill[0]
                     } else {
                         self.contentNode.backgroundColor = nil
                     }
-                    needsCleanBackground = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.incoming.bubble.withWallpaper.gradientFill.alpha <= 0.99
+                    needsCleanBackground = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 })
                 case .outgoing:
-                    self.contentNode.image = graphics.outgoingBubbleGradientImage
-                    if graphics.outgoingBubbleGradientImage == nil {
-                        self.contentNode.backgroundColor = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill
-                    } else {
+                    if backgroundNode.outgoingBubbleGradientBackgroundNode != nil {
+                        self.contentNode.image = nil
                         self.contentNode.backgroundColor = nil
+                    } else {
+                        self.contentNode.image = graphics.outgoingBubbleGradientImage
+                        if graphics.outgoingBubbleGradientImage == nil {
+                            self.contentNode.backgroundColor = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill[0]
+                        } else {
+                            self.contentNode.backgroundColor = nil
+                        }
+                        needsCleanBackground = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 })
                     }
-                    needsCleanBackground = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.alpha <= 0.99 || bubbleTheme.chat.message.outgoing.bubble.withWallpaper.gradientFill.alpha <= 0.99
                 case .free:
                     self.contentNode.image = nil
                     self.contentNode.backgroundColor = nil
@@ -147,6 +152,16 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     }
                 }
 
+                var gradientBackgroundSource: GradientBackgroundNode? = backgroundNode.gradientBackgroundNode
+
+                if case .outgoing = self.bubbleType {
+                    if let outgoingBubbleGradientBackgroundNode = backgroundNode.outgoingBubbleGradientBackgroundNode {
+                        gradientBackgroundSource = outgoingBubbleGradientBackgroundNode
+                        needsWallpaperBackground = false
+                        needsGradientBackground = true
+                    }
+                }
+
                 if needsWallpaperBackground {
                     if self.cleanWallpaperNode == nil {
                         let cleanWallpaperNode = ASImageNode()
@@ -168,7 +183,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     }
                 }
 
-                if needsGradientBackground, let gradientBackgroundNode = backgroundNode.gradientBackgroundNode {
+                if needsGradientBackground, let gradientBackgroundNode = gradientBackgroundSource {
                     if self.gradientWallpaperNode == nil {
                         let gradientWallpaperNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
                         gradientWallpaperNode.frame = self.bounds
@@ -277,6 +292,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var blurredBackgroundContents: UIImage?
 
     private var gradientBackgroundNode: GradientBackgroundNode?
+    private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: ASImageNode
     private var isGeneratingPatternImage: Bool = false
 
@@ -735,6 +751,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             gradientBackgroundNode.updateLayout(size: size, transition: transition)
         }
 
+        if let outgoingBubbleGradientBackgroundNode = self.outgoingBubbleGradientBackgroundNode {
+            transition.updateFrame(node: outgoingBubbleGradientBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: transition)
+        }
+
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
         
         if isFirstLayout && !self.frame.isEmpty {
@@ -744,12 +765,27 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
     public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
         self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
+        self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
     }
 
     public func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
             self.bubbleTheme = bubbleTheme
             self.bubbleCorners = bubbleCorners
+
+            if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && self.context.sharedContext.immediateExperimentalUISettings.enableDebugDataDisplay {
+                if self.outgoingBubbleGradientBackgroundNode == nil {
+                    let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode()
+                    if let size = self.validLayout {
+                        outgoingBubbleGradientBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+                        outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate)
+                    }
+                    self.outgoingBubbleGradientBackgroundNode = outgoingBubbleGradientBackgroundNode
+                }
+                self.outgoingBubbleGradientBackgroundNode?.updateColors(colors: bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill)
+            } else if let _ = self.outgoingBubbleGradientBackgroundNode {
+                self.outgoingBubbleGradientBackgroundNode = nil
+            }
 
             self.updateBubbles()
         }
@@ -789,14 +825,14 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             if graphics.incomingBubbleGradientImage != nil {
                 return true
             }
-            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.alpha <= 0.99 {
+            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 }) {
                 return !hasPlainWallpaper
             }
         case .outgoing:
             if graphics.outgoingBubbleGradientImage != nil {
                 return true
             }
-            if bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.alpha <= 0.99 {
+            if bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 }) {
                 return !hasPlainWallpaper
             }
         case .free:
