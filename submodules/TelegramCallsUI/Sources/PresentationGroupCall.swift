@@ -1382,8 +1382,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else {
                 var outgoingAudioBitrateKbit: Int32?
                 let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
-                if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Int32 {
-                    outgoingAudioBitrateKbit = value
+                if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Double {
+                    outgoingAudioBitrateKbit = Int32(value)
                 }
 
                 genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in

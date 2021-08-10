@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 private struct SearchStickersConfiguration {
     static var defaultValue: SearchStickersConfiguration {
         return SearchStickersConfiguration(cacheTimeout: 86400)
@@ -16,8 +15,8 @@ private struct SearchStickersConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> SearchStickersConfiguration {
-        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Int32 {
-            return SearchStickersConfiguration(cacheTimeout: value)
+        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Double {
+            return SearchStickersConfiguration(cacheTimeout: Int32(value))
         } else {
             return .defaultValue
         }

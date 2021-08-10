@@ -66,9 +66,9 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
         case .initial:
             for i in (0 ..< toEntries.count).reversed() {
                 switch toEntries[i] {
-                case .search, .trendingList, .peerSpecificSetup, .trending:
+                case .search, .peerSpecificSetup, .trending:
                     break
-                case .sticker:
+                case .trendingList, .sticker:
                     scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .immediate, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
                 }
             }
@@ -248,7 +248,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         }
         
         var trendingIsDismissed = false
-        if let dismissedTrendingStickerPacks = dismissedTrendingStickerPacks, trendingPacks.map { $0.info.id.id } == dismissedTrendingStickerPacks {
+        if let dismissedTrendingStickerPacks = dismissedTrendingStickerPacks, trendingPacks.map({ $0.info.id.id }) == dismissedTrendingStickerPacks {
             trendingIsDismissed = true
         }
         if !trendingIsDismissed {
@@ -505,14 +505,12 @@ final class ChatMediaInputNode: ChatInputNode {
         self.themeAndStringsPromise = Promise((theme, strings))
 
         self.collectionListPanel = ASDisplayNode()
-//        self.collectionListPanel.clipsToBounds = true
         
         self.collectionListSeparator = ASDisplayNode()
         self.collectionListSeparator.isLayerBacked = true
         self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
         
         self.collectionListContainer = CollectionListContainerNode()
-//        self.collectionListContainer.clipsToBounds = true
         
         self.listView = ListView()
         self.listView.useSingleDimensionTouchPoint = true
@@ -961,7 +959,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 if let topVisibleSection = visibleItems.topSectionVisible as? ChatMediaInputStickerGridSection {
                     topVisibleCollectionId = topVisibleSection.collectionId
                 } else if let topVisible = visibleItems.topVisible {
-                    if let item = topVisible.1 as? ChatMediaInputStickerGridItem {
+                    if let _ = topVisible.1 as? StickerPaneTrendingListGridItem {
+                        topVisibleCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
+                    } else if let item = topVisible.1 as? ChatMediaInputStickerGridItem {
                         topVisibleCollectionId = item.index.collectionId
                     } else if let _ = topVisible.1 as? StickerPanePeerSpecificSetupGridItem {
                         topVisibleCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0)
@@ -2179,13 +2179,12 @@ final class ChatMediaInputNode: ChatInputNode {
 
     private func updatePaneClippingContainer(size: CGSize, offset: CGFloat, transition: ContainedViewLayoutTransition) {
         var offset = offset
-        var additionalOffset: CGFloat = 0.0
         if self.panelIsFocused {
             offset = 0.0
         }
-        transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: offset + 41.0 + additionalOffset), size: self.collectionListSeparator.bounds.size))
-        transition.updateFrame(node: self.paneClippingContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: offset + 41.0 + additionalOffset), size: size))
-        transition.updateSublayerTransformOffset(layer: self.paneClippingContainer.layer, offset: CGPoint(x: 0.0, y: -offset - 41.0 - additionalOffset))
+        transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: offset + 41.0), size: self.collectionListSeparator.bounds.size))
+        transition.updateFrame(node: self.paneClippingContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: offset + 41.0), size: size))
+        transition.updateSublayerTransformOffset(layer: self.paneClippingContainer.layer, offset: CGPoint(x: 0.0, y: -offset - 41.0))
     }
     
     private func fixPaneScroll(pane: ChatMediaInputPane, state: ChatMediaInputPaneScrollState) {
