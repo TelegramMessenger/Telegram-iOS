@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 enum ChatMediaInputMetaSectionItemType: Equatable {
     case savedStickers
@@ -13,10 +15,11 @@ enum ChatMediaInputMetaSectionItemType: Equatable {
     case stickersMode
     case savedGifs
     case trendingGifs
-    case gifEmoji(String)
+    case gifEmoji(String, TelegramMediaFile?)
 }
 
 final class ChatMediaInputMetaSectionItem: ListViewItem {
+    let account: Account
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let type: ChatMediaInputMetaSectionItemType
     let theme: PresentationTheme
@@ -27,7 +30,8 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+        self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.type = type
         self.selectedItem = selected
@@ -41,7 +45,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
             Queue.mainQueue().async {
                 node.inputNodeInteraction = self.inputNodeInteraction
                 node.setItem(item: self)
-                node.updateTheme(theme: self.theme, expanded: self.expanded)
+                node.updateTheme(account: self.account, theme: self.theme, expanded: self.expanded)
                 node.updateIsHighlighted()
                 node.updateAppearanceTransition(transition: .immediate)
                 
@@ -61,7 +65,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: node().insets), { _ in
                 (node() as? ChatMediaInputMetaSectionItemNode)?.setItem(item: self)
-                (node() as? ChatMediaInputMetaSectionItemNode)?.updateTheme(theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputMetaSectionItemNode)?.updateTheme(account: self.account, theme: self.theme, expanded: self.expanded)
             })
         }
     }
@@ -86,6 +90,8 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     private let highlightNode: ASImageNode
     private let titleNode: ImmediateTextNode
     
+    private var animatedStickerNode: AnimatedStickerNode?
+    
     private var currentExpanded = false
     
     var item: ChatMediaInputMetaSectionItem?
@@ -93,6 +99,23 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     
     var theme: PresentationTheme?
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.visibilityStatus = self.visibility != .none
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+                self.animatedStickerNode?.visibility = self.visibilityStatus && loopAnimatedStickers
+            }
+        }
+    }
+    
+    private let stickerFetchedDisposable = MetaDisposable()
     
     init() {
         self.containerNode = ASDisplayNode()
@@ -130,6 +153,10 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         self.scalingNode.addSubnode(self.textNodeContainer)
     }
     
+    deinit {
+        self.stickerFetchedDisposable.dispose()
+    }
+    
     override func didLoad() {
         super.didLoad()
     }
@@ -146,7 +173,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         }
     }
     
-    func updateTheme(theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(account: Account, theme: PresentationTheme, expanded: Bool) {
         let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
@@ -174,7 +201,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 case .trendingGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                     title = "Trending"
-                case let .gifEmoji(emoji):
+                case let .gifEmoji(emoji, file):
                     var emoji = emoji
                     switch emoji {
                         case "😡":
@@ -200,16 +227,38 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                         default:
                             break
                     }
-                    if emoji == "🥳" {
-                        if #available(iOSApplicationExtension 12.1, iOS 12.1, *) {
-                        } else {
-                            emoji = "🎉"
-                        }
-                    }
+//                    if emoji == "🥳" {
+//                        if #available(iOSApplicationExtension 12.1, iOS 12.1, *) {
+//                        } else {
+//                            emoji = "🎉"
+//                        }
+//                    }
                     self.imageNode.image = nil
-                    self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(43.0), textColor: .black)
-                    let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
-                    self.textNode.frame = CGRect(origin: CGPoint(x: floor((self.textNodeContainer.bounds.width - textSize.width) / 2.0), y: floor((self.textNodeContainer.bounds.height - textSize.height) / 2.0)), size: textSize)
+                    
+                    if let file = file {
+                    
+                        let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+                        let animatedStickerNode: AnimatedStickerNode
+                        if let current = self.animatedStickerNode {
+                            animatedStickerNode = current
+                        } else {
+                            animatedStickerNode = AnimatedStickerNode()
+                            self.animatedStickerNode = animatedStickerNode
+    //                        if let placeholderNode = self.placeholderNode {
+    //                            self.scalingNode.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)
+    //                        } else {
+                                self.scalingNode.addSubnode(animatedStickerNode)
+    //                        }
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: file.resource), width: 128, height: 128, mode: .cached)
+                        }
+                        animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
+                        
+                        self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                    } else {
+                        self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(43.0), textColor: .black)
+                        let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
+                        self.textNode.frame = CGRect(origin: CGPoint(x: floor((self.textNodeContainer.bounds.width - textSize.width) / 2.0), y: floor((self.textNodeContainer.bounds.height - textSize.height) / 2.0)), size: textSize)
+                    }
                 }
             }
             self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
@@ -224,7 +273,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
         expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width, height: expandedBoundingSize.height))
         
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
@@ -235,6 +284,11 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         alphaTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0, delay: expanded ? 0.05 : 0.0)
         
         self.currentExpanded = expanded
+        
+        if let animatedStickerNode = self.animatedStickerNode {
+            animatedStickerNode.frame = self.imageNode.frame
+            animatedStickerNode.updateLayout(size: self.imageNode.frame.size)
+        }
         
         expandTransition.updateFrame(node: self.highlightNode, frame: expanded ? titleFrame.insetBy(dx: -7.0, dy: -2.0) : CGRect(origin: CGPoint(x: self.imageNode.position.x - highlightSize.width / 2.0, y: self.imageNode.position.y - highlightSize.height / 2.0), size: highlightSize))
     }
@@ -256,7 +310,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 if case .trending = inputNodeInteraction.highlightedGifMode {
                     isHighlighted = true
                 }
-            case let .gifEmoji(emoji):
+            case let .gifEmoji(emoji, _):
                 if case .emojiSearch(emoji) = inputNodeInteraction.highlightedGifMode {
                     isHighlighted = true
                 }

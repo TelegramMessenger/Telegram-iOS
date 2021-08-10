@@ -300,6 +300,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var currentGeneralScrollDirection: GeneralScrollDirection?
     public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
     
+    public private(set) var isReordering = false
+    public final var willBeginReorder: (CGPoint) -> Void = { _ in }
+    public final var reorderBegan: () -> Void = { }
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
     public final var reorderCompleted: (Any?) -> Void = { _ in }
     
@@ -322,8 +325,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderNode: ListViewReorderingItemNode?
     private var reorderFeedback: HapticFeedback?
     private var reorderFeedbackDisposable: MetaDisposable?
-    private var isReorderingItems: Bool = false
+    private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
+    public var reorderedItemHasShadow = true
     
     private let waitingForNodesDisposable = MetaDisposable()
     
@@ -394,15 +398,19 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             let itemNodeFrame = itemNode.frame
                             let itemNodeBounds = itemNode.bounds
                             if itemNode.isReorderable(at: point.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY)) {
-                                strongSelf.beginReordering(itemNode: itemNode)
-                                return true
+                                let requiresLongPress = !strongSelf.reorderedItemHasShadow
+                                return (true, requiresLongPress, itemNode)
                             }
                             break
                         }
                     }
                 }
             }
-            return false
+            return (false, false, nil)
+        }, willBegin: { [weak self] point in
+            self?.willBeginReorder(point)
+        }, began: { [weak self] itemNode in
+            self?.beginReordering(itemNode: itemNode)
         }, ended: { [weak self] in
             self?.endReordering()
         }, moved: { [weak self] offset in
@@ -469,10 +477,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func beginReordering(itemNode: ListViewItemNode) {
+        self.isReordering = true
+        self.reorderBegan()
+        
         if let reorderNode = self.reorderNode {
             reorderNode.removeFromSupernode()
         }
-        let reorderNode = ListViewReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin)
+        let reorderNode = ListViewReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin, hasShadow: self.reorderedItemHasShadow)
         self.reorderNode = reorderNode
         if let verticalScrollIndicator = self.verticalScrollIndicator {
             self.insertSubnode(reorderNode, belowSubnode: verticalScrollIndicator)
@@ -509,8 +520,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
             strongSelf.reorderCompleted(strongSelf.opaqueTransactionState)
+            strongSelf.isReordering = false
         }
-        if self.isReorderingItems {
+        if self.reorderInProgress {
             self.reorderingItemsCompleted = f
         } else {
             f()
@@ -587,14 +599,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if self.reorderFeedbackDisposable == nil {
                             self.reorderFeedbackDisposable = MetaDisposable()
                         }
-                        self.isReorderingItems = true
+                        self.reorderInProgress = true
                         self.reorderFeedbackDisposable?.set((self.reorderItem(reorderItemIndex, toIndex, self.opaqueTransactionState)
                         |> deliverOnMainQueue).start(next: { [weak self] value in
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            strongSelf.isReorderingItems = false
+                            strongSelf.reorderInProgress = false
                             if let reorderingItemsCompleted = strongSelf.reorderingItemsCompleted {
                                 strongSelf.reorderingItemsCompleted = nil
                                 reorderingItemsCompleted()

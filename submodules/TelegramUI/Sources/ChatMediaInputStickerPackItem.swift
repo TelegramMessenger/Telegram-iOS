@@ -87,6 +87,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var currentCollectionId: ItemCollectionId?
+    private var account: Account?
     private var currentThumbnailItem: StickerPackThumbnailItem?
     private var currentExpanded = false
     private var theme: PresentationTheme?
@@ -172,7 +173,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     
     func updateStickerPackItem(account: Account, info: StickerPackCollectionInfo, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme, expanded: Bool) {
         self.currentCollectionId = collectionId
-        
+        self.account = account
         var themeUpdated = false
         if self.theme !== theme {
             self.theme = theme
@@ -262,7 +263,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
         expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 4.0, height: expandedBoundingSize.height))
         
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
@@ -313,5 +314,75 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func isReorderable(at point: CGPoint) -> Bool {
+        if self.bounds.contains(point) {
+            return true
+        }
+        return false
+    }
+    
+    override func snapshotForReordering() -> UIView? {
+        if let account = account, let thumbnailItem = self.currentThumbnailItem {
+            var imageSize = boundingImageSize
+            let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+            let containerNode = ASDisplayNode()
+            let scalingNode = ASDisplayNode()
+            containerNode.addSubnode(scalingNode)
+            containerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            
+            var snapshotImageNode: TransformImageNode?
+            var snapshotAnimationNode: AnimatedStickerNode?
+            switch thumbnailItem {
+                case let .still(representation):
+                    imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
+                    
+                    let imageNode = TransformImageNode()
+                    let imageApply = imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
+                    imageApply()
+                    imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
+                    scalingNode.addSubnode(imageNode)
+                    
+                    snapshotImageNode = imageNode
+                case let .animated(resource, _):
+                    let animatedStickerNode = AnimatedStickerNode()
+                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .direct(cachePathPrefix: nil))
+                    animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
+                    scalingNode.addSubnode(animatedStickerNode)
+                    
+                    animatedStickerNode.cloneCurrentFrame(from: self.animatedStickerNode)
+                    animatedStickerNode.play(fromIndex: self.animatedStickerNode?.currentFrameIndex)
+                    
+                    snapshotAnimationNode = animatedStickerNode
+            }
+            
+            containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
+            scalingNode.bounds = CGRect(origin: CGPoint(), size: expandedBoundingSize)
+            
+            if let titleView = self.titleNode.view.snapshotContentTree() {
+                titleView.frame = self.titleNode.frame
+                scalingNode.view.addSubview(titleView)
+            }
+            
+            let imageFrame = CGRect(origin: CGPoint(x: (expandedBoundingSize.height - imageSize.width) / 2.0, y: (expandedBoundingSize.width - imageSize.height) / 2.0), size: imageSize)
+            if let imageNode = snapshotImageNode {
+                imageNode.bounds = CGRect(origin: CGPoint(), size: imageSize)
+                imageNode.position = imageFrame.center
+            }
+            if let animatedStickerNode = snapshotAnimationNode {
+                animatedStickerNode.frame = imageFrame
+                animatedStickerNode.updateLayout(size: imageFrame.size)
+            }
+            
+            let expanded = self.currentExpanded
+            let scale = expanded ? 1.0 : boundingImageScale
+            let boundsSize = expanded ? expandedBoundingSize : CGSize(width: boundingSize.height, height: boundingSize.height)
+            scalingNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            scalingNode.position = CGPoint(x: boundsSize.width / 2.0 + 3.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0) - 3.0)
+            
+            return containerNode.view
+        }
+        return nil
     }
 }
