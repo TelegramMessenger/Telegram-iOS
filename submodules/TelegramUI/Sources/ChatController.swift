@@ -1103,8 +1103,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             return interfaceState
                         }.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                return .media(mode: mode, expanded: nil)
+                            if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                return .media(mode: mode, expanded: nil, focused: focused)
                             }
                             return current
                         }
@@ -1123,8 +1123,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
                             var current = current
                             current = current.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                    return .media(mode: mode, expanded: nil)
+                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil, focused: focused)
                                 }
                                 return current
                             }
@@ -1167,8 +1167,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil  {
-                                    return .media(mode: mode, expanded: nil)
+                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
+                                    return .media(mode: mode, expanded: nil, focused: focused)
                                 }
                                 return current
                             }
@@ -7195,7 +7195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                         
-                        if case let .media(_, expanded) = strongSelf.presentationInterfaceState.inputMode, expanded != nil {
+                        if case let .media(_, expanded, _) = strongSelf.presentationInterfaceState.inputMode, expanded != nil {
                             return false
                         }
                         
@@ -10033,8 +10033,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return interfaceState
                         }
                         state = state.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil  {
-                                return .media(mode: mode, expanded: nil)
+                            if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
+                                return .media(mode: mode, expanded: nil, focused: focused)
                             }
                             return current
                         }
@@ -12477,7 +12477,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                         return state.updatedInterfaceState { interfaceState in
                             return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
-                        }.updatedInputMode({ _ in ChatInputMode.media(mode: .other, expanded: nil) })
+                        }.updatedInputMode({ _ in ChatInputMode.media(mode: .other, expanded: nil, focused: false) })
                     })
                 }
             }),

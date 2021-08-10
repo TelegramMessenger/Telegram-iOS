@@ -70,7 +70,10 @@ public final class GalleryFooterNode: ASDisplayNode {
             }
         }
         
-        let effectiveThumbnailPanelHeight = self.currentThumbnailPanelHeight ?? thumbnailPanelHeight
+        var effectiveThumbnailPanelHeight = self.currentThumbnailPanelHeight ?? thumbnailPanelHeight
+        if layout.size.width > layout.size.height {
+            effectiveThumbnailPanelHeight = 0.0
+        }
         var backgroundHeight: CGFloat = 0.0
         let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : (effectiveThumbnailPanelHeight > 0.0 ? 106.0 : 54.0)) : 0.0
         if let footerContentNode = self.currentFooterContentNode {

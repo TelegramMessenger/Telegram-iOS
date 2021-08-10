@@ -262,6 +262,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var synchronousNodes = false
     public final var debugInfo = false
     
+    public final var useSingleDimensionTouchPoint = false
+    
     public var enableExtractedBackgrounds: Bool = false {
         didSet {
             if self.enableExtractedBackgrounds != oldValue {
@@ -292,8 +294,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: (CGPoint) -> Void = { _ in }
-    public final var endedInteractiveDragging: () -> Void = { }
-    public final var didEndScrolling: (() -> Void)?
+    public final var endedInteractiveDragging: (CGPoint) -> Void = { _ in }
+    public final var didEndScrolling: ((Bool) -> Void)?
     
     private var currentGeneralScrollDirection: GeneralScrollDirection?
     public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
@@ -710,9 +712,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.resetScrollIndicatorFlashTimer(start: true)
             
             self.lastContentOffsetTimestamp = 0.0
-            self.didEndScrolling?()
+            self.didEndScrolling?(false)
         }
-        self.endedInteractiveDragging()
+        self.endedInteractiveDragging(self.touchesPosition)
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -722,7 +724,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.updateHeaderItemsFlashing(animated: true)
         self.resetScrollIndicatorFlashTimer(start: true)
         if !scrollView.isTracking {
-            self.didEndScrolling?()
+            self.didEndScrolling?(true)
         }
     }
     
@@ -3135,16 +3137,38 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 reverseAnimation = reverseBasicAnimation
                             }
                     }
-                    animation.completion = { _ in
-                        for itemNode in temporaryPreviousNodes {
-                            itemNode.removeFromSupernode()
-                            itemNode.extractedBackgroundNode?.removeFromSupernode()
+                    
+                    if scrollToItem.displayLink {
+                        self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, -offset, 0.0)
+                        let offsetAnimation = ListViewAnimation(from: -offset, to: 0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem, beginAt: timestamp, update: { [weak self] progress, currentValue in
+                            if let strongSelf = self {
+                                strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue, 0.0)
+                                
+                                if progress == 1.0 {
+                                    for itemNode in temporaryPreviousNodes {
+                                        itemNode.removeFromSupernode()
+                                        itemNode.extractedBackgroundNode?.removeFromSupernode()
+                                    }
+                                    for headerNode in temporaryHeaderNodes {
+                                        headerNode.removeFromSupernode()
+                                    }
+                                }
+                            }
+                        })
+                        self.animations.append(offsetAnimation)
+                    } else {
+                        animation.completion = { _ in
+                            for itemNode in temporaryPreviousNodes {
+                                itemNode.removeFromSupernode()
+                                itemNode.extractedBackgroundNode?.removeFromSupernode()
+                            }
+                            for headerNode in temporaryHeaderNodes {
+                                headerNode.removeFromSupernode()
+                            }
                         }
-                        for headerNode in temporaryHeaderNodes {
-                            headerNode.removeFromSupernode()
-                        }
+                        self.layer.add(animation, forKey: nil)
                     }
-                    self.layer.add(animation, forKey: nil)
+
                     for itemNode in self.itemNodes {
                         itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
@@ -3926,7 +3950,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             animation.applyAt(timestamp)
             
             if animation.completeAt(timestamp) {
-                animations.remove(at: i)
+                self.animations.remove(at: i)
                 animationCount -= 1
                 i -= 1
             } else {
@@ -4148,6 +4172,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func itemIndexAtPoint(_ point: CGPoint) -> Int? {
+        var point = point
+        if self.useSingleDimensionTouchPoint {
+            point.x = 0.0
+        }
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index

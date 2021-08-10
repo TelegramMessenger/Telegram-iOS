@@ -3156,7 +3156,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     break
                 }
             }, sendFile: nil,
-            sendSticker: { f, sourceNode, sourceRect in
+        sendSticker: { _, _, _ in
             return false
         }, requestMessageActionUrlAuth: nil,
         joinVoiceChat: { peerId, invite, call in

@@ -1119,7 +1119,7 @@ public final class VoiceChatController: ViewController {
             self.scheduleTextNode.textAlignment = .center
             self.scheduleTextNode.maximumNumberOfLines = 4
             
-            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor:  UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
+            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
             self.scheduleCancelButton.isHidden = !self.isScheduling
             
             self.dateFormatter = DateFormatter()
@@ -2410,7 +2410,6 @@ public final class VoiceChatController: ViewController {
                     return []
                 }
 
-                let presentationData = strongSelf.presentationData
                 var items: [ContextMenuItem] = []
 
                 if peers.count > 1 {
@@ -2582,14 +2581,22 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-                                    if let strongSelf = self, let title = title {
-                                        strongSelf.call.setShouldBeRecording(true, title: title)
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.call.setShouldBeRecording(true, title: "")
 
                                         strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
                                         strongSelf.call.playTone(.recordingStarted)
                                     }
                                 })
+//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+//                                    if let strongSelf = self, let title = title {
+//                                        strongSelf.call.setShouldBeRecording(true, title: title)
+//
+//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+//                                        strongSelf.call.playTone(.recordingStarted)
+//                                    }
+//                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }
