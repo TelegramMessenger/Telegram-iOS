@@ -387,20 +387,22 @@ public final class ShareController: ViewController {
                 break
             case let .image(representations):
                 if case .saveToCameraRoll = preferredAction {
-                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(representations: representations)
                         self?.actionCompleted?()
                     })
                 }
             case let .media(mediaReference):
                 var canSave = false
+                var isVideo = false
                 if mediaReference.media is TelegramMediaImage {
                     canSave = true
-                } else if mediaReference.media is TelegramMediaFile {
+                } else if let file = mediaReference.media as? TelegramMediaFile {
                     canSave = true
+                    isVideo = file.isVideo
                 }
                 if case .saveToCameraRoll = preferredAction, canSave {
-                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                    self.defaultAction = ShareControllerAction(title: isVideo ? self.presentationData.strings.Gallery_SaveVideo : self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
                         self?.actionCompleted?()
                     })

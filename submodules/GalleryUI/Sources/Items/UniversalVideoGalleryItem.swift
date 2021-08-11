@@ -2089,7 +2089,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
             if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {

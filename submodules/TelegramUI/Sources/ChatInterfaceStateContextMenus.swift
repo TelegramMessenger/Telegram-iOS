@@ -615,17 +615,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?
+                var isVideo = false
                 for media in message.media {
                     if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
                         mediaReference = ImageMediaReference.standalone(media: image).abstract
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
                         mediaReference = FileMediaReference.standalone(media: file).abstract
+                        isVideo = true
                         break
                     }
                 }
                 if let mediaReference = mediaReference {
-                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Preview_SaveToCameraRoll, icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: isVideo ? chatPresentationInterfaceState.strings.Gallery_SaveVideo : chatPresentationInterfaceState.strings.Gallery_SaveImage, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
